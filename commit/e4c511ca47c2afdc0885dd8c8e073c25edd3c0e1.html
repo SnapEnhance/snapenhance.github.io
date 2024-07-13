@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: ffmpeg logs - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/e4c511ca47c2afdc0885dd8c8e073c25edd3c0e1.html">e4c511ca47c2afdc0885dd8c8e073c25edd3c0e1</a>
+<b>parent</b> <a href="../commit/ec05e4f5d4d43a281a673a911195108aec9c72f0.html">ec05e4f5d4d43a281a673a911195108aec9c72f0</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri,  1 Sep 2023 20:43:09 +0200
+
+feat: ffmpeg logs
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt</a></td><td> | </td><td class="num">33</td><td><span class="i">++++++++++++++++++++++++</span><span class="d">---------</span></td></tr>
+</table></pre><pre>2 files changed, 30 insertions(+), 10 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -62,7 +62,12 @@ class DownloadProcessor (
+</a>         remoteSideContext.translation.getCategory(&quot;download_processor&quot;)
+     }
+ 
+<a href="#h0-0-3" id="h0-0-3" class="d">-    private val ffmpegProcessor by lazy { FFMpegProcessor(remoteSideContext.config.root.downloader.ffmpegOptions) }
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+    private val ffmpegProcessor by lazy {
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+        FFMpegProcessor(
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+            remoteSideContext.log,
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+            remoteSideContext.config.root.downloader.ffmpegOptions
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+        )
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+    }
+</a>     private val gson by lazy { GsonBuilder().setPrettyPrinting().create() }
+ 
+     private fun fallbackToast(message: Any) {
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -2,7 +2,10 @@ package me.rhunk.snapenhance.download
+</a> 
+ import com.arthenica.ffmpegkit.FFmpegKit
+ import com.arthenica.ffmpegkit.FFmpegSession
+<a href="#h1-0-3" id="h1-0-3" class="i">+import com.arthenica.ffmpegkit.Level
+</a> import kotlinx.coroutines.suspendCancellableCoroutine
+<a href="#h1-0-5" id="h1-0-5" class="i">+import me.rhunk.snapenhance.LogLevel
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+import me.rhunk.snapenhance.LogManager
+</a> import me.rhunk.snapenhance.Logger
+ import me.rhunk.snapenhance.core.config.impl.DownloaderConfig
+ import java.io.File
+<a href="#h1-1" id="h1-1" class="h">@@ -32,8 +35,12 @@ class ArgumentList : LinkedHashMap&lt;String, MutableList&lt;String&gt;&gt;() {
+</a> 
+ 
+ class FFMpegProcessor(
+<a href="#h1-1-3" id="h1-1-3" class="i">+    private val logManager: LogManager,
+</a>     private val ffmpegOptions: DownloaderConfig.FFMpegOptions
+ ) {
+<a href="#h1-1-6" id="h1-1-6" class="i">+    companion object {
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+        private const val TAG = &quot;ffmpeg-processor&quot;
+</a><a href="#h1-1-8" id="h1-1-8" class="i">+    }
+</a>     enum class Action {
+         DOWNLOAD_DASH,
+         MERGE_OVERLAY,
+<a href="#h1-2" id="h1-2" class="h">@@ -66,15 +73,23 @@ class FFMpegProcessor(
+</a> 
+         Logger.directDebug(&quot;arguments: $stringBuilder&quot;, &quot;FFMpegProcessor&quot;)
+ 
+<a href="#h1-2-3" id="h1-2-3" class="d">-        FFmpegKit.executeAsync(stringBuilder.toString(), { session -&gt;
+</a><a href="#h1-2-4" id="h1-2-4" class="d">-            it.resumeWith(
+</a><a href="#h1-2-5" id="h1-2-5" class="d">-                if (session.returnCode.isValueSuccess) {
+</a><a href="#h1-2-6" id="h1-2-6" class="d">-                    Result.success(session)
+</a><a href="#h1-2-7" id="h1-2-7" class="d">-                } else {
+</a><a href="#h1-2-8" id="h1-2-8" class="d">-                    Result.failure(Exception(session.output))
+</a><a href="#h1-2-9" id="h1-2-9" class="d">-                }
+</a><a href="#h1-2-10" id="h1-2-10" class="d">-            )
+</a><a href="#h1-2-11" id="h1-2-11" class="d">-        },  Executors.newSingleThreadExecutor())
+</a><a href="#h1-2-12" id="h1-2-12" class="i">+        FFmpegKit.executeAsync(stringBuilder.toString(),
+</a><a href="#h1-2-13" id="h1-2-13" class="i">+            { session -&gt;
+</a><a href="#h1-2-14" id="h1-2-14" class="i">+                it.resumeWith(
+</a><a href="#h1-2-15" id="h1-2-15" class="i">+                    if (session.returnCode.isValueSuccess) {
+</a><a href="#h1-2-16" id="h1-2-16" class="i">+                        Result.success(session)
+</a><a href="#h1-2-17" id="h1-2-17" class="i">+                    } else {
+</a><a href="#h1-2-18" id="h1-2-18" class="i">+                        Result.failure(Exception(session.output))
+</a><a href="#h1-2-19" id="h1-2-19" class="i">+                    }
+</a><a href="#h1-2-20" id="h1-2-20" class="i">+                )
+</a><a href="#h1-2-21" id="h1-2-21" class="i">+            }, logFunction@{ log -&gt;
+</a><a href="#h1-2-22" id="h1-2-22" class="i">+                logManager.internalLog(TAG, when (log.level) {
+</a><a href="#h1-2-23" id="h1-2-23" class="i">+                    Level.AV_LOG_ERROR, Level.AV_LOG_FATAL -&gt; LogLevel.ERROR
+</a><a href="#h1-2-24" id="h1-2-24" class="i">+                    Level.AV_LOG_WARNING -&gt; LogLevel.WARN
+</a><a href="#h1-2-25" id="h1-2-25" class="i">+                    Level.AV_LOG_VERBOSE -&gt; LogLevel.VERBOSE
+</a><a href="#h1-2-26" id="h1-2-26" class="i">+                    else -&gt; return@logFunction
+</a><a href="#h1-2-27" id="h1-2-27" class="i">+                }, log.message)
+</a><a href="#h1-2-28" id="h1-2-28" class="i">+            }, { logManager.verbose(it.toString(), &quot;ffmpeg-stats&quot;) }, Executors.newSingleThreadExecutor())
+</a>     }
+ 
+     suspend fun execute(args: Request) {
+</pre>
+</div>
+</body>
+</html>

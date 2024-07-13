@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(logger_history): conversation title - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/73a03b80aece4eaba1a08fad008a37e1c25ba47f.html">73a03b80aece4eaba1a08fad008a37e1c25ba47f</a>
+<b>parent</b> <a href="../commit/e67dc157e61af20f9152b2ac5b497216f854891d.html">e67dc157e61af20f9152b2ac5b497216f854891d</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 27 Mar 2024 19:08:42 +0100
+
+feat(logger_history): conversation title
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a></td><td> | </td><td class="num">61</td><td><span class="i">++++++++++++++++</span><span class="d">---------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt</a></td><td> | </td><td class="num">59</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++</span><span class="d">--------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/data/MessagingCoreObjects.kt</a></td><td> | </td><td class="num">40</td><td><span class="i">++++++++++++++++++++++++++++++++++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+</table></pre><pre>4 files changed, 95 insertions(+), 67 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -37,7 +37,8 @@ class ModDatabase(
+</a>         SQLiteDatabaseHelper.createTablesFromSchema(database, mapOf(
+             &quot;friends&quot; to listOf(
+                 &quot;id INTEGER PRIMARY KEY AUTOINCREMENT&quot;,
+<a href="#h0-0-3" id="h0-0-3" class="d">-                &quot;userId VARCHAR UNIQUE&quot;,
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                &quot;userId CHAR(36) UNIQUE&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+                &quot;dmConversationId VARCHAR(36)&quot;,
+</a>                 &quot;displayName VARCHAR&quot;,
+                 &quot;mutableUsername VARCHAR&quot;,
+                 &quot;bitmojiId VARCHAR&quot;,
+<a href="#h0-1" id="h0-1" class="h">@@ -45,7 +46,7 @@ class ModDatabase(
+</a>             ),
+             &quot;groups&quot; to listOf(
+                 &quot;id INTEGER PRIMARY KEY AUTOINCREMENT&quot;,
+<a href="#h0-1-3" id="h0-1-3" class="d">-                &quot;conversationId VARCHAR UNIQUE&quot;,
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+                &quot;conversationId CHAR(36) UNIQUE&quot;,
+</a>                 &quot;name VARCHAR&quot;,
+                 &quot;participantsCount INTEGER&quot;
+             ),
+<a href="#h0-2" id="h0-2" class="h">@@ -87,13 +88,7 @@ class ModDatabase(
+</a>         return database.rawQuery(&quot;SELECT * FROM groups&quot;, null).use { cursor -&gt;
+             val groups = mutableListOf&lt;MessagingGroupInfo&gt;()
+             while (cursor.moveToNext()) {
+<a href="#h0-2-3" id="h0-2-3" class="d">-                groups.add(
+</a><a href="#h0-2-4" id="h0-2-4" class="d">-                    MessagingGroupInfo(
+</a><a href="#h0-2-5" id="h0-2-5" class="d">-                        conversationId = cursor.getStringOrNull(&quot;conversationId&quot;)!!,
+</a><a href="#h0-2-6" id="h0-2-6" class="d">-                        name = cursor.getStringOrNull(&quot;name&quot;)!!,
+</a><a href="#h0-2-7" id="h0-2-7" class="d">-                        participantsCount = cursor.getInteger(&quot;participantsCount&quot;)
+</a><a href="#h0-2-8" id="h0-2-8" class="d">-                    )
+</a><a href="#h0-2-9" id="h0-2-9" class="d">-                )
+</a><a href="#h0-2-10" id="h0-2-10" class="i">+                groups.add(MessagingGroupInfo.fromCursor(cursor))
+</a>             }
+             groups
+         }
+<a href="#h0-3" id="h0-3" class="h">@@ -104,22 +99,7 @@ class ModDatabase(
+</a>             val friends = mutableListOf&lt;MessagingFriendInfo&gt;()
+             while (cursor.moveToNext()) {
+                 runCatching {
+<a href="#h0-3-3" id="h0-3-3" class="d">-                    friends.add(
+</a><a href="#h0-3-4" id="h0-3-4" class="d">-                        MessagingFriendInfo(
+</a><a href="#h0-3-5" id="h0-3-5" class="d">-                            userId = cursor.getStringOrNull(&quot;userId&quot;)!!,
+</a><a href="#h0-3-6" id="h0-3-6" class="d">-                            displayName = cursor.getStringOrNull(&quot;displayName&quot;),
+</a><a href="#h0-3-7" id="h0-3-7" class="d">-                            mutableUsername = cursor.getStringOrNull(&quot;mutableUsername&quot;)!!,
+</a><a href="#h0-3-8" id="h0-3-8" class="d">-                            bitmojiId = cursor.getStringOrNull(&quot;bitmojiId&quot;),
+</a><a href="#h0-3-9" id="h0-3-9" class="d">-                            selfieId = cursor.getStringOrNull(&quot;selfieId&quot;),
+</a><a href="#h0-3-10" id="h0-3-10" class="d">-                            streaks = cursor.getLongOrNull(&quot;expirationTimestamp&quot;)?.let {
+</a><a href="#h0-3-11" id="h0-3-11" class="d">-                                FriendStreaks(
+</a><a href="#h0-3-12" id="h0-3-12" class="d">-                                    notify = cursor.getInteger(&quot;notify&quot;) == 1,
+</a><a href="#h0-3-13" id="h0-3-13" class="d">-                                    expirationTimestamp = it,
+</a><a href="#h0-3-14" id="h0-3-14" class="d">-                                    length = cursor.getInteger(&quot;length&quot;)
+</a><a href="#h0-3-15" id="h0-3-15" class="d">-                                )
+</a><a href="#h0-3-16" id="h0-3-16" class="d">-                            }
+</a><a href="#h0-3-17" id="h0-3-17" class="d">-                        )
+</a><a href="#h0-3-18" id="h0-3-18" class="d">-                    )
+</a><a href="#h0-3-19" id="h0-3-19" class="i">+                    friends.add(MessagingFriendInfo.fromCursor(cursor))
+</a>                 }.onFailure {
+                     context.log.error(&quot;Failed to parse friend&quot;, it)
+                 }
+<a href="#h0-4" id="h0-4" class="h">@@ -147,9 +127,10 @@ class ModDatabase(
+</a>         executeAsync {
+             try {
+                 database.execSQL(
+<a href="#h0-4-3" id="h0-4-3" class="d">-                    &quot;INSERT OR REPLACE INTO friends (userId, displayName, mutableUsername, bitmojiId, selfieId) VALUES (?, ?, ?, ?, ?)&quot;,
+</a><a href="#h0-4-4" id="h0-4-4" class="i">+                    &quot;INSERT OR REPLACE INTO friends (userId, dmConversationId, displayName, mutableUsername, bitmojiId, selfieId) VALUES (?, ?, ?, ?, ?, ?)&quot;,
+</a>                     arrayOf(
+                         friend.userId,
+<a href="#h0-4-7" id="h0-4-7" class="i">+                        friend.dmConversationId,
+</a>                         friend.displayName,
+                         friend.mutableUsername,
+                         friend.bitmojiId,
+<a href="#h0-5" id="h0-5" class="h">@@ -208,20 +189,14 @@ class ModDatabase(
+</a>     fun getFriendInfo(userId: String): MessagingFriendInfo? {
+         return database.rawQuery(&quot;SELECT * FROM friends LEFT OUTER JOIN streaks ON friends.userId = streaks.id WHERE userId = ?&quot;, arrayOf(userId)).use { cursor -&gt;
+             if (!cursor.moveToFirst()) return@use null
+<a href="#h0-5-3" id="h0-5-3" class="d">-            MessagingFriendInfo(
+</a><a href="#h0-5-4" id="h0-5-4" class="d">-                userId = cursor.getStringOrNull(&quot;userId&quot;)!!,
+</a><a href="#h0-5-5" id="h0-5-5" class="d">-                displayName = cursor.getStringOrNull(&quot;displayName&quot;),
+</a><a href="#h0-5-6" id="h0-5-6" class="d">-                mutableUsername = cursor.getStringOrNull(&quot;mutableUsername&quot;)!!,
+</a><a href="#h0-5-7" id="h0-5-7" class="d">-                bitmojiId = cursor.getStringOrNull(&quot;bitmojiId&quot;),
+</a><a href="#h0-5-8" id="h0-5-8" class="d">-                selfieId = cursor.getStringOrNull(&quot;selfieId&quot;),
+</a><a href="#h0-5-9" id="h0-5-9" class="d">-                streaks = cursor.getLongOrNull(&quot;expirationTimestamp&quot;)?.let {
+</a><a href="#h0-5-10" id="h0-5-10" class="d">-                    FriendStreaks(
+</a><a href="#h0-5-11" id="h0-5-11" class="d">-                        notify = cursor.getInteger(&quot;notify&quot;) == 1,
+</a><a href="#h0-5-12" id="h0-5-12" class="d">-                        expirationTimestamp = it,
+</a><a href="#h0-5-13" id="h0-5-13" class="d">-                        length = cursor.getInteger(&quot;length&quot;)
+</a><a href="#h0-5-14" id="h0-5-14" class="d">-                    )
+</a><a href="#h0-5-15" id="h0-5-15" class="d">-                }
+</a><a href="#h0-5-16" id="h0-5-16" class="d">-            )
+</a><a href="#h0-5-17" id="h0-5-17" class="i">+            MessagingFriendInfo.fromCursor(cursor)
+</a><a href="#h0-5-18" id="h0-5-18" class="i">+        }
+</a><a href="#h0-5-19" id="h0-5-19" class="i">+    }
+</a><a href="#h0-5-20" id="h0-5-20" class="i">+
+</a><a href="#h0-5-21" id="h0-5-21" class="i">+    fun findFriend(conversationId: String): MessagingFriendInfo? {
+</a><a href="#h0-5-22" id="h0-5-22" class="i">+        return database.rawQuery(&quot;SELECT * FROM friends WHERE dmConversationId = ?&quot;, arrayOf(conversationId)).use { cursor -&gt;
+</a><a href="#h0-5-23" id="h0-5-23" class="i">+            if (!cursor.moveToFirst()) return@use null
+</a><a href="#h0-5-24" id="h0-5-24" class="i">+            MessagingFriendInfo.fromCursor(cursor)
+</a>         }
+     }
+ 
+<a href="#h0-6" id="h0-6" class="h">@@ -243,11 +218,7 @@ class ModDatabase(
+</a>     fun getGroupInfo(conversationId: String): MessagingGroupInfo? {
+         return database.rawQuery(&quot;SELECT * FROM groups WHERE conversationId = ?&quot;, arrayOf(conversationId)).use { cursor -&gt;
+             if (!cursor.moveToFirst()) return@use null
+<a href="#h0-6-3" id="h0-6-3" class="d">-            MessagingGroupInfo(
+</a><a href="#h0-6-4" id="h0-6-4" class="d">-                conversationId = cursor.getStringOrNull(&quot;conversationId&quot;)!!,
+</a><a href="#h0-6-5" id="h0-6-5" class="d">-                name = cursor.getStringOrNull(&quot;name&quot;)!!,
+</a><a href="#h0-6-6" id="h0-6-6" class="d">-                participantsCount = cursor.getInteger(&quot;participantsCount&quot;)
+</a><a href="#h0-6-7" id="h0-6-7" class="d">-            )
+</a><a href="#h0-6-8" id="h0-6-8" class="i">+            MessagingGroupInfo.fromCursor(cursor)
+</a>         }
+     }
+ 
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -17,6 +17,7 @@ import androidx.compose.ui.focus.FocusRequester
+</a> import androidx.compose.ui.focus.focusRequester
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.input.pointer.pointerInput
+<a href="#h1-0-3" id="h1-0-3" class="i">+import androidx.compose.ui.text.font.FontWeight
+</a> import androidx.compose.ui.text.style.TextAlign
+ import androidx.compose.ui.unit.dp
+ import androidx.navigation.NavBackStackEntry
+<a href="#h1-1" id="h1-1" class="h">@@ -36,6 +37,8 @@ import me.rhunk.snapenhance.core.features.impl.downloader.decoder.DecodedAttachm
+</a> import me.rhunk.snapenhance.core.features.impl.downloader.decoder.MessageDecoder
+ import me.rhunk.snapenhance.download.DownloadProcessor
+ import me.rhunk.snapenhance.ui.manager.Routes
+<a href="#h1-1-3" id="h1-1-3" class="i">+import java.nio.ByteBuffer
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+import java.util.UUID
+</a> import kotlin.math.absoluteValue
+ 
+ 
+<a href="#h1-2" id="h1-2" class="h">@@ -45,12 +48,15 @@ class LoggerHistoryRoot : Routes.Route() {
+</a>     private var stringFilter by mutableStateOf(&quot;&quot;)
+     private var reverseOrder by mutableStateOf(true)
+ 
+<a href="#h1-2-3" id="h1-2-3" class="d">-    private inline fun decodeMessage(message: LoggedMessage, result: (contentType: ContentType, messageReader: ProtoReader, attachments: List&lt;DecodedAttachment&gt;) -&gt; Unit) {
+</a><a href="#h1-2-4" id="h1-2-4" class="i">+    private inline fun decodeMessage(message: LoggedMessage, result: (senderId: String?, contentType: ContentType, messageReader: ProtoReader, attachments: List&lt;DecodedAttachment&gt;) -&gt; Unit) {
+</a>         runCatching {
+             val messageObject = JsonParser.parseString(String(message.messageData, Charsets.UTF_8)).asJsonObject
+<a href="#h1-2-7" id="h1-2-7" class="i">+            val senderId = messageObject.getAsJsonObject(&quot;mSenderId&quot;)?.getAsJsonArray(&quot;mId&quot;)?.map { it.asByte }?.toByteArray()?.let {
+</a><a href="#h1-2-8" id="h1-2-8" class="i">+                ByteBuffer.wrap(it).run { UUID(long, long) }.toString()
+</a><a href="#h1-2-9" id="h1-2-9" class="i">+            }
+</a>             val messageContent = messageObject.getAsJsonObject(&quot;mMessageContent&quot;)
+             val messageReader = messageContent.getAsJsonArray(&quot;mContent&quot;).map { it.asByte }.toByteArray().let { ProtoReader(it) }
+<a href="#h1-2-12" id="h1-2-12" class="d">-            result(ContentType.fromMessageContainer(messageReader) ?: ContentType.UNKNOWN, messageReader, MessageDecoder.decode(messageContent))
+</a><a href="#h1-2-13" id="h1-2-13" class="i">+            result(senderId, ContentType.fromMessageContainer(messageReader) ?: ContentType.UNKNOWN, messageReader, MessageDecoder.decode(messageContent))
+</a>         }.onFailure {
+             context.log.error(&quot;Failed to decode message&quot;, it)
+         }
+<a href="#h1-3" id="h1-3" class="h">@@ -119,23 +125,32 @@ class LoggerHistoryRoot : Routes.Route() {
+</a> 
+                 LaunchedEffect(Unit, message) {
+                     runCatching {
+<a href="#h1-3-3" id="h1-3-3" class="d">-                        decodeMessage(message) { contentType, messageReader, attachments -&gt;
+</a><a href="#h1-3-4" id="h1-3-4" class="i">+                        decodeMessage(message) { senderId, contentType, messageReader, attachments -&gt;
+</a><a href="#h1-3-5" id="h1-3-5" class="i">+                            val senderUsername = senderId?.let { context.modDatabase.getFriendInfo(it)?.mutableUsername } ?: &quot;unknown sender&quot;
+</a><a href="#h1-3-6" id="h1-3-6" class="i">+
+</a><a href="#h1-3-7" id="h1-3-7" class="i">+                            @Composable
+</a><a href="#h1-3-8" id="h1-3-8" class="i">+                            fun ContentHeader() {
+</a><a href="#h1-3-9" id="h1-3-9" class="i">+                                Text(&quot;$senderUsername (${contentType.toString().lowercase()})&quot;, modifier = Modifier.padding(end = 4.dp), fontWeight = FontWeight.ExtraLight)
+</a><a href="#h1-3-10" id="h1-3-10" class="i">+                            }
+</a><a href="#h1-3-11" id="h1-3-11" class="i">+
+</a>                             if (contentType == ContentType.CHAT) {
+                                 val content = messageReader.getString(2, 1) ?: &quot;[empty chat message]&quot;
+                                 contentView = {
+<a href="#h1-3-15" id="h1-3-15" class="d">-                                    Text(content, modifier = Modifier
+</a><a href="#h1-3-16" id="h1-3-16" class="d">-                                        .fillMaxWidth()
+</a><a href="#h1-3-17" id="h1-3-17" class="d">-                                        .pointerInput(Unit) {
+</a><a href="#h1-3-18" id="h1-3-18" class="d">-                                            detectTapGestures(onLongPress = {
+</a><a href="#h1-3-19" id="h1-3-19" class="d">-                                                context.androidContext.copyToClipboard(content)
+</a><a href="#h1-3-20" id="h1-3-20" class="i">+                                    Column {
+</a><a href="#h1-3-21" id="h1-3-21" class="i">+                                        Text(content, modifier = Modifier
+</a><a href="#h1-3-22" id="h1-3-22" class="i">+                                            .fillMaxWidth()
+</a><a href="#h1-3-23" id="h1-3-23" class="i">+                                            .pointerInput(Unit) {
+</a><a href="#h1-3-24" id="h1-3-24" class="i">+                                                detectTapGestures(onLongPress = {
+</a><a href="#h1-3-25" id="h1-3-25" class="i">+                                                    context.androidContext.copyToClipboard(content)
+</a><a href="#h1-3-26" id="h1-3-26" class="i">+                                                })
+</a>                                             })
+<a href="#h1-3-28" id="h1-3-28" class="d">-                                        })
+</a><a href="#h1-3-29" id="h1-3-29" class="i">+                                        ContentHeader()
+</a><a href="#h1-3-30" id="h1-3-30" class="i">+                                    }
+</a>                                 }
+                                 return@runCatching
+                             }
+                             contentView = {
+                                 Column column@{
+<a href="#h1-3-36" id="h1-3-36" class="d">-                                    Text(&quot;[$contentType]&quot;)
+</a>                                     if (attachments.isEmpty()) return@column
+ 
+                                     FlowRow(
+<a href="#h1-4" id="h1-4" class="h">@@ -164,6 +179,7 @@ class LoggerHistoryRoot : Routes.Route() {
+</a>                                             }
+                                         }
+                                     }
+<a href="#h1-4-3" id="h1-4-3" class="i">+                                    ContentHeader()
+</a>                                 }
+                             }
+                         }
+<a href="#h1-5" id="h1-5" class="h">@@ -194,8 +210,15 @@ class LoggerHistoryRoot : Routes.Route() {
+</a>                 expanded = expanded,
+                 onExpandedChange = { expanded = it },
+             ) {
+<a href="#h1-5-3" id="h1-5-3" class="i">+                fun formatConversationId(conversationId: String?): String? {
+</a><a href="#h1-5-4" id="h1-5-4" class="i">+                    if (conversationId == null) return null
+</a><a href="#h1-5-5" id="h1-5-5" class="i">+                    return context.modDatabase.getGroupInfo(conversationId)?.name?.let { &quot;Group $it&quot; } ?: context.modDatabase.findFriend(conversationId)?.let {
+</a><a href="#h1-5-6" id="h1-5-6" class="i">+                        &quot;Friend &quot; + (it.displayName?.let { name -&gt; &quot;$name (${it.mutableUsername})&quot; } ?: it.mutableUsername)
+</a><a href="#h1-5-7" id="h1-5-7" class="i">+                    } ?: conversationId
+</a><a href="#h1-5-8" id="h1-5-8" class="i">+                }
+</a><a href="#h1-5-9" id="h1-5-9" class="i">+
+</a>                 OutlinedTextField(
+<a href="#h1-5-11" id="h1-5-11" class="d">-                    value = selectedConversation ?: &quot;Select a conversation&quot;,
+</a><a href="#h1-5-12" id="h1-5-12" class="i">+                    value = remember(selectedConversation) { formatConversationId(selectedConversation) ?: &quot;Select a conversation&quot; },
+</a>                     onValueChange = {},
+                     readOnly = true,
+                     modifier = Modifier
+<a href="#h1-6" id="h1-6" class="h">@@ -213,12 +236,12 @@ class LoggerHistoryRoot : Routes.Route() {
+</a>                 }
+ 
+                 ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+<a href="#h1-6-3" id="h1-6-3" class="d">-                    conversations.forEach { conversation -&gt;
+</a><a href="#h1-6-4" id="h1-6-4" class="i">+                    conversations.forEach { conversationId -&gt;
+</a>                         DropdownMenuItem(onClick = {
+<a href="#h1-6-6" id="h1-6-6" class="d">-                            selectedConversation = conversation
+</a><a href="#h1-6-7" id="h1-6-7" class="i">+                            selectedConversation = conversationId
+</a>                             expanded = false
+                         }, text = {
+<a href="#h1-6-10" id="h1-6-10" class="d">-                            Text(conversation)
+</a><a href="#h1-6-11" id="h1-6-11" class="i">+                            Text(remember(conversationId) { formatConversationId(conversationId) ?: &quot;Unknown conversation&quot; })
+</a>                         })
+                     }
+                 }
+<a href="#h1-7" id="h1-7" class="h">@@ -278,7 +301,7 @@ class LoggerHistoryRoot : Routes.Route() {
+</a>                             ) { messageData -&gt;
+                                 if (stringFilter.isEmpty()) return@fetchMessages true
+                                 var isMatch = false
+<a href="#h1-7-3" id="h1-7-3" class="d">-                                decodeMessage(messageData) { contentType, messageReader, _ -&gt;
+</a><a href="#h1-7-4" id="h1-7-4" class="i">+                                decodeMessage(messageData) { _,  contentType, messageReader, _ -&gt;
+</a>                                     if (contentType == ContentType.CHAT) {
+                                         val content = messageReader.getString(2, 1) ?: return@decodeMessage
+                                         isMatch = content.contains(stringFilter, ignoreCase = true)
+<a href="#h1-8" id="h1-8" class="h">@@ -312,6 +335,7 @@ class LoggerHistoryRoot : Routes.Route() {
+</a>                 value = searchValue,
+                 onValueChange = { keyword -&gt;
+                     searchValue = keyword
+<a href="#h1-8-3" id="h1-8-3" class="i">+                    stringFilter = keyword
+</a>                 },
+                 keyboardActions = KeyboardActions(onDone = { focusRequester.freeFocus() }),
+                 modifier = Modifier
+<a href="#h1-9" id="h1-9" class="h">@@ -329,11 +353,6 @@ class LoggerHistoryRoot : Routes.Route() {
+</a>                     cursorColor = MaterialTheme.colorScheme.primary
+                 )
+             )
+<a href="#h1-9-3" id="h1-9-3" class="d">-            ElevatedButton(onClick = {
+</a><a href="#h1-9-4" id="h1-9-4" class="d">-                stringFilter = searchValue
+</a><a href="#h1-9-5" id="h1-9-5" class="d">-            }) {
+</a><a href="#h1-9-6" id="h1-9-6" class="d">-                Text(&quot;Search&quot;)
+</a><a href="#h1-9-7" id="h1-9-7" class="d">-            }
+</a> 
+             LaunchedEffect(Unit) {
+                 focusRequester.requestFocus()
+<b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/MessagingCoreObjects.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/MessagingCoreObjects.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/MessagingCoreObjects.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/MessagingCoreObjects.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,8 +1,13 @@
+</a> package me.rhunk.snapenhance.common.data
+ 
+<a href="#h2-0-2" id="h2-0-2" class="i">+import android.database.Cursor
+</a> import android.os.Parcelable
+ import kotlinx.parcelize.Parcelize
+ import me.rhunk.snapenhance.common.config.FeatureNotice
+<a href="#h2-0-6" id="h2-0-6" class="i">+import me.rhunk.snapenhance.common.util.ktx.getIntOrNull
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+import me.rhunk.snapenhance.common.util.ktx.getInteger
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+import me.rhunk.snapenhance.common.util.ktx.getLongOrNull
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+import me.rhunk.snapenhance.common.util.ktx.getStringOrNull
+</a> import kotlin.time.Duration.Companion.hours
+ 
+ 
+<a href="#h2-1" id="h2-1" class="h">@@ -71,17 +76,48 @@ data class MessagingGroupInfo(
+</a>     val conversationId: String,
+     val name: String,
+     val participantsCount: Int
+<a href="#h2-1-3" id="h2-1-3" class="d">-): Parcelable
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+): Parcelable {
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+    companion object {
+</a><a href="#h2-1-6" id="h2-1-6" class="i">+        fun fromCursor(cursor: Cursor): MessagingGroupInfo {
+</a><a href="#h2-1-7" id="h2-1-7" class="i">+            return MessagingGroupInfo(
+</a><a href="#h2-1-8" id="h2-1-8" class="i">+                conversationId = cursor.getStringOrNull(&quot;conversationId&quot;)!!,
+</a><a href="#h2-1-9" id="h2-1-9" class="i">+                name = cursor.getStringOrNull(&quot;name&quot;)!!,
+</a><a href="#h2-1-10" id="h2-1-10" class="i">+                participantsCount = cursor.getInteger(&quot;participantsCount&quot;)
+</a><a href="#h2-1-11" id="h2-1-11" class="i">+            )
+</a><a href="#h2-1-12" id="h2-1-12" class="i">+        }
+</a><a href="#h2-1-13" id="h2-1-13" class="i">+    }
+</a><a href="#h2-1-14" id="h2-1-14" class="i">+}
+</a> 
+ @Parcelize
+ data class MessagingFriendInfo(
+     val userId: String,
+<a href="#h2-1-19" id="h2-1-19" class="i">+    val dmConversationId: String?,
+</a>     val displayName: String?,
+     val mutableUsername: String,
+     val bitmojiId: String?,
+     val selfieId: String?,
+     var streaks: FriendStreaks?,
+<a href="#h2-1-25" id="h2-1-25" class="d">-): Parcelable
+</a><a href="#h2-1-26" id="h2-1-26" class="i">+): Parcelable {
+</a><a href="#h2-1-27" id="h2-1-27" class="i">+    companion object {
+</a><a href="#h2-1-28" id="h2-1-28" class="i">+        fun fromCursor(cursor: Cursor): MessagingFriendInfo {
+</a><a href="#h2-1-29" id="h2-1-29" class="i">+            return MessagingFriendInfo(
+</a><a href="#h2-1-30" id="h2-1-30" class="i">+                userId = cursor.getStringOrNull(&quot;userId&quot;)!!,
+</a><a href="#h2-1-31" id="h2-1-31" class="i">+                dmConversationId = cursor.getStringOrNull(&quot;dmConversationId&quot;),
+</a><a href="#h2-1-32" id="h2-1-32" class="i">+                displayName = cursor.getStringOrNull(&quot;displayName&quot;),
+</a><a href="#h2-1-33" id="h2-1-33" class="i">+                mutableUsername = cursor.getStringOrNull(&quot;mutableUsername&quot;)!!,
+</a><a href="#h2-1-34" id="h2-1-34" class="i">+                bitmojiId = cursor.getStringOrNull(&quot;bitmojiId&quot;),
+</a><a href="#h2-1-35" id="h2-1-35" class="i">+                selfieId = cursor.getStringOrNull(&quot;selfieId&quot;),
+</a><a href="#h2-1-36" id="h2-1-36" class="i">+                streaks = cursor.getLongOrNull(&quot;expirationTimestamp&quot;)?.let {
+</a><a href="#h2-1-37" id="h2-1-37" class="i">+                    FriendStreaks(
+</a><a href="#h2-1-38" id="h2-1-38" class="i">+                        notify = cursor.getIntOrNull(&quot;notify&quot;) == 1,
+</a><a href="#h2-1-39" id="h2-1-39" class="i">+                        expirationTimestamp = it,
+</a><a href="#h2-1-40" id="h2-1-40" class="i">+                        length = cursor.getIntOrNull(&quot;length&quot;) ?: 0
+</a><a href="#h2-1-41" id="h2-1-41" class="i">+                    )
+</a><a href="#h2-1-42" id="h2-1-42" class="i">+                }
+</a><a href="#h2-1-43" id="h2-1-43" class="i">+            )
+</a><a href="#h2-1-44" id="h2-1-44" class="i">+        }
+</a><a href="#h2-1-45" id="h2-1-45" class="i">+    }
+</a><a href="#h2-1-46" id="h2-1-46" class="i">+}
+</a> 
+ class StoryData(
+     val url: String,
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -261,6 +261,7 @@ class SnapEnhance {
+</a>             val friends = feedEntries.filter { it.friendUserId != null }.map {
+                 MessagingFriendInfo(
+                     it.friendUserId!!,
+<a href="#h3-0-3" id="h3-0-3" class="i">+                    appContext.database.getConversationLinkFromUserId(it.friendUserId!!)?.clientConversationId,
+</a>                     it.friendDisplayName,
+                     it.friendDisplayUsername!!.split(&quot;|&quot;)[1],
+                     it.bitmojiAvatarId,
+<a href="#h3-1" id="h3-1" class="h">@@ -279,6 +280,7 @@ class SnapEnhance {
+</a>                 return appContext.database.getFriendInfo(uuid)?.let {
+                     MessagingFriendInfo(
+                         userId = it.userId!!,
+<a href="#h3-1-3" id="h3-1-3" class="i">+                        dmConversationId = appContext.database.getConversationLinkFromUserId(it.userId!!)?.clientConversationId,
+</a>                         displayName = it.displayName,
+                         mutableUsername = it.mutableUsername!!,
+                         bitmojiId = it.bitmojiAvatarId,
+</pre>
+</div>
+</body>
+</html>

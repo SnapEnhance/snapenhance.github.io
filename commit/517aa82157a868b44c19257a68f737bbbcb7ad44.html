@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core): notifications - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/517aa82157a868b44c19257a68f737bbbcb7ad44.html">517aa82157a868b44c19257a68f737bbbcb7ad44</a>
+<b>parent</b> <a href="../commit/f1a368d44e9cd1c9714d0e0ccaf9d38ac2768ae1.html">f1a368d44e9cd1c9714d0e0ccaf9d38ac2768ae1</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun,  5 Nov 2023 02:32:56 +0100
+
+fix(core): notifications
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt</a></td><td> | </td><td class="num">350</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++</span><span class="d">------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/util/CallbackBuilder.kt</a></td><td> | </td><td class="num">19</td><td><span class="i">++++++++++</span><span class="d">---------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/util/hook/HookAdapter.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">+++++++</span><span class="d">-----</span></td></tr>
+</table></pre><pre>4 files changed, 208 insertions(+), 175 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -12,6 +12,10 @@ import android.os.Bundle
+</a> import android.os.UserHandle
+ import de.robv.android.xposed.XposedBridge
+ import de.robv.android.xposed.XposedHelpers
+<a href="#h0-0-3" id="h0-0-3" class="i">+import kotlinx.coroutines.Dispatchers
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+import kotlinx.coroutines.ExperimentalCoroutinesApi
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+import kotlinx.coroutines.launch
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+import kotlinx.coroutines.withContext
+</a> import me.rhunk.snapenhance.common.data.ContentType
+ import me.rhunk.snapenhance.common.data.MediaReferenceType
+ import me.rhunk.snapenhance.common.data.MessageUpdate
+<a href="#h0-1" id="h0-1" class="h">@@ -33,8 +37,25 @@ import me.rhunk.snapenhance.core.util.ktx.setObjectField
+</a> import me.rhunk.snapenhance.core.util.media.PreviewUtils
+ import me.rhunk.snapenhance.core.wrapper.impl.Message
+ import me.rhunk.snapenhance.core.wrapper.impl.SnapUUID
+<a href="#h0-1-3" id="h0-1-3" class="i">+import kotlin.coroutines.suspendCoroutine
+</a> 
+ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+<a href="#h0-1-6" id="h0-1-6" class="i">+    inner class NotificationData(
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+        val tag: String?,
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+        val id: Int,
+</a><a href="#h0-1-9" id="h0-1-9" class="i">+        var notification: Notification,
+</a><a href="#h0-1-10" id="h0-1-10" class="i">+        val userHandle: UserHandle
+</a><a href="#h0-1-11" id="h0-1-11" class="i">+    ) {
+</a><a href="#h0-1-12" id="h0-1-12" class="i">+        fun send() {
+</a><a href="#h0-1-13" id="h0-1-13" class="i">+            XposedBridge.invokeOriginalMethod(notifyAsUserMethod, notificationManager, arrayOf(
+</a><a href="#h0-1-14" id="h0-1-14" class="i">+                tag, id, notification, userHandle
+</a><a href="#h0-1-15" id="h0-1-15" class="i">+            ))
+</a><a href="#h0-1-16" id="h0-1-16" class="i">+        }
+</a><a href="#h0-1-17" id="h0-1-17" class="i">+
+</a><a href="#h0-1-18" id="h0-1-18" class="i">+        fun copy(tag: String? = this.tag, id: Int = this.id, notification: Notification = this.notification, userHandle: UserHandle = this.userHandle) =
+</a><a href="#h0-1-19" id="h0-1-19" class="i">+            NotificationData(tag, id, notification, userHandle)
+</a><a href="#h0-1-20" id="h0-1-20" class="i">+    }
+</a><a href="#h0-1-21" id="h0-1-21" class="i">+
+</a>     companion object{
+         const val ACTION_REPLY = &quot;me.rhunk.snapenhance.action.notification.REPLY&quot;
+         const val ACTION_DOWNLOAD = &quot;me.rhunk.snapenhance.action.notification.DOWNLOAD&quot;
+<a href="#h0-2" id="h0-2" class="h">@@ -42,9 +63,10 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>         const val SNAPCHAT_NOTIFICATION_GROUP = &quot;snapchat_notification_group&quot;
+     }
+ 
+<a href="#h0-2-3" id="h0-2-3" class="d">-    private val notificationDataQueue = mutableMapOf&lt;Long, NotificationData&gt;() // messageId =&gt; notification
+</a><a href="#h0-2-4" id="h0-2-4" class="d">-    private val cachedMessages = mutableMapOf&lt;String, MutableList&lt;String&gt;&gt;() // conversationId =&gt; cached messages
+</a><a href="#h0-2-5" id="h0-2-5" class="d">-    private val notificationIdMap = mutableMapOf&lt;Int, String&gt;() // notificationId =&gt; conversationId
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+    @OptIn(ExperimentalCoroutinesApi::class)
+</a><a href="#h0-2-7" id="h0-2-7" class="i">+    private val coroutineDispatcher = Dispatchers.IO.limitedParallelism(1)
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+    private val cachedMessages = mutableMapOf&lt;String, MutableMap&lt;Long, String&gt;&gt;() // conversationId =&gt; orderKey, message
+</a><a href="#h0-2-9" id="h0-2-9" class="i">+    private val sentNotifications = mutableMapOf&lt;Int, String&gt;() // notificationId =&gt; conversationId
+</a> 
+     private val notifyAsUserMethod by lazy {
+         XposedHelpers.findMethodExact(
+<a href="#h0-3" id="h0-3" class="h">@@ -56,10 +78,6 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>         )
+     }
+ 
+<a href="#h0-3-3" id="h0-3-3" class="d">-    private val fetchConversationWithMessagesMethod by lazy {
+</a><a href="#h0-3-4" id="h0-3-4" class="d">-        context.classCache.conversationManager.methods.first { it.name == &quot;fetchConversationWithMessages&quot;}
+</a><a href="#h0-3-5" id="h0-3-5" class="d">-    }
+</a><a href="#h0-3-6" id="h0-3-6" class="d">-
+</a>     private val notificationManager by lazy {
+         context.androidContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+     }
+<a href="#h0-4" id="h0-4" class="h">@@ -70,11 +88,17 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>         context.config.messaging.betterNotifications.get()
+     }
+ 
+<a href="#h0-4-3" id="h0-4-3" class="i">+    private fun newNotificationBuilder(notification: Notification) = XposedHelpers.newInstance(
+</a><a href="#h0-4-4" id="h0-4-4" class="i">+        Notification.Builder::class.java,
+</a><a href="#h0-4-5" id="h0-4-5" class="i">+        context.androidContext,
+</a><a href="#h0-4-6" id="h0-4-6" class="i">+        notification
+</a><a href="#h0-4-7" id="h0-4-7" class="i">+    ) as Notification.Builder
+</a><a href="#h0-4-8" id="h0-4-8" class="i">+
+</a>     private fun setNotificationText(notification: Notification, conversationId: String) {
+         val messageText = StringBuilder().apply {
+<a href="#h0-4-11" id="h0-4-11" class="d">-            cachedMessages.computeIfAbsent(conversationId) { mutableListOf() }.forEach {
+</a><a href="#h0-4-12" id="h0-4-12" class="i">+            cachedMessages.computeIfAbsent(conversationId) { sortedMapOf() }.forEach {
+</a>                 if (isNotEmpty()) append(&quot;\n&quot;)
+<a href="#h0-4-14" id="h0-4-14" class="d">-                append(it)
+</a><a href="#h0-4-15" id="h0-4-15" class="i">+                append(it.value)
+</a>             }
+         }.toString()
+ 
+<a href="#h0-5" id="h0-5" class="h">@@ -91,14 +115,7 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>         }
+     }
+ 
+<a href="#h0-5-3" id="h0-5-3" class="d">-    private fun setupNotificationActionButtons(contentType: ContentType, conversationId: String, messageId: Long, notificationData: NotificationData) {
+</a><a href="#h0-5-4" id="h0-5-4" class="d">-
+</a><a href="#h0-5-5" id="h0-5-5" class="d">-        val notificationBuilder = XposedHelpers.newInstance(
+</a><a href="#h0-5-6" id="h0-5-6" class="d">-            Notification.Builder::class.java,
+</a><a href="#h0-5-7" id="h0-5-7" class="d">-            context.androidContext,
+</a><a href="#h0-5-8" id="h0-5-8" class="d">-            notificationData.notification
+</a><a href="#h0-5-9" id="h0-5-9" class="d">-        ) as Notification.Builder
+</a><a href="#h0-5-10" id="h0-5-10" class="d">-
+</a><a href="#h0-5-11" id="h0-5-11" class="i">+    private fun setupNotificationActionButtons(contentType: ContentType, conversationId: String, message: Message, notificationData: NotificationData) {
+</a>         val actions = mutableListOf&lt;Notification.Action&gt;()
+         actions.addAll(notificationData.notification.actions)
+ 
+<a href="#h0-6" id="h0-6" class="h">@@ -108,7 +125,7 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>             val intent = SnapWidgetBroadcastReceiverHelper.create(remoteAction) {
+                 putExtra(&quot;conversation_id&quot;, conversationId)
+                 putExtra(&quot;notification_id&quot;, notificationData.id)
+<a href="#h0-6-3" id="h0-6-3" class="d">-                putExtra(&quot;message_id&quot;, messageId)
+</a><a href="#h0-6-4" id="h0-6-4" class="i">+                putExtra(&quot;client_message_id&quot;, message.messageDescriptor!!.messageId!!)
+</a>             }
+ 
+             val action = Notification.Action.Builder(null, title, PendingIntent.getBroadcast(
+<a href="#h0-7" id="h0-7" class="h">@@ -137,7 +154,9 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>             betterNotificationFilter.contains(&quot;mark_as_read_button&quot;)
+         }) {}
+ 
+<a href="#h0-7-3" id="h0-7-3" class="d">-        notificationBuilder.setActions(*actions.toTypedArray())
+</a><a href="#h0-7-4" id="h0-7-4" class="i">+        val notificationBuilder = newNotificationBuilder(notificationData.notification).apply {
+</a><a href="#h0-7-5" id="h0-7-5" class="i">+            setActions(*actions.toTypedArray())
+</a><a href="#h0-7-6" id="h0-7-6" class="i">+        }
+</a>         notificationData.notification = notificationBuilder.build()
+     }
+ 
+<a href="#h0-8" id="h0-8" class="h">@@ -145,15 +164,26 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>         context.event.subscribe(SnapWidgetBroadcastReceiveEvent::class) { event -&gt;
+             val intent = event.intent ?: return@subscribe
+             val conversationId = intent.getStringExtra(&quot;conversation_id&quot;) ?: return@subscribe
+<a href="#h0-8-3" id="h0-8-3" class="d">-            val messageId = intent.getLongExtra(&quot;message_id&quot;, -1)
+</a><a href="#h0-8-4" id="h0-8-4" class="i">+            val clientMessageId = intent.getLongExtra(&quot;client_message_id&quot;, -1)
+</a>             val notificationId = intent.getIntExtra(&quot;notification_id&quot;, -1)
+ 
+             val updateNotification: (Int, (Notification) -&gt; Unit) -&gt; Unit = { id, notificationBuilder -&gt;
+                 notificationManager.activeNotifications.firstOrNull { it.id == id }?.let {
+                     notificationBuilder(it.notification)
+<a href="#h0-8-10" id="h0-8-10" class="d">-                    XposedBridge.invokeOriginalMethod(notifyAsUserMethod, notificationManager, arrayOf(
+</a><a href="#h0-8-11" id="h0-8-11" class="d">-                        it.tag, it.id, it.notification, it.user
+</a><a href="#h0-8-12" id="h0-8-12" class="d">-                    ))
+</a><a href="#h0-8-13" id="h0-8-13" class="i">+                    NotificationData(it.tag, it.id, it.notification, it.user).send()
+</a><a href="#h0-8-14" id="h0-8-14" class="i">+                }
+</a><a href="#h0-8-15" id="h0-8-15" class="i">+            }
+</a><a href="#h0-8-16" id="h0-8-16" class="i">+
+</a><a href="#h0-8-17" id="h0-8-17" class="i">+            suspend fun appendNotificationText(input: String) {
+</a><a href="#h0-8-18" id="h0-8-18" class="i">+                cachedMessages.computeIfAbsent(conversationId) { sortedMapOf() }.let {
+</a><a href="#h0-8-19" id="h0-8-19" class="i">+                    it[(it.keys.lastOrNull() ?: 0) + 1L] = input
+</a><a href="#h0-8-20" id="h0-8-20" class="i">+                }
+</a><a href="#h0-8-21" id="h0-8-21" class="i">+
+</a><a href="#h0-8-22" id="h0-8-22" class="i">+                withContext(Dispatchers.Main) {
+</a><a href="#h0-8-23" id="h0-8-23" class="i">+                    updateNotification(notificationId) { notification -&gt;
+</a><a href="#h0-8-24" id="h0-8-24" class="i">+                        notification.flags = notification.flags or Notification.FLAG_ONLY_ALERT_ONCE
+</a><a href="#h0-8-25" id="h0-8-25" class="i">+                        setNotificationText(notification, conversationId)
+</a><a href="#h0-8-26" id="h0-8-26" class="i">+                    }
+</a>                 }
+             }
+ 
+<a href="#h0-9" id="h0-9" class="h">@@ -161,23 +191,22 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>                 ACTION_REPLY -&gt; {
+                     val input = RemoteInput.getResultsFromIntent(intent).getCharSequence(&quot;chat_reply_input&quot;)
+                         .toString()
+<a href="#h0-9-3" id="h0-9-3" class="i">+                    val myUser = context.database.myUserId.let { context.database.getFriendInfo(it) } ?: return@subscribe
+</a> 
+<a href="#h0-9-5" id="h0-9-5" class="d">-                    context.database.myUserId.let { context.database.getFriendInfo(it) }?.let { myUser -&gt;
+</a><a href="#h0-9-6" id="h0-9-6" class="d">-                        cachedMessages.computeIfAbsent(conversationId) { mutableListOf() }.add(&quot;${myUser.displayName}: $input&quot;)
+</a><a href="#h0-9-7" id="h0-9-7" class="d">-
+</a><a href="#h0-9-8" id="h0-9-8" class="d">-                        updateNotification(notificationId) { notification -&gt;
+</a><a href="#h0-9-9" id="h0-9-9" class="d">-                            notification.flags = notification.flags or Notification.FLAG_ONLY_ALERT_ONCE
+</a><a href="#h0-9-10" id="h0-9-10" class="d">-                            setNotificationText(notification, conversationId)
+</a><a href="#h0-9-11" id="h0-9-11" class="i">+                    context.messageSender.sendChatMessage(listOf(SnapUUID.fromString(conversationId)), input, onError = {
+</a><a href="#h0-9-12" id="h0-9-12" class="i">+                        context.longToast(&quot;Failed to send message: $it&quot;)
+</a><a href="#h0-9-13" id="h0-9-13" class="i">+                        context.coroutineScope.launch(coroutineDispatcher) {
+</a><a href="#h0-9-14" id="h0-9-14" class="i">+                            appendNotificationText(&quot;Failed to send message: $it&quot;)
+</a>                         }
+<a href="#h0-9-16" id="h0-9-16" class="d">-
+</a><a href="#h0-9-17" id="h0-9-17" class="d">-                        context.messageSender.sendChatMessage(listOf(SnapUUID.fromString(conversationId)), input, onError = {
+</a><a href="#h0-9-18" id="h0-9-18" class="d">-                            context.longToast(&quot;Failed to send message: $it&quot;)
+</a><a href="#h0-9-19" id="h0-9-19" class="d">-                        })
+</a><a href="#h0-9-20" id="h0-9-20" class="d">-                    }
+</a><a href="#h0-9-21" id="h0-9-21" class="i">+                    }, onSuccess = {
+</a><a href="#h0-9-22" id="h0-9-22" class="i">+                        context.coroutineScope.launch(coroutineDispatcher) {
+</a><a href="#h0-9-23" id="h0-9-23" class="i">+                            appendNotificationText(&quot;${myUser.displayName ?: myUser.mutableUsername}: $input&quot;)
+</a><a href="#h0-9-24" id="h0-9-24" class="i">+                        }
+</a><a href="#h0-9-25" id="h0-9-25" class="i">+                    })
+</a>                 }
+                 ACTION_DOWNLOAD -&gt; {
+                     runCatching {
+<a href="#h0-9-29" id="h0-9-29" class="d">-                        context.feature(MediaDownloader::class).downloadMessageId(messageId, isPreview = false)
+</a><a href="#h0-9-30" id="h0-9-30" class="i">+                        context.feature(MediaDownloader::class).downloadMessageId(clientMessageId, isPreview = false)
+</a>                     }.onFailure {
+                         context.longToast(it)
+                     }
+<a href="#h0-10" id="h0-10" class="h">@@ -193,7 +222,7 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a> 
+                         conversationManager.displayedMessages(
+                             conversationId,
+<a href="#h0-10-3" id="h0-10-3" class="d">-                            messageId,
+</a><a href="#h0-10-4" id="h0-10-4" class="i">+                            clientMessageId,
+</a>                             onResult = {
+                                 if (it != null) {
+                                     context.log.error(&quot;Failed to mark conversation as read: $it&quot;)
+<a href="#h0-11" id="h0-11" class="h">@@ -202,10 +231,10 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>                             }
+                         )
+ 
+<a href="#h0-11-3" id="h0-11-3" class="d">-                        val conversationMessage = context.database.getConversationMessageFromId(messageId) ?: return@subscribe
+</a><a href="#h0-11-4" id="h0-11-4" class="i">+                        val conversationMessage = context.database.getConversationMessageFromId(clientMessageId) ?: return@subscribe
+</a> 
+                         if (conversationMessage.contentType == ContentType.SNAP.id) {
+<a href="#h0-11-7" id="h0-11-7" class="d">-                            conversationManager.updateMessage(conversationId, messageId, MessageUpdate.READ) {
+</a><a href="#h0-11-8" id="h0-11-8" class="i">+                            conversationManager.updateMessage(conversationId, clientMessageId, MessageUpdate.READ) {
+</a>                                 if (it != null) {
+                                     context.log.error(&quot;Failed to open snap: $it&quot;)
+                                     context.shortToast(&quot;Failed to open snap&quot;)
+<a href="#h0-12" id="h0-12" class="h">@@ -225,117 +254,111 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>         }
+     }
+ 
+<a href="#h0-12-3" id="h0-12-3" class="d">-    private fun fetchMessagesResult(conversationId: String, messages: List&lt;Message&gt;) {
+</a><a href="#h0-12-4" id="h0-12-4" class="d">-        val sendNotificationData = { notificationData: NotificationData, forceCreate: Boolean  -&gt;
+</a><a href="#h0-12-5" id="h0-12-5" class="d">-            val notificationId = if (forceCreate) System.nanoTime().toInt() else notificationData.id
+</a><a href="#h0-12-6" id="h0-12-6" class="d">-            notificationIdMap.computeIfAbsent(notificationId) { conversationId }
+</a><a href="#h0-12-7" id="h0-12-7" class="d">-            if (betterNotificationFilter.contains(&quot;group&quot;)) {
+</a><a href="#h0-12-8" id="h0-12-8" class="d">-                runCatching {
+</a><a href="#h0-12-9" id="h0-12-9" class="d">-                    notificationData.notification.setObjectField(&quot;mGroupKey&quot;, SNAPCHAT_NOTIFICATION_GROUP)
+</a><a href="#h0-12-10" id="h0-12-10" class="d">-
+</a><a href="#h0-12-11" id="h0-12-11" class="d">-                    val summaryNotification = Notification.Builder(context.androidContext, notificationData.notification.channelId)
+</a><a href="#h0-12-12" id="h0-12-12" class="d">-                        .setSmallIcon(notificationData.notification.smallIcon)
+</a><a href="#h0-12-13" id="h0-12-13" class="d">-                        .setGroup(SNAPCHAT_NOTIFICATION_GROUP)
+</a><a href="#h0-12-14" id="h0-12-14" class="d">-                        .setGroupSummary(true)
+</a><a href="#h0-12-15" id="h0-12-15" class="d">-                        .setAutoCancel(true)
+</a><a href="#h0-12-16" id="h0-12-16" class="d">-                        .setOnlyAlertOnce(true)
+</a><a href="#h0-12-17" id="h0-12-17" class="d">-                        .build()
+</a><a href="#h0-12-18" id="h0-12-18" class="d">-
+</a><a href="#h0-12-19" id="h0-12-19" class="d">-                    if (notificationManager.activeNotifications.firstOrNull { it.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 } == null) {
+</a><a href="#h0-12-20" id="h0-12-20" class="d">-                        notificationManager.notify(notificationData.tag, notificationData.id, summaryNotification)
+</a><a href="#h0-12-21" id="h0-12-21" class="d">-                    }
+</a><a href="#h0-12-22" id="h0-12-22" class="d">-                }.onFailure {
+</a><a href="#h0-12-23" id="h0-12-23" class="d">-                    context.log.warn(&quot;Failed to set notification group key: ${it.stackTraceToString()}&quot;, featureKey)
+</a><a href="#h0-12-24" id="h0-12-24" class="i">+    private fun sendNotification(message: Message, notificationData: NotificationData, forceCreate: Boolean) {
+</a><a href="#h0-12-25" id="h0-12-25" class="i">+        val conversationId = message.messageDescriptor?.conversationId.toString()
+</a><a href="#h0-12-26" id="h0-12-26" class="i">+        val notificationId = if (forceCreate) System.nanoTime().toInt() else notificationData.id
+</a><a href="#h0-12-27" id="h0-12-27" class="i">+        sentNotifications.computeIfAbsent(notificationId) { conversationId }
+</a><a href="#h0-12-28" id="h0-12-28" class="i">+
+</a><a href="#h0-12-29" id="h0-12-29" class="i">+        if (betterNotificationFilter.contains(&quot;group&quot;)) {
+</a><a href="#h0-12-30" id="h0-12-30" class="i">+            runCatching {
+</a><a href="#h0-12-31" id="h0-12-31" class="i">+                if (notificationManager.activeNotifications.firstOrNull {
+</a><a href="#h0-12-32" id="h0-12-32" class="i">+                    it.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0
+</a><a href="#h0-12-33" id="h0-12-33" class="i">+                } == null) {
+</a><a href="#h0-12-34" id="h0-12-34" class="i">+                    notificationManager.notify(
+</a><a href="#h0-12-35" id="h0-12-35" class="i">+                        notificationData.tag,
+</a><a href="#h0-12-36" id="h0-12-36" class="i">+                        System.nanoTime().toInt(),
+</a><a href="#h0-12-37" id="h0-12-37" class="i">+                        Notification.Builder(context.androidContext, notificationData.notification.channelId)
+</a><a href="#h0-12-38" id="h0-12-38" class="i">+                            .setSmallIcon(notificationData.notification.smallIcon)
+</a><a href="#h0-12-39" id="h0-12-39" class="i">+                            .setGroup(SNAPCHAT_NOTIFICATION_GROUP)
+</a><a href="#h0-12-40" id="h0-12-40" class="i">+                            .setGroupSummary(true)
+</a><a href="#h0-12-41" id="h0-12-41" class="i">+                            .setAutoCancel(true)
+</a><a href="#h0-12-42" id="h0-12-42" class="i">+                            .setOnlyAlertOnce(true)
+</a><a href="#h0-12-43" id="h0-12-43" class="i">+                            .build()
+</a><a href="#h0-12-44" id="h0-12-44" class="i">+                    )
+</a>                 }
+<a href="#h0-12-46" id="h0-12-46" class="i">+            }.onFailure {
+</a><a href="#h0-12-47" id="h0-12-47" class="i">+                context.log.warn(&quot;Failed to set notification group key: ${it.stackTraceToString()}&quot;, featureKey)
+</a>             }
+<a href="#h0-12-49" id="h0-12-49" class="d">-
+</a><a href="#h0-12-50" id="h0-12-50" class="d">-            XposedBridge.invokeOriginalMethod(notifyAsUserMethod, notificationManager, arrayOf(
+</a><a href="#h0-12-51" id="h0-12-51" class="d">-                notificationData.tag, if (forceCreate) System.nanoTime().toInt() else notificationData.id, notificationData.notification, notificationData.userHandle
+</a><a href="#h0-12-52" id="h0-12-52" class="d">-            ))
+</a>         }
+ 
+<a href="#h0-12-55" id="h0-12-55" class="d">-        synchronized(notificationDataQueue) {
+</a><a href="#h0-12-56" id="h0-12-56" class="d">-            notificationDataQueue.entries.onEach { (messageId, notificationData) -&gt;
+</a><a href="#h0-12-57" id="h0-12-57" class="d">-                val snapMessage = messages.firstOrNull { message -&gt; message.orderKey == messageId } ?: return
+</a><a href="#h0-12-58" id="h0-12-58" class="d">-                val senderUsername by lazy {
+</a><a href="#h0-12-59" id="h0-12-59" class="d">-                    context.database.getFriendInfo(snapMessage.senderId.toString())?.let {
+</a><a href="#h0-12-60" id="h0-12-60" class="d">-                        it.displayName ?: it.mutableUsername
+</a><a href="#h0-12-61" id="h0-12-61" class="d">-                    }
+</a><a href="#h0-12-62" id="h0-12-62" class="d">-                }
+</a><a href="#h0-12-63" id="h0-12-63" class="i">+        notificationData.copy(id = notificationId).also {
+</a><a href="#h0-12-64" id="h0-12-64" class="i">+            setupNotificationActionButtons(message.messageContent!!.contentType!!, conversationId, message, it)
+</a><a href="#h0-12-65" id="h0-12-65" class="i">+        }.send()
+</a><a href="#h0-12-66" id="h0-12-66" class="i">+    }
+</a> 
+<a href="#h0-12-68" id="h0-12-68" class="d">-                val contentType = snapMessage.messageContent!!.contentType ?: return@onEach
+</a><a href="#h0-12-69" id="h0-12-69" class="d">-                val contentData = snapMessage.messageContent!!.content!!
+</a><a href="#h0-12-70" id="h0-12-70" class="i">+    private fun onMessageReceived(data: NotificationData, message: Message) {
+</a><a href="#h0-12-71" id="h0-12-71" class="i">+        val conversationId = message.messageDescriptor?.conversationId.toString()
+</a><a href="#h0-12-72" id="h0-12-72" class="i">+        val orderKey = message.orderKey ?: return
+</a><a href="#h0-12-73" id="h0-12-73" class="i">+        val senderUsername by lazy {
+</a><a href="#h0-12-74" id="h0-12-74" class="i">+            context.database.getFriendInfo(message.senderId.toString())?.let {
+</a><a href="#h0-12-75" id="h0-12-75" class="i">+                it.displayName ?: it.mutableUsername
+</a><a href="#h0-12-76" id="h0-12-76" class="i">+            } ?: &quot;Unknown&quot;
+</a><a href="#h0-12-77" id="h0-12-77" class="i">+        }
+</a> 
+<a href="#h0-12-79" id="h0-12-79" class="d">-                val formatUsername: (String) -&gt; String = { &quot;$senderUsername: $it&quot; }
+</a><a href="#h0-12-80" id="h0-12-80" class="d">-                val notificationCache = cachedMessages.let { it.computeIfAbsent(conversationId) { mutableListOf() } }
+</a><a href="#h0-12-81" id="h0-12-81" class="d">-                val appendNotifications: () -&gt; Unit = { setNotificationText(notificationData.notification, conversationId)}
+</a><a href="#h0-12-82" id="h0-12-82" class="i">+        val formatUsername: (String) -&gt; String = { &quot;$senderUsername: $it&quot; }
+</a><a href="#h0-12-83" id="h0-12-83" class="i">+        val notificationCache = cachedMessages.let { it.computeIfAbsent(conversationId) { sortedMapOf() } }
+</a><a href="#h0-12-84" id="h0-12-84" class="i">+        val appendNotifications: () -&gt; Unit = { setNotificationText(data.notification, conversationId)}
+</a> 
+<a href="#h0-12-86" id="h0-12-86" class="d">-                setupNotificationActionButtons(contentType, conversationId, snapMessage.messageDescriptor!!.messageId!!, notificationData)
+</a> 
+<a href="#h0-12-88" id="h0-12-88" class="d">-                when (contentType) {
+</a><a href="#h0-12-89" id="h0-12-89" class="d">-                    ContentType.NOTE -&gt; {
+</a><a href="#h0-12-90" id="h0-12-90" class="d">-                        notificationCache.add(formatUsername(&quot;sent audio note&quot;))
+</a><a href="#h0-12-91" id="h0-12-91" class="d">-                        appendNotifications()
+</a><a href="#h0-12-92" id="h0-12-92" class="d">-                    }
+</a><a href="#h0-12-93" id="h0-12-93" class="d">-                    ContentType.CHAT -&gt; {
+</a><a href="#h0-12-94" id="h0-12-94" class="d">-                        ProtoReader(contentData).getString(2, 1)?.trim()?.let {
+</a><a href="#h0-12-95" id="h0-12-95" class="d">-                            notificationCache.add(formatUsername(it))
+</a><a href="#h0-12-96" id="h0-12-96" class="d">-                        }
+</a><a href="#h0-12-97" id="h0-12-97" class="d">-                        appendNotifications()
+</a><a href="#h0-12-98" id="h0-12-98" class="d">-                    }
+</a><a href="#h0-12-99" id="h0-12-99" class="d">-                    ContentType.SNAP, ContentType.EXTERNAL_MEDIA -&gt; {
+</a><a href="#h0-12-100" id="h0-12-100" class="d">-                        val mediaReferences = MessageDecoder.getMediaReferences(
+</a><a href="#h0-12-101" id="h0-12-101" class="d">-                            messageContent = context.gson.toJsonTree(snapMessage.messageContent!!.instanceNonNull())
+</a><a href="#h0-12-102" id="h0-12-102" class="d">-                        )
+</a><a href="#h0-12-103" id="h0-12-103" class="i">+        when (val contentType = message.messageContent!!.contentType) {
+</a><a href="#h0-12-104" id="h0-12-104" class="i">+            ContentType.NOTE -&gt; {
+</a><a href="#h0-12-105" id="h0-12-105" class="i">+                notificationCache[orderKey] = formatUsername(&quot;sent audio note&quot;)
+</a><a href="#h0-12-106" id="h0-12-106" class="i">+                appendNotifications()
+</a><a href="#h0-12-107" id="h0-12-107" class="i">+            }
+</a><a href="#h0-12-108" id="h0-12-108" class="i">+            ContentType.CHAT -&gt; {
+</a><a href="#h0-12-109" id="h0-12-109" class="i">+                ProtoReader(message.messageContent!!.content!!).getString(2, 1)?.trim()?.let {
+</a><a href="#h0-12-110" id="h0-12-110" class="i">+                    notificationCache[orderKey] = formatUsername(it)
+</a><a href="#h0-12-111" id="h0-12-111" class="i">+                }
+</a><a href="#h0-12-112" id="h0-12-112" class="i">+                appendNotifications()
+</a><a href="#h0-12-113" id="h0-12-113" class="i">+            }
+</a><a href="#h0-12-114" id="h0-12-114" class="i">+            ContentType.SNAP, ContentType.EXTERNAL_MEDIA -&gt; {
+</a><a href="#h0-12-115" id="h0-12-115" class="i">+                val mediaReferences = MessageDecoder.getMediaReferences(
+</a><a href="#h0-12-116" id="h0-12-116" class="i">+                    messageContent = context.gson.toJsonTree(message.messageContent!!.instanceNonNull())
+</a><a href="#h0-12-117" id="h0-12-117" class="i">+                )
+</a> 
+<a href="#h0-12-119" id="h0-12-119" class="d">-                        val mediaReferenceKeys = mediaReferences.map { reference -&gt;
+</a><a href="#h0-12-120" id="h0-12-120" class="d">-                            reference.asJsonObject.getAsJsonArray(&quot;mContentObject&quot;).map { it.asByte }.toByteArray()
+</a><a href="#h0-12-121" id="h0-12-121" class="d">-                        }
+</a><a href="#h0-12-122" id="h0-12-122" class="i">+                val mediaReferenceKeys = mediaReferences.map { reference -&gt;
+</a><a href="#h0-12-123" id="h0-12-123" class="i">+                    reference.asJsonObject.getAsJsonArray(&quot;mContentObject&quot;).map { it.asByte }.toByteArray()
+</a><a href="#h0-12-124" id="h0-12-124" class="i">+                }
+</a> 
+<a href="#h0-12-126" id="h0-12-126" class="d">-                        MessageDecoder.decode(snapMessage.messageContent!!).firstOrNull()?.also { media -&gt;
+</a><a href="#h0-12-127" id="h0-12-127" class="d">-                            val mediaType = MediaReferenceType.valueOf(mediaReferences.first().asJsonObject[&quot;mMediaType&quot;].asString)
+</a><a href="#h0-12-128" id="h0-12-128" class="i">+                MessageDecoder.decode(message.messageContent!!).firstOrNull()?.also { media -&gt;
+</a><a href="#h0-12-129" id="h0-12-129" class="i">+                    val mediaType = MediaReferenceType.valueOf(mediaReferences.first().asJsonObject[&quot;mMediaType&quot;].asString)
+</a> 
+<a href="#h0-12-131" id="h0-12-131" class="d">-                            runCatching {
+</a><a href="#h0-12-132" id="h0-12-132" class="d">-                                val downloadedMedia = RemoteMediaResolver.downloadBoltMedia(mediaReferenceKeys.first(), decryptionCallback =  {
+</a><a href="#h0-12-133" id="h0-12-133" class="d">-                                    media.attachmentInfo?.encryption?.decryptInputStream(it) ?: it
+</a><a href="#h0-12-134" id="h0-12-134" class="d">-                                }) ?: throw Throwable(&quot;Unable to download media&quot;)
+</a><a href="#h0-12-135" id="h0-12-135" class="i">+                    runCatching {
+</a><a href="#h0-12-136" id="h0-12-136" class="i">+                        val downloadedMedia = RemoteMediaResolver.downloadBoltMedia(mediaReferenceKeys.first(), decryptionCallback =  {
+</a><a href="#h0-12-137" id="h0-12-137" class="i">+                            media.attachmentInfo?.encryption?.decryptInputStream(it) ?: it
+</a><a href="#h0-12-138" id="h0-12-138" class="i">+                        }) ?: throw Throwable(&quot;Unable to download media&quot;)
+</a> 
+<a href="#h0-12-140" id="h0-12-140" class="d">-                                val downloadedMedias = mutableMapOf&lt;SplitMediaAssetType, ByteArray&gt;()
+</a><a href="#h0-12-141" id="h0-12-141" class="i">+                        val downloadedMedias = mutableMapOf&lt;SplitMediaAssetType, ByteArray&gt;()
+</a> 
+<a href="#h0-12-143" id="h0-12-143" class="d">-                                MediaDownloaderHelper.getSplitElements(downloadedMedia.inputStream()) { type, inputStream -&gt;
+</a><a href="#h0-12-144" id="h0-12-144" class="d">-                                    downloadedMedias[type] = inputStream.readBytes()
+</a><a href="#h0-12-145" id="h0-12-145" class="d">-                                }
+</a><a href="#h0-12-146" id="h0-12-146" class="i">+                        MediaDownloaderHelper.getSplitElements(downloadedMedia.inputStream()) { type, inputStream -&gt;
+</a><a href="#h0-12-147" id="h0-12-147" class="i">+                            downloadedMedias[type] = inputStream.readBytes()
+</a><a href="#h0-12-148" id="h0-12-148" class="i">+                        }
+</a> 
+<a href="#h0-12-150" id="h0-12-150" class="d">-                                var bitmapPreview = PreviewUtils.createPreview(downloadedMedias[SplitMediaAssetType.ORIGINAL]!!, mediaType.name.contains(&quot;VIDEO&quot;))!!
+</a><a href="#h0-12-151" id="h0-12-151" class="i">+                        var bitmapPreview = PreviewUtils.createPreview(downloadedMedias[SplitMediaAssetType.ORIGINAL]!!, mediaType.name.contains(&quot;VIDEO&quot;))!!
+</a> 
+<a href="#h0-12-153" id="h0-12-153" class="d">-                                downloadedMedias[SplitMediaAssetType.OVERLAY]?.let {
+</a><a href="#h0-12-154" id="h0-12-154" class="d">-                                    bitmapPreview = PreviewUtils.mergeBitmapOverlay(bitmapPreview, BitmapFactory.decodeByteArray(it, 0, it.size))
+</a><a href="#h0-12-155" id="h0-12-155" class="d">-                                }
+</a><a href="#h0-12-156" id="h0-12-156" class="i">+                        downloadedMedias[SplitMediaAssetType.OVERLAY]?.let {
+</a><a href="#h0-12-157" id="h0-12-157" class="i">+                            bitmapPreview = PreviewUtils.mergeBitmapOverlay(bitmapPreview, BitmapFactory.decodeByteArray(it, 0, it.size))
+</a><a href="#h0-12-158" id="h0-12-158" class="i">+                        }
+</a> 
+<a href="#h0-12-160" id="h0-12-160" class="d">-                                val notificationBuilder = XposedHelpers.newInstance(
+</a><a href="#h0-12-161" id="h0-12-161" class="d">-                                    Notification.Builder::class.java,
+</a><a href="#h0-12-162" id="h0-12-162" class="d">-                                    context.androidContext,
+</a><a href="#h0-12-163" id="h0-12-163" class="d">-                                    notificationData.notification
+</a><a href="#h0-12-164" id="h0-12-164" class="d">-                                ) as Notification.Builder
+</a><a href="#h0-12-165" id="h0-12-165" class="d">-                                notificationBuilder.setLargeIcon(bitmapPreview)
+</a><a href="#h0-12-166" id="h0-12-166" class="d">-                                notificationBuilder.style = Notification.BigPictureStyle().bigPicture(bitmapPreview).bigLargeIcon(null as Bitmap?)
+</a><a href="#h0-12-167" id="h0-12-167" class="d">-
+</a><a href="#h0-12-168" id="h0-12-168" class="d">-                                sendNotificationData(notificationData.copy(notification = notificationBuilder.build()), true)
+</a><a href="#h0-12-169" id="h0-12-169" class="d">-                                return@onEach
+</a><a href="#h0-12-170" id="h0-12-170" class="d">-                            }.onFailure {
+</a><a href="#h0-12-171" id="h0-12-171" class="d">-                                context.log.error(&quot;Failed to send preview notification&quot;, it)
+</a><a href="#h0-12-172" id="h0-12-172" class="d">-                            }
+</a><a href="#h0-12-173" id="h0-12-173" class="i">+                        val notificationBuilder = newNotificationBuilder(data.notification).apply {
+</a><a href="#h0-12-174" id="h0-12-174" class="i">+                            setLargeIcon(bitmapPreview)
+</a><a href="#h0-12-175" id="h0-12-175" class="i">+                            style = Notification.BigPictureStyle().bigPicture(bitmapPreview).bigLargeIcon(null as Bitmap?)
+</a>                         }
+<a href="#h0-12-177" id="h0-12-177" class="d">-                    }
+</a><a href="#h0-12-178" id="h0-12-178" class="d">-                    else -&gt; {
+</a><a href="#h0-12-179" id="h0-12-179" class="d">-                        notificationCache.add(formatUsername(&quot;sent ${contentType.name.lowercase()}&quot;))
+</a><a href="#h0-12-180" id="h0-12-180" class="d">-                        appendNotifications()
+</a><a href="#h0-12-181" id="h0-12-181" class="i">+
+</a><a href="#h0-12-182" id="h0-12-182" class="i">+                        sendNotification(message, data.copy(notification = notificationBuilder.build()), true)
+</a><a href="#h0-12-183" id="h0-12-183" class="i">+                        return
+</a><a href="#h0-12-184" id="h0-12-184" class="i">+                    }.onFailure {
+</a><a href="#h0-12-185" id="h0-12-185" class="i">+                        context.log.error(&quot;Failed to send preview notification&quot;, it)
+</a>                     }
+                 }
+<a href="#h0-12-188" id="h0-12-188" class="d">-
+</a><a href="#h0-12-189" id="h0-12-189" class="d">-                sendNotificationData(notificationData, false)
+</a><a href="#h0-12-190" id="h0-12-190" class="d">-            }.clear()
+</a><a href="#h0-12-191" id="h0-12-191" class="i">+            }
+</a><a href="#h0-12-192" id="h0-12-192" class="i">+            else -&gt; {
+</a><a href="#h0-12-193" id="h0-12-193" class="i">+                notificationCache[orderKey] = formatUsername(&quot;sent ${contentType?.name?.lowercase()}&quot;)
+</a><a href="#h0-12-194" id="h0-12-194" class="i">+                appendNotifications()
+</a><a href="#h0-12-195" id="h0-12-195" class="i">+            }
+</a>         }
+<a href="#h0-12-197" id="h0-12-197" class="i">+
+</a><a href="#h0-12-198" id="h0-12-198" class="i">+        sendNotification(message, data, false)
+</a>     }
+ 
+     override fun init() {
+<a href="#h0-13" id="h0-13" class="h">@@ -343,39 +366,53 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a> 
+         notifyAsUserMethod.hook(HookStage.BEFORE) { param -&gt;
+             val notificationData = NotificationData(param.argNullable(0), param.arg(1), param.arg(2), param.arg(3))
+<a href="#h0-13-3" id="h0-13-3" class="i">+            val extras = notificationData.notification.extras.getBundle(&quot;system_notification_extras&quot;)?: return@hook
+</a> 
+<a href="#h0-13-5" id="h0-13-5" class="d">-            val extras: Bundle = notificationData.notification.extras.getBundle(&quot;system_notification_extras&quot;)?: return@hook
+</a><a href="#h0-13-6" id="h0-13-6" class="d">-
+</a><a href="#h0-13-7" id="h0-13-7" class="d">-            val messageId = extras.getString(&quot;message_id&quot;) ?: return@hook
+</a><a href="#h0-13-8" id="h0-13-8" class="d">-            val notificationType = extras.getString(&quot;notification_type&quot;) ?: return@hook
+</a><a href="#h0-13-9" id="h0-13-9" class="d">-            val conversationId = extras.getString(&quot;conversation_id&quot;) ?: return@hook
+</a><a href="#h0-13-10" id="h0-13-10" class="i">+            if (betterNotificationFilter.contains(&quot;group&quot;)) {
+</a><a href="#h0-13-11" id="h0-13-11" class="i">+                notificationData.notification.setObjectField(&quot;mGroupKey&quot;, SNAPCHAT_NOTIFICATION_GROUP)
+</a><a href="#h0-13-12" id="h0-13-12" class="i">+            }
+</a> 
+<a href="#h0-13-14" id="h0-13-14" class="d">-            if (betterNotificationFilter.map { it.uppercase() }.none {
+</a><a href="#h0-13-15" id="h0-13-15" class="d">-                    notificationType.contains(it)
+</a><a href="#h0-13-16" id="h0-13-16" class="d">-                }) return@hook
+</a><a href="#h0-13-17" id="h0-13-17" class="i">+            val conversationId = extras.getString(&quot;conversation_id&quot;).also { id -&gt;
+</a><a href="#h0-13-18" id="h0-13-18" class="i">+                sentNotifications.computeIfAbsent(notificationData.id) { id ?: &quot;&quot; }
+</a><a href="#h0-13-19" id="h0-13-19" class="i">+            } ?: return@hook
+</a> 
+<a href="#h0-13-21" id="h0-13-21" class="d">-            synchronized(notificationDataQueue) {
+</a><a href="#h0-13-22" id="h0-13-22" class="d">-                notificationDataQueue[messageId.toLong()] = notificationData
+</a><a href="#h0-13-23" id="h0-13-23" class="d">-            }
+</a><a href="#h0-13-24" id="h0-13-24" class="i">+            val serverMessageId = extras.getString(&quot;message_id&quot;) ?: return@hook
+</a><a href="#h0-13-25" id="h0-13-25" class="i">+            val notificationType = extras.getString(&quot;notification_type&quot;) ?: return@hook
+</a> 
+<a href="#h0-13-27" id="h0-13-27" class="d">-            context.feature(Messaging::class).conversationManager?.fetchConversationWithMessages(conversationId, onSuccess = { messages -&gt;
+</a><a href="#h0-13-28" id="h0-13-28" class="d">-                fetchMessagesResult(conversationId, messages)
+</a><a href="#h0-13-29" id="h0-13-29" class="d">-            }, onError = {
+</a><a href="#h0-13-30" id="h0-13-30" class="d">-                context.log.error(&quot;Failed to fetch conversation with messages: $it&quot;)
+</a><a href="#h0-13-31" id="h0-13-31" class="d">-            })
+</a><a href="#h0-13-32" id="h0-13-32" class="i">+            if (betterNotificationFilter.none { notificationType.contains(it, ignoreCase = true) }) return@hook
+</a> 
+             param.setResult(null)
+<a href="#h0-13-35" id="h0-13-35" class="i">+            val conversationManager = context.feature(Messaging::class).conversationManager ?: return@hook
+</a><a href="#h0-13-36" id="h0-13-36" class="i">+
+</a><a href="#h0-13-37" id="h0-13-37" class="i">+            context.coroutineScope.launch(coroutineDispatcher) {
+</a><a href="#h0-13-38" id="h0-13-38" class="i">+                suspendCoroutine { continuation -&gt;
+</a><a href="#h0-13-39" id="h0-13-39" class="i">+                    conversationManager.fetchMessageByServerId(conversationId, serverMessageId, onSuccess = {
+</a><a href="#h0-13-40" id="h0-13-40" class="i">+                        onMessageReceived(notificationData, it)
+</a><a href="#h0-13-41" id="h0-13-41" class="i">+                        continuation.resumeWith(Result.success(Unit))
+</a><a href="#h0-13-42" id="h0-13-42" class="i">+                    }, onError = {
+</a><a href="#h0-13-43" id="h0-13-43" class="i">+                        context.log.error(&quot;Failed to fetch message id ${serverMessageId}: $it&quot;)
+</a><a href="#h0-13-44" id="h0-13-44" class="i">+                        continuation.resumeWith(Result.success(Unit))
+</a><a href="#h0-13-45" id="h0-13-45" class="i">+                    })
+</a><a href="#h0-13-46" id="h0-13-46" class="i">+                }
+</a><a href="#h0-13-47" id="h0-13-47" class="i">+            }
+</a>         }
+ 
+<a href="#h0-13-50" id="h0-13-50" class="d">-        XposedHelpers.findMethodExact(
+</a><a href="#h0-13-51" id="h0-13-51" class="d">-            NotificationManager::class.java,
+</a><a href="#h0-13-52" id="h0-13-52" class="d">-            &quot;cancelAsUser&quot;, String::class.java,
+</a><a href="#h0-13-53" id="h0-13-53" class="d">-            Int::class.javaPrimitiveType,
+</a><a href="#h0-13-54" id="h0-13-54" class="d">-            UserHandle::class.java
+</a><a href="#h0-13-55" id="h0-13-55" class="d">-        ).hook(HookStage.BEFORE) { param -&gt;
+</a><a href="#h0-13-56" id="h0-13-56" class="i">+        NotificationManager::class.java.declaredMethods.find {
+</a><a href="#h0-13-57" id="h0-13-57" class="i">+            it.name == &quot;cancelAsUser&quot;
+</a><a href="#h0-13-58" id="h0-13-58" class="i">+        }?.hook(HookStage.AFTER) { param -&gt;
+</a>             val notificationId = param.arg&lt;Int&gt;(1)
+<a href="#h0-13-60" id="h0-13-60" class="d">-            notificationIdMap[notificationId]?.let {
+</a><a href="#h0-13-61" id="h0-13-61" class="d">-                cachedMessages[it]?.clear()
+</a><a href="#h0-13-62" id="h0-13-62" class="i">+
+</a><a href="#h0-13-63" id="h0-13-63" class="i">+            context.coroutineScope.launch(coroutineDispatcher) {
+</a><a href="#h0-13-64" id="h0-13-64" class="i">+                sentNotifications[notificationId]?.let {
+</a><a href="#h0-13-65" id="h0-13-65" class="i">+                    cachedMessages[it]?.clear()
+</a><a href="#h0-13-66" id="h0-13-66" class="i">+                }
+</a><a href="#h0-13-67" id="h0-13-67" class="i">+                sentNotifications.remove(notificationId)
+</a><a href="#h0-13-68" id="h0-13-68" class="i">+            }
+</a><a href="#h0-13-69" id="h0-13-69" class="i">+
+</a><a href="#h0-13-70" id="h0-13-70" class="i">+            notificationManager.activeNotifications.let { notifications -&gt;
+</a><a href="#h0-13-71" id="h0-13-71" class="i">+                if (notifications.all { it.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 }) {
+</a><a href="#h0-13-72" id="h0-13-72" class="i">+                    notifications.forEach { param.invokeOriginal(arrayOf(it.tag, it.id, it.user)) }
+</a><a href="#h0-13-73" id="h0-13-73" class="i">+                }
+</a>             }
+         }
+ 
+<a href="#h0-14" id="h0-14" class="h">@@ -398,11 +435,4 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>                 }
+         }
+     }
+<a href="#h0-14-3" id="h0-14-3" class="d">-
+</a><a href="#h0-14-4" id="h0-14-4" class="d">-    data class NotificationData(
+</a><a href="#h0-14-5" id="h0-14-5" class="d">-        val tag: String?,
+</a><a href="#h0-14-6" id="h0-14-6" class="d">-        val id: Int,
+</a><a href="#h0-14-7" id="h0-14-7" class="d">-        var notification: Notification,
+</a><a href="#h0-14-8" id="h0-14-8" class="d">-        val userHandle: UserHandle
+</a><a href="#h0-14-9" id="h0-14-9" class="d">-    )
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/CallbackBuilder.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/CallbackBuilder.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/CallbackBuilder.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/CallbackBuilder.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -73,15 +73,16 @@ class CallbackBuilder(
+</a>             //compute the args for the constructor with null or default primitive values
+             val args = constructor.parameterTypes.map { type: Class&lt;*&gt; -&gt;
+                 if (type.isPrimitive) {
+<a href="#h1-0-3" id="h1-0-3" class="d">-                    when (type.name) {
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-                        &quot;boolean&quot; -&gt; return@map false
+</a><a href="#h1-0-5" id="h1-0-5" class="d">-                        &quot;byte&quot; -&gt; return@map 0.toByte()
+</a><a href="#h1-0-6" id="h1-0-6" class="d">-                        &quot;char&quot; -&gt; return@map 0.toChar()
+</a><a href="#h1-0-7" id="h1-0-7" class="d">-                        &quot;short&quot; -&gt; return@map 0.toShort()
+</a><a href="#h1-0-8" id="h1-0-8" class="d">-                        &quot;int&quot; -&gt; return@map 0
+</a><a href="#h1-0-9" id="h1-0-9" class="d">-                        &quot;long&quot; -&gt; return@map 0L
+</a><a href="#h1-0-10" id="h1-0-10" class="d">-                        &quot;float&quot; -&gt; return@map 0f
+</a><a href="#h1-0-11" id="h1-0-11" class="d">-                        &quot;double&quot; -&gt; return@map 0.0
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+                    return@map when (type.name) {
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+                        &quot;boolean&quot; -&gt; false
+</a><a href="#h1-0-14" id="h1-0-14" class="i">+                        &quot;byte&quot; -&gt; 0.toByte()
+</a><a href="#h1-0-15" id="h1-0-15" class="i">+                        &quot;char&quot; -&gt; 0.toChar()
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+                        &quot;short&quot; -&gt; 0.toShort()
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+                        &quot;int&quot; -&gt; 0
+</a><a href="#h1-0-18" id="h1-0-18" class="i">+                        &quot;long&quot; -&gt; 0L
+</a><a href="#h1-0-19" id="h1-0-19" class="i">+                        &quot;float&quot; -&gt; 0f
+</a><a href="#h1-0-20" id="h1-0-20" class="i">+                        &quot;double&quot; -&gt; 0.0
+</a><a href="#h1-0-21" id="h1-0-21" class="i">+                        else -&gt; null
+</a>                     }
+                 }
+                 null
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/hook/HookAdapter.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/hook/HookAdapter.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/hook/HookAdapter.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/hook/HookAdapter.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -58,7 +58,7 @@ class HookAdapter(
+</a>         return XposedBridge.invokeOriginalMethod(method(), thisObject(), args())
+     }
+ 
+<a href="#h2-0-3" id="h2-0-3" class="d">-    fun invokeOriginal(args: Array&lt;Any&gt;): Any? {
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+    fun invokeOriginal(args: Array&lt;Any?&gt;): Any? {
+</a>         return XposedBridge.invokeOriginalMethod(method(), thisObject(), args)
+     }
+ 
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -3,6 +3,7 @@ package me.rhunk.snapenhance.core.wrapper.impl
+</a> import me.rhunk.snapenhance.common.data.MessageUpdate
+ import me.rhunk.snapenhance.core.ModContext
+ import me.rhunk.snapenhance.core.util.CallbackBuilder
+<a href="#h3-0-3" id="h3-0-3" class="i">+import me.rhunk.snapenhance.core.util.ktx.setObjectField
+</a> import me.rhunk.snapenhance.core.wrapper.AbstractWrapper
+ 
+ typealias CallbackResult = (error: String?) -&gt; Unit
+<a href="#h3-1" id="h3-1" class="h">@@ -63,7 +64,7 @@ class ConversationManager(
+</a>     fun displayedMessages(conversationId: String, messageId: Long, onResult: CallbackResult = {}) {
+         displayedMessagesMethod.invoke(
+             instanceNonNull(),
+<a href="#h3-1-3" id="h3-1-3" class="d">-            conversationId.toSnapUUID(),
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+            conversationId.toSnapUUID().instanceNonNull(),
+</a>             messageId,
+             CallbackBuilder(context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;Callback&quot;))
+                 .override(&quot;onSuccess&quot;) { onResult(null) }
+<a href="#h3-2" id="h3-2" class="h">@@ -87,16 +88,17 @@ class ConversationManager(
+</a>     }
+ 
+     fun fetchMessageByServerId(conversationId: String, serverMessageId: String, onSuccess: (Message) -&gt; Unit, onError: (error: String) -&gt; Unit) {
+<a href="#h3-2-3" id="h3-2-3" class="d">-        val serverMessageIdentifier = context.classCache.serverMessageIdentifier
+</a><a href="#h3-2-4" id="h3-2-4" class="d">-            .getConstructor(context.classCache.snapUUID, Long::class.javaPrimitiveType)
+</a><a href="#h3-2-5" id="h3-2-5" class="d">-            .newInstance(conversationId.toSnapUUID().instanceNonNull(), serverMessageId.toLong())
+</a><a href="#h3-2-6" id="h3-2-6" class="i">+        val serverMessageIdentifier = CallbackBuilder.createEmptyObject(context.classCache.serverMessageIdentifier.constructors.first())?.apply {
+</a><a href="#h3-2-7" id="h3-2-7" class="i">+            setObjectField(&quot;mServerConversationId&quot;, conversationId.toSnapUUID().instanceNonNull())
+</a><a href="#h3-2-8" id="h3-2-8" class="i">+            setObjectField(&quot;mServerMessageId&quot;, serverMessageId.toLong())
+</a><a href="#h3-2-9" id="h3-2-9" class="i">+        }
+</a> 
+         fetchMessageByServerId.invoke(
+             instanceNonNull(),
+             serverMessageIdentifier,
+             CallbackBuilder(context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;FetchMessageCallback&quot;))
+                 .override(&quot;onFetchMessageComplete&quot;) { param -&gt;
+<a href="#h3-2-16" id="h3-2-16" class="d">-                    onSuccess(Message(param.arg(1)))
+</a><a href="#h3-2-17" id="h3-2-17" class="i">+                    onSuccess(Message(param.arg(0)))
+</a>                 }
+                 .override(&quot;onError&quot;) {
+                     onError(it.arg&lt;Any&gt;(0).toString())
+</pre>
+</div>
+</body>
+</html>

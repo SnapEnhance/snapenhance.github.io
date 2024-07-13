@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(composer_hooks): log crash - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/ddf1edb35dcc216cd1377300c097470796f6e3ba.html">ddf1edb35dcc216cd1377300c097470796f6e3ba</a>
+<b>parent</b> <a href="../commit/475326dd48c9e0d080925eab1b8914824d13f6e4.html">475326dd48c9e0d080925eab1b8914824d13f6e4</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 28 Apr 2024 18:02:52 +0200
+
+fix(composer_hooks): log crash
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+</table></pre><pre>2 files changed, 3 insertions(+), 1 deletion(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -6,6 +6,7 @@ import android.content.Context
+</a> import android.content.Intent
+ import android.content.ServiceConnection
+ import android.os.*
+<a href="#h0-0-3" id="h0-0-3" class="i">+import android.util.Log
+</a> import de.robv.android.xposed.XposedHelpers
+ import me.rhunk.snapenhance.bridge.AccountStorage
+ import me.rhunk.snapenhance.bridge.BridgeInterface
+<a href="#h0-1" id="h0-1" class="h">@@ -108,6 +109,7 @@ class BridgeClient(
+</a>         return runCatching {
+             block()
+         }.getOrElse {
+<a href="#h0-1-3" id="h0-1-3" class="i">+            Log.e(&quot;SnapEnhance&quot;, &quot;service call failed&quot;, it)
+</a>             if (it is DeadObjectException) {
+                 context.softRestartApp()
+             }
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -167,7 +167,7 @@ class ComposerHooks: Feature(&quot;ComposerHooks&quot;, loadParams = FeatureLoadParams.ACT
+</a>             &quot;log&quot; -&gt; {
+                 if (argc &lt; 3) return false
+                 val logLevel = composerMarshaller.getUntyped(1) as? String ?: return false
+<a href="#h1-0-3" id="h1-0-3" class="d">-                val message = composerMarshaller.getUntyped(2) as? String ?: return false
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+                val message = (composerMarshaller.getUntyped(2) as? String)?.takeIf { it.length &lt; 1024 * 512 } ?: return false
+</a> 
+                 val tag = &quot;ComposerLogs&quot;
+ 
+</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core/ui_tweaks): hide friend suggestions - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/3b0ed89fbefdc8b19fe034709907d3612ec4a754.html">3b0ed89fbefdc8b19fe034709907d3612ec4a754</a>
+<b>parent</b> <a href="../commit/4fd268c4dc9131d83648701d9a524a604f666c53.html">4fd268c4dc9131d83648701d9a524a604f666c53</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 26 Jan 2024 23:38:34 +0100
+
+fix(core/ui_tweaks): hide friend suggestions
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/UITweaks.kt</a></td><td> | </td><td class="num">58</td><td><span class="i">++++++++++++++++++++++++</span><span class="d">----------------------------------</span></td></tr>
+</table></pre><pre>1 file changed, 24 insertions(+), 34 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/UITweaks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/UITweaks.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/UITweaks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/UITweaks.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -21,7 +21,6 @@ import me.rhunk.snapenhance.core.util.ktx.getIdentifier
+</a> class UITweaks : Feature(&quot;UITweaks&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+     private val identifierCache = mutableMapOf&lt;String, Int&gt;()
+ 
+<a href="#h0-0-3" id="h0-0-3" class="d">-    @SuppressLint(&quot;DiscouragedApi&quot;)
+</a>     fun getId(name: String, defType: String): Int {
+         return identifierCache.getOrPut(&quot;$name:$defType&quot;) {
+             context.resources.getIdentifier(name, defType)
+<a href="#h0-1" id="h0-1" class="h">@@ -36,9 +35,6 @@ class UITweaks : Feature(&quot;UITweaks&quot;, loadParams = FeatureLoadParams.ACTIVITY_CRE
+</a>         event.canceled = true
+     }
+ 
+<a href="#h0-1-3" id="h0-1-3" class="d">-    private var surfaceViewAspectRatio: Float = 0f
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-
+</a><a href="#h0-1-5" id="h0-1-5" class="d">-    @SuppressLint(&quot;DiscouragedApi&quot;, &quot;InternalInsetResource&quot;)
+</a>     override fun onActivityCreate() {
+         val blockAds by context.config.global.blockAds
+         val hiddenElements by context.config.userInterface.hideUiComponents
+<a href="#h0-2" id="h0-2" class="h">@@ -77,25 +73,33 @@ class UITweaks : Feature(&quot;UITweaks&quot;, loadParams = FeatureLoadParams.ACTIVITY_CRE
+</a> 
+         var friendCardFrameSize: Size? = null
+ 
+<a href="#h0-2-3" id="h0-2-3" class="d">-        context.event.subscribe(BindViewEvent::class, { hideStorySuggestions.contains(&quot;hide_suggested_friend_stories&quot;) }) { event -&gt;
+</a><a href="#h0-2-4" id="h0-2-4" class="d">-            if (event.view.id != friendCardFrame) return@subscribe
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+        context.event.subscribe(BindViewEvent::class, { hideStorySuggestions.isNotEmpty() }) { event -&gt;
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+            if (event.view is FrameLayout &amp;&amp;
+</a><a href="#h0-2-7" id="h0-2-7" class="i">+                hideStorySuggestions.contains(&quot;hide_friend_suggestions&quot;) &amp;&amp;
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+                event.prevModel.toString().startsWith(&quot;DFFriendSuggestionCardViewModel&quot;)
+</a><a href="#h0-2-9" id="h0-2-9" class="i">+            ) {
+</a><a href="#h0-2-10" id="h0-2-10" class="i">+                event.view.layoutParams.apply { width = 0; height = 0 }
+</a><a href="#h0-2-11" id="h0-2-11" class="i">+                return@subscribe
+</a><a href="#h0-2-12" id="h0-2-12" class="i">+            }
+</a> 
+<a href="#h0-2-14" id="h0-2-14" class="d">-            val friendStoryData = event.prevModel::class.java.findFieldsToString(event.prevModel, once = true) { _, value -&gt;
+</a><a href="#h0-2-15" id="h0-2-15" class="d">-                value.contains(&quot;FriendStoryData&quot;)
+</a><a href="#h0-2-16" id="h0-2-16" class="d">-            }.firstOrNull()?.get(event.prevModel) ?: return@subscribe
+</a><a href="#h0-2-17" id="h0-2-17" class="i">+            if (event.view.id == friendCardFrame &amp;&amp; hideStorySuggestions.contains(&quot;hide_suggested_friend_stories&quot;)) {
+</a><a href="#h0-2-18" id="h0-2-18" class="i">+                val friendStoryData = event.prevModel::class.java.findFieldsToString(event.prevModel, once = true) { _, value -&gt;
+</a><a href="#h0-2-19" id="h0-2-19" class="i">+                    value.contains(&quot;FriendStoryData&quot;)
+</a><a href="#h0-2-20" id="h0-2-20" class="i">+                }.firstOrNull()?.get(event.prevModel) ?: return@subscribe
+</a> 
+<a href="#h0-2-22" id="h0-2-22" class="d">-            event.view.layoutParams.apply {
+</a><a href="#h0-2-23" id="h0-2-23" class="d">-                if (friendCardFrameSize == null &amp;&amp; width &gt; 0 &amp;&amp; height &gt; 0) {
+</a><a href="#h0-2-24" id="h0-2-24" class="d">-                    friendCardFrameSize = Size(width, height)
+</a><a href="#h0-2-25" id="h0-2-25" class="d">-                }
+</a><a href="#h0-2-26" id="h0-2-26" class="i">+                event.view.layoutParams.apply {
+</a><a href="#h0-2-27" id="h0-2-27" class="i">+                    if (friendCardFrameSize == null &amp;&amp; width &gt; 0 &amp;&amp; height &gt; 0) {
+</a><a href="#h0-2-28" id="h0-2-28" class="i">+                        friendCardFrameSize = Size(width, height)
+</a><a href="#h0-2-29" id="h0-2-29" class="i">+                    }
+</a> 
+<a href="#h0-2-31" id="h0-2-31" class="d">-                if (friendStoryData.toString().contains(&quot;isFriendOfFriend=true&quot;)) {
+</a><a href="#h0-2-32" id="h0-2-32" class="d">-                    width = 0
+</a><a href="#h0-2-33" id="h0-2-33" class="d">-                    height = 0
+</a><a href="#h0-2-34" id="h0-2-34" class="d">-                } else {
+</a><a href="#h0-2-35" id="h0-2-35" class="d">-                    friendCardFrameSize?.let {
+</a><a href="#h0-2-36" id="h0-2-36" class="d">-                        width = it.width
+</a><a href="#h0-2-37" id="h0-2-37" class="d">-                        height = it.height
+</a><a href="#h0-2-38" id="h0-2-38" class="i">+                    if (friendStoryData.toString().contains(&quot;isFriendOfFriend=true&quot;)) {
+</a><a href="#h0-2-39" id="h0-2-39" class="i">+                        width = 0
+</a><a href="#h0-2-40" id="h0-2-40" class="i">+                        height = 0
+</a><a href="#h0-2-41" id="h0-2-41" class="i">+                    } else {
+</a><a href="#h0-2-42" id="h0-2-42" class="i">+                        friendCardFrameSize?.let {
+</a><a href="#h0-2-43" id="h0-2-43" class="i">+                            width = it.width
+</a><a href="#h0-2-44" id="h0-2-44" class="i">+                            height = it.height
+</a><a href="#h0-2-45" id="h0-2-45" class="i">+                        }
+</a>                     }
+                 }
+             }
+<a href="#h0-3" id="h0-3" class="h">@@ -105,20 +109,6 @@ class UITweaks : Feature(&quot;UITweaks&quot;, loadParams = FeatureLoadParams.ACTIVITY_CRE
+</a>             val viewId = event.view.id
+             val view = event.view
+ 
+<a href="#h0-3-3" id="h0-3-3" class="d">-            //mappings?
+</a><a href="#h0-3-4" id="h0-3-4" class="d">-            if (hideStorySuggestions.contains(&quot;hide_friend_suggestions&quot;) &amp;&amp; view.javaClass.superclass?.name?.endsWith(&quot;StackDrawLayout&quot;) == true) {
+</a><a href="#h0-3-5" id="h0-3-5" class="d">-                val layoutParams = view.layoutParams as? FrameLayout.LayoutParams ?: return@subscribe
+</a><a href="#h0-3-6" id="h0-3-6" class="d">-                if (layoutParams.width == -1 &amp;&amp;
+</a><a href="#h0-3-7" id="h0-3-7" class="d">-                    layoutParams.height == -2 &amp;&amp;
+</a><a href="#h0-3-8" id="h0-3-8" class="d">-                    view.javaClass.let { clazz -&gt;
+</a><a href="#h0-3-9" id="h0-3-9" class="d">-                        clazz.methods.any { it.returnType == SpannableString::class.java} &amp;&amp;
+</a><a href="#h0-3-10" id="h0-3-10" class="d">-                        clazz.constructors.any { it.parameterCount == 1 &amp;&amp; it.parameterTypes[0] == Context::class.java }
+</a><a href="#h0-3-11" id="h0-3-11" class="d">-                    }
+</a><a href="#h0-3-12" id="h0-3-12" class="d">-                ) {
+</a><a href="#h0-3-13" id="h0-3-13" class="d">-                    hideStorySection(event)
+</a><a href="#h0-3-14" id="h0-3-14" class="d">-                }
+</a><a href="#h0-3-15" id="h0-3-15" class="d">-            }
+</a><a href="#h0-3-16" id="h0-3-16" class="d">-
+</a>             if (blockAds &amp;&amp; viewId == getId(&quot;df_promoted_story&quot;, &quot;id&quot;)) {
+                 hideStorySection(event)
+             }
+</pre>
+</div>
+</body>
+</html>

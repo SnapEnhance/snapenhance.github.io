@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core): database cache - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/9ff818b546a398052e1a9e1183d507713f433354.html">9ff818b546a398052e1a9e1183d507713f433354</a>
+<b>parent</b> <a href="../commit/759840bd10a9f468b15bf14149dbe4f5bbe76640.html">759840bd10a9f468b15bf14149dbe4f5bbe76640</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat,  3 Feb 2024 19:21:37 +0100
+
+fix(core): database cache
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++</span><span class="d">---</span></td></tr>
+</table></pre><pre>1 file changed, 3 insertions(+), 3 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -33,7 +33,8 @@ class DatabaseAccess(
+</a>     private val openedDatabases = mutableMapOf&lt;DatabaseType, SQLiteDatabase&gt;()
+ 
+     private fun useDatabase(database: DatabaseType, writeMode: Boolean = false): SQLiteDatabase? {
+<a href="#h0-0-3" id="h0-0-3" class="d">-        if (openedDatabases.containsKey(database) &amp;&amp; openedDatabases[database]?.isOpen == true) {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        // only cache read-only databases
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+        if (!writeMode &amp;&amp; openedDatabases.containsKey(database) &amp;&amp; openedDatabases[database]?.isOpen == true) {
+</a>             return openedDatabases[database]
+         }
+ 
+<a href="#h0-1" id="h0-1" class="h">@@ -54,12 +55,11 @@ class DatabaseAccess(
+</a>             )
+         }.onFailure {
+             context.log.error(&quot;Failed to open database ${database.fileName}!&quot;, it)
+<a href="#h0-1-3" id="h0-1-3" class="d">-        }.getOrNull()?.also {
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+        }.getOrNull()?.takeIf { !writeMode }?.also {
+</a>             openedDatabases[database] = it
+         }
+     }
+ 
+<a href="#h0-1-9" id="h0-1-9" class="d">-
+</a>     private fun &lt;T&gt; SQLiteDatabase.performOperation(query: SQLiteDatabase.() -&gt; T?): T? {
+         return runCatching {
+             if (NativeLib.initialized &amp;&amp; openedDatabases[DatabaseType.ARROYO] == this) {
+</pre>
+</div>
+</body>
+</html>

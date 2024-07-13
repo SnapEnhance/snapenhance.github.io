@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core): BridgeClient safe calls - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/759840bd10a9f468b15bf14149dbe4f5bbe76640.html">759840bd10a9f468b15bf14149dbe4f5bbe76640</a>
+<b>parent</b> <a href="../commit/d79610e29ec623e17880811960995c6b85f07843.html">d79610e29ec623e17880811960995c6b85f07843</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat,  3 Feb 2024 18:47:41 +0100
+
+fix(core): BridgeClient safe calls
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></td><td> | </td><td class="num">95</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">------------------------</span></td></tr>
+</table></pre><pre>1 file changed, 66 insertions(+), 29 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -6,6 +6,7 @@ import android.content.Context
+</a> import android.content.Intent
+ import android.content.ServiceConnection
+ import android.os.Build
+<a href="#h0-0-3" id="h0-0-3" class="i">+import android.os.DeadObjectException
+</a> import android.os.Handler
+ import android.os.HandlerThread
+ import android.os.IBinder
+<a href="#h0-1" id="h0-1" class="h">@@ -105,66 +106,102 @@ class BridgeClient(
+</a>         exitProcess(0)
+     }
+ 
+<a href="#h0-1-3" id="h0-1-3" class="d">-    fun broadcastLog(tag: String, level: String, message: String) = service.broadcastLog(tag, level, message)
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+    private fun &lt;T&gt; safeServiceCall(block: () -&gt; T): T {
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+        return runCatching {
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+            block()
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+        }.getOrElse {
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+            context.log.error(&quot;failed to call service&quot;, it)
+</a><a href="#h0-1-9" id="h0-1-9" class="i">+            if (it is DeadObjectException) {
+</a><a href="#h0-1-10" id="h0-1-10" class="i">+                context.softRestartApp()
+</a><a href="#h0-1-11" id="h0-1-11" class="i">+            }
+</a><a href="#h0-1-12" id="h0-1-12" class="i">+            throw it
+</a><a href="#h0-1-13" id="h0-1-13" class="i">+        }
+</a><a href="#h0-1-14" id="h0-1-14" class="i">+    }
+</a><a href="#h0-1-15" id="h0-1-15" class="i">+
+</a><a href="#h0-1-16" id="h0-1-16" class="i">+    fun broadcastLog(tag: String, level: String, message: String) {
+</a><a href="#h0-1-17" id="h0-1-17" class="i">+        safeServiceCall { service.broadcastLog(tag, level, message) }
+</a><a href="#h0-1-18" id="h0-1-18" class="i">+    }
+</a> 
+     //TODO: use interfaces instead of direct file access
+     fun createAndReadFile(
+         fileType: BridgeFileType,
+         defaultContent: ByteArray
+<a href="#h0-1-24" id="h0-1-24" class="d">-    ): ByteArray = service.fileOperation(FileActionType.CREATE_AND_READ.ordinal, fileType.value, defaultContent)
+</a><a href="#h0-1-25" id="h0-1-25" class="i">+    ): ByteArray = safeServiceCall {
+</a><a href="#h0-1-26" id="h0-1-26" class="i">+        service.fileOperation(FileActionType.CREATE_AND_READ.ordinal, fileType.value, defaultContent)
+</a><a href="#h0-1-27" id="h0-1-27" class="i">+    }
+</a> 
+<a href="#h0-1-29" id="h0-1-29" class="d">-    fun readFile(fileType: BridgeFileType): ByteArray = service.fileOperation(FileActionType.READ.ordinal, fileType.value, null)
+</a><a href="#h0-1-30" id="h0-1-30" class="i">+    fun readFile(fileType: BridgeFileType): ByteArray = safeServiceCall { service.fileOperation(FileActionType.READ.ordinal, fileType.value, null) }
+</a> 
+     fun writeFile(
+         fileType: BridgeFileType,
+         content: ByteArray?
+<a href="#h0-1-35" id="h0-1-35" class="d">-    ) { service.fileOperation(FileActionType.WRITE.ordinal, fileType.value, content) }
+</a><a href="#h0-1-36" id="h0-1-36" class="i">+    ): ByteArray = safeServiceCall {
+</a><a href="#h0-1-37" id="h0-1-37" class="i">+        service.fileOperation(FileActionType.WRITE.ordinal, fileType.value, content)
+</a><a href="#h0-1-38" id="h0-1-38" class="i">+    }
+</a> 
+<a href="#h0-1-40" id="h0-1-40" class="d">-    fun deleteFile(fileType: BridgeFileType) { service.fileOperation(FileActionType.DELETE.ordinal, fileType.value, null) }
+</a><a href="#h0-1-41" id="h0-1-41" class="i">+    fun deleteFile(fileType: BridgeFileType) {
+</a><a href="#h0-1-42" id="h0-1-42" class="i">+        safeServiceCall {
+</a><a href="#h0-1-43" id="h0-1-43" class="i">+            service.fileOperation(FileActionType.DELETE.ordinal, fileType.value, null)
+</a><a href="#h0-1-44" id="h0-1-44" class="i">+        }
+</a><a href="#h0-1-45" id="h0-1-45" class="i">+    }
+</a> 
+<a href="#h0-1-47" id="h0-1-47" class="d">-    fun isFileExists(fileType: BridgeFileType) = service.fileOperation(FileActionType.EXISTS.ordinal, fileType.value, null).isNotEmpty()
+</a><a href="#h0-1-48" id="h0-1-48" class="i">+    fun isFileExists(fileType: BridgeFileType) = safeServiceCall {
+</a><a href="#h0-1-49" id="h0-1-49" class="i">+        service.fileOperation(FileActionType.EXISTS.ordinal, fileType.value, null).isNotEmpty()
+</a><a href="#h0-1-50" id="h0-1-50" class="i">+    }
+</a> 
+<a href="#h0-1-52" id="h0-1-52" class="d">-    fun fetchLocales(userLocale: String) = service.fetchLocales(userLocale).map {
+</a><a href="#h0-1-53" id="h0-1-53" class="d">-        LocalePair(it.key, it.value)
+</a><a href="#h0-1-54" id="h0-1-54" class="i">+    fun fetchLocales(userLocale: String) = safeServiceCall {
+</a><a href="#h0-1-55" id="h0-1-55" class="i">+        service.fetchLocales(userLocale).map {
+</a><a href="#h0-1-56" id="h0-1-56" class="i">+            LocalePair(it.key, it.value)
+</a><a href="#h0-1-57" id="h0-1-57" class="i">+        }
+</a>     }
+ 
+<a href="#h0-1-60" id="h0-1-60" class="d">-    fun getApplicationApkPath(): String = service.getApplicationApkPath()
+</a><a href="#h0-1-61" id="h0-1-61" class="i">+    fun getApplicationApkPath(): String = safeServiceCall { service.getApplicationApkPath() }
+</a> 
+<a href="#h0-1-63" id="h0-1-63" class="d">-    fun enqueueDownload(intent: Intent, callback: DownloadCallback) = service.enqueueDownload(intent, callback)
+</a><a href="#h0-1-64" id="h0-1-64" class="i">+    fun enqueueDownload(intent: Intent, callback: DownloadCallback) = safeServiceCall {
+</a><a href="#h0-1-65" id="h0-1-65" class="i">+        service.enqueueDownload(intent, callback)
+</a><a href="#h0-1-66" id="h0-1-66" class="i">+    }
+</a> 
+     fun sync(callback: SyncCallback) {
+         if (!context.database.hasMain()) return
+<a href="#h0-1-70" id="h0-1-70" class="d">-        service.sync(callback)
+</a><a href="#h0-1-71" id="h0-1-71" class="i">+        safeServiceCall {
+</a><a href="#h0-1-72" id="h0-1-72" class="i">+            service.sync(callback)
+</a><a href="#h0-1-73" id="h0-1-73" class="i">+        }
+</a>     }
+ 
+<a href="#h0-1-76" id="h0-1-76" class="d">-    fun triggerSync(scope: SocialScope, id: String) = service.triggerSync(scope.key, id)
+</a><a href="#h0-1-77" id="h0-1-77" class="i">+    fun triggerSync(scope: SocialScope, id: String) = safeServiceCall {
+</a><a href="#h0-1-78" id="h0-1-78" class="i">+        service.triggerSync(scope.key, id)
+</a><a href="#h0-1-79" id="h0-1-79" class="i">+    }
+</a> 
+<a href="#h0-1-81" id="h0-1-81" class="d">-    fun passGroupsAndFriends(groups: List&lt;MessagingGroupInfo&gt;, friends: List&lt;MessagingFriendInfo&gt;) = service.passGroupsAndFriends(
+</a><a href="#h0-1-82" id="h0-1-82" class="d">-        groups.mapNotNull { it.toSerialized() },
+</a><a href="#h0-1-83" id="h0-1-83" class="d">-        friends.mapNotNull { it.toSerialized() }
+</a><a href="#h0-1-84" id="h0-1-84" class="d">-    )
+</a><a href="#h0-1-85" id="h0-1-85" class="i">+    fun passGroupsAndFriends(groups: List&lt;MessagingGroupInfo&gt;, friends: List&lt;MessagingFriendInfo&gt;) =
+</a><a href="#h0-1-86" id="h0-1-86" class="i">+        safeServiceCall {
+</a><a href="#h0-1-87" id="h0-1-87" class="i">+            service.passGroupsAndFriends(
+</a><a href="#h0-1-88" id="h0-1-88" class="i">+                groups.mapNotNull { it.toSerialized() },
+</a><a href="#h0-1-89" id="h0-1-89" class="i">+                friends.mapNotNull { it.toSerialized() }
+</a><a href="#h0-1-90" id="h0-1-90" class="i">+            )
+</a><a href="#h0-1-91" id="h0-1-91" class="i">+        }
+</a> 
+<a href="#h0-1-93" id="h0-1-93" class="d">-    fun getRules(targetUuid: String): List&lt;MessagingRuleType&gt; {
+</a><a href="#h0-1-94" id="h0-1-94" class="d">-        return service.getRules(targetUuid).mapNotNull { MessagingRuleType.getByName(it) }
+</a><a href="#h0-1-95" id="h0-1-95" class="i">+    fun getRules(targetUuid: String): List&lt;MessagingRuleType&gt; = safeServiceCall {
+</a><a href="#h0-1-96" id="h0-1-96" class="i">+        service.getRules(targetUuid).mapNotNull { MessagingRuleType.getByName(it) }
+</a>     }
+ 
+<a href="#h0-1-99" id="h0-1-99" class="d">-    fun getRuleIds(ruleType: MessagingRuleType): List&lt;String&gt; {
+</a><a href="#h0-1-100" id="h0-1-100" class="d">-        return service.getRuleIds(ruleType.key)
+</a><a href="#h0-1-101" id="h0-1-101" class="i">+    fun getRuleIds(ruleType: MessagingRuleType): List&lt;String&gt; = safeServiceCall {
+</a><a href="#h0-1-102" id="h0-1-102" class="i">+        service.getRuleIds(ruleType.key)
+</a>     }
+ 
+<a href="#h0-1-105" id="h0-1-105" class="d">-    fun setRule(targetUuid: String, type: MessagingRuleType, state: Boolean)
+</a><a href="#h0-1-106" id="h0-1-106" class="d">-        = service.setRule(targetUuid, type.key, state)
+</a><a href="#h0-1-107" id="h0-1-107" class="i">+    fun setRule(targetUuid: String, type: MessagingRuleType, state: Boolean) = safeServiceCall {
+</a><a href="#h0-1-108" id="h0-1-108" class="i">+        service.setRule(targetUuid, type.key, state)
+</a><a href="#h0-1-109" id="h0-1-109" class="i">+    }
+</a> 
+<a href="#h0-1-111" id="h0-1-111" class="d">-    fun getScriptingInterface(): IScripting = service.getScriptingInterface()
+</a><a href="#h0-1-112" id="h0-1-112" class="i">+    fun getScriptingInterface(): IScripting = safeServiceCall { service.getScriptingInterface() }
+</a> 
+<a href="#h0-1-114" id="h0-1-114" class="d">-    fun getE2eeInterface(): E2eeInterface = service.getE2eeInterface()
+</a><a href="#h0-1-115" id="h0-1-115" class="i">+    fun getE2eeInterface(): E2eeInterface = safeServiceCall { service.getE2eeInterface() }
+</a> 
+<a href="#h0-1-117" id="h0-1-117" class="d">-    fun getMessageLogger(): MessageLoggerInterface = service.messageLogger
+</a><a href="#h0-1-118" id="h0-1-118" class="i">+    fun getMessageLogger(): MessageLoggerInterface = safeServiceCall { service.messageLogger }
+</a> 
+<a href="#h0-1-120" id="h0-1-120" class="d">-    fun registerMessagingBridge(bridge: MessagingBridge) = service.registerMessagingBridge(bridge)
+</a><a href="#h0-1-121" id="h0-1-121" class="i">+    fun registerMessagingBridge(bridge: MessagingBridge) = safeServiceCall { service.registerMessagingBridge(bridge) }
+</a> 
+<a href="#h0-1-123" id="h0-1-123" class="d">-    fun openSettingsOverlay() = service.openSettingsOverlay()
+</a><a href="#h0-1-124" id="h0-1-124" class="d">-    fun closeSettingsOverlay() = service.closeSettingsOverlay()
+</a><a href="#h0-1-125" id="h0-1-125" class="i">+    fun openSettingsOverlay() = safeServiceCall { service.openSettingsOverlay() }
+</a><a href="#h0-1-126" id="h0-1-126" class="i">+    fun closeSettingsOverlay() = safeServiceCall { service.closeSettingsOverlay() }
+</a> 
+<a href="#h0-1-128" id="h0-1-128" class="d">-    fun registerConfigStateListener(listener: ConfigStateListener) = service.registerConfigStateListener(listener)
+</a><a href="#h0-1-129" id="h0-1-129" class="i">+    fun registerConfigStateListener(listener: ConfigStateListener) = safeServiceCall { service.registerConfigStateListener(listener) }
+</a> }
+</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>chore(ci): improvments (#1156) - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/ed42ed4caf5fea8b68941d8bfdb48c62dc35124f.html">ed42ed4caf5fea8b68941d8bfdb48c62dc35124f</a>
+<b>parent</b> <a href="../commit/09e3e83d575103e421784d85f87590e38124eeb7.html">09e3e83d575103e421784d85f87590e38124eeb7</a>
+<b>Author:</b> sn-o-w &lt;<a href="mailto:cristian.silaghi@mozilla.ro">cristian.silaghi@mozilla.ro</a>&gt;
+<b>Date:</b>   Fri, 12 Jul 2024 03:15:12 +0300
+
+chore(ci): improvments (#1156)
+
+The Release CI workflow is currently failing, likely due to the minimum required Android SDK Build-tools version for `macos-latest` GitHub-hosted runners being updated to 33.0.2, while the version used in https://github.com/kevin-david/zipalign-sign-android-release is 32.0.0.
+
+Changes made in this PR include:
+- Upgraded Java version from 17 to 21.
+_(Updated to `noriban/sign-android-release` in both workflows, seems to be more updated recently)_
+_(Enabled by default in `noriban/sign-android-release`)_
+- Automatically determined and utilized the latest installed Build Tools version for APK signing.
+- Utilized `${{steps.sign_app.outputs.signedReleaseFile}}` to point to the signed APK files.
+- Utilized `${GITHUB_SHA::7}` to obtain the short Git version hash in Debug CI
+- Removed the &#39;Git branch name&#39; step in Debug CI (no longer used, I guess?!)
+- Removed the &#39;Delete unsigned file&#39; step (redundant in Release CI since we can directly upload `${{steps.sign_app.outputs.signedReleaseFile}}`).
+- In Debug CI delete unsigned files right before renaming the signed ones.
+- In Release CI switch to `softprops/action-gh-release` since `marvinpinto/action-automatic-releases` is no longer maintained.
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">.github/workflows/debug.yml</a></td><td> | </td><td class="num">116</td><td><span class="i">++++++++++++++++++++++++++++++</span><span class="d">-------------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">.github/workflows/pull_request.yml</a></td><td> | </td><td class="num">61</td><td><span class="i">++++++++++++++++++++</span><span class="d">-----------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">.github/workflows/release.yml</a></td><td> | </td><td class="num">100</td><td><span class="i">++++++++++++++++++++++++++++++++++++++</span><span class="d">-----------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">README.md</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+</table></pre><pre>4 files changed, 113 insertions(+), 165 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/.github/workflows/debug.yml.html">.github/workflows/debug.yml</a> b/<a href="../file/.github/workflows/debug.yml.html">.github/workflows/debug.yml</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -16,10 +16,10 @@ jobs:
+</a>         with:
+           submodules: &#39;recursive&#39;
+ 
+<a href="#h0-0-3" id="h0-0-3" class="d">-      - name: set up JDK 17
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+      - name: Set up JDK 21
+</a>         uses: actions/setup-java@v4
+         with:
+<a href="#h0-0-7" id="h0-0-7" class="d">-          java-version: &#39;17&#39;
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+          java-version: &#39;21&#39;
+</a>           distribution: &#39;temurin&#39;
+           cache: gradle
+ 
+<a href="#h0-1" id="h0-1" class="h">@@ -32,41 +32,32 @@ jobs:
+</a>       - name: Build
+         run: ./gradlew assembleArmv8Debug
+ 
+<a href="#h0-1-3" id="h0-1-3" class="i">+      - name: Determine the latest Build Tools version installed
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+        shell: bash
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+        run: echo &quot;BUILD_TOOL_VERSION=$(ls &quot;$ANDROID_HOME/build-tools/&quot; | tail -n 1)&quot; &gt;&gt; $GITHUB_ENV
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+
+</a>       - name: Sign APK
+         id: sign_app
+<a href="#h0-1-9" id="h0-1-9" class="d">-        uses: tiann/zipalign-sign-android-release@v1.1.4
+</a><a href="#h0-1-10" id="h0-1-10" class="i">+        uses: SnapEnhance/sign-android-release@master
+</a>         with:
+           releaseDirectory: app/build/outputs/apk/armv8/debug/
+           signingKeyBase64: ${{ secrets.JAVA_KEYSTORE_DATA }}
+           alias: ${{ secrets.KEY_ALIAS }}
+           keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+           keyPassword: ${{ secrets.KEY_PASSWORD }}
+<a href="#h0-1-17" id="h0-1-17" class="d">-          zipAlign: true
+</a>         env:
+<a href="#h0-1-19" id="h0-1-19" class="d">-          BUILD_TOOLS_VERSION: &quot;34.0.0&quot;
+</a><a href="#h0-1-20" id="h0-1-20" class="d">-
+</a><a href="#h0-1-21" id="h0-1-21" class="d">-      - name: Delete unsigned file
+</a><a href="#h0-1-22" id="h0-1-22" class="d">-        run: |
+</a><a href="#h0-1-23" id="h0-1-23" class="d">-          cd app/build/outputs/apk/armv8/debug/
+</a><a href="#h0-1-24" id="h0-1-24" class="d">-          shopt -s extglob
+</a><a href="#h0-1-25" id="h0-1-25" class="d">-          rm -rf !(*-signed*)
+</a><a href="#h0-1-26" id="h0-1-26" class="d">-
+</a><a href="#h0-1-27" id="h0-1-27" class="d">-      - name: Build Version
+</a><a href="#h0-1-28" id="h0-1-28" class="d">-        run: ./gradlew getVersion
+</a><a href="#h0-1-29" id="h0-1-29" class="i">+          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
+</a> 
+<a href="#h0-1-31" id="h0-1-31" class="d">-      - name: Set Environment Variables
+</a><a href="#h0-1-32" id="h0-1-32" class="i">+      - name: Get current build version
+</a>         id: version-env
+         run: |
+<a href="#h0-1-35" id="h0-1-35" class="i">+          ./gradlew getVersion
+</a>           echo &quot;version=$(cat app/build/version.txt)&quot; &gt;&gt; $GITHUB_ENV
+<a href="#h0-1-37" id="h0-1-37" class="d">-          echo &quot;sha_short=$(git rev-parse --short HEAD)&quot; &gt;&gt; $GITHUB_OUTPUT
+</a> 
+<a href="#h0-1-39" id="h0-1-39" class="d">-      - name: Git branch name
+</a><a href="#h0-1-40" id="h0-1-40" class="d">-        id: git-branch-name
+</a><a href="#h0-1-41" id="h0-1-41" class="d">-        uses: EthanSK/git-branch-name-action@main
+</a><a href="#h0-1-42" id="h0-1-42" class="d">-
+</a><a href="#h0-1-43" id="h0-1-43" class="d">-      - name: Rename APK file
+</a><a href="#h0-1-44" id="h0-1-44" class="i">+      - name: Delete unsigned APK file and rename the signed one
+</a>         run: |
+<a href="#h0-1-46" id="h0-1-46" class="d">-          mv app/build/outputs/apk/armv8/debug/*.apk app/build/outputs/apk/armv8/debug/snapenhance-${{ env.version }}-armv8-${{ steps.version-env.outputs.sha_short }}.apk
+</a><a href="#h0-1-47" id="h0-1-47" class="i">+          find app/build/outputs/apk/armv8/debug/ -type f ! -name &#39;*-signed*&#39; -delete
+</a><a href="#h0-1-48" id="h0-1-48" class="i">+          mv ${{steps.sign_app.outputs.signedReleaseFile}} app/build/outputs/apk/armv8/debug/snapenhance-${{ env.version }}-armv8-${GITHUB_SHA::7}.apk
+</a> 
+       - name: Upload artifact
+         uses: actions/upload-artifact@v4
+<a href="#h0-2" id="h0-2" class="h">@@ -82,10 +73,10 @@ jobs:
+</a>         with:
+           submodules: &#39;recursive&#39;
+ 
+<a href="#h0-2-3" id="h0-2-3" class="d">-      - name: set up JDK 17
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+      - name: Set up JDK 21
+</a>         uses: actions/setup-java@v4
+         with:
+<a href="#h0-2-7" id="h0-2-7" class="d">-          java-version: &#39;17&#39;
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+          java-version: &#39;21&#39;
+</a>           distribution: &#39;temurin&#39;
+           cache: gradle
+ 
+<a href="#h0-3" id="h0-3" class="h">@@ -98,41 +89,32 @@ jobs:
+</a>       - name: Build
+         run: ./gradlew assembleArmv7Debug
+ 
+<a href="#h0-3-3" id="h0-3-3" class="i">+      - name: Determine the latest Build Tools version installed
+</a><a href="#h0-3-4" id="h0-3-4" class="i">+        shell: bash
+</a><a href="#h0-3-5" id="h0-3-5" class="i">+        run: echo &quot;BUILD_TOOL_VERSION=$(ls &quot;$ANDROID_HOME/build-tools/&quot; | tail -n 1)&quot; &gt;&gt; $GITHUB_ENV
+</a><a href="#h0-3-6" id="h0-3-6" class="i">+
+</a>       - name: Sign APK
+         id: sign_app
+<a href="#h0-3-9" id="h0-3-9" class="d">-        uses: tiann/zipalign-sign-android-release@v1.1.4
+</a><a href="#h0-3-10" id="h0-3-10" class="i">+        uses: SnapEnhance/sign-android-release@master
+</a>         with:
+           releaseDirectory: app/build/outputs/apk/armv7/debug/
+           signingKeyBase64: ${{ secrets.JAVA_KEYSTORE_DATA }}
+           alias: ${{ secrets.KEY_ALIAS }}
+           keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+           keyPassword: ${{ secrets.KEY_PASSWORD }}
+<a href="#h0-3-17" id="h0-3-17" class="d">-          zipAlign: true
+</a>         env:
+<a href="#h0-3-19" id="h0-3-19" class="d">-          BUILD_TOOLS_VERSION: &quot;34.0.0&quot;
+</a><a href="#h0-3-20" id="h0-3-20" class="d">-
+</a><a href="#h0-3-21" id="h0-3-21" class="d">-      - name: Delete unsigned file
+</a><a href="#h0-3-22" id="h0-3-22" class="d">-        run: |
+</a><a href="#h0-3-23" id="h0-3-23" class="d">-          cd app/build/outputs/apk/armv7/debug/
+</a><a href="#h0-3-24" id="h0-3-24" class="d">-          shopt -s extglob
+</a><a href="#h0-3-25" id="h0-3-25" class="d">-          rm -rf !(*-signed*)
+</a><a href="#h0-3-26" id="h0-3-26" class="i">+          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
+</a> 
+<a href="#h0-3-28" id="h0-3-28" class="d">-      - name: Build Version
+</a><a href="#h0-3-29" id="h0-3-29" class="d">-        run: ./gradlew getVersion
+</a><a href="#h0-3-30" id="h0-3-30" class="d">-
+</a><a href="#h0-3-31" id="h0-3-31" class="d">-      - name: Set Environment Variables
+</a><a href="#h0-3-32" id="h0-3-32" class="i">+      - name: Get current build version
+</a>         id: version-env
+         run: |
+<a href="#h0-3-35" id="h0-3-35" class="i">+          ./gradlew getVersion
+</a>           echo &quot;version=$(cat app/build/version.txt)&quot; &gt;&gt; $GITHUB_ENV
+<a href="#h0-3-37" id="h0-3-37" class="d">-          echo &quot;sha_short=$(git rev-parse --short HEAD)&quot; &gt;&gt; $GITHUB_OUTPUT
+</a><a href="#h0-3-38" id="h0-3-38" class="d">-
+</a><a href="#h0-3-39" id="h0-3-39" class="d">-      - name: Git branch name
+</a><a href="#h0-3-40" id="h0-3-40" class="d">-        id: git-branch-name
+</a><a href="#h0-3-41" id="h0-3-41" class="d">-        uses: EthanSK/git-branch-name-action@main
+</a> 
+<a href="#h0-3-43" id="h0-3-43" class="d">-      - name: Rename APK file
+</a><a href="#h0-3-44" id="h0-3-44" class="i">+      - name: Delete unsigned APK file and rename the signed one
+</a>         run: |
+<a href="#h0-3-46" id="h0-3-46" class="d">-          mv app/build/outputs/apk/armv7/debug/*.apk app/build/outputs/apk/armv7/debug/snapenhance-${{ env.version }}-armv7-${{ steps.version-env.outputs.sha_short }}.apk
+</a><a href="#h0-3-47" id="h0-3-47" class="i">+          find app/build/outputs/apk/armv7/debug/ -type f ! -name &#39;*-signed*&#39; -delete
+</a><a href="#h0-3-48" id="h0-3-48" class="i">+          mv ${{steps.sign_app.outputs.signedReleaseFile}} app/build/outputs/apk/armv7/debug/snapenhance-${{ env.version }}-armv7-${GITHUB_SHA::7}.apk
+</a> 
+       - name: Upload artifact
+         uses: actions/upload-artifact@v4
+<a href="#h0-4" id="h0-4" class="h">@@ -148,10 +130,10 @@ jobs:
+</a>         with:
+           submodules: &#39;recursive&#39;
+ 
+<a href="#h0-4-3" id="h0-4-3" class="d">-      - name: set up JDK 17
+</a><a href="#h0-4-4" id="h0-4-4" class="i">+      - name: Set up JDK 21
+</a>         uses: actions/setup-java@v4
+         with:
+<a href="#h0-4-7" id="h0-4-7" class="d">-          java-version: &#39;17&#39;
+</a><a href="#h0-4-8" id="h0-4-8" class="i">+          java-version: &#39;21&#39;
+</a>           distribution: &#39;temurin&#39;
+           cache: gradle
+ 
+<a href="#h0-5" id="h0-5" class="h">@@ -164,41 +146,32 @@ jobs:
+</a>       - name: Build
+         run: ./gradlew assembleAllDebug
+ 
+<a href="#h0-5-3" id="h0-5-3" class="i">+      - name: Determine the latest Build Tools version installed
+</a><a href="#h0-5-4" id="h0-5-4" class="i">+        shell: bash
+</a><a href="#h0-5-5" id="h0-5-5" class="i">+        run: echo &quot;BUILD_TOOL_VERSION=$(ls &quot;$ANDROID_HOME/build-tools/&quot; | tail -n 1)&quot; &gt;&gt; $GITHUB_ENV
+</a><a href="#h0-5-6" id="h0-5-6" class="i">+
+</a>       - name: Sign APK
+         id: sign_app
+<a href="#h0-5-9" id="h0-5-9" class="d">-        uses: tiann/zipalign-sign-android-release@v1.1.4
+</a><a href="#h0-5-10" id="h0-5-10" class="i">+        uses: SnapEnhance/sign-android-release@master
+</a>         with:
+           releaseDirectory: app/build/outputs/apk/all/debug/
+           signingKeyBase64: ${{ secrets.JAVA_KEYSTORE_DATA }}
+           alias: ${{ secrets.KEY_ALIAS }}
+           keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+           keyPassword: ${{ secrets.KEY_PASSWORD }}
+<a href="#h0-5-17" id="h0-5-17" class="d">-          zipAlign: true
+</a>         env:
+<a href="#h0-5-19" id="h0-5-19" class="d">-          BUILD_TOOLS_VERSION: &quot;34.0.0&quot;
+</a><a href="#h0-5-20" id="h0-5-20" class="i">+          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
+</a> 
+<a href="#h0-5-22" id="h0-5-22" class="d">-      - name: Delete unsigned file
+</a><a href="#h0-5-23" id="h0-5-23" class="d">-        run: |
+</a><a href="#h0-5-24" id="h0-5-24" class="d">-          cd app/build/outputs/apk/all/debug/
+</a><a href="#h0-5-25" id="h0-5-25" class="d">-          shopt -s extglob
+</a><a href="#h0-5-26" id="h0-5-26" class="d">-          rm -rf !(*-signed*)
+</a><a href="#h0-5-27" id="h0-5-27" class="d">-
+</a><a href="#h0-5-28" id="h0-5-28" class="d">-      - name: Build Version
+</a><a href="#h0-5-29" id="h0-5-29" class="d">-        run: ./gradlew getVersion
+</a><a href="#h0-5-30" id="h0-5-30" class="d">-
+</a><a href="#h0-5-31" id="h0-5-31" class="d">-      - name: Set Environment Variables
+</a><a href="#h0-5-32" id="h0-5-32" class="i">+      - name: Get current build version
+</a>         id: version-env
+         run: |
+<a href="#h0-5-35" id="h0-5-35" class="i">+          ./gradlew getVersion
+</a>           echo &quot;version=$(cat app/build/version.txt)&quot; &gt;&gt; $GITHUB_ENV
+<a href="#h0-5-37" id="h0-5-37" class="d">-          echo &quot;sha_short=$(git rev-parse --short HEAD)&quot; &gt;&gt; $GITHUB_OUTPUT
+</a><a href="#h0-5-38" id="h0-5-38" class="d">-
+</a><a href="#h0-5-39" id="h0-5-39" class="d">-      - name: Git branch name
+</a><a href="#h0-5-40" id="h0-5-40" class="d">-        id: git-branch-name
+</a><a href="#h0-5-41" id="h0-5-41" class="d">-        uses: EthanSK/git-branch-name-action@main
+</a> 
+<a href="#h0-5-43" id="h0-5-43" class="d">-      - name: Rename APK files
+</a><a href="#h0-5-44" id="h0-5-44" class="i">+      - name: Delete unsigned APK file and rename the signed one
+</a>         run: |
+<a href="#h0-5-46" id="h0-5-46" class="d">-          mv app/build/outputs/apk/all/debug/*.apk app/build/outputs/apk/all/debug/snapenhance-${{ env.version }}-universal-${{ steps.version-env.outputs.sha_short }}.apk
+</a><a href="#h0-5-47" id="h0-5-47" class="i">+          find app/build/outputs/apk/all/debug/ -type f ! -name &#39;*-signed*&#39; -delete
+</a><a href="#h0-5-48" id="h0-5-48" class="i">+          mv ${{steps.sign_app.outputs.signedReleaseFile}} app/build/outputs/apk/all/debug/snapenhance-${{ env.version }}-universal-${GITHUB_SHA::7}.apk
+</a> 
+       - name: Upload universal
+         uses: actions/upload-artifact@v4
+<a href="#h0-6" id="h0-6" class="h">@@ -214,10 +187,10 @@ jobs:
+</a>         with:
+           submodules: &#39;recursive&#39;
+ 
+<a href="#h0-6-3" id="h0-6-3" class="d">-      - name: set up JDK 17
+</a><a href="#h0-6-4" id="h0-6-4" class="i">+      - name: Set up JDK 21
+</a>         uses: actions/setup-java@v4
+         with:
+<a href="#h0-6-7" id="h0-6-7" class="d">-          java-version: &#39;17&#39;
+</a><a href="#h0-6-8" id="h0-6-8" class="i">+          java-version: &#39;21&#39;
+</a>           distribution: &#39;temurin&#39;
+           cache: gradle
+ 
+<a href="#h0-7" id="h0-7" class="h">@@ -241,10 +214,10 @@ jobs:
+</a>         with:
+           submodules: &#39;recursive&#39;
+ 
+<a href="#h0-7-3" id="h0-7-3" class="d">-      - name: set up JDK 17
+</a><a href="#h0-7-4" id="h0-7-4" class="i">+      - name: Set up JDK 21
+</a>         uses: actions/setup-java@v4
+         with:
+<a href="#h0-7-7" id="h0-7-7" class="d">-          java-version: &#39;17&#39;
+</a><a href="#h0-7-8" id="h0-7-8" class="i">+          java-version: &#39;21&#39;
+</a>           distribution: &#39;temurin&#39;
+           cache: gradle
+ 
+<a href="#h0-8" id="h0-8" class="h">@@ -258,4 +231,4 @@ jobs:
+</a>         uses: actions/upload-artifact@v4
+         with:
+           name: core
+<a href="#h0-8-3" id="h0-8-3" class="d">-          path: app/build/outputs/apk/core/debug/*.apk</a><a href="#h0-8-4" id="h0-8-4" class="d">-
+\ No newline at end of file
+</a><a href="#h0-8-5" id="h0-8-5" class="i">+          path: app/build/outputs/apk/core/debug/*.apk
+</a><b>diff --git a/<a id="h1" href="../file/.github/workflows/pull_request.yml.html">.github/workflows/pull_request.yml</a> b/<a href="../file/.github/workflows/pull_request.yml.html">.github/workflows/pull_request.yml</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -12,10 +12,10 @@ jobs:
+</a>         with:
+           submodules: &#39;recursive&#39;
+ 
+<a href="#h1-0-3" id="h1-0-3" class="d">-      - name: set up JDK 17
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+      - name: Set up JDK 21
+</a>         uses: actions/setup-java@v4
+         with:
+<a href="#h1-0-7" id="h1-0-7" class="d">-          java-version: &#39;17&#39;
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+          java-version: &#39;21&#39;
+</a>           distribution: &#39;temurin&#39;
+           cache: gradle
+ 
+<a href="#h1-1" id="h1-1" class="h">@@ -28,22 +28,15 @@ jobs:
+</a>       - name: Build
+         run: ./gradlew assembleArmv8Debug
+ 
+<a href="#h1-1-3" id="h1-1-3" class="d">-      - name: Build Version
+</a><a href="#h1-1-4" id="h1-1-4" class="d">-        run: ./gradlew getVersion
+</a><a href="#h1-1-5" id="h1-1-5" class="d">-
+</a><a href="#h1-1-6" id="h1-1-6" class="d">-      - name: Set Environment Variables
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+      - name: Get current build version
+</a>         id: version-env
+         run: |
+<a href="#h1-1-10" id="h1-1-10" class="i">+          ./gradlew getVersion
+</a>           echo &quot;version=$(cat app/build/version.txt)&quot; &gt;&gt; $GITHUB_ENV
+<a href="#h1-1-12" id="h1-1-12" class="d">-          echo &quot;sha_short=$(git rev-parse --short HEAD)&quot; &gt;&gt; $GITHUB_OUTPUT
+</a><a href="#h1-1-13" id="h1-1-13" class="d">-
+</a><a href="#h1-1-14" id="h1-1-14" class="d">-      - name: Git branch name
+</a><a href="#h1-1-15" id="h1-1-15" class="d">-        id: git-branch-name
+</a><a href="#h1-1-16" id="h1-1-16" class="d">-        uses: EthanSK/git-branch-name-action@main
+</a> 
+       - name: Rename APK file
+         run: |
+<a href="#h1-1-20" id="h1-1-20" class="d">-          mv app/build/outputs/apk/armv8/debug/*.apk app/build/outputs/apk/armv8/debug/snapenhance-${{ env.version }}-armv8-${{ steps.version-env.outputs.sha_short }}.apk
+</a><a href="#h1-1-21" id="h1-1-21" class="i">+          mv app/build/outputs/apk/armv8/debug/*.apk app/build/outputs/apk/armv8/debug/snapenhance-${{ env.version }}-armv8-${GITHUB_SHA::7}.apk
+</a> 
+       - name: Upload artifact
+         uses: actions/upload-artifact@v4
+<a href="#h1-2" id="h1-2" class="h">@@ -59,10 +52,10 @@ jobs:
+</a>         with:
+           submodules: &#39;recursive&#39;
+ 
+<a href="#h1-2-3" id="h1-2-3" class="d">-      - name: set up JDK 17
+</a><a href="#h1-2-4" id="h1-2-4" class="i">+      - name: Set up JDK 21
+</a>         uses: actions/setup-java@v4
+         with:
+<a href="#h1-2-7" id="h1-2-7" class="d">-          java-version: &#39;17&#39;
+</a><a href="#h1-2-8" id="h1-2-8" class="i">+          java-version: &#39;21&#39;
+</a>           distribution: &#39;temurin&#39;
+           cache: gradle
+ 
+<a href="#h1-3" id="h1-3" class="h">@@ -75,22 +68,15 @@ jobs:
+</a>       - name: Build
+         run: ./gradlew assembleArmv7Debug
+ 
+<a href="#h1-3-3" id="h1-3-3" class="d">-      - name: Build Version
+</a><a href="#h1-3-4" id="h1-3-4" class="d">-        run: ./gradlew getVersion
+</a><a href="#h1-3-5" id="h1-3-5" class="d">-
+</a><a href="#h1-3-6" id="h1-3-6" class="d">-      - name: Set Environment Variables
+</a><a href="#h1-3-7" id="h1-3-7" class="i">+      - name: Get current build version
+</a>         id: version-env
+         run: |
+<a href="#h1-3-10" id="h1-3-10" class="i">+          ./gradlew getVersion
+</a>           echo &quot;version=$(cat app/build/version.txt)&quot; &gt;&gt; $GITHUB_ENV
+<a href="#h1-3-12" id="h1-3-12" class="d">-          echo &quot;sha_short=$(git rev-parse --short HEAD)&quot; &gt;&gt; $GITHUB_OUTPUT
+</a><a href="#h1-3-13" id="h1-3-13" class="d">-
+</a><a href="#h1-3-14" id="h1-3-14" class="d">-      - name: Git branch name
+</a><a href="#h1-3-15" id="h1-3-15" class="d">-        id: git-branch-name
+</a><a href="#h1-3-16" id="h1-3-16" class="d">-        uses: EthanSK/git-branch-name-action@main
+</a> 
+       - name: Rename APK file
+         run: |
+<a href="#h1-3-20" id="h1-3-20" class="d">-          mv app/build/outputs/apk/armv7/debug/*.apk app/build/outputs/apk/armv7/debug/snapenhance-${{ env.version }}-armv7-${{ steps.version-env.outputs.sha_short }}.apk
+</a><a href="#h1-3-21" id="h1-3-21" class="i">+          mv app/build/outputs/apk/armv7/debug/*.apk app/build/outputs/apk/armv7/debug/snapenhance-${{ env.version }}-armv7-${GITHUB_SHA::7}.apk
+</a> 
+       - name: Upload artifact
+         uses: actions/upload-artifact@v4
+<a href="#h1-4" id="h1-4" class="h">@@ -106,10 +92,10 @@ jobs:
+</a>         with:
+           submodules: &#39;recursive&#39;
+ 
+<a href="#h1-4-3" id="h1-4-3" class="d">-      - name: set up JDK 17
+</a><a href="#h1-4-4" id="h1-4-4" class="i">+      - name: Set up JDK 21
+</a>         uses: actions/setup-java@v4
+         with:
+<a href="#h1-4-7" id="h1-4-7" class="d">-          java-version: &#39;17&#39;
+</a><a href="#h1-4-8" id="h1-4-8" class="i">+          java-version: &#39;21&#39;
+</a>           distribution: &#39;temurin&#39;
+           cache: gradle
+ 
+<a href="#h1-5" id="h1-5" class="h">@@ -122,22 +108,15 @@ jobs:
+</a>       - name: Build
+         run: ./gradlew assembleAllDebug
+ 
+<a href="#h1-5-3" id="h1-5-3" class="d">-      - name: Build Version
+</a><a href="#h1-5-4" id="h1-5-4" class="d">-        run: ./gradlew getVersion
+</a><a href="#h1-5-5" id="h1-5-5" class="d">-
+</a><a href="#h1-5-6" id="h1-5-6" class="d">-      - name: Set Environment Variables
+</a><a href="#h1-5-7" id="h1-5-7" class="i">+      - name: Get current build version
+</a>         id: version-env
+         run: |
+<a href="#h1-5-10" id="h1-5-10" class="i">+          ./gradlew getVersion
+</a>           echo &quot;version=$(cat app/build/version.txt)&quot; &gt;&gt; $GITHUB_ENV
+<a href="#h1-5-12" id="h1-5-12" class="d">-          echo &quot;sha_short=$(git rev-parse --short HEAD)&quot; &gt;&gt; $GITHUB_OUTPUT
+</a><a href="#h1-5-13" id="h1-5-13" class="d">-
+</a><a href="#h1-5-14" id="h1-5-14" class="d">-      - name: Git branch name
+</a><a href="#h1-5-15" id="h1-5-15" class="d">-        id: git-branch-name
+</a><a href="#h1-5-16" id="h1-5-16" class="d">-        uses: EthanSK/git-branch-name-action@main
+</a> 
+<a href="#h1-5-18" id="h1-5-18" class="d">-      - name: Rename APK files
+</a><a href="#h1-5-19" id="h1-5-19" class="i">+      - name: Rename APK file
+</a>         run: |
+<a href="#h1-5-21" id="h1-5-21" class="d">-          mv app/build/outputs/apk/all/debug/*.apk app/build/outputs/apk/all/debug/snapenhance-${{ env.version }}-universal-${{ steps.version-env.outputs.sha_short }}.apk
+</a><a href="#h1-5-22" id="h1-5-22" class="i">+          mv app/build/outputs/apk/all/debug/*.apk app/build/outputs/apk/all/debug/snapenhance-${{ env.version }}-universal-${GITHUB_SHA::7}.apk
+</a> 
+       - name: Upload universal
+         uses: actions/upload-artifact@v4
+<a href="#h1-6" id="h1-6" class="h">@@ -153,10 +132,10 @@ jobs:
+</a>         with:
+           submodules: &#39;recursive&#39;
+ 
+<a href="#h1-6-3" id="h1-6-3" class="d">-      - name: set up JDK 17
+</a><a href="#h1-6-4" id="h1-6-4" class="i">+      - name: Set up JDK 21
+</a>         uses: actions/setup-java@v4
+         with:
+<a href="#h1-6-7" id="h1-6-7" class="d">-          java-version: &#39;17&#39;
+</a><a href="#h1-6-8" id="h1-6-8" class="i">+          java-version: &#39;21&#39;
+</a>           distribution: &#39;temurin&#39;
+           cache: gradle
+ 
+<a href="#h1-7" id="h1-7" class="h">@@ -180,10 +159,10 @@ jobs:
+</a>         with:
+           submodules: &#39;recursive&#39;
+ 
+<a href="#h1-7-3" id="h1-7-3" class="d">-      - name: set up JDK 17
+</a><a href="#h1-7-4" id="h1-7-4" class="i">+      - name: Set up JDK 21
+</a>         uses: actions/setup-java@v4
+         with:
+<a href="#h1-7-7" id="h1-7-7" class="d">-          java-version: &#39;17&#39;
+</a><a href="#h1-7-8" id="h1-7-8" class="i">+          java-version: &#39;21&#39;
+</a>           distribution: &#39;temurin&#39;
+           cache: gradle
+ 
+<b>diff --git a/<a id="h2" href="../file/.github/workflows/release.yml.html">.github/workflows/release.yml</a> b/<a href="../file/.github/workflows/release.yml.html">.github/workflows/release.yml</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -20,10 +20,10 @@ jobs:
+</a>         with:
+           submodules: &#39;recursive&#39;
+ 
+<a href="#h2-0-3" id="h2-0-3" class="d">-      - name: set up JDK 17
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+      - name: Set up JDK 21
+</a>         uses: actions/setup-java@v4
+         with:
+<a href="#h2-0-7" id="h2-0-7" class="d">-          java-version: &#39;17&#39;
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+          java-version: &#39;21&#39;
+</a>           distribution: &#39;temurin&#39;
+           cache: gradle
+ 
+<a href="#h2-1" id="h2-1" class="h">@@ -35,28 +35,28 @@ jobs:
+</a> 
+       - name: Build
+         run: ./gradlew assembleArmv8Release
+<a href="#h2-1-3" id="h2-1-3" class="i">+
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+      - name: Determine the latest Build Tools version installed
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+        shell: bash
+</a><a href="#h2-1-6" id="h2-1-6" class="i">+        run: echo &quot;BUILD_TOOL_VERSION=$(ls &quot;$ANDROID_HOME/build-tools/&quot; | tail -n 1)&quot; &gt;&gt; $GITHUB_ENV
+</a>         
+       - name: Sign APK
+         id: sign_app
+<a href="#h2-1-10" id="h2-1-10" class="d">-        uses: kevin-david/zipalign-sign-android-release@main
+</a><a href="#h2-1-11" id="h2-1-11" class="i">+        uses: SnapEnhance/sign-android-release@master
+</a>         with:
+           releaseDirectory: app/build/outputs/apk/armv8/release/
+           signingKeyBase64: ${{ secrets.JAVA_KEYSTORE_DATA }}
+           alias: ${{ secrets.KEY_ALIAS }}
+           keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+           keyPassword: ${{ secrets.KEY_PASSWORD }}
+<a href="#h2-1-18" id="h2-1-18" class="d">-
+</a><a href="#h2-1-19" id="h2-1-19" class="d">-      - name: Delete unsigned file
+</a><a href="#h2-1-20" id="h2-1-20" class="d">-        run: |
+</a><a href="#h2-1-21" id="h2-1-21" class="d">-          cd app/build/outputs/apk/armv8/release/
+</a><a href="#h2-1-22" id="h2-1-22" class="d">-          shopt -s extglob
+</a><a href="#h2-1-23" id="h2-1-23" class="d">-          rm !(*-signed*)
+</a><a href="#h2-1-24" id="h2-1-24" class="i">+        env:
+</a><a href="#h2-1-25" id="h2-1-25" class="i">+          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
+</a>       
+       - name: Upload artifact
+         uses: actions/upload-artifact@v4
+         with:
+           name: snapenhance-armv8-release
+<a href="#h2-1-31" id="h2-1-31" class="d">-          path: app/build/outputs/apk/armv8/release/*.apk
+</a><a href="#h2-1-32" id="h2-1-32" class="i">+          path: ${{steps.sign_app.outputs.signedReleaseFile}}
+</a>           
+   job_armv7:
+     runs-on: macos-latest
+<a href="#h2-2" id="h2-2" class="h">@@ -66,10 +66,10 @@ jobs:
+</a>         with:
+           submodules: &#39;recursive&#39;
+ 
+<a href="#h2-2-3" id="h2-2-3" class="d">-      - name: set up JDK 17
+</a><a href="#h2-2-4" id="h2-2-4" class="i">+      - name: Set up JDK 21
+</a>         uses: actions/setup-java@v4
+         with:
+<a href="#h2-2-7" id="h2-2-7" class="d">-          java-version: &#39;17&#39;
+</a><a href="#h2-2-8" id="h2-2-8" class="i">+          java-version: &#39;21&#39;
+</a>           distribution: &#39;temurin&#39;
+           cache: gradle
+ 
+<a href="#h2-3" id="h2-3" class="h">@@ -82,27 +82,27 @@ jobs:
+</a>       - name: Build
+         run: ./gradlew assembleArmv7Release
+ 
+<a href="#h2-3-3" id="h2-3-3" class="i">+      - name: Determine the latest Build Tools version installed
+</a><a href="#h2-3-4" id="h2-3-4" class="i">+        shell: bash
+</a><a href="#h2-3-5" id="h2-3-5" class="i">+        run: echo &quot;BUILD_TOOL_VERSION=$(ls &quot;$ANDROID_HOME/build-tools/&quot; | tail -n 1)&quot; &gt;&gt; $GITHUB_ENV
+</a><a href="#h2-3-6" id="h2-3-6" class="i">+
+</a>       - name: Sign APK
+         id: sign_app
+<a href="#h2-3-9" id="h2-3-9" class="d">-        uses: kevin-david/zipalign-sign-android-release@main
+</a><a href="#h2-3-10" id="h2-3-10" class="i">+        uses: SnapEnhance/sign-android-release@master
+</a>         with:
+           releaseDirectory: app/build/outputs/apk/armv7/release/
+           signingKeyBase64: ${{ secrets.JAVA_KEYSTORE_DATA }}
+           alias: ${{ secrets.KEY_ALIAS }}
+           keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+           keyPassword: ${{ secrets.KEY_PASSWORD }}
+<a href="#h2-3-17" id="h2-3-17" class="d">-
+</a><a href="#h2-3-18" id="h2-3-18" class="d">-      - name: Delete unsigned file
+</a><a href="#h2-3-19" id="h2-3-19" class="d">-        run: |
+</a><a href="#h2-3-20" id="h2-3-20" class="d">-          cd app/build/outputs/apk/armv7/release/
+</a><a href="#h2-3-21" id="h2-3-21" class="d">-          shopt -s extglob
+</a><a href="#h2-3-22" id="h2-3-22" class="d">-          rm !(*-signed*)
+</a><a href="#h2-3-23" id="h2-3-23" class="i">+        env:
+</a><a href="#h2-3-24" id="h2-3-24" class="i">+          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
+</a> 
+       - name: Upload artifact
+         uses: actions/upload-artifact@v4
+         with:
+           name: snapenhance-armv7-release
+<a href="#h2-3-30" id="h2-3-30" class="d">-          path: app/build/outputs/apk/armv7/release/*.apk
+</a><a href="#h2-3-31" id="h2-3-31" class="i">+          path: ${{steps.sign_app.outputs.signedReleaseFile}}
+</a> 
+   job_universal:
+     runs-on: macos-latest
+<a href="#h2-4" id="h2-4" class="h">@@ -112,10 +112,10 @@ jobs:
+</a>         with:
+           submodules: &#39;recursive&#39;
+ 
+<a href="#h2-4-3" id="h2-4-3" class="d">-      - name: set up JDK 17
+</a><a href="#h2-4-4" id="h2-4-4" class="i">+      - name: Set up JDK 21
+</a>         uses: actions/setup-java@v4
+         with:
+<a href="#h2-4-7" id="h2-4-7" class="d">-          java-version: &#39;17&#39;
+</a><a href="#h2-4-8" id="h2-4-8" class="i">+          java-version: &#39;21&#39;
+</a>           distribution: &#39;temurin&#39;
+           cache: gradle
+ 
+<a href="#h2-5" id="h2-5" class="h">@@ -127,28 +127,28 @@ jobs:
+</a> 
+       - name: Build
+         run: ./gradlew assembleAllRelease
+<a href="#h2-5-3" id="h2-5-3" class="d">-        
+</a><a href="#h2-5-4" id="h2-5-4" class="i">+
+</a><a href="#h2-5-5" id="h2-5-5" class="i">+      - name: Determine the latest Build Tools version installed
+</a><a href="#h2-5-6" id="h2-5-6" class="i">+        shell: bash
+</a><a href="#h2-5-7" id="h2-5-7" class="i">+        run: echo &quot;BUILD_TOOL_VERSION=$(ls &quot;$ANDROID_HOME/build-tools/&quot; | tail -n 1)&quot; &gt;&gt; $GITHUB_ENV
+</a><a href="#h2-5-8" id="h2-5-8" class="i">+
+</a>       - name: Sign APK
+         id: sign_app
+<a href="#h2-5-11" id="h2-5-11" class="d">-        uses: kevin-david/zipalign-sign-android-release@main
+</a><a href="#h2-5-12" id="h2-5-12" class="i">+        uses: SnapEnhance/sign-android-release@master
+</a>         with:
+           releaseDirectory: app/build/outputs/apk/all/release/
+           signingKeyBase64: ${{ secrets.JAVA_KEYSTORE_DATA }}
+           alias: ${{ secrets.KEY_ALIAS }}
+           keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+           keyPassword: ${{ secrets.KEY_PASSWORD }}
+<a href="#h2-5-19" id="h2-5-19" class="d">-
+</a><a href="#h2-5-20" id="h2-5-20" class="d">-      - name: Delete unsigned file
+</a><a href="#h2-5-21" id="h2-5-21" class="d">-        run: |
+</a><a href="#h2-5-22" id="h2-5-22" class="d">-          cd app/build/outputs/apk/all/release/
+</a><a href="#h2-5-23" id="h2-5-23" class="d">-          shopt -s extglob
+</a><a href="#h2-5-24" id="h2-5-24" class="d">-          rm !(*-signed*)
+</a><a href="#h2-5-25" id="h2-5-25" class="i">+        env:
+</a><a href="#h2-5-26" id="h2-5-26" class="i">+          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
+</a> 
+       - name: Upload universal
+         uses: actions/upload-artifact@v4
+         with:
+           name: snapenhance-universal-release
+<a href="#h2-5-32" id="h2-5-32" class="d">-          path: app/build/outputs/apk/all/release/*.apk
+</a><a href="#h2-5-33" id="h2-5-33" class="i">+          path: ${{steps.sign_app.outputs.signedReleaseFile}}
+</a> 
+   job_manager:
+     runs-on: ubuntu-latest
+<a href="#h2-6" id="h2-6" class="h">@@ -158,10 +158,10 @@ jobs:
+</a>         with:
+           submodules: &#39;recursive&#39;
+ 
+<a href="#h2-6-3" id="h2-6-3" class="d">-      - name: set up JDK 17
+</a><a href="#h2-6-4" id="h2-6-4" class="i">+      - name: Set up JDK 21
+</a>         uses: actions/setup-java@v4
+         with:
+<a href="#h2-6-7" id="h2-6-7" class="d">-          java-version: &#39;17&#39;
+</a><a href="#h2-6-8" id="h2-6-8" class="i">+          java-version: &#39;21&#39;
+</a>           distribution: &#39;temurin&#39;
+           cache: gradle
+ 
+<a href="#h2-7" id="h2-7" class="h">@@ -171,27 +171,27 @@ jobs:
+</a>       - name: Build
+         run: ./gradlew manager:assembleRelease
+ 
+<a href="#h2-7-3" id="h2-7-3" class="i">+      - name: Determine the latest Build Tools version installed
+</a><a href="#h2-7-4" id="h2-7-4" class="i">+        shell: bash
+</a><a href="#h2-7-5" id="h2-7-5" class="i">+        run: echo &quot;BUILD_TOOL_VERSION=$(ls &quot;$ANDROID_HOME/build-tools/&quot; | tail -n 1)&quot; &gt;&gt; $GITHUB_ENV
+</a><a href="#h2-7-6" id="h2-7-6" class="i">+
+</a>       - name: Sign APK
+         id: sign_app
+<a href="#h2-7-9" id="h2-7-9" class="d">-        uses: kevin-david/zipalign-sign-android-release@main
+</a><a href="#h2-7-10" id="h2-7-10" class="i">+        uses: SnapEnhance/sign-android-release@master
+</a>         with:
+           releaseDirectory: manager/build/outputs/apk/release/
+           signingKeyBase64: ${{ secrets.JAVA_KEYSTORE_DATA }}
+           alias: ${{ secrets.KEY_ALIAS }}
+           keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+           keyPassword: ${{ secrets.KEY_PASSWORD }}
+<a href="#h2-7-17" id="h2-7-17" class="d">-
+</a><a href="#h2-7-18" id="h2-7-18" class="d">-      - name: Delete unsigned file
+</a><a href="#h2-7-19" id="h2-7-19" class="d">-        run: |
+</a><a href="#h2-7-20" id="h2-7-20" class="d">-          cd manager/build/outputs/apk/release/
+</a><a href="#h2-7-21" id="h2-7-21" class="d">-          shopt -s extglob
+</a><a href="#h2-7-22" id="h2-7-22" class="d">-          rm !(*-signed*)
+</a><a href="#h2-7-23" id="h2-7-23" class="i">+        env:
+</a><a href="#h2-7-24" id="h2-7-24" class="i">+          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
+</a> 
+       - name: Upload artifact
+         uses: actions/upload-artifact@v4
+         with:
+           name: manager
+<a href="#h2-7-30" id="h2-7-30" class="d">-          path: manager/build/outputs/apk/release/*.apk
+</a><a href="#h2-7-31" id="h2-7-31" class="i">+          path: ${{steps.sign_app.outputs.signedReleaseFile}}
+</a> 
+   job_release:
+     runs-on: ubuntu-latest
+<a href="#h2-8" id="h2-8" class="h">@@ -203,24 +203,21 @@ jobs:
+</a>         with:
+           submodules: &#39;recursive&#39;
+ 
+<a href="#h2-8-3" id="h2-8-3" class="d">-      - name: set up JDK 17
+</a><a href="#h2-8-4" id="h2-8-4" class="i">+      - name: Set up JDK 21
+</a>         uses: actions/setup-java@v4
+         with:
+<a href="#h2-8-7" id="h2-8-7" class="d">-          java-version: &#39;17&#39;
+</a><a href="#h2-8-8" id="h2-8-8" class="i">+          java-version: &#39;21&#39;
+</a>           distribution: &#39;temurin&#39;
+           cache: gradle
+ 
+       - name: Grant execute permission for gradlew
+         run: chmod +x gradlew
+ 
+<a href="#h2-8-15" id="h2-8-15" class="d">-      - name: Generate version
+</a><a href="#h2-8-16" id="h2-8-16" class="d">-        run: ./gradlew getVersion
+</a><a href="#h2-8-17" id="h2-8-17" class="d">-
+</a><a href="#h2-8-18" id="h2-8-18" class="d">-      - name: Set Environment Variables
+</a><a href="#h2-8-19" id="h2-8-19" class="i">+      - name: Get current build version
+</a>         id: version-env
+         run: |
+<a href="#h2-8-22" id="h2-8-22" class="i">+          ./gradlew getVersion
+</a>           echo &quot;version=$(cat app/build/version.txt)&quot; &gt;&gt; $GITHUB_ENV
+<a href="#h2-8-24" id="h2-8-24" class="d">-          echo &quot;sha_short=$(git rev-parse --short HEAD)&quot; &gt;&gt; $GITHUB_OUTPUT
+</a> 
+       - name: Download artifacts
+         uses: actions/download-artifact@v4
+<a href="#h2-9" id="h2-9" class="h">@@ -229,9 +226,9 @@ jobs:
+</a>           merge-multiple: true
+ 
+       - name: Publish APK
+<a href="#h2-9-3" id="h2-9-3" class="d">-        uses: marvinpinto/action-automatic-releases@latest
+</a><a href="#h2-9-4" id="h2-9-4" class="i">+        uses: softprops/action-gh-release@v2
+</a>         with:
+<a href="#h2-9-6" id="h2-9-6" class="d">-          repo_token: &quot;${{ secrets.GITHUB_TOKEN }}&quot;
+</a><a href="#h2-9-7" id="h2-9-7" class="i">+          token: ${{ secrets.GITHUB_TOKEN }}
+</a>           prerelease: ${{ inputs.prerelease }}
+           files: bins/*.apk
+<a href="#h2-9-10" id="h2-9-10" class="d">-          automatic_release_tag: v${{ env.version }}</a><a href="#h2-9-11" id="h2-9-11" class="d">-
+\ No newline at end of file
+</a><a href="#h2-9-12" id="h2-9-12" class="i">+          tag_name: v${{ env.version }}
+</a><b>diff --git a/<a id="h3" href="../file/README.md.html">README.md</a> b/<a href="../file/README.md.html">README.md</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -253,6 +253,7 @@ Thanks to everyone involved including the [third-party libraries](https://github
+</a> - [CanerKaraca23](https://github.com/CanerKaraca23)
+ - [bocajthomas](https://github.com/bocajthomas)
+ - [w451](https://github.com/w451)
+<a href="#h3-0-3" id="h3-0-3" class="i">+- [sn-o-w](https://github.com/sn-o-w)
+</a> 
+ ## Donate
+ **@rhunk**
+</pre>
+</div>
+</body>
+</html>

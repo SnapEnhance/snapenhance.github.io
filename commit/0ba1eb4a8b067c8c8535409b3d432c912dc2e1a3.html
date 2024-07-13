@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: bypass video length restriction - single and split mode - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/0ba1eb4a8b067c8c8535409b3d432c912dc2e1a3.html">0ba1eb4a8b067c8c8535409b3d432c912dc2e1a3</a>
+<b>parent</b> <a href="../commit/e4443279d67e61d6f858324a6d745cfb3608bd04.html">e4443279d67e61d6f858324a6d745cfb3608bd04</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun,  8 Oct 2023 18:41:18 +0200
+
+feat: bypass video length restriction
+- single and split mode
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">10</td><td><span class="i">+++++++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Global.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/BypassVideoLengthRestriction.kt</a></td><td> | </td><td class="num">73</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="D">D</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/DisableVideoLengthRestriction.kt</a></td><td> | </td><td class="num">51</td><td><span class="i"></span><span class="d">---------------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/DefaultMediaItemMapper.kt</a></td><td> | </td><td class="num">13</td><td><span class="i">+++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>6 files changed, 95 insertions(+), 56 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a> b/<a href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -362,9 +362,9 @@
+</a>                         &quot;name&quot;: &quot;Block Ads&quot;,
+                         &quot;description&quot;: &quot;Prevents Advertisements from being displayed&quot;
+                     },
+<a href="#h0-0-3" id="h0-0-3" class="d">-                    &quot;disable_video_length_restrictions&quot;: {
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-                        &quot;name&quot;: &quot;Disable Video Length Restrictions&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-                        &quot;description&quot;: &quot;Disables Snapchat&#39;s maximum video length restriction&quot;
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                    &quot;bypass_video_length_restriction&quot;: {
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+                        &quot;name&quot;: &quot;Bypass Video Length Restrictions&quot;,
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+                        &quot;description&quot;: &quot;Single: sends a single video\nSplit: split videos after editing&quot;
+</a>                     },
+                     &quot;disable_google_play_dialogs&quot;: {
+                         &quot;name&quot;: &quot;Disable Google Play Services Dialogs&quot;,
+<a href="#h0-1" id="h0-1" class="h">@@ -664,6 +664,10 @@
+</a>                 &quot;added_by_group_chat&quot;: &quot;By Group Chat&quot;,
+                 &quot;added_by_qr_code&quot;: &quot;By QR Code&quot;,
+                 &quot;added_by_community&quot;: &quot;By Community&quot;
+<a href="#h0-1-3" id="h0-1-3" class="i">+            },
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+            &quot;bypass_video_length_restriction&quot;: {
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+                &quot;single&quot;: &quot;Single media&quot;,
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+                &quot;split&quot;: &quot;Split media&quot;
+</a>             }
+         }
+     },
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Global.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Global.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Global.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Global.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -7,7 +7,7 @@ class Global : ConfigContainer() {
+</a>     val snapchatPlus = boolean(&quot;snapchat_plus&quot;) { addNotices(FeatureNotice.BAN_RISK); requireRestart() }
+     val disableMetrics = boolean(&quot;disable_metrics&quot;)
+     val blockAds = boolean(&quot;block_ads&quot;)
+<a href="#h1-0-3" id="h1-0-3" class="d">-    val disableVideoLengthRestrictions = boolean(&quot;disable_video_length_restrictions&quot;) { addNotices(FeatureNotice.BAN_RISK) }
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    val bypassVideoLengthRestriction = unique(&quot;bypass_video_length_restriction&quot;, &quot;split&quot;, &quot;single&quot;) { addNotices(FeatureNotice.BAN_RISK); requireRestart() }
+</a>     val disableGooglePlayDialogs = boolean(&quot;disable_google_play_dialogs&quot;) { requireRestart() }
+     val forceMediaSourceQuality = boolean(&quot;force_media_source_quality&quot;)
+     val disableSnapSplitting = boolean(&quot;disable_snap_splitting&quot;) { addNotices(FeatureNotice.INTERNAL_BEHAVIOR) }
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/BypassVideoLengthRestriction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/BypassVideoLengthRestriction.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/BypassVideoLengthRestriction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/BypassVideoLengthRestriction.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -0,0 +1,72 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="i">+package me.rhunk.snapenhance.features.impl.tweaks
+</a><a href="#h2-0-1" id="h2-0-1" class="i">+
+</a><a href="#h2-0-2" id="h2-0-2" class="i">+import android.os.Build
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+import android.os.FileObserver
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import com.google.gson.JsonParser
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+import me.rhunk.snapenhance.core.event.events.impl.SendMessageWithContentEvent
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+import me.rhunk.snapenhance.core.util.ktx.setObjectField
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+import me.rhunk.snapenhance.features.Feature
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+import me.rhunk.snapenhance.features.FeatureLoadParams
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+import me.rhunk.snapenhance.hook.HookStage
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+import me.rhunk.snapenhance.hook.hookConstructor
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+import java.io.File
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+class BypassVideoLengthRestriction :
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+    Feature(&quot;BypassVideoLengthRestriction&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_ASYNC) {
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+    private lateinit var fileObserver: FileObserver
+</a><a href="#h2-0-16" id="h2-0-16" class="i">+
+</a><a href="#h2-0-17" id="h2-0-17" class="i">+    override fun asyncOnActivityCreate() {
+</a><a href="#h2-0-18" id="h2-0-18" class="i">+        val mode = context.config.global.bypassVideoLengthRestriction.getNullable()
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+        if (mode == &quot;single&quot;) {
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+            //fix black videos when story is posted
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+            if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.Q) {
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+                val postedStorySnapFolder =
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+                    File(context.androidContext.filesDir, &quot;file_manager/posted_story_snap&quot;)
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+                fileObserver = (object : FileObserver(postedStorySnapFolder, MOVED_TO) {
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+                    override fun onEvent(event: Int, path: String?) {
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+                        if (event != MOVED_TO || path?.endsWith(&quot;posted_story_snap.2&quot;) != true) return
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+                        fileObserver.stopWatching()
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+                        val file = File(postedStorySnapFolder, path)
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+                        runCatching {
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+                            val fileContent = JsonParser.parseReader(file.reader()).asJsonObject
+</a><a href="#h2-0-34" id="h2-0-34" class="i">+                            if (fileContent[&quot;timerOrDuration&quot;].asLong &lt; 0) file.delete()
+</a><a href="#h2-0-35" id="h2-0-35" class="i">+                        }.onFailure {
+</a><a href="#h2-0-36" id="h2-0-36" class="i">+                            context.log.error(&quot;Failed to read story metadata file&quot;, it)
+</a><a href="#h2-0-37" id="h2-0-37" class="i">+                        }
+</a><a href="#h2-0-38" id="h2-0-38" class="i">+                    }
+</a><a href="#h2-0-39" id="h2-0-39" class="i">+                })
+</a><a href="#h2-0-40" id="h2-0-40" class="i">+
+</a><a href="#h2-0-41" id="h2-0-41" class="i">+                context.event.subscribe(SendMessageWithContentEvent::class) { event -&gt;
+</a><a href="#h2-0-42" id="h2-0-42" class="i">+                    if (event.destinations.stories.isEmpty()) return@subscribe
+</a><a href="#h2-0-43" id="h2-0-43" class="i">+                    fileObserver.startWatching()
+</a><a href="#h2-0-44" id="h2-0-44" class="i">+                }
+</a><a href="#h2-0-45" id="h2-0-45" class="i">+            }
+</a><a href="#h2-0-46" id="h2-0-46" class="i">+
+</a><a href="#h2-0-47" id="h2-0-47" class="i">+            context.mappings.getMappedClass(&quot;DefaultMediaItem&quot;)
+</a><a href="#h2-0-48" id="h2-0-48" class="i">+                .hookConstructor(HookStage.BEFORE) { param -&gt;
+</a><a href="#h2-0-49" id="h2-0-49" class="i">+                    //set the video length argument
+</a><a href="#h2-0-50" id="h2-0-50" class="i">+                    param.setArg(5, -1L)
+</a><a href="#h2-0-51" id="h2-0-51" class="i">+                }
+</a><a href="#h2-0-52" id="h2-0-52" class="i">+        }
+</a><a href="#h2-0-53" id="h2-0-53" class="i">+
+</a><a href="#h2-0-54" id="h2-0-54" class="i">+        //TODO: allow split from any source
+</a><a href="#h2-0-55" id="h2-0-55" class="i">+        if (mode == &quot;split&quot;) {
+</a><a href="#h2-0-56" id="h2-0-56" class="i">+            val cameraRollId = context.mappings.getMappedMap(&quot;CameraRollMediaId&quot;)
+</a><a href="#h2-0-57" id="h2-0-57" class="i">+            // memories grid
+</a><a href="#h2-0-58" id="h2-0-58" class="i">+            findClass(cameraRollId[&quot;class&quot;].toString()).hookConstructor(HookStage.AFTER) { param -&gt;
+</a><a href="#h2-0-59" id="h2-0-59" class="i">+                //set the durationMs field
+</a><a href="#h2-0-60" id="h2-0-60" class="i">+                param.thisObject&lt;Any&gt;()
+</a><a href="#h2-0-61" id="h2-0-61" class="i">+                    .setObjectField(cameraRollId[&quot;durationMsField&quot;].toString(), -1L)
+</a><a href="#h2-0-62" id="h2-0-62" class="i">+            }
+</a><a href="#h2-0-63" id="h2-0-63" class="i">+
+</a><a href="#h2-0-64" id="h2-0-64" class="i">+            // chat camera roll grid
+</a><a href="#h2-0-65" id="h2-0-65" class="i">+            findClass(&quot;com.snap.impala.common.media.MediaLibraryItem&quot;).hookConstructor(HookStage.BEFORE) { param -&gt;
+</a><a href="#h2-0-66" id="h2-0-66" class="i">+                //set the video length argument
+</a><a href="#h2-0-67" id="h2-0-67" class="i">+                param.setArg(3, -1L)
+</a><a href="#h2-0-68" id="h2-0-68" class="i">+            }
+</a><a href="#h2-0-69" id="h2-0-69" class="i">+        }
+</a><a href="#h2-0-70" id="h2-0-70" class="i">+    }
+</a><a href="#h2-0-71" id="h2-0-71" class="i">+}</a><a href="#h2-0-72" id="h2-0-72" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/DisableVideoLengthRestriction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/DisableVideoLengthRestriction.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/DisableVideoLengthRestriction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/DisableVideoLengthRestriction.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -1,50 +0,0 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="d">-package me.rhunk.snapenhance.features.impl.tweaks
+</a><a href="#h3-0-1" id="h3-0-1" class="d">-
+</a><a href="#h3-0-2" id="h3-0-2" class="d">-import android.os.Build
+</a><a href="#h3-0-3" id="h3-0-3" class="d">-import android.os.FileObserver
+</a><a href="#h3-0-4" id="h3-0-4" class="d">-import com.google.gson.JsonParser
+</a><a href="#h3-0-5" id="h3-0-5" class="d">-import me.rhunk.snapenhance.core.event.events.impl.SendMessageWithContentEvent
+</a><a href="#h3-0-6" id="h3-0-6" class="d">-import me.rhunk.snapenhance.features.Feature
+</a><a href="#h3-0-7" id="h3-0-7" class="d">-import me.rhunk.snapenhance.features.FeatureLoadParams
+</a><a href="#h3-0-8" id="h3-0-8" class="d">-import me.rhunk.snapenhance.hook.HookStage
+</a><a href="#h3-0-9" id="h3-0-9" class="d">-import me.rhunk.snapenhance.hook.Hooker
+</a><a href="#h3-0-10" id="h3-0-10" class="d">-import java.io.File
+</a><a href="#h3-0-11" id="h3-0-11" class="d">-
+</a><a href="#h3-0-12" id="h3-0-12" class="d">-class DisableVideoLengthRestriction : Feature(&quot;DisableVideoLengthRestriction&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_ASYNC) {
+</a><a href="#h3-0-13" id="h3-0-13" class="d">-    private lateinit var fileObserver: FileObserver
+</a><a href="#h3-0-14" id="h3-0-14" class="d">-
+</a><a href="#h3-0-15" id="h3-0-15" class="d">-    override fun asyncOnActivityCreate() {
+</a><a href="#h3-0-16" id="h3-0-16" class="d">-        val defaultMediaItem = context.mappings.getMappedClass(&quot;DefaultMediaItem&quot;)
+</a><a href="#h3-0-17" id="h3-0-17" class="d">-        val isState by context.config.global.disableVideoLengthRestrictions
+</a><a href="#h3-0-18" id="h3-0-18" class="d">-
+</a><a href="#h3-0-19" id="h3-0-19" class="d">-        //fix black videos when story is posted
+</a><a href="#h3-0-20" id="h3-0-20" class="d">-        if (isState &amp;&amp; Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.Q) {
+</a><a href="#h3-0-21" id="h3-0-21" class="d">-            val postedStorySnapFolder = File(context.androidContext.filesDir, &quot;file_manager/posted_story_snap&quot;)
+</a><a href="#h3-0-22" id="h3-0-22" class="d">-
+</a><a href="#h3-0-23" id="h3-0-23" class="d">-            fileObserver = (object : FileObserver(postedStorySnapFolder, MOVED_TO) {
+</a><a href="#h3-0-24" id="h3-0-24" class="d">-                override fun onEvent(event: Int, path: String?) {
+</a><a href="#h3-0-25" id="h3-0-25" class="d">-                    if (event != MOVED_TO || path?.endsWith(&quot;posted_story_snap.2&quot;) != true) return
+</a><a href="#h3-0-26" id="h3-0-26" class="d">-                    fileObserver.stopWatching()
+</a><a href="#h3-0-27" id="h3-0-27" class="d">-
+</a><a href="#h3-0-28" id="h3-0-28" class="d">-                    val file = File(postedStorySnapFolder, path)
+</a><a href="#h3-0-29" id="h3-0-29" class="d">-                    runCatching {
+</a><a href="#h3-0-30" id="h3-0-30" class="d">-                        val fileContent = JsonParser.parseReader(file.reader()).asJsonObject
+</a><a href="#h3-0-31" id="h3-0-31" class="d">-                        if (fileContent[&quot;timerOrDuration&quot;].asLong &lt; 0) file.delete()
+</a><a href="#h3-0-32" id="h3-0-32" class="d">-                    }.onFailure {
+</a><a href="#h3-0-33" id="h3-0-33" class="d">-                        context.log.error(&quot;Failed to read story metadata file&quot;, it)
+</a><a href="#h3-0-34" id="h3-0-34" class="d">-                    }
+</a><a href="#h3-0-35" id="h3-0-35" class="d">-                }
+</a><a href="#h3-0-36" id="h3-0-36" class="d">-            })
+</a><a href="#h3-0-37" id="h3-0-37" class="d">-
+</a><a href="#h3-0-38" id="h3-0-38" class="d">-            context.event.subscribe(SendMessageWithContentEvent::class) { event -&gt;
+</a><a href="#h3-0-39" id="h3-0-39" class="d">-                if (event.destinations.stories.isEmpty()) return@subscribe
+</a><a href="#h3-0-40" id="h3-0-40" class="d">-                fileObserver.startWatching()
+</a><a href="#h3-0-41" id="h3-0-41" class="d">-            }
+</a><a href="#h3-0-42" id="h3-0-42" class="d">-        }
+</a><a href="#h3-0-43" id="h3-0-43" class="d">-
+</a><a href="#h3-0-44" id="h3-0-44" class="d">-        Hooker.hookConstructor(defaultMediaItem, HookStage.BEFORE, { isState }) { param -&gt;
+</a><a href="#h3-0-45" id="h3-0-45" class="d">-            //set the video length argument
+</a><a href="#h3-0-46" id="h3-0-46" class="d">-            param.setArg(5, -1L)
+</a><a href="#h3-0-47" id="h3-0-47" class="d">-        }
+</a><a href="#h3-0-48" id="h3-0-48" class="d">-    }
+</a><a href="#h3-0-49" id="h3-0-49" class="d">-}</a><a href="#h3-0-50" id="h3-0-50" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -84,7 +84,7 @@ class FeatureManager(
+</a>             ConfigurationOverride::class,
+             SendOverride::class,
+             UnlimitedSnapViewTime::class,
+<a href="#h4-0-3" id="h4-0-3" class="d">-            DisableVideoLengthRestriction::class,
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+            BypassVideoLengthRestriction::class,
+</a>             MediaQualityLevelOverride::class,
+             MeoPasscodeBypass::class,
+             AppPasscode::class,
+<b>diff --git a/<a id="h5" href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/DefaultMediaItemMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/DefaultMediaItemMapper.kt</a> b/<a href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/DefaultMediaItemMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/DefaultMediaItemMapper.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -1,6 +1,7 @@
+</a> package me.rhunk.snapenhance.mapper.impl
+ 
+ import me.rhunk.snapenhance.mapper.AbstractClassMapper
+<a href="#h5-0-3" id="h5-0-3" class="i">+import me.rhunk.snapenhance.mapper.ext.findConstString
+</a> import me.rhunk.snapenhance.mapper.ext.getClassName
+ import me.rhunk.snapenhance.mapper.ext.isAbstract
+ 
+<a href="#h5-1" id="h5-1" class="h">@@ -8,6 +9,18 @@ class DefaultMediaItemMapper : AbstractClassMapper() {
+</a>     init {
+         mapper {
+             for (clazz in classes) {
+<a href="#h5-1-3" id="h5-1-3" class="i">+                if (clazz.methods.find { it.name == &quot;toString&quot; }?.implementation?.findConstString(&quot;CameraRollMediaId&quot;, contains = true) != true) {
+</a><a href="#h5-1-4" id="h5-1-4" class="i">+                    continue
+</a><a href="#h5-1-5" id="h5-1-5" class="i">+                }
+</a><a href="#h5-1-6" id="h5-1-6" class="i">+                val durationMsField = clazz.fields.firstOrNull { it.type == &quot;J&quot; } ?: continue
+</a><a href="#h5-1-7" id="h5-1-7" class="i">+
+</a><a href="#h5-1-8" id="h5-1-8" class="i">+                addMapping(&quot;CameraRollMediaId&quot;, &quot;class&quot; to clazz.getClassName(), &quot;durationMsField&quot; to durationMsField.name)
+</a><a href="#h5-1-9" id="h5-1-9" class="i">+                return@mapper
+</a><a href="#h5-1-10" id="h5-1-10" class="i">+            }
+</a><a href="#h5-1-11" id="h5-1-11" class="i">+        }
+</a><a href="#h5-1-12" id="h5-1-12" class="i">+
+</a><a href="#h5-1-13" id="h5-1-13" class="i">+        mapper {
+</a><a href="#h5-1-14" id="h5-1-14" class="i">+            for (clazz in classes) {
+</a>                 val superClass = getClass(clazz.superclass) ?: continue
+ 
+                 if (!superClass.isAbstract() || superClass.interfaces.isEmpty() || superClass.interfaces[0] != &quot;Ljava/lang/Comparable;&quot;) continue
+</pre>
+</div>
+</body>
+</html>

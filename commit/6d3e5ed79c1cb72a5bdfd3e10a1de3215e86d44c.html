@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>refactor: message logger - send timestamp - sender/conversation usernames - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/6d3e5ed79c1cb72a5bdfd3e10a1de3215e86d44c.html">6d3e5ed79c1cb72a5bdfd3e10a1de3215e86d44c</a>
+<b>parent</b> <a href="../commit/cb51da8166e4aea9e8258c0946be4afae35adfab.html">cb51da8166e4aea9e8258c0946be4afae35adfab</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun,  2 Jun 2024 10:12:46 +0200
+
+refactor: message logger
+- send timestamp
+- sender/conversation usernames
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt</a></td><td> | </td><td class="num">58</td><td><span class="i">++++++++++++++++++++++++++++++++++</span><span class="d">------------------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h1">common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/BridgeLoggedMessage.aidl</a></td><td> | </td><td class="num">12</td><td><span class="i">++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/LoggerInterface.aidl</a></td><td> | </td><td class="num">4</td><td><span class="i">+++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt</a></td><td> | </td><td class="num">200</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">--------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt</a></td><td> | </td><td class="num">20</td><td><span class="i">+++++++++++++++++++</span><span class="d">-</span></td></tr>
+</table></pre><pre>5 files changed, 187 insertions(+), 107 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -20,6 +20,7 @@ import androidx.compose.ui.input.pointer.pointerInput
+</a> import androidx.compose.ui.text.font.FontStyle
+ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.text.style.TextAlign
+<a href="#h0-0-3" id="h0-0-3" class="i">+import androidx.compose.ui.text.style.TextOverflow
+</a> import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+ import androidx.navigation.NavBackStackEntry
+<a href="#h0-1" id="h0-1" class="h">@@ -28,6 +29,7 @@ import kotlinx.coroutines.Dispatchers
+</a> import kotlinx.coroutines.launch
+ import kotlinx.coroutines.withContext
+ import me.rhunk.snapenhance.bridge.DownloadCallback
+<a href="#h0-1-3" id="h0-1-3" class="i">+import me.rhunk.snapenhance.common.bridge.wrapper.ConversationInfo
+</a> import me.rhunk.snapenhance.common.bridge.wrapper.LoggedMessage
+ import me.rhunk.snapenhance.common.bridge.wrapper.LoggerWrapper
+ import me.rhunk.snapenhance.common.data.ContentType
+<a href="#h0-2" id="h0-2" class="h">@@ -43,12 +45,8 @@ import me.rhunk.snapenhance.core.features.impl.downloader.decoder.DecodedAttachm
+</a> import me.rhunk.snapenhance.core.features.impl.downloader.decoder.MessageDecoder
+ import me.rhunk.snapenhance.download.DownloadProcessor
+ import me.rhunk.snapenhance.storage.findFriend
+<a href="#h0-2-3" id="h0-2-3" class="d">-import me.rhunk.snapenhance.storage.getFriendInfo
+</a><a href="#h0-2-4" id="h0-2-4" class="d">-import me.rhunk.snapenhance.storage.getGroupInfo
+</a> import me.rhunk.snapenhance.ui.manager.Routes
+<a href="#h0-2-6" id="h0-2-6" class="d">-import java.nio.ByteBuffer
+</a> import java.text.DateFormat
+<a href="#h0-2-8" id="h0-2-8" class="d">-import java.util.UUID
+</a> import kotlin.math.absoluteValue
+ 
+ 
+<a href="#h0-3" id="h0-3" class="h">@@ -58,15 +56,12 @@ class LoggerHistoryRoot : Routes.Route() {
+</a>     private var stringFilter by mutableStateOf(&quot;&quot;)
+     private var reverseOrder by mutableStateOf(true)
+ 
+<a href="#h0-3-3" id="h0-3-3" class="d">-    private inline fun decodeMessage(message: LoggedMessage, result: (senderId: String?, contentType: ContentType, messageReader: ProtoReader, attachments: List&lt;DecodedAttachment&gt;) -&gt; Unit) {
+</a><a href="#h0-3-4" id="h0-3-4" class="i">+    private inline fun decodeMessage(message: LoggedMessage, result: (contentType: ContentType, messageReader: ProtoReader, attachments: List&lt;DecodedAttachment&gt;) -&gt; Unit) {
+</a>         runCatching {
+             val messageObject = JsonParser.parseString(String(message.messageData, Charsets.UTF_8)).asJsonObject
+<a href="#h0-3-7" id="h0-3-7" class="d">-            val senderId = messageObject.getAsJsonObject(&quot;mSenderId&quot;)?.getAsJsonArray(&quot;mId&quot;)?.map { it.asByte }?.toByteArray()?.let {
+</a><a href="#h0-3-8" id="h0-3-8" class="d">-                ByteBuffer.wrap(it).run { UUID(long, long) }.toString()
+</a><a href="#h0-3-9" id="h0-3-9" class="d">-            }
+</a>             val messageContent = messageObject.getAsJsonObject(&quot;mMessageContent&quot;)
+             val messageReader = messageContent.getAsJsonArray(&quot;mContent&quot;).map { it.asByte }.toByteArray().let { ProtoReader(it) }
+<a href="#h0-3-12" id="h0-3-12" class="d">-            result(senderId, ContentType.fromMessageContainer(messageReader) ?: ContentType.UNKNOWN, messageReader, MessageDecoder.decode(messageContent))
+</a><a href="#h0-3-13" id="h0-3-13" class="i">+            result(ContentType.fromMessageContainer(messageReader) ?: ContentType.UNKNOWN, messageReader, MessageDecoder.decode(messageContent))
+</a>         }.onFailure {
+             context.log.error(&quot;Failed to decode message&quot;, it)
+         }
+<a href="#h0-4" id="h0-4" class="h">@@ -129,12 +124,10 @@ class LoggerHistoryRoot : Routes.Route() {
+</a> 
+                 LaunchedEffect(Unit, message) {
+                     runCatching {
+<a href="#h0-4-3" id="h0-4-3" class="d">-                        decodeMessage(message) { senderId, contentType, messageReader, attachments -&gt;
+</a><a href="#h0-4-4" id="h0-4-4" class="d">-                            val senderUsername = senderId?.let { context.database.getFriendInfo(it)?.mutableUsername } ?: translation[&quot;unknown_sender&quot;]
+</a><a href="#h0-4-5" id="h0-4-5" class="d">-
+</a><a href="#h0-4-6" id="h0-4-6" class="i">+                        decodeMessage(message) { contentType, messageReader, attachments -&gt;
+</a>                             @Composable
+                             fun ContentHeader() {
+<a href="#h0-4-9" id="h0-4-9" class="d">-                                Text(&quot;$senderUsername (${contentType.toString().lowercase()})&quot;, modifier = Modifier.padding(end = 4.dp), fontWeight = FontWeight.ExtraLight)
+</a><a href="#h0-4-10" id="h0-4-10" class="i">+                                Text(&quot;${message.username} (${contentType.toString().lowercase()}) - ${DateFormat.getDateTimeInstance().format(message.sendTimestamp)}&quot;, modifier = Modifier.padding(end = 4.dp), fontWeight = FontWeight.ExtraLight)
+</a>                             }
+ 
+                             if (contentType == ContentType.CHAT) {
+<a href="#h0-5" id="h0-5" class="h">@@ -187,7 +180,7 @@ class LoggerHistoryRoot : Routes.Route() {
+</a>                                             ElevatedButton(onClick = {
+                                                 context.coroutineScope.launch {
+                                                     runCatching {
+<a href="#h0-5-3" id="h0-5-3" class="d">-                                                        downloadAttachment(message.timestamp, attachment)
+</a><a href="#h0-5-4" id="h0-5-4" class="i">+                                                        downloadAttachment(message.sendTimestamp, attachment)
+</a>                                                     }.onFailure {
+                                                         context.log.error(&quot;Failed to download attachment&quot;, it)
+                                                         context.shortToast(translation[&quot;download_attachment_failed_toast&quot;])
+<a href="#h0-6" id="h0-6" class="h">@@ -232,17 +225,26 @@ class LoggerHistoryRoot : Routes.Route() {
+</a>                 expanded = expanded,
+                 onExpandedChange = { expanded = it },
+             ) {
+<a href="#h0-6-3" id="h0-6-3" class="d">-                fun formatConversationId(conversationId: String?): String? {
+</a><a href="#h0-6-4" id="h0-6-4" class="d">-                    if (conversationId == null) return null
+</a><a href="#h0-6-5" id="h0-6-5" class="d">-                    return context.database.getGroupInfo(conversationId)?.name?.let {
+</a><a href="#h0-6-6" id="h0-6-6" class="i">+                fun formatConversationInfo(conversationInfo: ConversationInfo?): String? {
+</a><a href="#h0-6-7" id="h0-6-7" class="i">+                    if (conversationInfo == null) return null
+</a><a href="#h0-6-8" id="h0-6-8" class="i">+
+</a><a href="#h0-6-9" id="h0-6-9" class="i">+                    return conversationInfo.groupTitle?.let {
+</a>                         translation.format(&quot;list_group_format&quot;, &quot;name&quot; to it)
+<a href="#h0-6-11" id="h0-6-11" class="d">-                    } ?: context.database.findFriend(conversationId)?.let {
+</a><a href="#h0-6-12" id="h0-6-12" class="d">-                        translation.format(&quot;list_friend_format&quot;, &quot;name&quot; to (it.displayName?.let { name -&gt; &quot;$name (${it.mutableUsername})&quot; } ?: it.mutableUsername))
+</a><a href="#h0-6-13" id="h0-6-13" class="d">-                    } ?: conversationId
+</a><a href="#h0-6-14" id="h0-6-14" class="i">+                    } ?: conversationInfo.usernames.takeIf { it.size &gt; 1 }?.let {
+</a><a href="#h0-6-15" id="h0-6-15" class="i">+                        translation.format(&quot;list_friend_format&quot;, &quot;name&quot; to (&quot;(&quot; + it.joinToString(&quot;, &quot;) + &quot;)&quot;))
+</a><a href="#h0-6-16" id="h0-6-16" class="i">+                    } ?: context.database.findFriend(conversationInfo.conversationId)?.let {
+</a><a href="#h0-6-17" id="h0-6-17" class="i">+                        translation.format(&quot;list_friend_format&quot;, &quot;name&quot; to &quot;(&quot; + (conversationInfo.usernames + listOf(it.mutableUsername)).toSet().joinToString(&quot;, &quot;) + &quot;)&quot;)
+</a><a href="#h0-6-18" id="h0-6-18" class="i">+                    } ?: conversationInfo.usernames.firstOrNull()?.let {
+</a><a href="#h0-6-19" id="h0-6-19" class="i">+                        translation.format(&quot;list_friend_format&quot;, &quot;name&quot; to &quot;($it)&quot;)
+</a><a href="#h0-6-20" id="h0-6-20" class="i">+                    }
+</a><a href="#h0-6-21" id="h0-6-21" class="i">+                }
+</a><a href="#h0-6-22" id="h0-6-22" class="i">+
+</a><a href="#h0-6-23" id="h0-6-23" class="i">+                val selectedConversationInfo by rememberAsyncMutableState(defaultValue = null, keys = arrayOf(selectedConversation)) {
+</a><a href="#h0-6-24" id="h0-6-24" class="i">+                    selectedConversation?.let { loggerWrapper.getConversationInfo(it) }
+</a>                 }
+ 
+                 OutlinedTextField(
+<a href="#h0-6-28" id="h0-6-28" class="d">-                    value = remember(selectedConversation) { formatConversationId(selectedConversation) ?: &quot;Select a conversation&quot; },
+</a><a href="#h0-6-29" id="h0-6-29" class="i">+                    value = remember(selectedConversationInfo) { formatConversationInfo(selectedConversationInfo) ?: &quot;Select a conversation&quot; },
+</a>                     onValueChange = {},
+                     readOnly = true,
+                     modifier = Modifier
+<a href="#h0-7" id="h0-7" class="h">@@ -260,7 +262,15 @@ class LoggerHistoryRoot : Routes.Route() {
+</a>                             selectedConversation = conversationId
+                             expanded = false
+                         }, text = {
+<a href="#h0-7-3" id="h0-7-3" class="d">-                            Text(remember(conversationId) { formatConversationId(conversationId) ?: &quot;Unknown conversation&quot; })
+</a><a href="#h0-7-4" id="h0-7-4" class="i">+                            val conversationInfo by rememberAsyncMutableState(defaultValue = null, keys = arrayOf(conversationId)) {
+</a><a href="#h0-7-5" id="h0-7-5" class="i">+                                formatConversationInfo(loggerWrapper.getConversationInfo(conversationId))
+</a><a href="#h0-7-6" id="h0-7-6" class="i">+                            }
+</a><a href="#h0-7-7" id="h0-7-7" class="i">+
+</a><a href="#h0-7-8" id="h0-7-8" class="i">+                            Text(
+</a><a href="#h0-7-9" id="h0-7-9" class="i">+                                text = remember(conversationInfo) { conversationInfo ?: conversationId },
+</a><a href="#h0-7-10" id="h0-7-10" class="i">+                                fontWeight = if (conversationId == selectedConversation) FontWeight.Bold else FontWeight.Normal,
+</a><a href="#h0-7-11" id="h0-7-11" class="i">+                                overflow = TextOverflow.Ellipsis
+</a><a href="#h0-7-12" id="h0-7-12" class="i">+                            )
+</a>                         })
+                     }
+                 }
+<a href="#h0-8" id="h0-8" class="h">@@ -320,7 +330,7 @@ class LoggerHistoryRoot : Routes.Route() {
+</a>                             ) { messageData -&gt;
+                                 if (stringFilter.isEmpty()) return@fetchMessages true
+                                 var isMatch = false
+<a href="#h0-8-3" id="h0-8-3" class="d">-                                decodeMessage(messageData) { _,  contentType, messageReader, _ -&gt;
+</a><a href="#h0-8-4" id="h0-8-4" class="i">+                                decodeMessage(messageData) { contentType, messageReader, _ -&gt;
+</a>                                     if (contentType == ContentType.CHAT) {
+                                         val content = messageReader.getString(2, 1) ?: return@decodeMessage
+                                         isMatch = content.contains(stringFilter, ignoreCase = true)
+<a href="#h0-9" id="h0-9" class="h">@@ -332,7 +342,7 @@ class LoggerHistoryRoot : Routes.Route() {
+</a>                                 hasReachedEnd = true
+                                 return@withContext
+                             }
+<a href="#h0-9-3" id="h0-9-3" class="d">-                            lastFetchMessageTimestamp = newMessages.lastOrNull()?.timestamp ?: return@withContext
+</a><a href="#h0-9-4" id="h0-9-4" class="i">+                            lastFetchMessageTimestamp = newMessages.lastOrNull()?.sendTimestamp ?: return@withContext
+</a>                             withContext(Dispatchers.Main) {
+                                 messages.addAll(newMessages)
+                             }
+<b>diff --git a/<a id="h1" href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/BridgeLoggedMessage.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/BridgeLoggedMessage.aidl</a> b/<a href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/BridgeLoggedMessage.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/BridgeLoggedMessage.aidl</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -0,0 +1,11 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="i">+package me.rhunk.snapenhance.bridge.logger;
+</a><a href="#h1-0-1" id="h1-0-1" class="i">+
+</a><a href="#h1-0-2" id="h1-0-2" class="i">+parcelable BridgeLoggedMessage {
+</a><a href="#h1-0-3" id="h1-0-3" class="i">+    long messageId;
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    String conversationId;
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+    String userId;
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+    String username;
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+    long sendTimestamp;
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+    @nullable String groupTitle;
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+    byte[] messageData;
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+}</a><a href="#h1-0-11" id="h1-0-11" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h2" href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/LoggerInterface.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/LoggerInterface.aidl</a> b/<a href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/LoggerInterface.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/LoggerInterface.aidl</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,5 +1,7 @@
+</a> package me.rhunk.snapenhance.bridge.logger;
+ 
+<a href="#h2-0-2" id="h2-0-2" class="i">+import me.rhunk.snapenhance.bridge.logger.BridgeLoggedMessage;
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+
+</a> interface LoggerInterface {
+     /**
+      * Get the ids of the messages that are logged
+<a href="#h2-1" id="h2-1" class="h">@@ -15,7 +17,7 @@ interface LoggerInterface {
+</a>     /**
+      * Add a message to the message logger database if it is not already there
+      */
+<a href="#h2-1-3" id="h2-1-3" class="d">-    oneway void addMessage(String conversationId, long id, in byte[] message);
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+    oneway void addMessage(in BridgeLoggedMessage message);
+</a> 
+     /**
+      * Delete a message from the message logger database
+<b>diff --git a/<a id="h3" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase
+</a> import com.google.gson.GsonBuilder
+ import com.google.gson.JsonObject
+ import kotlinx.coroutines.*
+<a href="#h3-0-3" id="h3-0-3" class="i">+import me.rhunk.snapenhance.bridge.logger.BridgeLoggedMessage
+</a> import me.rhunk.snapenhance.bridge.logger.LoggerInterface
+ import me.rhunk.snapenhance.common.bridge.InternalFileHandleType
+ import me.rhunk.snapenhance.common.data.StoryData
+<a href="#h3-1" id="h3-1" class="h">@@ -26,10 +27,22 @@ class LoggedMessageEdit(
+</a> 
+ class LoggedMessage(
+     val messageId: Long,
+<a href="#h3-1-3" id="h3-1-3" class="d">-    val timestamp: Long,
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+    val conversationId: String,
+</a><a href="#h3-1-5" id="h3-1-5" class="i">+    val userId: String,
+</a><a href="#h3-1-6" id="h3-1-6" class="i">+    val username: String,
+</a><a href="#h3-1-7" id="h3-1-7" class="i">+    val sendTimestamp: Long,
+</a><a href="#h3-1-8" id="h3-1-8" class="i">+    val addedTimestamp: Long,
+</a><a href="#h3-1-9" id="h3-1-9" class="i">+    val groupTitle: String?,
+</a>     val messageData: ByteArray,
+ )
+ 
+<a href="#h3-1-13" id="h3-1-13" class="i">+class ConversationInfo(
+</a><a href="#h3-1-14" id="h3-1-14" class="i">+    val conversationId: String,
+</a><a href="#h3-1-15" id="h3-1-15" class="i">+    val participantSize: Int,
+</a><a href="#h3-1-16" id="h3-1-16" class="i">+    val groupTitle: String?,
+</a><a href="#h3-1-17" id="h3-1-17" class="i">+    val usernames: List&lt;String&gt;
+</a><a href="#h3-1-18" id="h3-1-18" class="i">+)
+</a><a href="#h3-1-19" id="h3-1-19" class="i">+
+</a> class TrackerLog(
+     val id: Int,
+     val timestamp: Long,
+<a href="#h3-2" id="h3-2" class="h">@@ -77,9 +90,13 @@ class LoggerWrapper(
+</a>             SQLiteDatabaseHelper.createTablesFromSchema(openedDatabase, mapOf(
+                 &quot;messages&quot; to listOf(
+                     &quot;id INTEGER PRIMARY KEY&quot;,
+<a href="#h3-2-3" id="h3-2-3" class="d">-                    &quot;added_timestamp BIGINT&quot;,
+</a><a href="#h3-2-4" id="h3-2-4" class="d">-                    &quot;conversation_id VARCHAR&quot;,
+</a>                     &quot;message_id BIGINT&quot;,
+<a href="#h3-2-6" id="h3-2-6" class="i">+                    &quot;conversation_id VARCHAR&quot;,
+</a><a href="#h3-2-7" id="h3-2-7" class="i">+                    &quot;user_id CHAR(36)&quot;,
+</a><a href="#h3-2-8" id="h3-2-8" class="i">+                    &quot;username VARCHAR&quot;,
+</a><a href="#h3-2-9" id="h3-2-9" class="i">+                    &quot;send_timestamp BIGINT&quot;,
+</a><a href="#h3-2-10" id="h3-2-10" class="i">+                    &quot;added_timestamp BIGINT&quot;,
+</a><a href="#h3-2-11" id="h3-2-11" class="i">+                    &quot;group_title VARCHAR&quot;,
+</a>                     &quot;message_data BLOB&quot;
+                 ),
+                 &quot;chat_edits&quot; to listOf(
+<a href="#h3-3" id="h3-3" class="h">@@ -150,67 +167,67 @@ class LoggerWrapper(
+</a>         }
+     }
+ 
+<a href="#h3-3-3" id="h3-3-3" class="d">-    override fun addMessage(conversationId: String, messageId: Long, serializedMessage: ByteArray) {
+</a><a href="#h3-3-4" id="h3-3-4" class="d">-        val hasMessage = database.rawQuery(&quot;SELECT message_id FROM messages WHERE conversation_id = ? AND message_id = ?&quot;, arrayOf(conversationId, messageId.toString())).use {
+</a><a href="#h3-3-5" id="h3-3-5" class="i">+    override fun addMessage(bridgeLoggedMessage: BridgeLoggedMessage) {
+</a><a href="#h3-3-6" id="h3-3-6" class="i">+        val hasMessage = database.rawQuery(&quot;SELECT message_id FROM messages WHERE conversation_id = ? AND message_id = ?&quot;, arrayOf(bridgeLoggedMessage.conversationId, bridgeLoggedMessage.messageId.toString())).use {
+</a>             it.moveToFirst()
+             it.count &gt; 0
+         }
+ 
+         if (!hasMessage) {
+<a href="#h3-3-12" id="h3-3-12" class="d">-            runBlocking {
+</a><a href="#h3-3-13" id="h3-3-13" class="d">-                withContext(coroutineScope.coroutineContext) {
+</a><a href="#h3-3-14" id="h3-3-14" class="d">-                    database.insert(&quot;messages&quot;, null, ContentValues().apply {
+</a><a href="#h3-3-15" id="h3-3-15" class="d">-                        put(&quot;added_timestamp&quot;, System.currentTimeMillis())
+</a><a href="#h3-3-16" id="h3-3-16" class="d">-                        put(&quot;conversation_id&quot;, conversationId)
+</a><a href="#h3-3-17" id="h3-3-17" class="d">-                        put(&quot;message_id&quot;, messageId)
+</a><a href="#h3-3-18" id="h3-3-18" class="d">-                        put(&quot;message_data&quot;, serializedMessage)
+</a><a href="#h3-3-19" id="h3-3-19" class="d">-                    })
+</a><a href="#h3-3-20" id="h3-3-20" class="d">-                }
+</a><a href="#h3-3-21" id="h3-3-21" class="i">+            runBlocking(coroutineScope.coroutineContext) {
+</a><a href="#h3-3-22" id="h3-3-22" class="i">+                database.insert(&quot;messages&quot;, null, ContentValues().apply {
+</a><a href="#h3-3-23" id="h3-3-23" class="i">+                    put(&quot;message_id&quot;, bridgeLoggedMessage.messageId)
+</a><a href="#h3-3-24" id="h3-3-24" class="i">+                    put(&quot;conversation_id&quot;, bridgeLoggedMessage.conversationId)
+</a><a href="#h3-3-25" id="h3-3-25" class="i">+                    put(&quot;user_id&quot;, bridgeLoggedMessage.userId)
+</a><a href="#h3-3-26" id="h3-3-26" class="i">+                    put(&quot;username&quot;, bridgeLoggedMessage.username)
+</a><a href="#h3-3-27" id="h3-3-27" class="i">+                    put(&quot;send_timestamp&quot;, bridgeLoggedMessage.sendTimestamp)
+</a><a href="#h3-3-28" id="h3-3-28" class="i">+                    put(&quot;added_timestamp&quot;, System.currentTimeMillis())
+</a><a href="#h3-3-29" id="h3-3-29" class="i">+                    put(&quot;group_title&quot;, bridgeLoggedMessage.groupTitle)
+</a><a href="#h3-3-30" id="h3-3-30" class="i">+                    put(&quot;message_data&quot;, bridgeLoggedMessage.messageData)
+</a><a href="#h3-3-31" id="h3-3-31" class="i">+                })
+</a>             }
+         }
+ 
+         // handle message edits
+<a href="#h3-3-36" id="h3-3-36" class="d">-        runBlocking {
+</a><a href="#h3-3-37" id="h3-3-37" class="d">-            withContext(coroutineScope.coroutineContext) {
+</a><a href="#h3-3-38" id="h3-3-38" class="d">-                runCatching {
+</a><a href="#h3-3-39" id="h3-3-39" class="d">-                    val messageObject = gson.fromJson(
+</a><a href="#h3-3-40" id="h3-3-40" class="d">-                        serializedMessage.toString(Charsets.UTF_8),
+</a><a href="#h3-3-41" id="h3-3-41" class="d">-                        JsonObject::class.java
+</a><a href="#h3-3-42" id="h3-3-42" class="d">-                    )
+</a><a href="#h3-3-43" id="h3-3-43" class="d">-                    if (messageObject.getAsJsonObject(&quot;mMessageContent&quot;)
+</a><a href="#h3-3-44" id="h3-3-44" class="d">-                            ?.getAsJsonPrimitive(&quot;mContentType&quot;)?.asString != &quot;CHAT&quot;
+</a><a href="#h3-3-45" id="h3-3-45" class="d">-                    ) return@withContext
+</a><a href="#h3-3-46" id="h3-3-46" class="d">-
+</a><a href="#h3-3-47" id="h3-3-47" class="d">-                    val metadata = messageObject.getAsJsonObject(&quot;mMetadata&quot;)
+</a><a href="#h3-3-48" id="h3-3-48" class="d">-                    if (metadata.get(&quot;mIsEdited&quot;)?.asBoolean != true) return@withContext
+</a><a href="#h3-3-49" id="h3-3-49" class="d">-
+</a><a href="#h3-3-50" id="h3-3-50" class="d">-                    val messageTextContent =
+</a><a href="#h3-3-51" id="h3-3-51" class="d">-                        messageObject.getAsJsonObject(&quot;mMessageContent&quot;)?.getAsJsonArray(&quot;mContent&quot;)
+</a><a href="#h3-3-52" id="h3-3-52" class="d">-                            ?.map { it.asByte }?.toByteArray()?.let {
+</a><a href="#h3-3-53" id="h3-3-53" class="d">-                                ProtoReader(it).getString(2, 1)
+</a><a href="#h3-3-54" id="h3-3-54" class="d">-                            } ?: return@withContext
+</a><a href="#h3-3-55" id="h3-3-55" class="d">-
+</a><a href="#h3-3-56" id="h3-3-56" class="d">-                    database.rawQuery(
+</a><a href="#h3-3-57" id="h3-3-57" class="d">-                        &quot;SELECT MAX(edit_number), message_text FROM chat_edits WHERE conversation_id = ? AND message_id = ?&quot;,
+</a><a href="#h3-3-58" id="h3-3-58" class="d">-                        arrayOf(conversationId, messageId.toString())
+</a><a href="#h3-3-59" id="h3-3-59" class="d">-                    ).use {
+</a><a href="#h3-3-60" id="h3-3-60" class="d">-                        it.moveToFirst()
+</a><a href="#h3-3-61" id="h3-3-61" class="d">-                        val editNumber = it.getInt(0)
+</a><a href="#h3-3-62" id="h3-3-62" class="d">-                        val lastEditedMessage = it.getString(1)
+</a><a href="#h3-3-63" id="h3-3-63" class="d">-
+</a><a href="#h3-3-64" id="h3-3-64" class="d">-                        if (lastEditedMessage == messageTextContent) return@withContext
+</a><a href="#h3-3-65" id="h3-3-65" class="d">-
+</a><a href="#h3-3-66" id="h3-3-66" class="d">-                        database.insert(&quot;chat_edits&quot;, null, ContentValues().apply {
+</a><a href="#h3-3-67" id="h3-3-67" class="d">-                            put(&quot;edit_number&quot;, editNumber + 1)
+</a><a href="#h3-3-68" id="h3-3-68" class="d">-                            put(&quot;added_timestamp&quot;, System.currentTimeMillis())
+</a><a href="#h3-3-69" id="h3-3-69" class="d">-                            put(&quot;conversation_id&quot;, conversationId)
+</a><a href="#h3-3-70" id="h3-3-70" class="d">-                            put(&quot;message_id&quot;, messageId)
+</a><a href="#h3-3-71" id="h3-3-71" class="d">-                            put(&quot;message_text&quot;, messageTextContent)
+</a><a href="#h3-3-72" id="h3-3-72" class="d">-                        })
+</a><a href="#h3-3-73" id="h3-3-73" class="d">-                    }
+</a><a href="#h3-3-74" id="h3-3-74" class="d">-                }.onFailure {
+</a><a href="#h3-3-75" id="h3-3-75" class="d">-                    AbstractLogger.directDebug(&quot;Failed to handle message edit: ${it.message}&quot;)
+</a><a href="#h3-3-76" id="h3-3-76" class="i">+        runBlocking(coroutineScope.coroutineContext) {
+</a><a href="#h3-3-77" id="h3-3-77" class="i">+            runCatching {
+</a><a href="#h3-3-78" id="h3-3-78" class="i">+                val messageObject = gson.fromJson(
+</a><a href="#h3-3-79" id="h3-3-79" class="i">+                    bridgeLoggedMessage.messageData.toString(Charsets.UTF_8),
+</a><a href="#h3-3-80" id="h3-3-80" class="i">+                    JsonObject::class.java
+</a><a href="#h3-3-81" id="h3-3-81" class="i">+                )
+</a><a href="#h3-3-82" id="h3-3-82" class="i">+                if (messageObject.getAsJsonObject(&quot;mMessageContent&quot;)
+</a><a href="#h3-3-83" id="h3-3-83" class="i">+                        ?.getAsJsonPrimitive(&quot;mContentType&quot;)?.asString != &quot;CHAT&quot;
+</a><a href="#h3-3-84" id="h3-3-84" class="i">+                ) return@runBlocking
+</a><a href="#h3-3-85" id="h3-3-85" class="i">+
+</a><a href="#h3-3-86" id="h3-3-86" class="i">+                val metadata = messageObject.getAsJsonObject(&quot;mMetadata&quot;)
+</a><a href="#h3-3-87" id="h3-3-87" class="i">+                if (metadata.get(&quot;mIsEdited&quot;)?.asBoolean != true) return@runBlocking
+</a><a href="#h3-3-88" id="h3-3-88" class="i">+
+</a><a href="#h3-3-89" id="h3-3-89" class="i">+                val messageTextContent =
+</a><a href="#h3-3-90" id="h3-3-90" class="i">+                    messageObject.getAsJsonObject(&quot;mMessageContent&quot;)?.getAsJsonArray(&quot;mContent&quot;)
+</a><a href="#h3-3-91" id="h3-3-91" class="i">+                        ?.map { it.asByte }?.toByteArray()?.let {
+</a><a href="#h3-3-92" id="h3-3-92" class="i">+                            ProtoReader(it).getString(2, 1)
+</a><a href="#h3-3-93" id="h3-3-93" class="i">+                        } ?: return@runBlocking
+</a><a href="#h3-3-94" id="h3-3-94" class="i">+
+</a><a href="#h3-3-95" id="h3-3-95" class="i">+                database.rawQuery(
+</a><a href="#h3-3-96" id="h3-3-96" class="i">+                    &quot;SELECT MAX(edit_number), message_text FROM chat_edits WHERE conversation_id = ? AND message_id = ?&quot;,
+</a><a href="#h3-3-97" id="h3-3-97" class="i">+                    arrayOf(bridgeLoggedMessage.conversationId, bridgeLoggedMessage.messageId.toString())
+</a><a href="#h3-3-98" id="h3-3-98" class="i">+                ).use {
+</a><a href="#h3-3-99" id="h3-3-99" class="i">+                    it.moveToFirst()
+</a><a href="#h3-3-100" id="h3-3-100" class="i">+                    val editNumber = it.getInt(0)
+</a><a href="#h3-3-101" id="h3-3-101" class="i">+                    val lastEditedMessage = it.getString(1)
+</a><a href="#h3-3-102" id="h3-3-102" class="i">+
+</a><a href="#h3-3-103" id="h3-3-103" class="i">+                    if (lastEditedMessage == messageTextContent) return@runBlocking
+</a><a href="#h3-3-104" id="h3-3-104" class="i">+
+</a><a href="#h3-3-105" id="h3-3-105" class="i">+                    database.insert(&quot;chat_edits&quot;, null, ContentValues().apply {
+</a><a href="#h3-3-106" id="h3-3-106" class="i">+                        put(&quot;edit_number&quot;, editNumber + 1)
+</a><a href="#h3-3-107" id="h3-3-107" class="i">+                        put(&quot;added_timestamp&quot;, System.currentTimeMillis())
+</a><a href="#h3-3-108" id="h3-3-108" class="i">+                        put(&quot;conversation_id&quot;, bridgeLoggedMessage.conversationId)
+</a><a href="#h3-3-109" id="h3-3-109" class="i">+                        put(&quot;message_id&quot;, bridgeLoggedMessage.messageId)
+</a><a href="#h3-3-110" id="h3-3-110" class="i">+                        put(&quot;message_text&quot;, messageTextContent)
+</a><a href="#h3-3-111" id="h3-3-111" class="i">+                    })
+</a>                 }
+<a href="#h3-3-113" id="h3-3-113" class="i">+            }.onFailure {
+</a><a href="#h3-3-114" id="h3-3-114" class="i">+                AbstractLogger.directDebug(&quot;Failed to handle message edit: ${it.message}&quot;)
+</a>             }
+         }
+     }
+<a href="#h3-4" id="h3-4" class="h">@@ -257,18 +274,16 @@ class LoggerWrapper(
+</a>         }) {
+             return false
+         }
+<a href="#h3-4-3" id="h3-4-3" class="d">-        runBlocking {
+</a><a href="#h3-4-4" id="h3-4-4" class="d">-            withContext(coroutineScope.coroutineContext) {
+</a><a href="#h3-4-5" id="h3-4-5" class="d">-                database.insert(&quot;stories&quot;, null, ContentValues().apply {
+</a><a href="#h3-4-6" id="h3-4-6" class="d">-                    put(&quot;user_id&quot;, userId)
+</a><a href="#h3-4-7" id="h3-4-7" class="d">-                    put(&quot;added_timestamp&quot;, System.currentTimeMillis())
+</a><a href="#h3-4-8" id="h3-4-8" class="d">-                    put(&quot;url&quot;, url)
+</a><a href="#h3-4-9" id="h3-4-9" class="d">-                    put(&quot;posted_timestamp&quot;, postedAt)
+</a><a href="#h3-4-10" id="h3-4-10" class="d">-                    put(&quot;created_timestamp&quot;, createdAt)
+</a><a href="#h3-4-11" id="h3-4-11" class="d">-                    put(&quot;encryption_key&quot;, key)
+</a><a href="#h3-4-12" id="h3-4-12" class="d">-                    put(&quot;encryption_iv&quot;, iv)
+</a><a href="#h3-4-13" id="h3-4-13" class="d">-                })
+</a><a href="#h3-4-14" id="h3-4-14" class="d">-            }
+</a><a href="#h3-4-15" id="h3-4-15" class="i">+        runBlocking(coroutineScope.coroutineContext) {
+</a><a href="#h3-4-16" id="h3-4-16" class="i">+            database.insert(&quot;stories&quot;, null, ContentValues().apply {
+</a><a href="#h3-4-17" id="h3-4-17" class="i">+                put(&quot;user_id&quot;, userId)
+</a><a href="#h3-4-18" id="h3-4-18" class="i">+                put(&quot;added_timestamp&quot;, System.currentTimeMillis())
+</a><a href="#h3-4-19" id="h3-4-19" class="i">+                put(&quot;url&quot;, url)
+</a><a href="#h3-4-20" id="h3-4-20" class="i">+                put(&quot;posted_timestamp&quot;, postedAt)
+</a><a href="#h3-4-21" id="h3-4-21" class="i">+                put(&quot;created_timestamp&quot;, createdAt)
+</a><a href="#h3-4-22" id="h3-4-22" class="i">+                put(&quot;encryption_key&quot;, key)
+</a><a href="#h3-4-23" id="h3-4-23" class="i">+                put(&quot;encryption_iv&quot;, iv)
+</a><a href="#h3-4-24" id="h3-4-24" class="i">+            })
+</a>         }
+         return true
+     }
+<a href="#h3-5" id="h3-5" class="h">@@ -282,19 +297,17 @@ class LoggerWrapper(
+</a>         eventType: String,
+         data: String
+     ) {
+<a href="#h3-5-3" id="h3-5-3" class="d">-        runBlocking {
+</a><a href="#h3-5-4" id="h3-5-4" class="d">-            withContext(coroutineScope.coroutineContext) {
+</a><a href="#h3-5-5" id="h3-5-5" class="d">-                database.insert(&quot;tracker_events&quot;, null, ContentValues().apply {
+</a><a href="#h3-5-6" id="h3-5-6" class="d">-                    put(&quot;timestamp&quot;, System.currentTimeMillis())
+</a><a href="#h3-5-7" id="h3-5-7" class="d">-                    put(&quot;conversation_id&quot;, conversationId)
+</a><a href="#h3-5-8" id="h3-5-8" class="d">-                    put(&quot;conversation_title&quot;, conversationTitle)
+</a><a href="#h3-5-9" id="h3-5-9" class="d">-                    put(&quot;is_group&quot;, isGroup)
+</a><a href="#h3-5-10" id="h3-5-10" class="d">-                    put(&quot;username&quot;, username)
+</a><a href="#h3-5-11" id="h3-5-11" class="d">-                    put(&quot;user_id&quot;, userId)
+</a><a href="#h3-5-12" id="h3-5-12" class="d">-                    put(&quot;event_type&quot;, eventType)
+</a><a href="#h3-5-13" id="h3-5-13" class="d">-                    put(&quot;data&quot;, data)
+</a><a href="#h3-5-14" id="h3-5-14" class="d">-                })
+</a><a href="#h3-5-15" id="h3-5-15" class="d">-            }
+</a><a href="#h3-5-16" id="h3-5-16" class="i">+        runBlocking(coroutineScope.coroutineContext) {
+</a><a href="#h3-5-17" id="h3-5-17" class="i">+            database.insert(&quot;tracker_events&quot;, null, ContentValues().apply {
+</a><a href="#h3-5-18" id="h3-5-18" class="i">+                put(&quot;timestamp&quot;, System.currentTimeMillis())
+</a><a href="#h3-5-19" id="h3-5-19" class="i">+                put(&quot;conversation_id&quot;, conversationId)
+</a><a href="#h3-5-20" id="h3-5-20" class="i">+                put(&quot;conversation_title&quot;, conversationTitle)
+</a><a href="#h3-5-21" id="h3-5-21" class="i">+                put(&quot;is_group&quot;, isGroup)
+</a><a href="#h3-5-22" id="h3-5-22" class="i">+                put(&quot;username&quot;, username)
+</a><a href="#h3-5-23" id="h3-5-23" class="i">+                put(&quot;user_id&quot;, userId)
+</a><a href="#h3-5-24" id="h3-5-24" class="i">+                put(&quot;event_type&quot;, eventType)
+</a><a href="#h3-5-25" id="h3-5-25" class="i">+                put(&quot;data&quot;, data)
+</a><a href="#h3-5-26" id="h3-5-26" class="i">+            })
+</a>         }
+     }
+ 
+<a href="#h3-6" id="h3-6" class="h">@@ -389,6 +402,26 @@ class LoggerWrapper(
+</a>         }
+     }
+ 
+<a href="#h3-6-3" id="h3-6-3" class="i">+    fun getConversationInfo(conversationId: String): ConversationInfo? {
+</a><a href="#h3-6-4" id="h3-6-4" class="i">+        val participantSize = database.rawQuery(&quot;SELECT COUNT(DISTINCT user_id) FROM messages WHERE conversation_id = ?&quot;, arrayOf(conversationId)).use {
+</a><a href="#h3-6-5" id="h3-6-5" class="i">+            if (!it.moveToFirst()) return null
+</a><a href="#h3-6-6" id="h3-6-6" class="i">+            it.getInt(0)
+</a><a href="#h3-6-7" id="h3-6-7" class="i">+        }
+</a><a href="#h3-6-8" id="h3-6-8" class="i">+        val groupTitle = if (participantSize &gt; 2) database.rawQuery(&quot;SELECT group_title FROM messages WHERE conversation_id = ? AND group_title IS NOT NULL LIMIT 1&quot;, arrayOf(conversationId)).use {
+</a><a href="#h3-6-9" id="h3-6-9" class="i">+            if (!it.moveToFirst()) return@use null
+</a><a href="#h3-6-10" id="h3-6-10" class="i">+            it.getStringOrNull(&quot;group_title&quot;)
+</a><a href="#h3-6-11" id="h3-6-11" class="i">+        } else null
+</a><a href="#h3-6-12" id="h3-6-12" class="i">+        val usernames = database.rawQuery(&quot;SELECT DISTINCT username FROM messages WHERE conversation_id = ?&quot;, arrayOf(conversationId)).use {
+</a><a href="#h3-6-13" id="h3-6-13" class="i">+            val usernames = mutableListOf&lt;String&gt;()
+</a><a href="#h3-6-14" id="h3-6-14" class="i">+            while (it.moveToNext()) {
+</a><a href="#h3-6-15" id="h3-6-15" class="i">+                usernames.add(it.getString(0))
+</a><a href="#h3-6-16" id="h3-6-16" class="i">+            }
+</a><a href="#h3-6-17" id="h3-6-17" class="i">+            usernames
+</a><a href="#h3-6-18" id="h3-6-18" class="i">+        }
+</a><a href="#h3-6-19" id="h3-6-19" class="i">+
+</a><a href="#h3-6-20" id="h3-6-20" class="i">+        return ConversationInfo(conversationId, participantSize, groupTitle, usernames)
+</a><a href="#h3-6-21" id="h3-6-21" class="i">+    }
+</a><a href="#h3-6-22" id="h3-6-22" class="i">+
+</a>     fun getMessageEdits(conversationId: String, messageId: Long): List&lt;LoggedMessageEdit&gt; {
+         val edits = mutableListOf&lt;LoggedMessageEdit&gt;()
+         database.rawQuery(
+<a href="#h3-7" id="h3-7" class="h">@@ -414,13 +447,18 @@ class LoggerWrapper(
+</a>     ): List&lt;LoggedMessage&gt; {
+         val messages = mutableListOf&lt;LoggedMessage&gt;()
+         database.rawQuery(
+<a href="#h3-7-3" id="h3-7-3" class="d">-            &quot;SELECT * FROM messages WHERE conversation_id = ? AND added_timestamp ${if (reverseOrder) &quot;&lt;&quot; else &quot;&gt;&quot;} ? ORDER BY added_timestamp ${if (reverseOrder) &quot;DESC&quot; else &quot;ASC&quot;}&quot;,
+</a><a href="#h3-7-4" id="h3-7-4" class="i">+            &quot;SELECT * FROM messages WHERE conversation_id = ? AND send_timestamp ${if (reverseOrder) &quot;&lt;&quot; else &quot;&gt;&quot;} ? ORDER BY send_timestamp ${if (reverseOrder) &quot;DESC&quot; else &quot;ASC&quot;}&quot;,
+</a>             arrayOf(conversationId, fromTimestamp.toString())
+         ).use {
+             while (it.moveToNext() &amp;&amp; messages.size &lt; limit) {
+                 val message = LoggedMessage(
+                     messageId = it.getLongOrNull(&quot;message_id&quot;) ?: continue,
+<a href="#h3-7-10" id="h3-7-10" class="d">-                    timestamp = it.getLongOrNull(&quot;added_timestamp&quot;) ?: continue,
+</a><a href="#h3-7-11" id="h3-7-11" class="i">+                    conversationId = it.getStringOrNull(&quot;conversation_id&quot;) ?: continue,
+</a><a href="#h3-7-12" id="h3-7-12" class="i">+                    userId = it.getStringOrNull(&quot;user_id&quot;) ?: continue,
+</a><a href="#h3-7-13" id="h3-7-13" class="i">+                    username = it.getStringOrNull(&quot;username&quot;) ?: continue,
+</a><a href="#h3-7-14" id="h3-7-14" class="i">+                    sendTimestamp = it.getLongOrNull(&quot;send_timestamp&quot;) ?: continue,
+</a><a href="#h3-7-15" id="h3-7-15" class="i">+                    addedTimestamp = it.getLongOrNull(&quot;added_timestamp&quot;) ?: continue,
+</a><a href="#h3-7-16" id="h3-7-16" class="i">+                    groupTitle = it.getStringOrNull(&quot;group_title&quot;),
+</a>                     messageData = it.getBlobOrNull(&quot;message_data&quot;) ?: continue
+                 )
+                 if (filter != null &amp;&amp; !filter(message)) continue
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -7,6 +7,7 @@ import android.graphics.drawable.shapes.Shape
+</a> import android.os.DeadObjectException
+ import com.google.gson.JsonObject
+ import com.google.gson.JsonParser
+<a href="#h4-0-3" id="h4-0-3" class="i">+import me.rhunk.snapenhance.bridge.logger.BridgeLoggedMessage
+</a> import me.rhunk.snapenhance.common.data.ContentType
+ import me.rhunk.snapenhance.common.data.MessageState
+ import me.rhunk.snapenhance.common.data.QuotedMessageContentStatus
+<a href="#h4-1" id="h4-1" class="h">@@ -40,6 +41,9 @@ class MessageLogger : Feature(&quot;MessageLogger&quot;,
+</a> 
+     private val threadPool = Executors.newFixedThreadPool(10)
+ 
+<a href="#h4-1-3" id="h4-1-3" class="i">+    private val usernameCache = EvictingMap&lt;String, String&gt;(500) // user id -&gt; username
+</a><a href="#h4-1-4" id="h4-1-4" class="i">+    private val groupTitleCache = EvictingMap&lt;String, String?&gt;(500) // conversation id -&gt; group title
+</a><a href="#h4-1-5" id="h4-1-5" class="i">+
+</a>     private val cachedIdLinks = EvictingMap&lt;Long, Long&gt;(500) // client id -&gt; server id
+     private val fetchedMessages = mutableListOf&lt;Long&gt;() // list of unique message ids
+     private val deletedMessageCache = EvictingMap&lt;Long, JsonObject&gt;(200) // unique message id -&gt; message json object
+<a href="#h4-2" id="h4-2" class="h">@@ -127,7 +131,21 @@ class MessageLogger : Feature(&quot;MessageLogger&quot;,
+</a> 
+                 threadPool.execute {
+                     try {
+<a href="#h4-2-3" id="h4-2-3" class="d">-                        loggerInterface.addMessage(conversationId, uniqueMessageIdentifier, context.gson.toJson(messageInstance).toByteArray(Charsets.UTF_8))
+</a><a href="#h4-2-4" id="h4-2-4" class="i">+                        loggerInterface.addMessage(
+</a><a href="#h4-2-5" id="h4-2-5" class="i">+                            BridgeLoggedMessage().also {
+</a><a href="#h4-2-6" id="h4-2-6" class="i">+                                it.messageId = uniqueMessageIdentifier
+</a><a href="#h4-2-7" id="h4-2-7" class="i">+                                it.conversationId = conversationId
+</a><a href="#h4-2-8" id="h4-2-8" class="i">+                                it.userId = event.message.senderId.toString()
+</a><a href="#h4-2-9" id="h4-2-9" class="i">+                                it.username = usernameCache.getOrPut(it.userId) {
+</a><a href="#h4-2-10" id="h4-2-10" class="i">+                                    context.database.getFriendInfo(it.userId)?.mutableUsername ?: it.userId
+</a><a href="#h4-2-11" id="h4-2-11" class="i">+                                }
+</a><a href="#h4-2-12" id="h4-2-12" class="i">+                                it.sendTimestamp = event.message.messageMetadata?.createdAt ?: System.currentTimeMillis()
+</a><a href="#h4-2-13" id="h4-2-13" class="i">+                                it.groupTitle = groupTitleCache.getOrPut(conversationId) {
+</a><a href="#h4-2-14" id="h4-2-14" class="i">+                                    context.database.getFeedEntryByConversationId(conversationId)?.feedDisplayName ?: conversationId
+</a><a href="#h4-2-15" id="h4-2-15" class="i">+                                }
+</a><a href="#h4-2-16" id="h4-2-16" class="i">+                                it.messageData = context.gson.toJson(messageInstance).toByteArray(Charsets.UTF_8)
+</a><a href="#h4-2-17" id="h4-2-17" class="i">+                            }
+</a><a href="#h4-2-18" id="h4-2-18" class="i">+                        )
+</a>                     } catch (ignored: DeadObjectException) {}
+                 }
+ 
+</pre>
+</div>
+</body>
+</html>

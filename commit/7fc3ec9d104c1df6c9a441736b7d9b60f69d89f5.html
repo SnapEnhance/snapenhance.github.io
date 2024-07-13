@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(core): bulk clean conversations - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/7fc3ec9d104c1df6c9a441736b7d9b60f69d89f5.html">7fc3ec9d104c1df6c9a441736b7d9b60f69d89f5</a>
+<b>parent</b> <a href="../commit/b92378bffd59d6457f3c9c28c3f5cf92fa82ad34.html">b92378bffd59d6457f3c9c28c3f5cf92fa82ad34</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 26 Apr 2024 16:34:14 +0200
+
+feat(core): bulk clean conversations
+
+<b>Diffstat:</b>
+<table><tr><td class="D">D</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/messaging/MessagingTask.kt</a></td><td> | </td><td class="num">127</td><td><span class="i"></span><span class="d">-------------------------------------------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/MessagingPreview.kt</a></td><td> | </td><td class="num">15</td><td><span class="i">+++++++++</span><span class="d">------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/messaging/MessagingTask.kt</a></td><td> | </td><td class="num">127</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a></td><td> | </td><td class="num">218</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-------------------------------</span></td></tr>
+</table></pre><pre>4 files changed, 269 insertions(+), 218 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/MessagingTask.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/MessagingTask.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/MessagingTask.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/MessagingTask.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,126 +0,0 @@
+</a><a href="#h0-0-0" id="h0-0-0" class="d">-package me.rhunk.snapenhance.messaging
+</a><a href="#h0-0-1" id="h0-0-1" class="d">-
+</a><a href="#h0-0-2" id="h0-0-2" class="d">-import androidx.compose.runtime.MutableIntState
+</a><a href="#h0-0-3" id="h0-0-3" class="d">-import kotlinx.coroutines.delay
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-import me.rhunk.snapenhance.bridge.snapclient.MessagingBridge
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-import me.rhunk.snapenhance.bridge.snapclient.types.Message
+</a><a href="#h0-0-6" id="h0-0-6" class="d">-import me.rhunk.snapenhance.common.data.ContentType
+</a><a href="#h0-0-7" id="h0-0-7" class="d">-import kotlin.random.Random
+</a><a href="#h0-0-8" id="h0-0-8" class="d">-
+</a><a href="#h0-0-9" id="h0-0-9" class="d">-
+</a><a href="#h0-0-10" id="h0-0-10" class="d">-enum class MessagingTaskType(
+</a><a href="#h0-0-11" id="h0-0-11" class="d">-    val key: String
+</a><a href="#h0-0-12" id="h0-0-12" class="d">-) {
+</a><a href="#h0-0-13" id="h0-0-13" class="d">-    SAVE(&quot;SAVE&quot;),
+</a><a href="#h0-0-14" id="h0-0-14" class="d">-    UNSAVE(&quot;UNSAVE&quot;),
+</a><a href="#h0-0-15" id="h0-0-15" class="d">-    DELETE(&quot;ERASE&quot;),
+</a><a href="#h0-0-16" id="h0-0-16" class="d">-    READ(&quot;READ&quot;),
+</a><a href="#h0-0-17" id="h0-0-17" class="d">-}
+</a><a href="#h0-0-18" id="h0-0-18" class="d">-
+</a><a href="#h0-0-19" id="h0-0-19" class="d">-typealias MessagingTaskConstraint = Message.() -&gt; Boolean
+</a><a href="#h0-0-20" id="h0-0-20" class="d">-
+</a><a href="#h0-0-21" id="h0-0-21" class="d">-object MessagingConstraints {
+</a><a href="#h0-0-22" id="h0-0-22" class="d">-    val USER_ID: (String) -&gt; MessagingTaskConstraint = { userId: String -&gt;
+</a><a href="#h0-0-23" id="h0-0-23" class="d">-        {
+</a><a href="#h0-0-24" id="h0-0-24" class="d">-            this.senderId == userId
+</a><a href="#h0-0-25" id="h0-0-25" class="d">-        }
+</a><a href="#h0-0-26" id="h0-0-26" class="d">-    }
+</a><a href="#h0-0-27" id="h0-0-27" class="d">-    val NO_USER_ID: (String) -&gt; MessagingTaskConstraint = { userId: String -&gt;
+</a><a href="#h0-0-28" id="h0-0-28" class="d">-        {
+</a><a href="#h0-0-29" id="h0-0-29" class="d">-            this.senderId != userId
+</a><a href="#h0-0-30" id="h0-0-30" class="d">-        }
+</a><a href="#h0-0-31" id="h0-0-31" class="d">-    }
+</a><a href="#h0-0-32" id="h0-0-32" class="d">-    val MY_USER_ID: (messagingBridge: MessagingBridge) -&gt; MessagingTaskConstraint = {
+</a><a href="#h0-0-33" id="h0-0-33" class="d">-        val myUserId = it.myUserId
+</a><a href="#h0-0-34" id="h0-0-34" class="d">-        {
+</a><a href="#h0-0-35" id="h0-0-35" class="d">-            this.senderId == myUserId
+</a><a href="#h0-0-36" id="h0-0-36" class="d">-        }
+</a><a href="#h0-0-37" id="h0-0-37" class="d">-    }
+</a><a href="#h0-0-38" id="h0-0-38" class="d">-    val CONTENT_TYPE: (Array&lt;ContentType&gt;) -&gt; MessagingTaskConstraint = {
+</a><a href="#h0-0-39" id="h0-0-39" class="d">-        val contentTypes = it.map { type -&gt; type.id };
+</a><a href="#h0-0-40" id="h0-0-40" class="d">-        {
+</a><a href="#h0-0-41" id="h0-0-41" class="d">-            contentTypes.contains(this.contentType)
+</a><a href="#h0-0-42" id="h0-0-42" class="d">-        }
+</a><a href="#h0-0-43" id="h0-0-43" class="d">-    }
+</a><a href="#h0-0-44" id="h0-0-44" class="d">-}
+</a><a href="#h0-0-45" id="h0-0-45" class="d">-
+</a><a href="#h0-0-46" id="h0-0-46" class="d">-class MessagingTask(
+</a><a href="#h0-0-47" id="h0-0-47" class="d">-    private val messagingBridge: MessagingBridge,
+</a><a href="#h0-0-48" id="h0-0-48" class="d">-    private val conversationId: String,
+</a><a href="#h0-0-49" id="h0-0-49" class="d">-    val taskType: MessagingTaskType,
+</a><a href="#h0-0-50" id="h0-0-50" class="d">-    val constraints: List&lt;MessagingTaskConstraint&gt;,
+</a><a href="#h0-0-51" id="h0-0-51" class="d">-    private val processedMessageCount: MutableIntState,
+</a><a href="#h0-0-52" id="h0-0-52" class="d">-    val onSuccess: (message: Message) -&gt; Unit = {},
+</a><a href="#h0-0-53" id="h0-0-53" class="d">-    private val onFailure: (message: Message, reason: String) -&gt; Unit = { _, _ -&gt; },
+</a><a href="#h0-0-54" id="h0-0-54" class="d">-    private val overrideClientMessageIds: List&lt;Long&gt;? = null,
+</a><a href="#h0-0-55" id="h0-0-55" class="d">-    private val amountToProcess: Int? = null,
+</a><a href="#h0-0-56" id="h0-0-56" class="d">-) {
+</a><a href="#h0-0-57" id="h0-0-57" class="d">-    private suspend fun processMessages(
+</a><a href="#h0-0-58" id="h0-0-58" class="d">-        messages: List&lt;Message&gt;
+</a><a href="#h0-0-59" id="h0-0-59" class="d">-    ) {
+</a><a href="#h0-0-60" id="h0-0-60" class="d">-        messages.forEach { message -&gt;
+</a><a href="#h0-0-61" id="h0-0-61" class="d">-            if (constraints.any { !it(message) }) {
+</a><a href="#h0-0-62" id="h0-0-62" class="d">-                return@forEach
+</a><a href="#h0-0-63" id="h0-0-63" class="d">-            }
+</a><a href="#h0-0-64" id="h0-0-64" class="d">-
+</a><a href="#h0-0-65" id="h0-0-65" class="d">-            val error = messagingBridge.updateMessage(conversationId, message.clientMessageId, taskType.key)
+</a><a href="#h0-0-66" id="h0-0-66" class="d">-            error?.takeIf { error != &quot;DUPLICATE_REQUEST&quot; }?.let {
+</a><a href="#h0-0-67" id="h0-0-67" class="d">-                onFailure(message, error)
+</a><a href="#h0-0-68" id="h0-0-68" class="d">-            }
+</a><a href="#h0-0-69" id="h0-0-69" class="d">-            onSuccess(message)
+</a><a href="#h0-0-70" id="h0-0-70" class="d">-            processedMessageCount.intValue++
+</a><a href="#h0-0-71" id="h0-0-71" class="d">-            delay(Random.nextLong(20, 50))
+</a><a href="#h0-0-72" id="h0-0-72" class="d">-        }
+</a><a href="#h0-0-73" id="h0-0-73" class="d">-    }
+</a><a href="#h0-0-74" id="h0-0-74" class="d">-
+</a><a href="#h0-0-75" id="h0-0-75" class="d">-    fun hasFixedGoal() = overrideClientMessageIds?.takeIf { it.isNotEmpty() } != null || amountToProcess?.takeIf { it &gt; 0 } != null
+</a><a href="#h0-0-76" id="h0-0-76" class="d">-
+</a><a href="#h0-0-77" id="h0-0-77" class="d">-    suspend fun run() {
+</a><a href="#h0-0-78" id="h0-0-78" class="d">-        var processedOverrideMessages = 0
+</a><a href="#h0-0-79" id="h0-0-79" class="d">-        var lastMessageId = Long.MAX_VALUE
+</a><a href="#h0-0-80" id="h0-0-80" class="d">-
+</a><a href="#h0-0-81" id="h0-0-81" class="d">-        do {
+</a><a href="#h0-0-82" id="h0-0-82" class="d">-            val fetchedMessages = messagingBridge.fetchConversationWithMessagesPaginated(
+</a><a href="#h0-0-83" id="h0-0-83" class="d">-                conversationId,
+</a><a href="#h0-0-84" id="h0-0-84" class="d">-                100,
+</a><a href="#h0-0-85" id="h0-0-85" class="d">-                lastMessageId
+</a><a href="#h0-0-86" id="h0-0-86" class="d">-            ) ?: return
+</a><a href="#h0-0-87" id="h0-0-87" class="d">-
+</a><a href="#h0-0-88" id="h0-0-88" class="d">-            if (fetchedMessages.isEmpty()) {
+</a><a href="#h0-0-89" id="h0-0-89" class="d">-                break
+</a><a href="#h0-0-90" id="h0-0-90" class="d">-            }
+</a><a href="#h0-0-91" id="h0-0-91" class="d">-
+</a><a href="#h0-0-92" id="h0-0-92" class="d">-            lastMessageId = fetchedMessages.first().clientMessageId
+</a><a href="#h0-0-93" id="h0-0-93" class="d">-
+</a><a href="#h0-0-94" id="h0-0-94" class="d">-            overrideClientMessageIds?.let { ids -&gt;
+</a><a href="#h0-0-95" id="h0-0-95" class="d">-                fetchedMessages.retainAll { message -&gt;
+</a><a href="#h0-0-96" id="h0-0-96" class="d">-                    ids.contains(message.clientMessageId)
+</a><a href="#h0-0-97" id="h0-0-97" class="d">-                }
+</a><a href="#h0-0-98" id="h0-0-98" class="d">-            }
+</a><a href="#h0-0-99" id="h0-0-99" class="d">-
+</a><a href="#h0-0-100" id="h0-0-100" class="d">-            amountToProcess?.let { amount -&gt;
+</a><a href="#h0-0-101" id="h0-0-101" class="d">-                while (processedMessageCount.intValue + fetchedMessages.size &gt; amount) {
+</a><a href="#h0-0-102" id="h0-0-102" class="d">-                    fetchedMessages.removeLastOrNull()
+</a><a href="#h0-0-103" id="h0-0-103" class="d">-                }
+</a><a href="#h0-0-104" id="h0-0-104" class="d">-            }
+</a><a href="#h0-0-105" id="h0-0-105" class="d">-
+</a><a href="#h0-0-106" id="h0-0-106" class="d">-            processMessages(fetchedMessages.reversed())
+</a><a href="#h0-0-107" id="h0-0-107" class="d">-
+</a><a href="#h0-0-108" id="h0-0-108" class="d">-            overrideClientMessageIds?.let { ids -&gt;
+</a><a href="#h0-0-109" id="h0-0-109" class="d">-                processedOverrideMessages += fetchedMessages.count { message -&gt;
+</a><a href="#h0-0-110" id="h0-0-110" class="d">-                    ids.contains(message.clientMessageId)
+</a><a href="#h0-0-111" id="h0-0-111" class="d">-                }
+</a><a href="#h0-0-112" id="h0-0-112" class="d">-
+</a><a href="#h0-0-113" id="h0-0-113" class="d">-                if (processedOverrideMessages &gt;= ids.size) {
+</a><a href="#h0-0-114" id="h0-0-114" class="d">-                    return
+</a><a href="#h0-0-115" id="h0-0-115" class="d">-                }
+</a><a href="#h0-0-116" id="h0-0-116" class="d">-            }
+</a><a href="#h0-0-117" id="h0-0-117" class="d">-
+</a><a href="#h0-0-118" id="h0-0-118" class="d">-            amountToProcess?.let { amount -&gt;
+</a><a href="#h0-0-119" id="h0-0-119" class="d">-                if (processedMessageCount.intValue &gt;= amount) {
+</a><a href="#h0-0-120" id="h0-0-120" class="d">-                    return
+</a><a href="#h0-0-121" id="h0-0-121" class="d">-                }
+</a><a href="#h0-0-122" id="h0-0-122" class="d">-            }
+</a><a href="#h0-0-123" id="h0-0-123" class="d">-        } while (true)
+</a><a href="#h0-0-124" id="h0-0-124" class="d">-    }
+</a><a href="#h0-0-125" id="h0-0-125" class="d">-}</a><a href="#h0-0-126" id="h0-0-126" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/MessagingPreview.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/MessagingPreview.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/MessagingPreview.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/MessagingPreview.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -33,12 +33,12 @@ import me.rhunk.snapenhance.common.Constants
+</a> import me.rhunk.snapenhance.common.ReceiversConfig
+ import me.rhunk.snapenhance.common.data.ContentType
+ import me.rhunk.snapenhance.common.data.SocialScope
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.common.messaging.MessagingConstraints
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import me.rhunk.snapenhance.common.messaging.MessagingTask
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+import me.rhunk.snapenhance.common.messaging.MessagingTaskConstraint
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+import me.rhunk.snapenhance.common.messaging.MessagingTaskType
+</a> import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.common.util.snap.SnapWidgetBroadcastReceiverHelper
+<a href="#h1-0-9" id="h1-0-9" class="d">-import me.rhunk.snapenhance.messaging.MessagingConstraints
+</a><a href="#h1-0-10" id="h1-0-10" class="d">-import me.rhunk.snapenhance.messaging.MessagingTask
+</a><a href="#h1-0-11" id="h1-0-11" class="d">-import me.rhunk.snapenhance.messaging.MessagingTaskConstraint
+</a><a href="#h1-0-12" id="h1-0-12" class="d">-import me.rhunk.snapenhance.messaging.MessagingTaskType
+</a> import me.rhunk.snapenhance.ui.manager.Routes
+ import me.rhunk.snapenhance.ui.util.Dialog
+ 
+<a href="#h1-1" id="h1-1" class="h">@@ -299,14 +299,17 @@ class MessagingPreview: Routes.Route() {
+</a>                     else selectConstraintsDialog = true
+                 }
+                 ActionButton(text = translation[if (hasSelection) &quot;mark_selection_as_seen_option&quot; else &quot;mark_all_as_seen_option&quot;], icon = Icons.Rounded.RemoveRedEye) {
+<a href="#h1-1-3" id="h1-1-3" class="d">-                    launchMessagingTask(MessagingTaskType.READ, listOf(
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+                    launchMessagingTask(
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+                        MessagingTaskType.READ, listOf(
+</a>                         MessagingConstraints.NO_USER_ID(messagingBridge.myUserId),
+                         MessagingConstraints.CONTENT_TYPE(arrayOf(ContentType.SNAP))
+                     ))
+                     runCurrentTask()
+                 }
+                 ActionButton(text = translation[if (hasSelection) &quot;delete_selection_option&quot; else &quot;delete_all_option&quot;], icon = Icons.Rounded.DeleteForever) {
+<a href="#h1-1-12" id="h1-1-12" class="d">-                    launchMessagingTask(MessagingTaskType.DELETE, listOf(MessagingConstraints.USER_ID(messagingBridge.myUserId))) { message -&gt;
+</a><a href="#h1-1-13" id="h1-1-13" class="i">+                    launchMessagingTask(MessagingTaskType.DELETE, listOf(MessagingConstraints.USER_ID(messagingBridge.myUserId), {
+</a><a href="#h1-1-14" id="h1-1-14" class="i">+                        contentType != ContentType.STATUS.id
+</a><a href="#h1-1-15" id="h1-1-15" class="i">+                    })) { message -&gt;
+</a>                         coroutineScope.launch {
+                             message.contentType = ContentType.STATUS.id
+                         }
+<b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/messaging/MessagingTask.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/messaging/MessagingTask.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/messaging/MessagingTask.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/messaging/MessagingTask.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -0,0 +1,126 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="i">+package me.rhunk.snapenhance.common.messaging
+</a><a href="#h2-0-1" id="h2-0-1" class="i">+
+</a><a href="#h2-0-2" id="h2-0-2" class="i">+import androidx.compose.runtime.MutableIntState
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+import kotlinx.coroutines.delay
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import me.rhunk.snapenhance.bridge.snapclient.MessagingBridge
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+import me.rhunk.snapenhance.bridge.snapclient.types.Message
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+import me.rhunk.snapenhance.common.data.ContentType
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+import kotlin.random.Random
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+enum class MessagingTaskType(
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+    val key: String
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+) {
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+    SAVE(&quot;SAVE&quot;),
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+    UNSAVE(&quot;UNSAVE&quot;),
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+    DELETE(&quot;ERASE&quot;),
+</a><a href="#h2-0-16" id="h2-0-16" class="i">+    READ(&quot;READ&quot;),
+</a><a href="#h2-0-17" id="h2-0-17" class="i">+}
+</a><a href="#h2-0-18" id="h2-0-18" class="i">+
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+typealias MessagingTaskConstraint = Message.() -&gt; Boolean
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+object MessagingConstraints {
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+    val USER_ID: (String) -&gt; MessagingTaskConstraint = { userId: String -&gt;
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+        {
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+            this.senderId == userId
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+        }
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+    }
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+    val NO_USER_ID: (String) -&gt; MessagingTaskConstraint = { userId: String -&gt;
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+        {
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+            this.senderId != userId
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+        }
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+    }
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+    val MY_USER_ID: (messagingBridge: MessagingBridge) -&gt; MessagingTaskConstraint = {
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+        val myUserId = it.myUserId
+</a><a href="#h2-0-34" id="h2-0-34" class="i">+        {
+</a><a href="#h2-0-35" id="h2-0-35" class="i">+            this.senderId == myUserId
+</a><a href="#h2-0-36" id="h2-0-36" class="i">+        }
+</a><a href="#h2-0-37" id="h2-0-37" class="i">+    }
+</a><a href="#h2-0-38" id="h2-0-38" class="i">+    val CONTENT_TYPE: (Array&lt;ContentType&gt;) -&gt; MessagingTaskConstraint = {
+</a><a href="#h2-0-39" id="h2-0-39" class="i">+        val contentTypes = it.map { type -&gt; type.id };
+</a><a href="#h2-0-40" id="h2-0-40" class="i">+        {
+</a><a href="#h2-0-41" id="h2-0-41" class="i">+            contentTypes.contains(this.contentType)
+</a><a href="#h2-0-42" id="h2-0-42" class="i">+        }
+</a><a href="#h2-0-43" id="h2-0-43" class="i">+    }
+</a><a href="#h2-0-44" id="h2-0-44" class="i">+}
+</a><a href="#h2-0-45" id="h2-0-45" class="i">+
+</a><a href="#h2-0-46" id="h2-0-46" class="i">+class MessagingTask(
+</a><a href="#h2-0-47" id="h2-0-47" class="i">+    private val messagingBridge: MessagingBridge,
+</a><a href="#h2-0-48" id="h2-0-48" class="i">+    private val conversationId: String,
+</a><a href="#h2-0-49" id="h2-0-49" class="i">+    val taskType: MessagingTaskType,
+</a><a href="#h2-0-50" id="h2-0-50" class="i">+    val constraints: List&lt;MessagingTaskConstraint&gt;,
+</a><a href="#h2-0-51" id="h2-0-51" class="i">+    private val processedMessageCount: MutableIntState,
+</a><a href="#h2-0-52" id="h2-0-52" class="i">+    val onSuccess: (message: Message) -&gt; Unit = {},
+</a><a href="#h2-0-53" id="h2-0-53" class="i">+    private val onFailure: (message: Message, reason: String) -&gt; Unit = { _, _ -&gt; },
+</a><a href="#h2-0-54" id="h2-0-54" class="i">+    private val overrideClientMessageIds: List&lt;Long&gt;? = null,
+</a><a href="#h2-0-55" id="h2-0-55" class="i">+    private val amountToProcess: Int? = null,
+</a><a href="#h2-0-56" id="h2-0-56" class="i">+) {
+</a><a href="#h2-0-57" id="h2-0-57" class="i">+    private suspend fun processMessages(
+</a><a href="#h2-0-58" id="h2-0-58" class="i">+        messages: List&lt;Message&gt;
+</a><a href="#h2-0-59" id="h2-0-59" class="i">+    ) {
+</a><a href="#h2-0-60" id="h2-0-60" class="i">+        messages.forEach { message -&gt;
+</a><a href="#h2-0-61" id="h2-0-61" class="i">+            if (constraints.any { !it(message) }) {
+</a><a href="#h2-0-62" id="h2-0-62" class="i">+                return@forEach
+</a><a href="#h2-0-63" id="h2-0-63" class="i">+            }
+</a><a href="#h2-0-64" id="h2-0-64" class="i">+
+</a><a href="#h2-0-65" id="h2-0-65" class="i">+            val error = messagingBridge.updateMessage(conversationId, message.clientMessageId, taskType.key)
+</a><a href="#h2-0-66" id="h2-0-66" class="i">+            error?.takeIf { error != &quot;DUPLICATE_REQUEST&quot; }?.let {
+</a><a href="#h2-0-67" id="h2-0-67" class="i">+                onFailure(message, error)
+</a><a href="#h2-0-68" id="h2-0-68" class="i">+            }
+</a><a href="#h2-0-69" id="h2-0-69" class="i">+            processedMessageCount.intValue++
+</a><a href="#h2-0-70" id="h2-0-70" class="i">+            onSuccess(message)
+</a><a href="#h2-0-71" id="h2-0-71" class="i">+            delay(Random.nextLong(50, 80))
+</a><a href="#h2-0-72" id="h2-0-72" class="i">+        }
+</a><a href="#h2-0-73" id="h2-0-73" class="i">+    }
+</a><a href="#h2-0-74" id="h2-0-74" class="i">+
+</a><a href="#h2-0-75" id="h2-0-75" class="i">+    fun hasFixedGoal() = overrideClientMessageIds?.takeIf { it.isNotEmpty() } != null || amountToProcess?.takeIf { it &gt; 0 } != null
+</a><a href="#h2-0-76" id="h2-0-76" class="i">+
+</a><a href="#h2-0-77" id="h2-0-77" class="i">+    suspend fun run() {
+</a><a href="#h2-0-78" id="h2-0-78" class="i">+        var processedOverrideMessages = 0
+</a><a href="#h2-0-79" id="h2-0-79" class="i">+        var lastMessageId = Long.MAX_VALUE
+</a><a href="#h2-0-80" id="h2-0-80" class="i">+
+</a><a href="#h2-0-81" id="h2-0-81" class="i">+        do {
+</a><a href="#h2-0-82" id="h2-0-82" class="i">+            val fetchedMessages = messagingBridge.fetchConversationWithMessagesPaginated(
+</a><a href="#h2-0-83" id="h2-0-83" class="i">+                conversationId,
+</a><a href="#h2-0-84" id="h2-0-84" class="i">+                100,
+</a><a href="#h2-0-85" id="h2-0-85" class="i">+                lastMessageId
+</a><a href="#h2-0-86" id="h2-0-86" class="i">+            ) ?: return
+</a><a href="#h2-0-87" id="h2-0-87" class="i">+
+</a><a href="#h2-0-88" id="h2-0-88" class="i">+            if (fetchedMessages.isEmpty()) {
+</a><a href="#h2-0-89" id="h2-0-89" class="i">+                break
+</a><a href="#h2-0-90" id="h2-0-90" class="i">+            }
+</a><a href="#h2-0-91" id="h2-0-91" class="i">+
+</a><a href="#h2-0-92" id="h2-0-92" class="i">+            lastMessageId = fetchedMessages.first().clientMessageId
+</a><a href="#h2-0-93" id="h2-0-93" class="i">+
+</a><a href="#h2-0-94" id="h2-0-94" class="i">+            overrideClientMessageIds?.let { ids -&gt;
+</a><a href="#h2-0-95" id="h2-0-95" class="i">+                fetchedMessages.retainAll { message -&gt;
+</a><a href="#h2-0-96" id="h2-0-96" class="i">+                    ids.contains(message.clientMessageId)
+</a><a href="#h2-0-97" id="h2-0-97" class="i">+                }
+</a><a href="#h2-0-98" id="h2-0-98" class="i">+            }
+</a><a href="#h2-0-99" id="h2-0-99" class="i">+
+</a><a href="#h2-0-100" id="h2-0-100" class="i">+            amountToProcess?.let { amount -&gt;
+</a><a href="#h2-0-101" id="h2-0-101" class="i">+                while (processedMessageCount.intValue + fetchedMessages.size &gt; amount) {
+</a><a href="#h2-0-102" id="h2-0-102" class="i">+                    fetchedMessages.removeLastOrNull()
+</a><a href="#h2-0-103" id="h2-0-103" class="i">+                }
+</a><a href="#h2-0-104" id="h2-0-104" class="i">+            }
+</a><a href="#h2-0-105" id="h2-0-105" class="i">+
+</a><a href="#h2-0-106" id="h2-0-106" class="i">+            processMessages(fetchedMessages.reversed())
+</a><a href="#h2-0-107" id="h2-0-107" class="i">+
+</a><a href="#h2-0-108" id="h2-0-108" class="i">+            overrideClientMessageIds?.let { ids -&gt;
+</a><a href="#h2-0-109" id="h2-0-109" class="i">+                processedOverrideMessages += fetchedMessages.count { message -&gt;
+</a><a href="#h2-0-110" id="h2-0-110" class="i">+                    ids.contains(message.clientMessageId)
+</a><a href="#h2-0-111" id="h2-0-111" class="i">+                }
+</a><a href="#h2-0-112" id="h2-0-112" class="i">+
+</a><a href="#h2-0-113" id="h2-0-113" class="i">+                if (processedOverrideMessages &gt;= ids.size) {
+</a><a href="#h2-0-114" id="h2-0-114" class="i">+                    return
+</a><a href="#h2-0-115" id="h2-0-115" class="i">+                }
+</a><a href="#h2-0-116" id="h2-0-116" class="i">+            }
+</a><a href="#h2-0-117" id="h2-0-117" class="i">+
+</a><a href="#h2-0-118" id="h2-0-118" class="i">+            amountToProcess?.let { amount -&gt;
+</a><a href="#h2-0-119" id="h2-0-119" class="i">+                if (processedMessageCount.intValue &gt;= amount) {
+</a><a href="#h2-0-120" id="h2-0-120" class="i">+                    return
+</a><a href="#h2-0-121" id="h2-0-121" class="i">+                }
+</a><a href="#h2-0-122" id="h2-0-122" class="i">+            }
+</a><a href="#h2-0-123" id="h2-0-123" class="i">+        } while (true)
+</a><a href="#h2-0-124" id="h2-0-124" class="i">+    }
+</a><a href="#h2-0-125" id="h2-0-125" class="i">+}</a><a href="#h2-0-126" id="h2-0-126" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -3,7 +3,11 @@ package me.rhunk.snapenhance.core.action.impl
+</a> import android.content.Context
+ import android.graphics.Bitmap
+ import android.graphics.BitmapFactory
+<a href="#h3-0-3" id="h3-0-3" class="i">+import android.view.Gravity
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import android.view.View
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+import android.widget.LinearLayout
+</a> import android.widget.ProgressBar
+<a href="#h3-0-7" id="h3-0-7" class="i">+import android.widget.TextView
+</a> import androidx.compose.foundation.ExperimentalFoundationApi
+ import androidx.compose.foundation.Image
+ import androidx.compose.foundation.background
+<a href="#h3-1" id="h3-1" class="h">@@ -27,12 +31,15 @@ import androidx.compose.ui.text.style.TextOverflow
+</a> import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+ import kotlinx.coroutines.Dispatchers
+<a href="#h3-1-3" id="h3-1-3" class="d">-import kotlinx.coroutines.Job
+</a> import kotlinx.coroutines.delay
+ import kotlinx.coroutines.launch
+ import kotlinx.coroutines.withContext
+<a href="#h3-1-7" id="h3-1-7" class="i">+import me.rhunk.snapenhance.common.data.ContentType
+</a> import me.rhunk.snapenhance.common.data.FriendLinkType
+ import me.rhunk.snapenhance.common.database.impl.FriendInfo
+<a href="#h3-1-10" id="h3-1-10" class="i">+import me.rhunk.snapenhance.common.messaging.MessagingConstraints
+</a><a href="#h3-1-11" id="h3-1-11" class="i">+import me.rhunk.snapenhance.common.messaging.MessagingTask
+</a><a href="#h3-1-12" id="h3-1-12" class="i">+import me.rhunk.snapenhance.common.messaging.MessagingTaskType
+</a> import me.rhunk.snapenhance.common.ui.createComposeAlertDialog
+ import me.rhunk.snapenhance.common.util.ktx.copyToClipboard
+ import me.rhunk.snapenhance.common.util.snap.BitmojiSelfie
+<a href="#h3-2" id="h3-2" class="h">@@ -72,34 +79,45 @@ class BulkMessagingAction : AbstractAction() {
+</a>         ctx: Context,
+         ids: List&lt;String&gt;,
+         delay: Pair&lt;Long, Long&gt;,
+<a href="#h3-2-3" id="h3-2-3" class="d">-        action: (String) -&gt; Unit = {},
+</a><a href="#h3-2-4" id="h3-2-4" class="d">-    ): Job {
+</a><a href="#h3-2-5" id="h3-2-5" class="d">-        var index = 0
+</a><a href="#h3-2-6" id="h3-2-6" class="d">-        val dialog = ViewAppearanceHelper.newAlertDialogBuilder(ctx)
+</a><a href="#h3-2-7" id="h3-2-7" class="d">-            .setTitle(&quot;...&quot;)
+</a><a href="#h3-2-8" id="h3-2-8" class="d">-            .setView(ProgressBar(ctx))
+</a><a href="#h3-2-9" id="h3-2-9" class="d">-            .setCancelable(false)
+</a><a href="#h3-2-10" id="h3-2-10" class="d">-            .show()
+</a><a href="#h3-2-11" id="h3-2-11" class="d">-
+</a><a href="#h3-2-12" id="h3-2-12" class="d">-        return context.coroutineScope.launch {
+</a><a href="#h3-2-13" id="h3-2-13" class="d">-            ids.forEach { id -&gt;
+</a><a href="#h3-2-14" id="h3-2-14" class="d">-                runCatching {
+</a><a href="#h3-2-15" id="h3-2-15" class="d">-                    action(id)
+</a><a href="#h3-2-16" id="h3-2-16" class="d">-                }.onFailure {
+</a><a href="#h3-2-17" id="h3-2-17" class="d">-                    context.log.error(&quot;Failed to process $it&quot;, it)
+</a><a href="#h3-2-18" id="h3-2-18" class="d">-                    context.shortToast(&quot;Failed to process $id&quot;)
+</a><a href="#h3-2-19" id="h3-2-19" class="d">-                }
+</a><a href="#h3-2-20" id="h3-2-20" class="d">-                index++
+</a><a href="#h3-2-21" id="h3-2-21" class="d">-                withContext(Dispatchers.Main) {
+</a><a href="#h3-2-22" id="h3-2-22" class="d">-                    dialog.setTitle(
+</a><a href="#h3-2-23" id="h3-2-23" class="d">-                        translation.format(&quot;progress_status&quot;, &quot;index&quot; to index.toString(), &quot;total&quot; to ids.size.toString())
+</a><a href="#h3-2-24" id="h3-2-24" class="d">-                    )
+</a><a href="#h3-2-25" id="h3-2-25" class="d">-                }
+</a><a href="#h3-2-26" id="h3-2-26" class="d">-                delay(Random.nextLong(delay.first, delay.second))
+</a><a href="#h3-2-27" id="h3-2-27" class="i">+        action: suspend (id: String, setDialogMessage: (String) -&gt; Unit) -&gt; Unit = { _, _ -&gt; }
+</a><a href="#h3-2-28" id="h3-2-28" class="i">+    ) = context.coroutineScope.launch {
+</a><a href="#h3-2-29" id="h3-2-29" class="i">+        val statusTextView = TextView(ctx)
+</a><a href="#h3-2-30" id="h3-2-30" class="i">+        val dialog = withContext(Dispatchers.Main) {
+</a><a href="#h3-2-31" id="h3-2-31" class="i">+            ViewAppearanceHelper.newAlertDialogBuilder(ctx)
+</a><a href="#h3-2-32" id="h3-2-32" class="i">+                .setTitle(&quot;...&quot;)
+</a><a href="#h3-2-33" id="h3-2-33" class="i">+                .setView(LinearLayout(ctx).apply {
+</a><a href="#h3-2-34" id="h3-2-34" class="i">+                    orientation = LinearLayout.VERTICAL
+</a><a href="#h3-2-35" id="h3-2-35" class="i">+                    gravity = Gravity.CENTER
+</a><a href="#h3-2-36" id="h3-2-36" class="i">+                    addView(statusTextView.apply {
+</a><a href="#h3-2-37" id="h3-2-37" class="i">+                        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+</a><a href="#h3-2-38" id="h3-2-38" class="i">+                        textAlignment = View.TEXT_ALIGNMENT_CENTER
+</a><a href="#h3-2-39" id="h3-2-39" class="i">+                    })
+</a><a href="#h3-2-40" id="h3-2-40" class="i">+                    addView(ProgressBar(ctx))
+</a><a href="#h3-2-41" id="h3-2-41" class="i">+                })
+</a><a href="#h3-2-42" id="h3-2-42" class="i">+                .setCancelable(false)
+</a><a href="#h3-2-43" id="h3-2-43" class="i">+                .show()
+</a><a href="#h3-2-44" id="h3-2-44" class="i">+        }
+</a><a href="#h3-2-45" id="h3-2-45" class="i">+
+</a><a href="#h3-2-46" id="h3-2-46" class="i">+        ids.forEachIndexed { index, id -&gt;
+</a><a href="#h3-2-47" id="h3-2-47" class="i">+            launch(Dispatchers.Main) {
+</a><a href="#h3-2-48" id="h3-2-48" class="i">+                dialog.setTitle(
+</a><a href="#h3-2-49" id="h3-2-49" class="i">+                    translation.format(&quot;progress_status&quot;, &quot;index&quot; to (index + 1).toString(), &quot;total&quot; to ids.size.toString())
+</a><a href="#h3-2-50" id="h3-2-50" class="i">+                )
+</a>             }
+<a href="#h3-2-52" id="h3-2-52" class="d">-            withContext(Dispatchers.Main) {
+</a><a href="#h3-2-53" id="h3-2-53" class="d">-                dialog.dismiss()
+</a><a href="#h3-2-54" id="h3-2-54" class="i">+            runCatching {
+</a><a href="#h3-2-55" id="h3-2-55" class="i">+                action(id) {
+</a><a href="#h3-2-56" id="h3-2-56" class="i">+                    launch(Dispatchers.Main) {
+</a><a href="#h3-2-57" id="h3-2-57" class="i">+                        statusTextView.text = it
+</a><a href="#h3-2-58" id="h3-2-58" class="i">+                    }
+</a><a href="#h3-2-59" id="h3-2-59" class="i">+                }
+</a><a href="#h3-2-60" id="h3-2-60" class="i">+            }.onFailure {
+</a><a href="#h3-2-61" id="h3-2-61" class="i">+                context.log.error(&quot;Failed to process $it&quot;, it)
+</a><a href="#h3-2-62" id="h3-2-62" class="i">+                context.shortToast(&quot;Failed to process $id&quot;)
+</a>             }
+<a href="#h3-2-64" id="h3-2-64" class="i">+            delay(Random.nextLong(delay.first, delay.second))
+</a><a href="#h3-2-65" id="h3-2-65" class="i">+        }
+</a><a href="#h3-2-66" id="h3-2-66" class="i">+        withContext(Dispatchers.Main) {
+</a><a href="#h3-2-67" id="h3-2-67" class="i">+            dialog.dismiss()
+</a>         }
+     }
+ 
+<a href="#h3-3" id="h3-3" class="h">@@ -378,20 +396,22 @@ class BulkMessagingAction : AbstractAction() {
+</a>                                 Text(text = (friendInfo.displayName ?: friendInfo.mutableUsername).toString(), fontSize = 16.sp, fontWeight = FontWeight.Bold, overflow = TextOverflow.Ellipsis, maxLines = 1)
+                                 Text(text = friendInfo.mutableUsername.toString(), fontSize = 10.sp, fontWeight = FontWeight.Light, overflow = TextOverflow.Ellipsis, maxLines = 1)
+                             }
+<a href="#h3-3-3" id="h3-3-3" class="d">-                            Text(text = &quot;Relationship: &quot; + remember(friendInfo) {
+</a><a href="#h3-3-4" id="h3-3-4" class="d">-                                 context.translation[&quot;friendship_link_type.${FriendLinkType.fromValue(friendInfo.friendLinkType).shortName}&quot;]
+</a><a href="#h3-3-5" id="h3-3-5" class="d">-                            }, fontSize = 12.sp, fontWeight = FontWeight.Light)
+</a><a href="#h3-3-6" id="h3-3-6" class="d">-                            remember(friendInfo) { friendInfo.addedTimestamp.takeIf { it &gt; 0L }?.let {
+</a><a href="#h3-3-7" id="h3-3-7" class="d">-                                DateFormat.getDateTimeInstance().format(Date(friendInfo.addedTimestamp))
+</a><a href="#h3-3-8" id="h3-3-8" class="d">-                            } }?.let {
+</a><a href="#h3-3-9" id="h3-3-9" class="d">-                                Text(text = &quot;Added $it&quot;, fontSize = 12.sp, fontWeight = FontWeight.Light)
+</a><a href="#h3-3-10" id="h3-3-10" class="d">-                            }
+</a><a href="#h3-3-11" id="h3-3-11" class="d">-                            remember(friendInfo) { friendInfo.snapScore.takeIf { it &gt; 0 } }?.let {
+</a><a href="#h3-3-12" id="h3-3-12" class="d">-                                Text(text = &quot;Snap Score: $it&quot;, fontSize = 12.sp, fontWeight = FontWeight.Light)
+</a><a href="#h3-3-13" id="h3-3-13" class="d">-                            }
+</a><a href="#h3-3-14" id="h3-3-14" class="d">-                            remember(friendInfo) { friendInfo.streakLength.takeIf { it &gt; 0 } }?.let {
+</a><a href="#h3-3-15" id="h3-3-15" class="d">-                                Text(text = &quot;Streaks length: $it&quot;, fontSize = 12.sp, fontWeight = FontWeight.Light)
+</a><a href="#h3-3-16" id="h3-3-16" class="i">+                            val userInfo = remember(friendInfo) {
+</a><a href="#h3-3-17" id="h3-3-17" class="i">+                                buildString {
+</a><a href="#h3-3-18" id="h3-3-18" class="i">+                                    append(&quot;Relationship: &quot;)
+</a><a href="#h3-3-19" id="h3-3-19" class="i">+                                    append(context.translation[&quot;friendship_link_type.${FriendLinkType.fromValue(friendInfo.friendLinkType).shortName}&quot;])
+</a><a href="#h3-3-20" id="h3-3-20" class="i">+                                    friendInfo.addedTimestamp.takeIf { it &gt; 0L }?.let {
+</a><a href="#h3-3-21" id="h3-3-21" class="i">+                                        append(&quot;\nAdded ${DateFormat.getDateTimeInstance().format(Date(it))}&quot;)
+</a><a href="#h3-3-22" id="h3-3-22" class="i">+                                    }
+</a><a href="#h3-3-23" id="h3-3-23" class="i">+                                    friendInfo.snapScore.takeIf { it &gt; 0 }?.let {
+</a><a href="#h3-3-24" id="h3-3-24" class="i">+                                        append(&quot;\nSnap Score: $it&quot;)
+</a><a href="#h3-3-25" id="h3-3-25" class="i">+                                    }
+</a><a href="#h3-3-26" id="h3-3-26" class="i">+                                    friendInfo.streakLength.takeIf { it &gt; 0 }?.let {
+</a><a href="#h3-3-27" id="h3-3-27" class="i">+                                        append(&quot;\nStreaks length: $it&quot;)
+</a><a href="#h3-3-28" id="h3-3-28" class="i">+                                    }
+</a><a href="#h3-3-29" id="h3-3-29" class="i">+                                }
+</a>                             }
+<a href="#h3-3-31" id="h3-3-31" class="i">+                            Text(text = userInfo, fontSize = 12.sp, fontWeight = FontWeight.Light, lineHeight = 16.sp, overflow = TextOverflow.Ellipsis)
+</a>                         }
+ 
+                         Checkbox(
+<a href="#h3-4" id="h3-4" class="h">@@ -421,56 +441,65 @@ class BulkMessagingAction : AbstractAction() {
+</a> 
+             val ctx = LocalContext.current
+ 
+<a href="#h3-4-3" id="h3-4-3" class="d">-            Column(
+</a><a href="#h3-4-4" id="h3-4-4" class="d">-                modifier = Modifier.fillMaxWidth(),
+</a><a href="#h3-4-5" id="h3-4-5" class="d">-            ) {
+</a><a href="#h3-4-6" id="h3-4-6" class="d">-                Button(
+</a><a href="#h3-4-7" id="h3-4-7" class="d">-                    modifier = Modifier
+</a><a href="#h3-4-8" id="h3-4-8" class="d">-                        .fillMaxWidth()
+</a><a href="#h3-4-9" id="h3-4-9" class="d">-                        .padding(2.dp),
+</a><a href="#h3-4-10" id="h3-4-10" class="d">-                    onClick = {
+</a><a href="#h3-4-11" id="h3-4-11" class="d">-                        showConfirmationDialog = true
+</a><a href="#h3-4-12" id="h3-4-12" class="d">-                        action = {
+</a><a href="#h3-4-13" id="h3-4-13" class="d">-                            val messaging = context.feature(Messaging::class)
+</a><a href="#h3-4-14" id="h3-4-14" class="d">-                            messaging.conversationManager?.apply {
+</a><a href="#h3-4-15" id="h3-4-15" class="d">-                                getOneOnOneConversationIds(selectedFriends, onError = { error -&gt;
+</a><a href="#h3-4-16" id="h3-4-16" class="d">-                                    context.shortToast(&quot;Failed to fetch conversations: $error&quot;)
+</a><a href="#h3-4-17" id="h3-4-17" class="d">-                                }, onSuccess = { conversations -&gt;
+</a><a href="#h3-4-18" id="h3-4-18" class="d">-                                    context.runOnUiThread {
+</a><a href="#h3-4-19" id="h3-4-19" class="d">-                                        removeAction(ctx, conversations.map { it.second }.distinct(), delay = 100L to 400L) {
+</a><a href="#h3-4-20" id="h3-4-20" class="d">-                                            messaging.clearConversationFromFeed(it, onError = { error -&gt;
+</a><a href="#h3-4-21" id="h3-4-21" class="d">-                                                context.shortToast(&quot;Failed to clear conversation: $error&quot;)
+</a><a href="#h3-4-22" id="h3-4-22" class="d">-                                            })
+</a><a href="#h3-4-23" id="h3-4-23" class="d">-                                        }.invokeOnCompletion {
+</a><a href="#h3-4-24" id="h3-4-24" class="d">-                                            coroutineScope.launch { refreshList() }
+</a><a href="#h3-4-25" id="h3-4-25" class="d">-                                        }
+</a><a href="#h3-4-26" id="h3-4-26" class="d">-                                    }
+</a><a href="#h3-4-27" id="h3-4-27" class="d">-                                })
+</a><a href="#h3-4-28" id="h3-4-28" class="d">-                                selectedFriends.clear()
+</a><a href="#h3-4-29" id="h3-4-29" class="i">+            val actions = remember {
+</a><a href="#h3-4-30" id="h3-4-30" class="i">+                mapOf&lt;() -&gt; String, () -&gt; Unit&gt;(
+</a><a href="#h3-4-31" id="h3-4-31" class="i">+                    { &quot;Clean &quot; + selectedFriends.size + &quot; conversations&quot; } to {
+</a><a href="#h3-4-32" id="h3-4-32" class="i">+                        context.feature(Messaging::class).conversationManager?.getOneOnOneConversationIds(selectedFriends.toList().also {
+</a><a href="#h3-4-33" id="h3-4-33" class="i">+                            selectedFriends.clear()
+</a><a href="#h3-4-34" id="h3-4-34" class="i">+                        }, onError = { error -&gt;
+</a><a href="#h3-4-35" id="h3-4-35" class="i">+                            context.shortToast(&quot;Failed to fetch conversations: $error&quot;)
+</a><a href="#h3-4-36" id="h3-4-36" class="i">+                        }, onSuccess = { conversations -&gt;
+</a><a href="#h3-4-37" id="h3-4-37" class="i">+                            removeAction(ctx, conversations.map { it.second }.distinct(), delay = 10L to 40L) { conversationId, setDialogMessage -&gt;
+</a><a href="#h3-4-38" id="h3-4-38" class="i">+                                cleanConversation(
+</a><a href="#h3-4-39" id="h3-4-39" class="i">+                                    conversationId, setDialogMessage
+</a><a href="#h3-4-40" id="h3-4-40" class="i">+                                )
+</a><a href="#h3-4-41" id="h3-4-41" class="i">+                            }.invokeOnCompletion {
+</a><a href="#h3-4-42" id="h3-4-42" class="i">+                                coroutineScope.launch { refreshList() }
+</a>                             }
+<a href="#h3-4-44" id="h3-4-44" class="i">+                        })
+</a><a href="#h3-4-45" id="h3-4-45" class="i">+                    },
+</a><a href="#h3-4-46" id="h3-4-46" class="i">+                    { &quot;Remove &quot; + selectedFriends.size + &quot; friends&quot; } to {
+</a><a href="#h3-4-47" id="h3-4-47" class="i">+                        removeAction(ctx, selectedFriends.toList().also {
+</a><a href="#h3-4-48" id="h3-4-48" class="i">+                            selectedFriends.clear()
+</a><a href="#h3-4-49" id="h3-4-49" class="i">+                        }, delay = 500L to 1200L) { userId, _ -&gt; removeFriend(userId) }.invokeOnCompletion {
+</a><a href="#h3-4-50" id="h3-4-50" class="i">+                            coroutineScope.launch { refreshList() }
+</a>                         }
+                     },
+<a href="#h3-4-53" id="h3-4-53" class="d">-                    enabled = selectedFriends.isNotEmpty()
+</a><a href="#h3-4-54" id="h3-4-54" class="d">-                ) {
+</a><a href="#h3-4-55" id="h3-4-55" class="d">-                    Text(text = &quot;Clear &quot; + selectedFriends.size + &quot; conversations&quot;)
+</a><a href="#h3-4-56" id="h3-4-56" class="d">-                }
+</a><a href="#h3-4-57" id="h3-4-57" class="d">-                Button(
+</a><a href="#h3-4-58" id="h3-4-58" class="d">-                    modifier = Modifier
+</a><a href="#h3-4-59" id="h3-4-59" class="d">-                        .fillMaxWidth()
+</a><a href="#h3-4-60" id="h3-4-60" class="d">-                        .padding(2.dp),
+</a><a href="#h3-4-61" id="h3-4-61" class="d">-                    onClick = {
+</a><a href="#h3-4-62" id="h3-4-62" class="d">-                        showConfirmationDialog = true
+</a><a href="#h3-4-63" id="h3-4-63" class="d">-                        action = {
+</a><a href="#h3-4-64" id="h3-4-64" class="d">-                            removeAction(ctx, selectedFriends.toList().also {
+</a><a href="#h3-4-65" id="h3-4-65" class="d">-                                selectedFriends.clear()
+</a><a href="#h3-4-66" id="h3-4-66" class="d">-                            }, delay = 500L to 1200L) { removeFriend(it) }.invokeOnCompletion {
+</a><a href="#h3-4-67" id="h3-4-67" class="i">+                    { &quot;Clean &quot; + selectedFriends.size + &quot; conversations and remove &quot; + selectedFriends.size + &quot; friends&quot; } to {
+</a><a href="#h3-4-68" id="h3-4-68" class="i">+                        context.feature(Messaging::class).conversationManager?.getOneOnOneConversationIds(selectedFriends.toList().also {
+</a><a href="#h3-4-69" id="h3-4-69" class="i">+                            selectedFriends.clear()
+</a><a href="#h3-4-70" id="h3-4-70" class="i">+                        }, onError = { error -&gt;
+</a><a href="#h3-4-71" id="h3-4-71" class="i">+                            context.shortToast(&quot;Failed to fetch conversations: $error&quot;)
+</a><a href="#h3-4-72" id="h3-4-72" class="i">+                        }, onSuccess = { conversations -&gt;
+</a><a href="#h3-4-73" id="h3-4-73" class="i">+                            removeAction(ctx, conversations.map { it.second }.distinct(), delay = 500L to 1200L) { conversationId, setDialogMessage -&gt;
+</a><a href="#h3-4-74" id="h3-4-74" class="i">+                                cleanConversation(
+</a><a href="#h3-4-75" id="h3-4-75" class="i">+                                    conversationId, setDialogMessage
+</a><a href="#h3-4-76" id="h3-4-76" class="i">+                                )
+</a><a href="#h3-4-77" id="h3-4-77" class="i">+                                removeFriend(conversations.firstOrNull { it.second == conversationId }?.first ?: return@removeAction)
+</a><a href="#h3-4-78" id="h3-4-78" class="i">+                            }.invokeOnCompletion {
+</a>                                 coroutineScope.launch { refreshList() }
+                             }
+<a href="#h3-4-81" id="h3-4-81" class="d">-                        }
+</a><a href="#h3-4-82" id="h3-4-82" class="d">-                    },
+</a><a href="#h3-4-83" id="h3-4-83" class="d">-                    enabled = selectedFriends.isNotEmpty()
+</a><a href="#h3-4-84" id="h3-4-84" class="d">-                ) {
+</a><a href="#h3-4-85" id="h3-4-85" class="d">-                    Text(text = &quot;Remove &quot; + selectedFriends.size + &quot; friends&quot;)
+</a><a href="#h3-4-86" id="h3-4-86" class="i">+                        })
+</a><a href="#h3-4-87" id="h3-4-87" class="i">+                    }
+</a><a href="#h3-4-88" id="h3-4-88" class="i">+                )
+</a><a href="#h3-4-89" id="h3-4-89" class="i">+            }
+</a><a href="#h3-4-90" id="h3-4-90" class="i">+
+</a><a href="#h3-4-91" id="h3-4-91" class="i">+            Column(
+</a><a href="#h3-4-92" id="h3-4-92" class="i">+                modifier = Modifier.fillMaxWidth(),
+</a><a href="#h3-4-93" id="h3-4-93" class="i">+            ) {
+</a><a href="#h3-4-94" id="h3-4-94" class="i">+                actions.forEach { (text, actionFunction) -&gt;
+</a><a href="#h3-4-95" id="h3-4-95" class="i">+                    Button(
+</a><a href="#h3-4-96" id="h3-4-96" class="i">+                        modifier = Modifier
+</a><a href="#h3-4-97" id="h3-4-97" class="i">+                            .fillMaxWidth()
+</a><a href="#h3-4-98" id="h3-4-98" class="i">+                            .padding(2.dp),
+</a><a href="#h3-4-99" id="h3-4-99" class="i">+                        onClick = {
+</a><a href="#h3-4-100" id="h3-4-100" class="i">+                            showConfirmationDialog = true
+</a><a href="#h3-4-101" id="h3-4-101" class="i">+                            action = actionFunction
+</a><a href="#h3-4-102" id="h3-4-102" class="i">+                        },
+</a><a href="#h3-4-103" id="h3-4-103" class="i">+                        enabled = selectedFriends.isNotEmpty()
+</a><a href="#h3-4-104" id="h3-4-104" class="i">+                    ) {
+</a><a href="#h3-4-105" id="h3-4-105" class="i">+                        Text(text = remember(selectedFriends.size) { text() })
+</a><a href="#h3-4-106" id="h3-4-106" class="i">+                    }
+</a>                 }
+             }
+         }
+<a href="#h3-5" id="h3-5" class="h">@@ -520,4 +549,23 @@ class BulkMessagingAction : AbstractAction() {
+</a>             }.invoke(completable)
+         }
+     }
+<a href="#h3-5-3" id="h3-5-3" class="i">+
+</a><a href="#h3-5-4" id="h3-5-4" class="i">+    private suspend fun cleanConversation(
+</a><a href="#h3-5-5" id="h3-5-5" class="i">+        conversationId: String,
+</a><a href="#h3-5-6" id="h3-5-6" class="i">+        setDialogMessage: (String) -&gt; Unit
+</a><a href="#h3-5-7" id="h3-5-7" class="i">+    ) {
+</a><a href="#h3-5-8" id="h3-5-8" class="i">+        val messageCount = mutableIntStateOf(0)
+</a><a href="#h3-5-9" id="h3-5-9" class="i">+        MessagingTask(
+</a><a href="#h3-5-10" id="h3-5-10" class="i">+            context.messagingBridge,
+</a><a href="#h3-5-11" id="h3-5-11" class="i">+            conversationId,
+</a><a href="#h3-5-12" id="h3-5-12" class="i">+            taskType = MessagingTaskType.DELETE,
+</a><a href="#h3-5-13" id="h3-5-13" class="i">+            constraints = listOf(MessagingConstraints.MY_USER_ID(context.messagingBridge), {
+</a><a href="#h3-5-14" id="h3-5-14" class="i">+                contentType != ContentType.STATUS.id
+</a><a href="#h3-5-15" id="h3-5-15" class="i">+            }),
+</a><a href="#h3-5-16" id="h3-5-16" class="i">+            processedMessageCount = messageCount,
+</a><a href="#h3-5-17" id="h3-5-17" class="i">+            onSuccess = {
+</a><a href="#h3-5-18" id="h3-5-18" class="i">+                setDialogMessage(&quot;${messageCount.intValue} deleted messages&quot;)
+</a><a href="#h3-5-19" id="h3-5-19" class="i">+            },
+</a><a href="#h3-5-20" id="h3-5-20" class="i">+        ).run()
+</a><a href="#h3-5-21" id="h3-5-21" class="i">+    }
+</a> }
+</pre>
+</div>
+</body>
+</html>

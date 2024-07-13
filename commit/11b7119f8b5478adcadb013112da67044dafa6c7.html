@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(media_downloader): partial compat for story replies - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/11b7119f8b5478adcadb013112da67044dafa6c7.html">11b7119f8b5478adcadb013112da67044dafa6c7</a>
+<b>parent</b> <a href="../commit/b0dfcd5470ff981e35c38e2ca5b95dfd78794ed9.html">b0dfcd5470ff981e35c38e2ca5b95dfd78794ed9</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 18 Aug 2023 15:26:54 +0200
+
+fix(media_downloader): partial compat for story replies
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">+++++++++++</span><span class="d">-</span></td></tr>
+</table></pre><pre>2 files changed, 16 insertions(+), 2 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -464,7 +464,11 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a> 
+         val messageReader = ProtoReader(messageContent)
+         val urlProto: ByteArray = if (isArroyoMessage) {
+<a href="#h0-0-3" id="h0-0-3" class="d">-            messageReader.getByteArray(*ARROYO_URL_KEY_PROTO_PATH)!!
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+            var finalProto: ByteArray? = null
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+            messageReader.readPath(4)?.each(5) {
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                finalProto = getByteArray(1, 3)
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+            }
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+            finalProto!!
+</a>         } else {
+             deletedMediaReference!!
+         }
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -25,7 +25,17 @@ object MediaDownloaderHelper {
+</a>         return when (contentType) {
+             ContentType.NOTE -&gt; messageContainerPath.readPath(*mediaContainerPath)
+             ContentType.SNAP -&gt; messageContainerPath.readPath(*(intArrayOf(11) + mediaContainerPath))
+<a href="#h1-0-3" id="h1-0-3" class="d">-            ContentType.EXTERNAL_MEDIA -&gt; messageContainerPath.readPath(*(intArrayOf(3, 3) + mediaContainerPath))
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+            ContentType.EXTERNAL_MEDIA -&gt; {
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+                val externalMediaTypes = arrayOf(
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+                    intArrayOf(3, 3), //normal external media
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+                    intArrayOf(7, 12, 3), //attached story reply
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+                    intArrayOf(7, 3) //original story reply
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+                )
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+                externalMediaTypes.forEach { path -&gt;
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+                    messageContainerPath.readPath(*(path + mediaContainerPath))?.also { return it }
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+                }
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+                null
+</a><a href="#h1-0-14" id="h1-0-14" class="i">+            }
+</a>             else -&gt; null
+         }
+     }
+</pre>
+</div>
+</body>
+</html>

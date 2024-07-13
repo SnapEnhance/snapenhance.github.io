@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core/e2ee): self check - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/3bde12a2af8e4123ff41729b371808b7838999a7.html">3bde12a2af8e4123ff41729b371808b7838999a7</a>
+<b>parent</b> <a href="../commit/6f545905a19cd86ec4309442c503cebde51eee3e.html">6f545905a19cd86ec4309442c503cebde51eee3e</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 18 Oct 2023 19:45:47 +0200
+
+fix(core/e2ee): self check
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt</a></td><td> | </td><td class="num">23</td><td><span class="i">+++++++++++</span><span class="d">------------</span></td></tr>
+</table></pre><pre>1 file changed, 11 insertions(+), 12 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -57,7 +57,9 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>     private val encryptedMessages = mutableListOf&lt;Long&gt;()
+ 
+     private fun getE2EParticipants(conversationId: String): List&lt;String&gt; {
+<a href="#h0-0-3" id="h0-0-3" class="d">-        return context.database.getConversationParticipants(conversationId)?.filter { friendId -&gt; e2eeInterface.friendKeyExists(friendId) } ?: emptyList()
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        return context.database.getConversationParticipants(conversationId)?.filter { friendId -&gt;
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+            friendId != context.database.myUserId &amp;&amp; e2eeInterface.friendKeyExists(friendId)
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+        } ?: emptyList()
+</a>     }
+ 
+     private fun askForKeys(conversationId: String) {
+<a href="#h0-1" id="h0-1" class="h">@@ -281,10 +283,11 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>             getE2EParticipants(conversationId)
+         }
+ 
+<a href="#h0-1-3" id="h0-1-3" class="d">-        fun setMessageContent(buffer: ByteArray) {
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+        fun setDecryptedMessage(buffer: ByteArray) {
+</a>             outputBuffer = buffer
+             outputContentType = fixContentType(outputContentType, ProtoReader(buffer)) ?: outputContentType
+             decryptedMessageCache[clientMessageId] = outputContentType to buffer
+<a href="#h0-1-8" id="h0-1-8" class="i">+            encryptedMessages.add(clientMessageId)
+</a>         }
+ 
+         fun replaceMessageText(text: String) {
+<a href="#h0-2" id="h0-2" class="h">@@ -303,6 +306,8 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>             if (messageTypeId == ENCRYPTED_MESSAGE_ID) {
+                 runCatching {
+                     eachBuffer(2) {
+<a href="#h0-2-3" id="h0-2-3" class="i">+                        if (encryptedMessages.contains(clientMessageId)) return@eachBuffer
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+
+</a>                         val participantIdHash = getByteArray(1) ?: return@eachBuffer
+                         val iv = getByteArray(2) ?: return@eachBuffer
+                         val ciphertext = getByteArray(3) ?: return@eachBuffer
+<a href="#h0-3" id="h0-3" class="h">@@ -310,19 +315,13 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>                         if (isMe) {
+                             if (conversationParticipants.isEmpty()) return@eachBuffer
+                             val participantId = conversationParticipants.firstOrNull { participantIdHash.contentEquals(hashParticipantId(it, iv)) } ?: return@eachBuffer
+<a href="#h0-3-3" id="h0-3-3" class="d">-                            setMessageContent(
+</a><a href="#h0-3-4" id="h0-3-4" class="d">-                                e2eeInterface.decryptMessage(participantId, ciphertext, iv)
+</a><a href="#h0-3-5" id="h0-3-5" class="d">-                            )
+</a><a href="#h0-3-6" id="h0-3-6" class="d">-                            encryptedMessages.add(clientMessageId)
+</a><a href="#h0-3-7" id="h0-3-7" class="i">+                            setDecryptedMessage(e2eeInterface.decryptMessage(participantId, ciphertext, iv))
+</a>                             return@eachBuffer
+                         }
+ 
+                         if (!participantIdHash.contentEquals(hashParticipantId(context.database.myUserId, iv))) return@eachBuffer
+ 
+<a href="#h0-3-13" id="h0-3-13" class="d">-                        setMessageContent(
+</a><a href="#h0-3-14" id="h0-3-14" class="d">-                            e2eeInterface.decryptMessage(senderId, ciphertext, iv)
+</a><a href="#h0-3-15" id="h0-3-15" class="d">-                        )
+</a><a href="#h0-3-16" id="h0-3-16" class="d">-                        encryptedMessages.add(clientMessageId)
+</a><a href="#h0-3-17" id="h0-3-17" class="i">+                        setDecryptedMessage(e2eeInterface.decryptMessage(senderId, ciphertext, iv))
+</a>                     }
+                 }.onFailure {
+                     context.log.error(&quot;Failed to decrypt message id: $clientMessageId&quot;, it)
+<a href="#h0-4" id="h0-4" class="h">@@ -381,7 +380,7 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>             val messageContent = event.messageContent
+             val destinations = event.destinations
+ 
+<a href="#h0-4-3" id="h0-4-3" class="d">-            val e2eeConversations = destinations.conversations.filter { getState(it.toString()) }
+</a><a href="#h0-4-4" id="h0-4-4" class="i">+            val e2eeConversations = destinations.conversations.filter { getState(it.toString()) &amp;&amp; getE2EParticipants(it.toString()).isNotEmpty() }
+</a> 
+             if (e2eeConversations.isEmpty()) return@subscribe
+ 
+<a href="#h0-5" id="h0-5" class="h">@@ -420,7 +419,7 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>             val participantsIds = conversationIds.map { getE2EParticipants(it.toString()) }.flatten().distinct()
+ 
+             if (participantsIds.isEmpty()) {
+<a href="#h0-5-3" id="h0-5-3" class="d">-                context.longToast(&quot;You don&#39;t have any friends in this conversation to encrypt messages with!&quot;)
+</a><a href="#h0-5-4" id="h0-5-4" class="i">+                context.shortToast(&quot;You don&#39;t have any friends in this conversation to encrypt messages with!&quot;)
+</a>                 return@subscribe
+             }
+             val messageReader = protoReader.followPath(4) ?: return@subscribe
+</pre>
+</div>
+</body>
+</html>

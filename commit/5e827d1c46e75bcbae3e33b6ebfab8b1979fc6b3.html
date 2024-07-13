@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>event dispatcher - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/5e827d1c46e75bcbae3e33b6ebfab8b1979fc6b3.html">5e827d1c46e75bcbae3e33b6ebfab8b1979fc6b3</a>
+<b>parent</b> <a href="../commit/369ed0a8a640bea6e3728a1ccc3bc5225c020ad7.html">369ed0a8a640bea6e3728a1ccc3bc5225c020ad7</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed,  2 Aug 2023 09:17:17 +0200
+
+event dispatcher
+
+<b>Diffstat:</b>
+<table><tr><td class="A">A</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt</a></td><td> | </td><td class="num">38</td><td><span class="i">++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">+++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt</a></td><td> | </td><td class="num">67</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/event/impl/OnSnapInteractionEvent.kt</a></td><td> | </td><td class="num">10</td><td><span class="i">++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/event/impl/SendMessageWithContentEvent.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">+++++++++</span><span class="d"></span></td></tr>
+<tr><td class="D">D</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/event/EventBus.kt</a></td><td> | </td><td class="num">63</td><td><span class="i"></span><span class="d">---------------------------------------------------------------</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/event/Events.kt</a></td><td> | </td><td class="num">4</td><td><span class="i"></span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/Messaging.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">++++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/privacy/PreventMessageSending.kt</a></td><td> | </td><td class="num">10</td><td><span class="i">+++++</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/PreventReadReceipts.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">+++++</span><span class="d">---</span></td></tr>
+</table></pre><pre>11 files changed, 142 insertions(+), 78 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -0,0 +1,37 @@
+</a><a href="#h0-0-0" id="h0-0-0" class="i">+package me.rhunk.snapenhance
+</a><a href="#h0-0-1" id="h0-0-1" class="i">+
+</a><a href="#h0-0-2" id="h0-0-2" class="i">+import me.rhunk.snapenhance.core.event.impl.OnSnapInteractionEvent
+</a><a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.core.event.impl.SendMessageWithContentEvent
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+import me.rhunk.snapenhance.data.wrapper.impl.MessageContent
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+import me.rhunk.snapenhance.data.wrapper.impl.SnapUUID
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+import me.rhunk.snapenhance.hook.HookStage
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+import me.rhunk.snapenhance.hook.hook
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+import me.rhunk.snapenhance.manager.Manager
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+class EventDispatcher(
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+    private val context: ModContext
+</a><a href="#h0-0-12" id="h0-0-12" class="i">+) : Manager {
+</a><a href="#h0-0-13" id="h0-0-13" class="i">+    override fun init() {
+</a><a href="#h0-0-14" id="h0-0-14" class="i">+        context.classCache.conversationManager.hook(&quot;sendMessageWithContent&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h0-0-15" id="h0-0-15" class="i">+            val messageContent = MessageContent(param.arg(1))
+</a><a href="#h0-0-16" id="h0-0-16" class="i">+            context.event.post(SendMessageWithContentEvent(messageContent))?.let {
+</a><a href="#h0-0-17" id="h0-0-17" class="i">+                if (it.canceled) {
+</a><a href="#h0-0-18" id="h0-0-18" class="i">+                    param.setResult(null)
+</a><a href="#h0-0-19" id="h0-0-19" class="i">+                }
+</a><a href="#h0-0-20" id="h0-0-20" class="i">+            }
+</a><a href="#h0-0-21" id="h0-0-21" class="i">+        }
+</a><a href="#h0-0-22" id="h0-0-22" class="i">+
+</a><a href="#h0-0-23" id="h0-0-23" class="i">+        context.classCache.snapManager.hook(&quot;onSnapInteraction&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h0-0-24" id="h0-0-24" class="i">+            val conversationId = SnapUUID(param.arg(1))
+</a><a href="#h0-0-25" id="h0-0-25" class="i">+            val messageId = param.arg&lt;Long&gt;(2)
+</a><a href="#h0-0-26" id="h0-0-26" class="i">+            context.event.post(OnSnapInteractionEvent(
+</a><a href="#h0-0-27" id="h0-0-27" class="i">+                conversationId = conversationId,
+</a><a href="#h0-0-28" id="h0-0-28" class="i">+                messageId = messageId
+</a><a href="#h0-0-29" id="h0-0-29" class="i">+            ))?.let {
+</a><a href="#h0-0-30" id="h0-0-30" class="i">+                if (it.canceled) {
+</a><a href="#h0-0-31" id="h0-0-31" class="i">+                    param.setResult(null)
+</a><a href="#h0-0-32" id="h0-0-32" class="i">+                }
+</a><a href="#h0-0-33" id="h0-0-33" class="i">+            }
+</a><a href="#h0-0-34" id="h0-0-34" class="i">+        }
+</a><a href="#h0-0-35" id="h0-0-35" class="i">+    }
+</a><a href="#h0-0-36" id="h0-0-36" class="i">+}</a><a href="#h0-0-37" id="h0-0-37" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -14,6 +14,7 @@ import kotlinx.coroutines.asCoroutineDispatcher
+</a> import me.rhunk.snapenhance.bridge.BridgeClient
+ import me.rhunk.snapenhance.bridge.wrapper.TranslationWrapper
+ import me.rhunk.snapenhance.core.config.ModConfig
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.core.event.EventBus
+</a> import me.rhunk.snapenhance.data.MessageSender
+ import me.rhunk.snapenhance.database.DatabaseAccess
+ import me.rhunk.snapenhance.features.Feature
+<a href="#h1-1" id="h1-1" class="h">@@ -41,6 +42,8 @@ class ModContext {
+</a> 
+     private val modConfig = ModConfig()
+     val config by modConfig
+<a href="#h1-1-3" id="h1-1-3" class="i">+    val event = EventBus(this)
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+    val eventDispatcher = EventDispatcher(this)
+</a> 
+     val translation = TranslationWrapper()
+     val features = FeatureManager(this)
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -99,6 +99,7 @@ class SnapEnhance {
+</a>             with(appContext) {
+                 reloadConfig()
+                 mappings.init()
+<a href="#h2-0-3" id="h2-0-3" class="i">+                eventDispatcher.init()
+</a>                 //if mappings aren&#39;t loaded, we can&#39;t initialize features
+                 if (!mappings.areMappingsLoaded) return
+                 features.init()
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -0,0 +1,66 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="i">+package me.rhunk.snapenhance.core.event
+</a><a href="#h3-0-1" id="h3-0-1" class="i">+
+</a><a href="#h3-0-2" id="h3-0-2" class="i">+import me.rhunk.snapenhance.Logger
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+import me.rhunk.snapenhance.ModContext
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import kotlin.reflect.KClass
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+abstract class Event {
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+    lateinit var context: ModContext
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+    var canceled = false
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+}
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+interface IListener&lt;T&gt; {
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+    fun handle(event: T)
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+}
+</a><a href="#h3-0-14" id="h3-0-14" class="i">+
+</a><a href="#h3-0-15" id="h3-0-15" class="i">+class EventBus(
+</a><a href="#h3-0-16" id="h3-0-16" class="i">+    private val context: ModContext
+</a><a href="#h3-0-17" id="h3-0-17" class="i">+) {
+</a><a href="#h3-0-18" id="h3-0-18" class="i">+    private val subscribers = mutableMapOf&lt;KClass&lt;out Event&gt;, MutableList&lt;IListener&lt;out Event&gt;&gt;&gt;()
+</a><a href="#h3-0-19" id="h3-0-19" class="i">+
+</a><a href="#h3-0-20" id="h3-0-20" class="i">+    fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;, listener: IListener&lt;T&gt;) {
+</a><a href="#h3-0-21" id="h3-0-21" class="i">+        if (!subscribers.containsKey(event)) {
+</a><a href="#h3-0-22" id="h3-0-22" class="i">+            subscribers[event] = mutableListOf()
+</a><a href="#h3-0-23" id="h3-0-23" class="i">+        }
+</a><a href="#h3-0-24" id="h3-0-24" class="i">+        subscribers[event]!!.add(listener)
+</a><a href="#h3-0-25" id="h3-0-25" class="i">+    }
+</a><a href="#h3-0-26" id="h3-0-26" class="i">+
+</a><a href="#h3-0-27" id="h3-0-27" class="i">+    inline fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;, crossinline listener: (T) -&gt; Unit): () -&gt; Unit {
+</a><a href="#h3-0-28" id="h3-0-28" class="i">+        val obj = object : IListener&lt;T&gt; {
+</a><a href="#h3-0-29" id="h3-0-29" class="i">+            override fun handle(event: T) {
+</a><a href="#h3-0-30" id="h3-0-30" class="i">+                listener(event)
+</a><a href="#h3-0-31" id="h3-0-31" class="i">+            }
+</a><a href="#h3-0-32" id="h3-0-32" class="i">+        }
+</a><a href="#h3-0-33" id="h3-0-33" class="i">+        subscribe(event, obj)
+</a><a href="#h3-0-34" id="h3-0-34" class="i">+        return { unsubscribe(event, obj) }
+</a><a href="#h3-0-35" id="h3-0-35" class="i">+    }
+</a><a href="#h3-0-36" id="h3-0-36" class="i">+
+</a><a href="#h3-0-37" id="h3-0-37" class="i">+    fun &lt;T : Event&gt; unsubscribe(event: KClass&lt;T&gt;, listener: IListener&lt;T&gt;) {
+</a><a href="#h3-0-38" id="h3-0-38" class="i">+        if (!subscribers.containsKey(event)) {
+</a><a href="#h3-0-39" id="h3-0-39" class="i">+            return
+</a><a href="#h3-0-40" id="h3-0-40" class="i">+        }
+</a><a href="#h3-0-41" id="h3-0-41" class="i">+        subscribers[event]!!.remove(listener)
+</a><a href="#h3-0-42" id="h3-0-42" class="i">+    }
+</a><a href="#h3-0-43" id="h3-0-43" class="i">+
+</a><a href="#h3-0-44" id="h3-0-44" class="i">+    fun &lt;T : Event&gt; post(event: T): T? {
+</a><a href="#h3-0-45" id="h3-0-45" class="i">+        if (!subscribers.containsKey(event::class)) {
+</a><a href="#h3-0-46" id="h3-0-46" class="i">+            return null
+</a><a href="#h3-0-47" id="h3-0-47" class="i">+        }
+</a><a href="#h3-0-48" id="h3-0-48" class="i">+
+</a><a href="#h3-0-49" id="h3-0-49" class="i">+        event.context = context
+</a><a href="#h3-0-50" id="h3-0-50" class="i">+
+</a><a href="#h3-0-51" id="h3-0-51" class="i">+        subscribers[event::class]?.forEach { listener -&gt;
+</a><a href="#h3-0-52" id="h3-0-52" class="i">+            @Suppress(&quot;UNCHECKED_CAST&quot;)
+</a><a href="#h3-0-53" id="h3-0-53" class="i">+            runCatching {
+</a><a href="#h3-0-54" id="h3-0-54" class="i">+                (listener as IListener&lt;T&gt;).handle(event)
+</a><a href="#h3-0-55" id="h3-0-55" class="i">+            }.onFailure { t -&gt;
+</a><a href="#h3-0-56" id="h3-0-56" class="i">+                Logger.error(&quot;Error while handling event ${event::class.simpleName} by ${listener::class.simpleName}&quot;, t)
+</a><a href="#h3-0-57" id="h3-0-57" class="i">+            }
+</a><a href="#h3-0-58" id="h3-0-58" class="i">+        }
+</a><a href="#h3-0-59" id="h3-0-59" class="i">+        return event
+</a><a href="#h3-0-60" id="h3-0-60" class="i">+    }
+</a><a href="#h3-0-61" id="h3-0-61" class="i">+
+</a><a href="#h3-0-62" id="h3-0-62" class="i">+    fun clear() {
+</a><a href="#h3-0-63" id="h3-0-63" class="i">+        subscribers.clear()
+</a><a href="#h3-0-64" id="h3-0-64" class="i">+    }
+</a><a href="#h3-0-65" id="h3-0-65" class="i">+}</a><a href="#h3-0-66" id="h3-0-66" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/impl/OnSnapInteractionEvent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/impl/OnSnapInteractionEvent.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/impl/OnSnapInteractionEvent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/impl/OnSnapInteractionEvent.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -0,0 +1,9 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="i">+package me.rhunk.snapenhance.core.event.impl
+</a><a href="#h4-0-1" id="h4-0-1" class="i">+
+</a><a href="#h4-0-2" id="h4-0-2" class="i">+import me.rhunk.snapenhance.core.event.Event
+</a><a href="#h4-0-3" id="h4-0-3" class="i">+import me.rhunk.snapenhance.data.wrapper.impl.SnapUUID
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+class OnSnapInteractionEvent(
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+    val conversationId: SnapUUID,
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+    val messageId: Long
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+) : Event()</a><a href="#h4-0-9" id="h4-0-9" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/impl/SendMessageWithContentEvent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/impl/SendMessageWithContentEvent.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/impl/SendMessageWithContentEvent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/impl/SendMessageWithContentEvent.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -0,0 +1,8 @@
+</a><a href="#h5-0-0" id="h5-0-0" class="i">+package me.rhunk.snapenhance.core.event.impl
+</a><a href="#h5-0-1" id="h5-0-1" class="i">+
+</a><a href="#h5-0-2" id="h5-0-2" class="i">+import me.rhunk.snapenhance.core.event.Event
+</a><a href="#h5-0-3" id="h5-0-3" class="i">+import me.rhunk.snapenhance.data.wrapper.impl.MessageContent
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+
+</a><a href="#h5-0-5" id="h5-0-5" class="i">+class SendMessageWithContentEvent(
+</a><a href="#h5-0-6" id="h5-0-6" class="i">+    val messageContent: MessageContent
+</a><a href="#h5-0-7" id="h5-0-7" class="i">+) : Event()</a><a href="#h5-0-8" id="h5-0-8" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/event/EventBus.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/event/EventBus.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/event/EventBus.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/event/EventBus.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -1,62 +0,0 @@
+</a><a href="#h6-0-0" id="h6-0-0" class="d">-package me.rhunk.snapenhance.event
+</a><a href="#h6-0-1" id="h6-0-1" class="d">-
+</a><a href="#h6-0-2" id="h6-0-2" class="d">-import me.rhunk.snapenhance.ModContext
+</a><a href="#h6-0-3" id="h6-0-3" class="d">-import kotlin.reflect.KClass
+</a><a href="#h6-0-4" id="h6-0-4" class="d">-
+</a><a href="#h6-0-5" id="h6-0-5" class="d">-abstract class Event {
+</a><a href="#h6-0-6" id="h6-0-6" class="d">-    lateinit var context: ModContext
+</a><a href="#h6-0-7" id="h6-0-7" class="d">-}
+</a><a href="#h6-0-8" id="h6-0-8" class="d">-
+</a><a href="#h6-0-9" id="h6-0-9" class="d">-interface IListener&lt;T&gt; {
+</a><a href="#h6-0-10" id="h6-0-10" class="d">-    fun handle(event: T)
+</a><a href="#h6-0-11" id="h6-0-11" class="d">-}
+</a><a href="#h6-0-12" id="h6-0-12" class="d">-
+</a><a href="#h6-0-13" id="h6-0-13" class="d">-class EventBus(
+</a><a href="#h6-0-14" id="h6-0-14" class="d">-    private val context: ModContext
+</a><a href="#h6-0-15" id="h6-0-15" class="d">-) {
+</a><a href="#h6-0-16" id="h6-0-16" class="d">-    private val subscribers = mutableMapOf&lt;KClass&lt;out Event&gt;, MutableList&lt;IListener&lt;out Event&gt;&gt;&gt;()
+</a><a href="#h6-0-17" id="h6-0-17" class="d">-
+</a><a href="#h6-0-18" id="h6-0-18" class="d">-    fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;, listener: IListener&lt;T&gt;) {
+</a><a href="#h6-0-19" id="h6-0-19" class="d">-        if (!subscribers.containsKey(event)) {
+</a><a href="#h6-0-20" id="h6-0-20" class="d">-            subscribers[event] = mutableListOf()
+</a><a href="#h6-0-21" id="h6-0-21" class="d">-        }
+</a><a href="#h6-0-22" id="h6-0-22" class="d">-        subscribers[event]!!.add(listener)
+</a><a href="#h6-0-23" id="h6-0-23" class="d">-    }
+</a><a href="#h6-0-24" id="h6-0-24" class="d">-
+</a><a href="#h6-0-25" id="h6-0-25" class="d">-    fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;, listener: (T) -&gt; Unit) {
+</a><a href="#h6-0-26" id="h6-0-26" class="d">-        subscribe(event, object : IListener&lt;T&gt; {
+</a><a href="#h6-0-27" id="h6-0-27" class="d">-            override fun handle(event: T) {
+</a><a href="#h6-0-28" id="h6-0-28" class="d">-                listener(event)
+</a><a href="#h6-0-29" id="h6-0-29" class="d">-            }
+</a><a href="#h6-0-30" id="h6-0-30" class="d">-        })
+</a><a href="#h6-0-31" id="h6-0-31" class="d">-    }
+</a><a href="#h6-0-32" id="h6-0-32" class="d">-
+</a><a href="#h6-0-33" id="h6-0-33" class="d">-    fun &lt;T : Event&gt; unsubscribe(event: KClass&lt;T&gt;, listener: IListener&lt;T&gt;) {
+</a><a href="#h6-0-34" id="h6-0-34" class="d">-        if (!subscribers.containsKey(event)) {
+</a><a href="#h6-0-35" id="h6-0-35" class="d">-            return
+</a><a href="#h6-0-36" id="h6-0-36" class="d">-        }
+</a><a href="#h6-0-37" id="h6-0-37" class="d">-        subscribers[event]!!.remove(listener)
+</a><a href="#h6-0-38" id="h6-0-38" class="d">-    }
+</a><a href="#h6-0-39" id="h6-0-39" class="d">-
+</a><a href="#h6-0-40" id="h6-0-40" class="d">-    fun &lt;T : Event&gt; post(event: T) {
+</a><a href="#h6-0-41" id="h6-0-41" class="d">-        if (!subscribers.containsKey(event::class)) {
+</a><a href="#h6-0-42" id="h6-0-42" class="d">-            return
+</a><a href="#h6-0-43" id="h6-0-43" class="d">-        }
+</a><a href="#h6-0-44" id="h6-0-44" class="d">-
+</a><a href="#h6-0-45" id="h6-0-45" class="d">-        event.context = context
+</a><a href="#h6-0-46" id="h6-0-46" class="d">-
+</a><a href="#h6-0-47" id="h6-0-47" class="d">-        subscribers[event::class]!!.forEach { listener -&gt;
+</a><a href="#h6-0-48" id="h6-0-48" class="d">-            @Suppress(&quot;UNCHECKED_CAST&quot;)
+</a><a href="#h6-0-49" id="h6-0-49" class="d">-            try {
+</a><a href="#h6-0-50" id="h6-0-50" class="d">-                (listener as IListener&lt;T&gt;).handle(event)
+</a><a href="#h6-0-51" id="h6-0-51" class="d">-            } catch (t: Throwable) {
+</a><a href="#h6-0-52" id="h6-0-52" class="d">-                println(&quot;Error while handling event ${event::class.simpleName} by ${listener::class.simpleName}&quot;)
+</a><a href="#h6-0-53" id="h6-0-53" class="d">-                t.printStackTrace()
+</a><a href="#h6-0-54" id="h6-0-54" class="d">-            }
+</a><a href="#h6-0-55" id="h6-0-55" class="d">-        }
+</a><a href="#h6-0-56" id="h6-0-56" class="d">-    }
+</a><a href="#h6-0-57" id="h6-0-57" class="d">-
+</a><a href="#h6-0-58" id="h6-0-58" class="d">-    fun clear() {
+</a><a href="#h6-0-59" id="h6-0-59" class="d">-        subscribers.clear()
+</a><a href="#h6-0-60" id="h6-0-60" class="d">-    }
+</a><a href="#h6-0-61" id="h6-0-61" class="d">-}</a><a href="#h6-0-62" id="h6-0-62" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/event/Events.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/event/Events.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/event/Events.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/event/Events.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -1,3 +0,0 @@
+</a><a href="#h7-0-0" id="h7-0-0" class="d">-package me.rhunk.snapenhance.event
+</a><a href="#h7-0-1" id="h7-0-1" class="d">-
+</a><a href="#h7-0-2" id="h7-0-2" class="d">-//TODO: addView event</a><a href="#h7-0-3" id="h7-0-3" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/Messaging.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/Messaging.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/Messaging.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/Messaging.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -1,5 +1,6 @@
+</a> package me.rhunk.snapenhance.features.impl
+ 
+<a href="#h8-0-2" id="h8-0-2" class="i">+import me.rhunk.snapenhance.core.event.impl.OnSnapInteractionEvent
+</a> import me.rhunk.snapenhance.data.wrapper.impl.SnapUUID
+ import me.rhunk.snapenhance.features.Feature
+ import me.rhunk.snapenhance.features.FeatureLoadParams
+<a href="#h8-1" id="h8-1" class="h">@@ -72,9 +73,9 @@ class Messaging : Feature(&quot;Messaging&quot;, loadParams = FeatureLoadParams.ACTIVITY_C
+</a>         }
+ 
+         //get last opened snap for media downloader
+<a href="#h8-1-3" id="h8-1-3" class="d">-        Hooker.hook(context.classCache.snapManager, &quot;onSnapInteraction&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h8-1-4" id="h8-1-4" class="d">-            openedConversationUUID = SnapUUID(param.arg(1))
+</a><a href="#h8-1-5" id="h8-1-5" class="d">-            lastFocusedMessageId = param.arg(2)
+</a><a href="#h8-1-6" id="h8-1-6" class="i">+        context.event.subscribe(OnSnapInteractionEvent::class) { event -&gt;
+</a><a href="#h8-1-7" id="h8-1-7" class="i">+            openedConversationUUID = event.conversationId
+</a><a href="#h8-1-8" id="h8-1-8" class="i">+            lastFocusedMessageId = event.messageId
+</a>         }
+ 
+         Hooker.hook(context.classCache.conversationManager, &quot;fetchMessage&quot;, HookStage.BEFORE) { param -&gt;
+<b>diff --git a/<a id="h9" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/privacy/PreventMessageSending.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/privacy/PreventMessageSending.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/privacy/PreventMessageSending.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/privacy/PreventMessageSending.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -1,6 +1,7 @@
+</a> package me.rhunk.snapenhance.features.impl.privacy
+ 
+ import me.rhunk.snapenhance.Logger
+<a href="#h9-0-3" id="h9-0-3" class="i">+import me.rhunk.snapenhance.core.event.impl.SendMessageWithContentEvent
+</a> import me.rhunk.snapenhance.data.NotificationType
+ import me.rhunk.snapenhance.data.wrapper.impl.MessageContent
+ import me.rhunk.snapenhance.features.Feature
+<a href="#h9-1" id="h9-1" class="h">@@ -23,14 +24,13 @@ class PreventMessageSending : Feature(&quot;Prevent message sending&quot;, loadParams = Fe
+</a>             }
+         }
+ 
+<a href="#h9-1-3" id="h9-1-3" class="d">-        context.classCache.conversationManager.hook(&quot;sendMessageWithContent&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h9-1-4" id="h9-1-4" class="d">-            val message = MessageContent(param.arg(1))
+</a><a href="#h9-1-5" id="h9-1-5" class="d">-            val contentType = message.contentType
+</a><a href="#h9-1-6" id="h9-1-6" class="d">-            val associatedType = NotificationType.fromContentType(contentType) ?: return@hook
+</a><a href="#h9-1-7" id="h9-1-7" class="i">+        context.event.subscribe(SendMessageWithContentEvent::class) { event -&gt;
+</a><a href="#h9-1-8" id="h9-1-8" class="i">+            val contentType = event.messageContent.contentType
+</a><a href="#h9-1-9" id="h9-1-9" class="i">+            val associatedType = NotificationType.fromContentType(contentType) ?: return@subscribe
+</a> 
+             if (preventMessageSending.contains(associatedType.key)) {
+                 Logger.debug(&quot;Preventing message sending for $associatedType&quot;)
+<a href="#h9-1-13" id="h9-1-13" class="d">-                param.setResult(null)
+</a><a href="#h9-1-14" id="h9-1-14" class="i">+                event.canceled = true
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h10" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/PreventReadReceipts.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/PreventReadReceipts.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/PreventReadReceipts.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/PreventReadReceipts.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -1,5 +1,6 @@
+</a> package me.rhunk.snapenhance.features.impl.spying
+ 
+<a href="#h10-0-2" id="h10-0-2" class="i">+import me.rhunk.snapenhance.core.event.impl.OnSnapInteractionEvent
+</a> import me.rhunk.snapenhance.data.wrapper.impl.SnapUUID
+ import me.rhunk.snapenhance.features.Feature
+ import me.rhunk.snapenhance.features.FeatureLoadParams
+<a href="#h10-1" id="h10-1" class="h">@@ -19,9 +20,10 @@ class PreventReadReceipts : Feature(&quot;PreventReadReceipts&quot;, loadParams = FeatureL
+</a>                 it.setResult(null)
+             }
+         }
+<a href="#h10-1-3" id="h10-1-3" class="d">-        Hooker.hook(context.classCache.snapManager, &quot;onSnapInteraction&quot;, HookStage.BEFORE) {
+</a><a href="#h10-1-4" id="h10-1-4" class="d">-            if (isConversationInStealthMode(SnapUUID(it.arg(1) as Any))) {
+</a><a href="#h10-1-5" id="h10-1-5" class="d">-                it.setResult(null)
+</a><a href="#h10-1-6" id="h10-1-6" class="i">+
+</a><a href="#h10-1-7" id="h10-1-7" class="i">+        context.event.subscribe(OnSnapInteractionEvent::class) { event -&gt;
+</a><a href="#h10-1-8" id="h10-1-8" class="i">+            if (isConversationInStealthMode(event.conversationId)) {
+</a><a href="#h10-1-9" id="h10-1-9" class="i">+                event.canceled = true
+</a>             }
+         }
+     }
+</pre>
+</div>
+</body>
+</html>

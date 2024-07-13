@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bridge getRulesIds - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/600dec7fc64a7d9a3d448d8ce759279c34aef1aa.html">600dec7fc64a7d9a3d448d8ce759279c34aef1aa</a>
+<b>parent</b> <a href="../commit/24fc945f1aeefd4344125ccb8c2ad70713e80814.html">24fc945f1aeefd4344125ccb8c2ad70713e80814</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri,  1 Sep 2023 19:19:25 +0200
+
+bridge getRulesIds
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a></td><td> | </td><td class="num">10</td><td><span class="i">++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl</a></td><td> | </td><td class="num">7</td><td><span class="i">+++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/PinConversations.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">mapper/src/main/kotlin/me/rhunk/snapmapper/impl/CallbackMapper.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">++</span><span class="d">----</span></td></tr>
+</table></pre><pre>6 files changed, 28 insertions(+), 5 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -128,6 +128,10 @@ class BridgeService : Service() {
+</a>             return remoteSideContext.modDatabase.getRules(uuid).map { it.key }
+         }
+ 
+<a href="#h0-0-3" id="h0-0-3" class="i">+        override fun getRuleIds(type: String): MutableList&lt;String&gt; {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+            return remoteSideContext.modDatabase.getRuleIds(type)
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+        }
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+
+</a>         override fun setRule(uuid: String, rule: String, state: Boolean) {
+             remoteSideContext.modDatabase.setRule(uuid, rule, state)
+         }
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -241,4 +241,14 @@ class ModDatabase(
+</a>             ))
+         }
+     }
+<a href="#h1-0-3" id="h1-0-3" class="i">+
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    fun getRuleIds(type: String): MutableList&lt;String&gt; {
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+        return database.rawQuery(&quot;SELECT targetUuid FROM rules WHERE type = ?&quot;, arrayOf(type)).use { cursor -&gt;
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+            val ruleIds = mutableListOf&lt;String&gt;()
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+            while (cursor.moveToNext()) {
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+                ruleIds.add(cursor.getStringOrNull(&quot;targetUuid&quot;)!!)
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+            }
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+            ruleIds
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+        }
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+    }
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h2" href="../file/core/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl.html">core/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl</a> b/<a href="../file/core/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl.html">core/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -61,6 +61,13 @@ interface BridgeInterface {
+</a>     List&lt;String&gt; getRules(String uuid);
+ 
+     /**
+<a href="#h2-0-3" id="h2-0-3" class="i">+    * Get all ids for a specific rule
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+    * @param type rule type (MessagingRuleType)
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+    * @return list of ids
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+    */
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+    List&lt;String&gt; getRuleIds(String type);
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+    /**
+</a>     * Update rule for a giver user or conversation
+     *
+     * @param type rule type (MessagingRuleType)
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -142,6 +142,10 @@ class BridgeClient(
+</a>         return service.getRules(targetUuid).map { MessagingRuleType.getByName(it) }
+     }
+ 
+<a href="#h3-0-3" id="h3-0-3" class="i">+    fun getRuleIds(ruleType: MessagingRuleType): List&lt;String&gt; {
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+        return service.getRuleIds(ruleType.key)
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+    }
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+
+</a>     fun setRule(targetUuid: String, type: MessagingRuleType, state: Boolean)
+         = service.setRule(targetUuid, type.key, state)
+ }
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/PinConversations.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/PinConversations.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/PinConversations.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/PinConversations.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -29,7 +29,7 @@ class PinConversations : BridgeFileFeature(&quot;PinConversations&quot;, BridgeFileType.PI
+</a> 
+         context.classCache.feedEntry.hookConstructor(HookStage.AFTER) { param -&gt;
+             val instance = param.thisObject&lt;Any&gt;()
+<a href="#h4-0-3" id="h4-0-3" class="d">-            val conversationUUID = SnapUUID(instance.getObjectField(&quot;mConversationId&quot;))
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+            val conversationUUID = SnapUUID(instance.getObjectField(&quot;mConversationId&quot;) ?: return@hookConstructor)
+</a>             val isPinned = exists(conversationUUID.toString())
+             if (isPinned) {
+                 instance.setObjectField(&quot;mPinnedTimestampMs&quot;, 1L)
+<b>diff --git a/<a id="h5" href="../file/mapper/src/main/kotlin/me/rhunk/snapmapper/impl/CallbackMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapmapper/impl/CallbackMapper.kt</a> b/<a href="../file/mapper/src/main/kotlin/me/rhunk/snapmapper/impl/CallbackMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapmapper/impl/CallbackMapper.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -12,12 +12,10 @@ class CallbackMapper : AbstractClassMapper() {
+</a>             if (clazz.superclass == null) return@filter false
+ 
+             val superclassName = clazz.getSuperClassName()!!
+<a href="#h5-0-3" id="h5-0-3" class="d">-            if (!superclassName.endsWith(&quot;Callback&quot;) || superclassName.endsWith(&quot;\$Callback&quot;)) return@filter false
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+            if ((!superclassName.endsWith(&quot;Callback&quot;) &amp;&amp; !superclassName.endsWith(&quot;Delegate&quot;)) || superclassName.endsWith(&quot;\$Callback&quot;)) return@filter false
+</a> 
+             val superClass = context.getClass(clazz.superclass) ?: return@filter false
+<a href="#h5-0-7" id="h5-0-7" class="d">-            if (superClass.isFinal()) return@filter false
+</a><a href="#h5-0-8" id="h5-0-8" class="d">-
+</a><a href="#h5-0-9" id="h5-0-9" class="d">-            superClass.virtualMethods.any { it.name == &quot;onError&quot; }
+</a><a href="#h5-0-10" id="h5-0-10" class="i">+            !superClass.isFinal()
+</a>         }.map {
+              it.getSuperClassName()!!.substringAfterLast(&quot;/&quot;) to it.getClassName()
+         }
+</pre>
+</div>
+</body>
+</html>

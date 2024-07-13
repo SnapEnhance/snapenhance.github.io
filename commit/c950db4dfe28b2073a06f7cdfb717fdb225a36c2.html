@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: Random walking around in spoofed location (#805) - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/c950db4dfe28b2073a06f7cdfb717fdb225a36c2.html">c950db4dfe28b2073a06f7cdfb717fdb225a36c2</a>
+<b>parent</b> <a href="../commit/178f2f4ac6b2065147fa415da2093e41101c806a.html">178f2f4ac6b2065147fa415da2093e41101c806a</a>
+<b>Author:</b> w451 &lt;<a href="mailto:115924828+w451@users.noreply.github.com">115924828+w451@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 27 Apr 2024 08:00:20 -0400
+
+feat: Random walking around in spoofed location (#805)
+
+Co-authored-by: w451 &lt;cheb&gt;
+Co-authored-by: auth &lt;64337177+authorisation@users.noreply.github.com&gt;
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">README.md</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt</a></td><td> | </td><td class="num">78</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+</table></pre><pre>5 files changed, 81 insertions(+), 6 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/README.md.html">README.md</a> b/<a href="../file/README.md.html">README.md</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -249,6 +249,7 @@ Thanks to everyone involved including the [third-party libraries](https://github
+</a> - [TheVisual](https://github.com/TheVisual)
+ - [CanerKaraca23](https://github.com/CanerKaraca23)
+ - [bocajthomas](https://github.com/bocajthomas)
+<a href="#h0-0-3" id="h0-0-3" class="i">+- [w451](https://github.com/w451)
+</a> 
+ ## Donate
+ - LTC: LbBnT9GxgnFhwy891EdDKqGmpn7XtduBdE
+<b>diff --git a/<a id="h1" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -636,6 +636,10 @@
+</a>                                 &quot;name&quot;: &quot;Coordinates&quot;,
+                                 &quot;description&quot;: &quot;Set the coordinates of the spoofed location&quot;
+                             },
+<a href="#h1-0-3" id="h1-0-3" class="i">+                            &quot;walk_radius&quot;: {
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+                                &quot;name&quot;: &quot;Walk Radius&quot;,
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+                                &quot;description&quot;: &quot;Randomly walk around within this radius (ft)&quot;
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+                            },
+</a>                             &quot;always_update_location&quot;: {
+                                 &quot;name&quot;: &quot;Always Update Location&quot;,
+                                 &quot;description&quot;: &quot;Force Snapchat to update location even if no GPS data is received&quot;
+<b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -21,6 +21,7 @@ class Global : ConfigContainer() {
+</a>     inner class BetterLocation : ConfigContainer(hasGlobalState = true) {
+         val spoofLocation = boolean(&quot;spoof_location&quot;) { requireRestart() }
+         val coordinates = mapCoordinates(&quot;coordinates&quot;, 0.0 to 0.0) // lat, long
+<a href="#h2-0-3" id="h2-0-3" class="i">+        val walkRadius = string(&quot;walk_radius&quot;) { requireRestart(); inputCheck = { it.toDoubleOrNull()?.isFinite() == true &amp;&amp; it.toDouble() &gt;= 0.0 } }
+</a>         val alwaysUpdateLocation = boolean(&quot;always_update_location&quot;) { requireRestart() }
+         val suspendLocationUpdates = boolean(&quot;suspend_location_updates&quot;) { requireRestart() }
+         val spoofBatteryLevel = string(&quot;spoof_battery_level&quot;) { requireRestart(); inputCheck = { it.isEmpty() || it.toIntOrNull() in 0..100 } }
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -11,9 +11,78 @@ import me.rhunk.snapenhance.core.features.impl.global.SuspendLocationUpdates
+</a> import me.rhunk.snapenhance.core.util.hook.HookStage
+ import me.rhunk.snapenhance.core.util.hook.hook
+ import java.nio.ByteBuffer
+<a href="#h3-0-3" id="h3-0-3" class="i">+import kotlin.math.cos
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import kotlin.math.hypot
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+import kotlin.math.pow
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+import kotlin.math.sin
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+import kotlin.math.sqrt
+</a> import kotlin.time.Duration.Companion.days
+ 
+ class BetterLocation : Feature(&quot;Better Location&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+<a href="#h3-0-11" id="h3-0-11" class="i">+    //Latitude ft / deg /Longitude ft /deg = 1.26301179736
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+    // 4ft/s * 1 degree/364000ft (latitude) * 1s/1000ms = .000000010989011 degrees/ms
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+    val max_speed = 4.0 / 364000.0 / 1000.0
+</a><a href="#h3-0-14" id="h3-0-14" class="i">+    val pause_chance = .0023 // .23% chance to pause every second = after 5 minutes 50% chance of pause
+</a><a href="#h3-0-15" id="h3-0-15" class="i">+    val pause_duration = 60000L //ms
+</a><a href="#h3-0-16" id="h3-0-16" class="i">+    val pause_random = 30000L //ms
+</a><a href="#h3-0-17" id="h3-0-17" class="i">+
+</a><a href="#h3-0-18" id="h3-0-18" class="i">+    var pause_expire = 0L
+</a><a href="#h3-0-19" id="h3-0-19" class="i">+    var current_x = 0.0
+</a><a href="#h3-0-20" id="h3-0-20" class="i">+    var current_y = 0.0
+</a><a href="#h3-0-21" id="h3-0-21" class="i">+    var target_x = 0.0
+</a><a href="#h3-0-22" id="h3-0-22" class="i">+    var target_y = 0.0
+</a><a href="#h3-0-23" id="h3-0-23" class="i">+    var last_update_time = 0L
+</a><a href="#h3-0-24" id="h3-0-24" class="i">+    private fun updatePosition(){
+</a><a href="#h3-0-25" id="h3-0-25" class="i">+        val now = System.currentTimeMillis()
+</a><a href="#h3-0-26" id="h3-0-26" class="i">+
+</a><a href="#h3-0-27" id="h3-0-27" class="i">+        if(current_x == target_x &amp;&amp; current_y == target_y) {
+</a><a href="#h3-0-28" id="h3-0-28" class="i">+            val config = context.config.global.betterLocation
+</a><a href="#h3-0-29" id="h3-0-29" class="i">+            val walk_rad = if (config.walkRadius.get()
+</a><a href="#h3-0-30" id="h3-0-30" class="i">+                    .toDoubleOrNull() == null
+</a><a href="#h3-0-31" id="h3-0-31" class="i">+            ) 0.0 else (config.walkRadius.get().toDouble() / 364000.0) //Lat deg
+</a><a href="#h3-0-32" id="h3-0-32" class="i">+
+</a><a href="#h3-0-33" id="h3-0-33" class="i">+            if(last_update_time == 0L){ //Start at random position
+</a><a href="#h3-0-34" id="h3-0-34" class="i">+                val radius1 = sqrt(Math.random()) * walk_rad
+</a><a href="#h3-0-35" id="h3-0-35" class="i">+                val theta1 = Math.PI * 2.0 * Math.random()
+</a><a href="#h3-0-36" id="h3-0-36" class="i">+                current_x = cos(theta1) * radius1 * 1.26301179736
+</a><a href="#h3-0-37" id="h3-0-37" class="i">+                current_y = sin(theta1) * radius1
+</a><a href="#h3-0-38" id="h3-0-38" class="i">+            }
+</a><a href="#h3-0-39" id="h3-0-39" class="i">+
+</a><a href="#h3-0-40" id="h3-0-40" class="i">+            val radius2 = sqrt(Math.random()) * walk_rad
+</a><a href="#h3-0-41" id="h3-0-41" class="i">+            val theta2 = Math.PI * 2.0 * Math.random()
+</a><a href="#h3-0-42" id="h3-0-42" class="i">+            target_x = cos(theta2) * radius2 * 1.26301179736
+</a><a href="#h3-0-43" id="h3-0-43" class="i">+            target_y = sin(theta2) * radius2
+</a><a href="#h3-0-44" id="h3-0-44" class="i">+        } else if (pause_expire &lt; now) {
+</a><a href="#h3-0-45" id="h3-0-45" class="i">+            val deltat = now - last_update_time
+</a><a href="#h3-0-46" id="h3-0-46" class="i">+            if(Math.random() &gt; (1.0 - pause_chance).pow(deltat / 1000.0)){
+</a><a href="#h3-0-47" id="h3-0-47" class="i">+                pause_expire = now + pause_duration + (pause_random * Math.random()).toLong()
+</a><a href="#h3-0-48" id="h3-0-48" class="i">+            } else {
+</a><a href="#h3-0-49" id="h3-0-49" class="i">+                val max_dist = max_speed * deltat
+</a><a href="#h3-0-50" id="h3-0-50" class="i">+                val dist = hypot(target_x - current_x, target_y - current_y)
+</a><a href="#h3-0-51" id="h3-0-51" class="i">+
+</a><a href="#h3-0-52" id="h3-0-52" class="i">+                if (dist &lt;= max_dist) {
+</a><a href="#h3-0-53" id="h3-0-53" class="i">+                    current_x = target_x
+</a><a href="#h3-0-54" id="h3-0-54" class="i">+                    current_y = target_y
+</a><a href="#h3-0-55" id="h3-0-55" class="i">+                } else {
+</a><a href="#h3-0-56" id="h3-0-56" class="i">+                    val norm_x = (target_x - current_x) / dist * max_dist
+</a><a href="#h3-0-57" id="h3-0-57" class="i">+                    val norm_y = (target_y - current_y) / dist * max_dist
+</a><a href="#h3-0-58" id="h3-0-58" class="i">+                    current_x += norm_x
+</a><a href="#h3-0-59" id="h3-0-59" class="i">+                    current_y += norm_y
+</a><a href="#h3-0-60" id="h3-0-60" class="i">+                }
+</a><a href="#h3-0-61" id="h3-0-61" class="i">+            }
+</a><a href="#h3-0-62" id="h3-0-62" class="i">+        }
+</a><a href="#h3-0-63" id="h3-0-63" class="i">+        last_update_time = now
+</a><a href="#h3-0-64" id="h3-0-64" class="i">+    }
+</a><a href="#h3-0-65" id="h3-0-65" class="i">+
+</a><a href="#h3-0-66" id="h3-0-66" class="i">+    private fun getLat() : Double {
+</a><a href="#h3-0-67" id="h3-0-67" class="i">+        updatePosition()
+</a><a href="#h3-0-68" id="h3-0-68" class="i">+        return (context.config.global.betterLocation.coordinates.get().first + current_x)
+</a><a href="#h3-0-69" id="h3-0-69" class="i">+    }
+</a><a href="#h3-0-70" id="h3-0-70" class="i">+
+</a><a href="#h3-0-71" id="h3-0-71" class="i">+    private fun getLong() : Double {
+</a><a href="#h3-0-72" id="h3-0-72" class="i">+        updatePosition()
+</a><a href="#h3-0-73" id="h3-0-73" class="i">+        return (context.config.global.betterLocation.coordinates.get().second + current_y)
+</a><a href="#h3-0-74" id="h3-0-74" class="i">+    }
+</a>     private fun editClientUpdate(editor: EditorContext) {
+         val config = context.config.global.betterLocation
+ 
+<a href="#h3-1" id="h3-1" class="h">@@ -22,11 +91,10 @@ class BetterLocation : Feature(&quot;Better Location&quot;, loadParams = FeatureLoadParams
+</a>             edit(1) {
+                 context.log.verbose(&quot;SCVSLocationUpdate ${this@apply}&quot;)
+                 if (config.spoofLocation.get()) {
+<a href="#h3-1-3" id="h3-1-3" class="d">-                    val coordinates by config.coordinates
+</a>                     remove(1)
+                     remove(2)
+<a href="#h3-1-6" id="h3-1-6" class="d">-                    addFixed32(1, coordinates.first.toFloat()) // lat
+</a><a href="#h3-1-7" id="h3-1-7" class="d">-                    addFixed32(2, coordinates.second.toFloat()) // lng
+</a><a href="#h3-1-8" id="h3-1-8" class="i">+                    addFixed32(1, getLat().toFloat()) // lat
+</a><a href="#h3-1-9" id="h3-1-9" class="i">+                    addFixed32(2, getLong().toFloat()) // lng
+</a>                 }
+ 
+                 if (config.alwaysUpdateLocation.get()) {
+<a href="#h3-2" id="h3-2" class="h">@@ -79,9 +147,9 @@ class BetterLocation : Feature(&quot;Better Location&quot;, loadParams = FeatureLoadParams
+</a>             }
+             Location::class.java.apply {
+                 hook(&quot;getLatitude&quot;, HookStage.BEFORE) {
+<a href="#h3-2-3" id="h3-2-3" class="d">-                    it.setResult(context.config.global.betterLocation.coordinates.get().first) }
+</a><a href="#h3-2-4" id="h3-2-4" class="i">+                    it.setResult(getLat()) }
+</a>                 hook(&quot;getLongitude&quot;, HookStage.BEFORE) {
+<a href="#h3-2-6" id="h3-2-6" class="d">-                    it.setResult(context.config.global.betterLocation.coordinates.get().second)
+</a><a href="#h3-2-7" id="h3-2-7" class="i">+                    it.setResult(getLong())
+</a>                 }
+             }
+         }
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -172,4 +172,4 @@ class ChatActionMenu : AbstractMenu() {
+</a> 
+         viewGroup.addView(buttonContainer)
+     }
+<a href="#h4-0-3" id="h4-0-3" class="d">-}
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+}</a><a href="#h4-0-5" id="h4-0-5" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

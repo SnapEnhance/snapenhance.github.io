@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ManageFriendList.kt - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../../../../../../../../../../../logo.png"/>
+<link rel="alternate icon" href="../../../../../../../../../../../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../../../../../../../../../../../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../../../../../../../../../../../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../../../../../../../../../../../"><img src="../../../../../../../../../../../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../../../../../../../../../../../about.html">About</a> | <a href="../../../../../../../../../../../log.html">Log</a> | <a href="../../../../../../../../../../../files.html">Files</a> | <a href="../../../../../../../../../../../refs.html">Refs</a> | <a href="../../../../../../../../../../../file/.gitmodules.html">Submodules</a> | <a href="../../../../../../../../../../../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<p> ManageFriendList.kt (12668B) - <a href="../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ManageFriendList.kt">raw</a></p><hr/><pre id="blob">
+<a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core.action.impl
+<a href="#l2" class="line" id="l2">      2</a> 
+<a href="#l3" class="line" id="l3">      3</a> import android.content.Intent
+<a href="#l4" class="line" id="l4">      4</a> import android.net.Uri
+<a href="#l5" class="line" id="l5">      5</a> import androidx.compose.foundation.layout.*
+<a href="#l6" class="line" id="l6">      6</a> import androidx.compose.foundation.lazy.LazyColumn
+<a href="#l7" class="line" id="l7">      7</a> import androidx.compose.foundation.lazy.items
+<a href="#l8" class="line" id="l8">      8</a> import androidx.compose.material.icons.Icons
+<a href="#l9" class="line" id="l9">      9</a> import androidx.compose.material.icons.automirrored.filled.ArrowBack
+<a href="#l10" class="line" id="l10">     10</a> import androidx.compose.material3.*
+<a href="#l11" class="line" id="l11">     11</a> import androidx.compose.runtime.*
+<a href="#l12" class="line" id="l12">     12</a> import androidx.compose.ui.Alignment
+<a href="#l13" class="line" id="l13">     13</a> import androidx.compose.ui.Modifier
+<a href="#l14" class="line" id="l14">     14</a> import androidx.compose.ui.text.font.FontWeight
+<a href="#l15" class="line" id="l15">     15</a> import androidx.compose.ui.text.style.TextAlign
+<a href="#l16" class="line" id="l16">     16</a> import androidx.compose.ui.unit.dp
+<a href="#l17" class="line" id="l17">     17</a> import androidx.compose.ui.unit.sp
+<a href="#l18" class="line" id="l18">     18</a> import kotlinx.coroutines.Dispatchers
+<a href="#l19" class="line" id="l19">     19</a> import kotlinx.coroutines.Job
+<a href="#l20" class="line" id="l20">     20</a> import kotlinx.coroutines.delay
+<a href="#l21" class="line" id="l21">     21</a> import kotlinx.coroutines.launch
+<a href="#l22" class="line" id="l22">     22</a> import kotlinx.coroutines.withTimeout
+<a href="#l23" class="line" id="l23">     23</a> import me.rhunk.snapenhance.common.data.FriendLinkType
+<a href="#l24" class="line" id="l24">     24</a> import me.rhunk.snapenhance.common.ui.createComposeAlertDialog
+<a href="#l25" class="line" id="l25">     25</a> import me.rhunk.snapenhance.core.action.AbstractAction
+<a href="#l26" class="line" id="l26">     26</a> import me.rhunk.snapenhance.core.event.events.impl.ActivityResultEvent
+<a href="#l27" class="line" id="l27">     27</a> import me.rhunk.snapenhance.core.features.impl.experiments.AddFriendSourceSpoof
+<a href="#l28" class="line" id="l28">     28</a> import me.rhunk.snapenhance.core.features.impl.messaging.Messaging
+<a href="#l29" class="line" id="l29">     29</a> import me.rhunk.snapenhance.core.wrapper.impl.Snapchatter
+<a href="#l30" class="line" id="l30">     30</a> import me.rhunk.snapenhance.mapper.impl.FriendRelationshipChangerMapper
+<a href="#l31" class="line" id="l31">     31</a> import kotlin.random.Random
+<a href="#l32" class="line" id="l32">     32</a> 
+<a href="#l33" class="line" id="l33">     33</a> class ManageFriendList : AbstractAction() {
+<a href="#l34" class="line" id="l34">     34</a>     private var pendingPickerAction: Pair&lt;Int, (data: Uri) -&gt; Unit&gt;? = null
+<a href="#l35" class="line" id="l35">     35</a> 
+<a href="#l36" class="line" id="l36">     36</a>     private val uuidRegex by lazy {
+<a href="#l37" class="line" id="l37">     37</a>         Regex(&quot;[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}&quot;)
+<a href="#l38" class="line" id="l38">     38</a>     }
+<a href="#l39" class="line" id="l39">     39</a> 
+<a href="#l40" class="line" id="l40">     40</a>     private fun addFriend(userId: String) {
+<a href="#l41" class="line" id="l41">     41</a>         val friendRelationshipChangerInstance = context.feature(AddFriendSourceSpoof::class).friendRelationshipChangerInstance
+<a href="#l42" class="line" id="l42">     42</a>         context.mappings.useMapper(FriendRelationshipChangerMapper::class) {
+<a href="#l43" class="line" id="l43">     43</a>             val addFriend = friendshipRelationshipChangerKtx.get()?.methods?.firstOrNull { it.name == addFriendMethod.get() }
+<a href="#l44" class="line" id="l44">     44</a>                 ?: return@useMapper
+<a href="#l45" class="line" id="l45">     45</a> 
+<a href="#l46" class="line" id="l46">     46</a>             addFriend.invoke(
+<a href="#l47" class="line" id="l47">     47</a>                 null,
+<a href="#l48" class="line" id="l48">     48</a>                 friendRelationshipChangerInstance,
+<a href="#l49" class="line" id="l49">     49</a>                 userId,
+<a href="#l50" class="line" id="l50">     50</a>                 addFriend.parameterTypes[2].enumConstants.first { it.toString() == &quot;ADDED_BY_USERNAME&quot; },
+<a href="#l51" class="line" id="l51">     51</a>                 addFriend.parameterTypes[3].enumConstants.first { it.toString() == &quot;SEARCH&quot; },
+<a href="#l52" class="line" id="l52">     52</a>                 addFriend.parameterTypes[4].enumConstants.first { it.toString() == &quot;SEARCH&quot; },
+<a href="#l53" class="line" id="l53">     53</a>                 0
+<a href="#l54" class="line" id="l54">     54</a>             )
+<a href="#l55" class="line" id="l55">     55</a>         }
+<a href="#l56" class="line" id="l56">     56</a>     }
+<a href="#l57" class="line" id="l57">     57</a> 
+<a href="#l58" class="line" id="l58">     58</a>     override fun onActivityCreate() {
+<a href="#l59" class="line" id="l59">     59</a>         context.event.subscribe(ActivityResultEvent::class) { event -&gt;
+<a href="#l60" class="line" id="l60">     60</a>             if (event.requestCode == pendingPickerAction?.first) {
+<a href="#l61" class="line" id="l61">     61</a>                 val pendingAction = pendingPickerAction ?: return@subscribe
+<a href="#l62" class="line" id="l62">     62</a>                 this.pendingPickerAction = null
+<a href="#l63" class="line" id="l63">     63</a>                 event.canceled = true
+<a href="#l64" class="line" id="l64">     64</a>                 pendingAction.second(event.intent.data!!)
+<a href="#l65" class="line" id="l65">     65</a>             }
+<a href="#l66" class="line" id="l66">     66</a>         }
+<a href="#l67" class="line" id="l67">     67</a>     }
+<a href="#l68" class="line" id="l68">     68</a> 
+<a href="#l69" class="line" id="l69">     69</a>     private fun exportFriends(
+<a href="#l70" class="line" id="l70">     70</a>         userIds: List&lt;String&gt;
+<a href="#l71" class="line" id="l71">     71</a>     ) {
+<a href="#l72" class="line" id="l72">     72</a>         pendingPickerAction = Random.nextInt(0, 65535) to { data -&gt;
+<a href="#l73" class="line" id="l73">     73</a>             context.androidContext.contentResolver.openOutputStream(data).use { output -&gt;
+<a href="#l74" class="line" id="l74">     74</a>                 output?.bufferedWriter()?.use { writer -&gt;
+<a href="#l75" class="line" id="l75">     75</a>                     userIds.forEach {
+<a href="#l76" class="line" id="l76">     76</a>                         writer.write(it)
+<a href="#l77" class="line" id="l77">     77</a>                         writer.newLine()
+<a href="#l78" class="line" id="l78">     78</a>                     }
+<a href="#l79" class="line" id="l79">     79</a>                 }
+<a href="#l80" class="line" id="l80">     80</a>                 context.longToast(&quot;Exported ${userIds.size} friends!&quot;)
+<a href="#l81" class="line" id="l81">     81</a>             }
+<a href="#l82" class="line" id="l82">     82</a>         }
+<a href="#l83" class="line" id="l83">     83</a>         context.mainActivity?.startActivityForResult(
+<a href="#l84" class="line" id="l84">     84</a>             Intent.createChooser(
+<a href="#l85" class="line" id="l85">     85</a>                 Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+<a href="#l86" class="line" id="l86">     86</a>                     type = &quot;text/plain&quot;
+<a href="#l87" class="line" id="l87">     87</a>                     putExtra(Intent.EXTRA_TITLE, &quot;my_friends.txt&quot;)
+<a href="#l88" class="line" id="l88">     88</a>                 },
+<a href="#l89" class="line" id="l89">     89</a>                 &quot;Select a location to save the file&quot;
+<a href="#l90" class="line" id="l90">     90</a>             ),
+<a href="#l91" class="line" id="l91">     91</a>             pendingPickerAction!!.first
+<a href="#l92" class="line" id="l92">     92</a>         )
+<a href="#l93" class="line" id="l93">     93</a>     }
+<a href="#l94" class="line" id="l94">     94</a> 
+<a href="#l95" class="line" id="l95">     95</a>     private val userIdToSnapchatter = mutableMapOf&lt;String, Snapchatter&gt;()
+<a href="#l96" class="line" id="l96">     96</a> 
+<a href="#l97" class="line" id="l97">     97</a>     @Composable
+<a href="#l98" class="line" id="l98">     98</a>     private fun ManagerDialog() {
+<a href="#l99" class="line" id="l99">     99</a>         val pendingFriendRequests = remember { mutableStateMapOf&lt;String, Job&gt;() }
+<a href="#l100" class="line" id="l100">    100</a>         var fetchedFriends by remember { mutableStateOf&lt;List&lt;String&gt;?&gt;(null) } // list of uuids
+<a href="#l101" class="line" id="l101">    101</a>         val coroutineScope = rememberCoroutineScope()
+<a href="#l102" class="line" id="l102">    102</a> 
+<a href="#l103" class="line" id="l103">    103</a>         if (fetchedFriends == null) {
+<a href="#l104" class="line" id="l104">    104</a>             Box(
+<a href="#l105" class="line" id="l105">    105</a>                 modifier = Modifier
+<a href="#l106" class="line" id="l106">    106</a>                     .fillMaxWidth()
+<a href="#l107" class="line" id="l107">    107</a>                     .heightIn(min = 200.dp),
+<a href="#l108" class="line" id="l108">    108</a>                 contentAlignment = Alignment.Center
+<a href="#l109" class="line" id="l109">    109</a>             ) {
+<a href="#l110" class="line" id="l110">    110</a>                 Column(
+<a href="#l111" class="line" id="l111">    111</a>                     modifier = Modifier
+<a href="#l112" class="line" id="l112">    112</a>                         .fillMaxWidth()
+<a href="#l113" class="line" id="l113">    113</a>                         .padding(16.dp),
+<a href="#l114" class="line" id="l114">    114</a>                     horizontalAlignment = Alignment.CenterHorizontally,
+<a href="#l115" class="line" id="l115">    115</a>                 ) {
+<a href="#l116" class="line" id="l116">    116</a>                     Text(&quot;Manage Friend List&quot;, fontSize = 20.sp)
+<a href="#l117" class="line" id="l117">    117</a>                     Spacer(modifier = Modifier.height(5.dp))
+<a href="#l118" class="line" id="l118">    118</a>                     Text(
+<a href="#l119" class="line" id="l119">    119</a>                         text = &quot;Export friends allows you to save a list of your friends&#39; IDs in a text file. Importing from a file will display the friends in a list where you can add them.&quot;,
+<a href="#l120" class="line" id="l120">    120</a>                         fontSize = 14.sp,
+<a href="#l121" class="line" id="l121">    121</a>                         fontWeight = FontWeight.Light,
+<a href="#l122" class="line" id="l122">    122</a>                         textAlign = TextAlign.Center
+<a href="#l123" class="line" id="l123">    123</a>                     )
+<a href="#l124" class="line" id="l124">    124</a>                     Spacer(modifier = Modifier.height(10.dp))
+<a href="#l125" class="line" id="l125">    125</a>                     Row(
+<a href="#l126" class="line" id="l126">    126</a>                         horizontalArrangement = Arrangement.spacedBy(16.dp)
+<a href="#l127" class="line" id="l127">    127</a>                     ) {
+<a href="#l128" class="line" id="l128">    128</a>                         Button(onClick = {
+<a href="#l129" class="line" id="l129">    129</a>                             exportFriends(context.database.getAllFriends().filter { it.friendLinkType == FriendLinkType.MUTUAL.value &amp;&amp; it.addedTimestamp &gt; 0L }.mapNotNull { it.userId })
+<a href="#l130" class="line" id="l130">    130</a>                         }) {
+<a href="#l131" class="line" id="l131">    131</a>                             Text(&quot;Export friends&quot;)
+<a href="#l132" class="line" id="l132">    132</a>                         }
+<a href="#l133" class="line" id="l133">    133</a>                         Button(onClick = {
+<a href="#l134" class="line" id="l134">    134</a>                             pendingPickerAction = Random.nextInt(0, 65535) to { data -&gt;
+<a href="#l135" class="line" id="l135">    135</a>                                 runCatching {
+<a href="#l136" class="line" id="l136">    136</a>                                     fetchedFriends = null
+<a href="#l137" class="line" id="l137">    137</a>                                     context.androidContext.contentResolver.openInputStream(data).use { input -&gt;
+<a href="#l138" class="line" id="l138">    138</a>                                         fetchedFriends = input?.bufferedReader()?.readLines()?.filter {
+<a href="#l139" class="line" id="l139">    139</a>                                             it.matches(uuidRegex)
+<a href="#l140" class="line" id="l140">    140</a>                                         }?.map { it.trim() }?.toMutableList() ?: mutableListOf()
+<a href="#l141" class="line" id="l141">    141</a>                                     }
+<a href="#l142" class="line" id="l142">    142</a>                                 }.onFailure {
+<a href="#l143" class="line" id="l143">    143</a>                                     context.log.error(&quot;Failed to import friends&quot;, it)
+<a href="#l144" class="line" id="l144">    144</a>                                     context.longToast(&quot;Failed to import friends: ${it.message}&quot;)
+<a href="#l145" class="line" id="l145">    145</a>                                 }
+<a href="#l146" class="line" id="l146">    146</a>                             }
+<a href="#l147" class="line" id="l147">    147</a>                             // launch file picker
+<a href="#l148" class="line" id="l148">    148</a>                             context.mainActivity?.startActivityForResult(
+<a href="#l149" class="line" id="l149">    149</a>                                 Intent.createChooser(
+<a href="#l150" class="line" id="l150">    150</a>                                     Intent(Intent.ACTION_GET_CONTENT).apply { type = &quot;*/*&quot; },
+<a href="#l151" class="line" id="l151">    151</a>                                     &quot;Select a file&quot;
+<a href="#l152" class="line" id="l152">    152</a>                                 ),
+<a href="#l153" class="line" id="l153">    153</a>                                 pendingPickerAction!!.first
+<a href="#l154" class="line" id="l154">    154</a>                             )
+<a href="#l155" class="line" id="l155">    155</a>                         }) {
+<a href="#l156" class="line" id="l156">    156</a>                             Text(&quot;Import from file&quot;)
+<a href="#l157" class="line" id="l157">    157</a>                         }
+<a href="#l158" class="line" id="l158">    158</a>                     }
+<a href="#l159" class="line" id="l159">    159</a>                 }
+<a href="#l160" class="line" id="l160">    160</a>             }
+<a href="#l161" class="line" id="l161">    161</a>         } else {
+<a href="#l162" class="line" id="l162">    162</a>             Column(
+<a href="#l163" class="line" id="l163">    163</a>                 modifier = Modifier.fillMaxSize(),
+<a href="#l164" class="line" id="l164">    164</a>             ) {
+<a href="#l165" class="line" id="l165">    165</a>                 Row(
+<a href="#l166" class="line" id="l166">    166</a>                     modifier = Modifier.fillMaxWidth(),
+<a href="#l167" class="line" id="l167">    167</a>                     horizontalArrangement = Arrangement.spacedBy(8.dp)
+<a href="#l168" class="line" id="l168">    168</a>                 ) {
+<a href="#l169" class="line" id="l169">    169</a>                     IconButton(
+<a href="#l170" class="line" id="l170">    170</a>                         modifier = Modifier.padding(8.dp),
+<a href="#l171" class="line" id="l171">    171</a>                         onClick = {
+<a href="#l172" class="line" id="l172">    172</a>                             fetchedFriends = null
+<a href="#l173" class="line" id="l173">    173</a>                         }
+<a href="#l174" class="line" id="l174">    174</a>                     ) {
+<a href="#l175" class="line" id="l175">    175</a>                         Icon(Icons.AutoMirrored.Default.ArrowBack, contentDescription = &quot;Back&quot;)
+<a href="#l176" class="line" id="l176">    176</a>                     }
+<a href="#l177" class="line" id="l177">    177</a>                 }
+<a href="#l178" class="line" id="l178">    178</a>                 LazyColumn(
+<a href="#l179" class="line" id="l179">    179</a>                     modifier = Modifier.weight(1f).padding(8.dp)
+<a href="#l180" class="line" id="l180">    180</a>                 ) {
+<a href="#l181" class="line" id="l181">    181</a>                     item {
+<a href="#l182" class="line" id="l182">    182</a>                         if (fetchedFriends?.isEmpty() == true) {
+<a href="#l183" class="line" id="l183">    183</a>                             Text(&quot;No friends found&quot;, modifier = Modifier.padding(8.dp))
+<a href="#l184" class="line" id="l184">    184</a>                         }
+<a href="#l185" class="line" id="l185">    185</a>                     }
+<a href="#l186" class="line" id="l186">    186</a>                     items(fetchedFriends ?: emptyList()) { userId -&gt;
+<a href="#l187" class="line" id="l187">    187</a>                         fun fetchLocalLinkType(): FriendLinkType? {
+<a href="#l188" class="line" id="l188">    188</a>                             return context.database.getFriendInfo(userId)?.friendLinkType?.let { FriendLinkType.fromValue(it) }
+<a href="#l189" class="line" id="l189">    189</a>                         }
+<a href="#l190" class="line" id="l190">    190</a> 
+<a href="#l191" class="line" id="l191">    191</a>                         var friendSnapchatter by remember(userId) { mutableStateOf&lt;Snapchatter?&gt;(null) }
+<a href="#l192" class="line" id="l192">    192</a>                         var failedToFetch by remember(userId) { mutableStateOf(false) }
+<a href="#l193" class="line" id="l193">    193</a>                         var friendLinkType by remember(userId) { mutableStateOf(fetchLocalLinkType()) }
+<a href="#l194" class="line" id="l194">    194</a> 
+<a href="#l195" class="line" id="l195">    195</a>                         LaunchedEffect(userId) {
+<a href="#l196" class="line" id="l196">    196</a>                             launch(Dispatchers.IO) {
+<a href="#l197" class="line" id="l197">    197</a>                                 friendSnapchatter = userIdToSnapchatter.getOrPut(userId) {
+<a href="#l198" class="line" id="l198">    198</a>                                     context.feature(Messaging::class).fetchSnapchatterInfos(listOf(userId)).firstOrNull() ?: run {
+<a href="#l199" class="line" id="l199">    199</a>                                         failedToFetch = true
+<a href="#l200" class="line" id="l200">    200</a>                                         return@launch
+<a href="#l201" class="line" id="l201">    201</a>                                     }
+<a href="#l202" class="line" id="l202">    202</a>                                 }
+<a href="#l203" class="line" id="l203">    203</a>                             }
+<a href="#l204" class="line" id="l204">    204</a>                         }
+<a href="#l205" class="line" id="l205">    205</a> 
+<a href="#l206" class="line" id="l206">    206</a>                         Row(
+<a href="#l207" class="line" id="l207">    207</a>                             modifier = Modifier
+<a href="#l208" class="line" id="l208">    208</a>                                 .fillMaxWidth()
+<a href="#l209" class="line" id="l209">    209</a>                                 .padding(6.dp),
+<a href="#l210" class="line" id="l210">    210</a>                             verticalAlignment = Alignment.CenterVertically
+<a href="#l211" class="line" id="l211">    211</a>                         ){
+<a href="#l212" class="line" id="l212">    212</a>                             Column(
+<a href="#l213" class="line" id="l213">    213</a>                                 modifier = Modifier.weight(1f)
+<a href="#l214" class="line" id="l214">    214</a>                             ) {
+<a href="#l215" class="line" id="l215">    215</a>                                 friendSnapchatter?.let { snapchatter -&gt;
+<a href="#l216" class="line" id="l216">    216</a>                                     Text(snapchatter.displayName?.let { &quot;$it (${snapchatter.username}) &quot; } ?: snapchatter.username ?: &quot;Unknown&quot;)
+<a href="#l217" class="line" id="l217">    217</a>                                 }
+<a href="#l218" class="line" id="l218">    218</a>                                 Text(userId, fontSize = 12.sp, fontWeight = FontWeight.Light)
+<a href="#l219" class="line" id="l219">    219</a>                             }
+<a href="#l220" class="line" id="l220">    220</a> 
+<a href="#l221" class="line" id="l221">    221</a>                             if (friendSnapchatter != null &amp;&amp; friendLinkType != FriendLinkType.FOLLOWING) {
+<a href="#l222" class="line" id="l222">    222</a>                                 Button(
+<a href="#l223" class="line" id="l223">    223</a>                                     enabled = friendLinkType != FriendLinkType.MUTUAL,
+<a href="#l224" class="line" id="l224">    224</a>                                     onClick = {
+<a href="#l225" class="line" id="l225">    225</a>                                         val prevLinkType = fetchLocalLinkType()
+<a href="#l226" class="line" id="l226">    226</a>                                         if (prevLinkType == FriendLinkType.MUTUAL || pendingFriendRequests[userId]?.isActive == true) return@Button
+<a href="#l227" class="line" id="l227">    227</a>                                         addFriend(userId)
+<a href="#l228" class="line" id="l228">    228</a>                                         pendingFriendRequests[userId] = coroutineScope.launch {
+<a href="#l229" class="line" id="l229">    229</a>                                             withTimeout(10000) {
+<a href="#l230" class="line" id="l230">    230</a>                                                 while (fetchLocalLinkType()?.value == prevLinkType?.value) {
+<a href="#l231" class="line" id="l231">    231</a>                                                     delay(500)
+<a href="#l232" class="line" id="l232">    232</a>                                                 }
+<a href="#l233" class="line" id="l233">    233</a>                                             }
+<a href="#l234" class="line" id="l234">    234</a>                                         }.apply {
+<a href="#l235" class="line" id="l235">    235</a>                                             invokeOnCompletion {
+<a href="#l236" class="line" id="l236">    236</a>                                                 pendingFriendRequests.remove(userId)
+<a href="#l237" class="line" id="l237">    237</a>                                                 friendLinkType = fetchLocalLinkType()
+<a href="#l238" class="line" id="l238">    238</a>                                             }
+<a href="#l239" class="line" id="l239">    239</a>                                         }
+<a href="#l240" class="line" id="l240">    240</a>                                     }
+<a href="#l241" class="line" id="l241">    241</a>                                 ) {
+<a href="#l242" class="line" id="l242">    242</a>                                     if (friendLinkType == FriendLinkType.MUTUAL) {
+<a href="#l243" class="line" id="l243">    243</a>                                         Text(&quot;Added&quot;)
+<a href="#l244" class="line" id="l244">    244</a>                                     } else if (pendingFriendRequests[userId]?.isActive == true) {
+<a href="#l245" class="line" id="l245">    245</a>                                         CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(20.dp), strokeWidth = 1.dp)
+<a href="#l246" class="line" id="l246">    246</a>                                     } else {
+<a href="#l247" class="line" id="l247">    247</a>                                         Text(&quot;Add&quot;)
+<a href="#l248" class="line" id="l248">    248</a>                                     }
+<a href="#l249" class="line" id="l249">    249</a>                                 }
+<a href="#l250" class="line" id="l250">    250</a>                             }
+<a href="#l251" class="line" id="l251">    251</a>                         }
+<a href="#l252" class="line" id="l252">    252</a>                     }
+<a href="#l253" class="line" id="l253">    253</a>                 }
+<a href="#l254" class="line" id="l254">    254</a>             }
+<a href="#l255" class="line" id="l255">    255</a>         }
+<a href="#l256" class="line" id="l256">    256</a>     }
+<a href="#l257" class="line" id="l257">    257</a> 
+<a href="#l258" class="line" id="l258">    258</a>     override fun run() {
+<a href="#l259" class="line" id="l259">    259</a>         context.coroutineScope.launch(Dispatchers.Main) {
+<a href="#l260" class="line" id="l260">    260</a>             createComposeAlertDialog(context.mainActivity!!) {
+<a href="#l261" class="line" id="l261">    261</a>                 ManagerDialog()
+<a href="#l262" class="line" id="l262">    262</a>             }.apply {
+<a href="#l263" class="line" id="l263">    263</a>                 setCanceledOnTouchOutside(false)
+<a href="#l264" class="line" id="l264">    264</a>                 show()
+<a href="#l265" class="line" id="l265">    265</a>             }
+<a href="#l266" class="line" id="l266">    266</a>         }
+<a href="#l267" class="line" id="l267">    267</a>     }
+<a href="#l268" class="line" id="l268">    268</a> }</pre>
+</div>
+</body>
+</html>

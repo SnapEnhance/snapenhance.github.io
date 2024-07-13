@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(core): message indicators - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/3d6d070b291cac933eb82f526d06767bea2deb18.html">3d6d070b291cac933eb82f526d06767bea2deb18</a>
+<b>parent</b> <a href="../commit/52addbe78063537fcc0b9704d9dc24faaaea4906.html">52addbe78063537fcc0b9704d9dc24faaaea4906</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 17 Mar 2024 00:08:08 +0100
+
+feat(core): message indicators
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">11</td><td><span class="i">++++++++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/UserInterfaceTweaks.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/FideliusIndicator.kt</a></td><td> | </td><td class="num">43</td><td><span class="i"></span><span class="d">-------------------------------------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/MessageIndicators.kt</a></td><td> | </td><td class="num">111</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/ComposeIcons.kt</a></td><td> | </td><td class="num">77</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>6 files changed, 198 insertions(+), 48 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -336,9 +336,9 @@
+</a>                         &quot;name&quot;: &quot;Friend Feed Menu Bar&quot;,
+                         &quot;description&quot;: &quot;Enables the new Friend Feed Menu Bar&quot;
+                     },
+<a href="#h0-0-3" id="h0-0-3" class="d">-                    &quot;fidelius_indicator&quot;: {
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-                        &quot;name&quot;: &quot;Fidelius Indicator&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-                        &quot;description&quot;: &quot;Adds a green circle next to messages that have been sent only to you&quot;
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                    &quot;message_indicators&quot;: {
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+                        &quot;name&quot;: &quot;Message Indicators&quot;,
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+                        &quot;description&quot;: &quot;Adds specific indicators icons to messages\nNote: indicators might not be 100% accurate&quot;
+</a>                     },
+                     &quot;stealth_mode_indicator&quot;: {
+                         &quot;name&quot;: &quot;Stealth Mode Indicator&quot;,
+<a href="#h0-1" id="h0-1" class="h">@@ -944,6 +944,11 @@
+</a>                 &quot;read_contacts&quot;: &quot;Read Contacts&quot;,
+                 &quot;nearby_devices&quot;: &quot;Nearby Devices&quot;,
+                 &quot;phone_calls&quot;: &quot;Phone Calls&quot;
+<a href="#h0-1-3" id="h0-1-3" class="i">+            },
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+            &quot;message_indicators&quot;: {
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+                &quot;encryption_indicator&quot;: &quot;Adds a \uD83D\uDD12 icon next to messages that have been sent only to you&quot;,
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+                &quot;platform_indicator&quot;: &quot;Adds the platform icon from which a media was sent (e.g. Android, iOS, Web)&quot;,
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+                &quot;location_indicator&quot;: &quot;Adds a \uD83D\uDCCD icon to snaps when they have been sent with location enabled&quot;
+</a>             }
+         }
+     },
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/UserInterfaceTweaks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/UserInterfaceTweaks.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/UserInterfaceTweaks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/UserInterfaceTweaks.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -47,7 +47,7 @@ class UserInterfaceTweaks : ConfigContainer() {
+</a>     val disableSpotlight = boolean(&quot;disable_spotlight&quot;) { requireRestart() }
+     val hideSettingsGear = boolean(&quot;hide_settings_gear&quot;) { requireRestart() }
+     val verticalStoryViewer = boolean(&quot;vertical_story_viewer&quot;) { requireRestart() }
+<a href="#h1-0-3" id="h1-0-3" class="d">-    val fideliusIndicator = boolean(&quot;fidelius_indicator&quot;) { requireRestart() }
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    val messageIndicators = multiple(&quot;message_indicators&quot;, &quot;encryption_indicator&quot;, &quot;platform_indicator&quot;, &quot;location_indicator&quot;) { requireRestart() }
+</a>     val stealthModeIndicator = boolean(&quot;stealth_mode_indicator&quot;) { requireRestart() }
+     val editTextOverride = multiple(&quot;edit_text_override&quot;, &quot;multi_line_chat_input&quot;, &quot;bypass_text_input_limit&quot;) {
+         requireRestart(); addNotices(FeatureNotice.BAN_RISK, FeatureNotice.INTERNAL_BEHAVIOR)
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -112,7 +112,7 @@ class FeatureManager(
+</a>             DisableConfirmationDialogs(),
+             MixerStories(),
+             DisableComposerModules(),
+<a href="#h2-0-3" id="h2-0-3" class="d">-            FideliusIndicator(),
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+            MessageIndicators(),
+</a>             EditTextOverride(),
+             PreventForcedLogout(),
+             SuspendLocationUpdates(),
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/FideliusIndicator.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/FideliusIndicator.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/FideliusIndicator.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/FideliusIndicator.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -1,42 +0,0 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="d">-package me.rhunk.snapenhance.core.features.impl.ui
+</a><a href="#h3-0-1" id="h3-0-1" class="d">-
+</a><a href="#h3-0-2" id="h3-0-2" class="d">-import android.graphics.Canvas
+</a><a href="#h3-0-3" id="h3-0-3" class="d">-import android.graphics.Paint
+</a><a href="#h3-0-4" id="h3-0-4" class="d">-import android.graphics.drawable.ShapeDrawable
+</a><a href="#h3-0-5" id="h3-0-5" class="d">-import android.graphics.drawable.shapes.Shape
+</a><a href="#h3-0-6" id="h3-0-6" class="d">-import me.rhunk.snapenhance.common.data.ContentType
+</a><a href="#h3-0-7" id="h3-0-7" class="d">-import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+</a><a href="#h3-0-8" id="h3-0-8" class="d">-import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+</a><a href="#h3-0-9" id="h3-0-9" class="d">-import me.rhunk.snapenhance.core.features.Feature
+</a><a href="#h3-0-10" id="h3-0-10" class="d">-import me.rhunk.snapenhance.core.features.FeatureLoadParams
+</a><a href="#h3-0-11" id="h3-0-11" class="d">-import me.rhunk.snapenhance.core.ui.addForegroundDrawable
+</a><a href="#h3-0-12" id="h3-0-12" class="d">-import me.rhunk.snapenhance.core.ui.removeForegroundDrawable
+</a><a href="#h3-0-13" id="h3-0-13" class="d">-
+</a><a href="#h3-0-14" id="h3-0-14" class="d">-class FideliusIndicator : Feature(&quot;Fidelius Indicator&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+</a><a href="#h3-0-15" id="h3-0-15" class="d">-    override fun onActivityCreate() {
+</a><a href="#h3-0-16" id="h3-0-16" class="d">-        if (!context.config.userInterface.fideliusIndicator.get()) return
+</a><a href="#h3-0-17" id="h3-0-17" class="d">-
+</a><a href="#h3-0-18" id="h3-0-18" class="d">-        context.event.subscribe(BindViewEvent::class) { event -&gt;
+</a><a href="#h3-0-19" id="h3-0-19" class="d">-            event.chatMessage { _, messageId -&gt;
+</a><a href="#h3-0-20" id="h3-0-20" class="d">-                event.view.removeForegroundDrawable(&quot;fideliusIndicator&quot;)
+</a><a href="#h3-0-21" id="h3-0-21" class="d">-
+</a><a href="#h3-0-22" id="h3-0-22" class="d">-                val message = context.database.getConversationMessageFromId(messageId.toLong()) ?: return@chatMessage
+</a><a href="#h3-0-23" id="h3-0-23" class="d">-                if (message.senderId == context.database.myUserId) return@chatMessage
+</a><a href="#h3-0-24" id="h3-0-24" class="d">-                if (message.contentType != ContentType.SNAP.id &amp;&amp; message.contentType != ContentType.EXTERNAL_MEDIA.id) return@chatMessage
+</a><a href="#h3-0-25" id="h3-0-25" class="d">-
+</a><a href="#h3-0-26" id="h3-0-26" class="d">-                if (!ProtoReader(message.messageContent ?: return@chatMessage).containsPath(4, 3, 3, 6)) return@chatMessage
+</a><a href="#h3-0-27" id="h3-0-27" class="d">-
+</a><a href="#h3-0-28" id="h3-0-28" class="d">-                event.view.addForegroundDrawable(&quot;fideliusIndicator&quot;, ShapeDrawable(object: Shape() {
+</a><a href="#h3-0-29" id="h3-0-29" class="d">-                    override fun draw(canvas: Canvas, paint: Paint) {
+</a><a href="#h3-0-30" id="h3-0-30" class="d">-                        val margin = 25f
+</a><a href="#h3-0-31" id="h3-0-31" class="d">-                        val radius = 15f
+</a><a href="#h3-0-32" id="h3-0-32" class="d">-
+</a><a href="#h3-0-33" id="h3-0-33" class="d">-                        canvas.drawCircle(margin + radius, canvas.height - margin - radius, radius, paint.apply {
+</a><a href="#h3-0-34" id="h3-0-34" class="d">-                            color = 0xFF00FF00.toInt()
+</a><a href="#h3-0-35" id="h3-0-35" class="d">-                        })
+</a><a href="#h3-0-36" id="h3-0-36" class="d">-                    }
+</a><a href="#h3-0-37" id="h3-0-37" class="d">-                }))
+</a><a href="#h3-0-38" id="h3-0-38" class="d">-            }
+</a><a href="#h3-0-39" id="h3-0-39" class="d">-        }
+</a><a href="#h3-0-40" id="h3-0-40" class="d">-    }
+</a><a href="#h3-0-41" id="h3-0-41" class="d">-}</a><a href="#h3-0-42" id="h3-0-42" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/MessageIndicators.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/MessageIndicators.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/MessageIndicators.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/MessageIndicators.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -0,0 +1,110 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="i">+package me.rhunk.snapenhance.core.features.impl.ui
+</a><a href="#h4-0-1" id="h4-0-1" class="i">+
+</a><a href="#h4-0-2" id="h4-0-2" class="i">+import android.view.View
+</a><a href="#h4-0-3" id="h4-0-3" class="i">+import android.view.ViewGroup
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+import android.widget.FrameLayout
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+import androidx.compose.foundation.Image
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+import androidx.compose.foundation.layout.Box
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+import androidx.compose.foundation.layout.Row
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+import androidx.compose.foundation.layout.fillMaxWidth
+</a><a href="#h4-0-9" id="h4-0-9" class="i">+import androidx.compose.foundation.layout.padding
+</a><a href="#h4-0-10" id="h4-0-10" class="i">+import androidx.compose.foundation.layout.size
+</a><a href="#h4-0-11" id="h4-0-11" class="i">+import androidx.compose.material.icons.Icons
+</a><a href="#h4-0-12" id="h4-0-12" class="i">+import androidx.compose.material.icons.filled.Android
+</a><a href="#h4-0-13" id="h4-0-13" class="i">+import androidx.compose.material.icons.filled.Laptop
+</a><a href="#h4-0-14" id="h4-0-14" class="i">+import androidx.compose.material.icons.filled.LocationOn
+</a><a href="#h4-0-15" id="h4-0-15" class="i">+import androidx.compose.material.icons.filled.Lock
+</a><a href="#h4-0-16" id="h4-0-16" class="i">+import androidx.compose.ui.Alignment
+</a><a href="#h4-0-17" id="h4-0-17" class="i">+import androidx.compose.ui.Modifier
+</a><a href="#h4-0-18" id="h4-0-18" class="i">+import androidx.compose.ui.graphics.Color
+</a><a href="#h4-0-19" id="h4-0-19" class="i">+import androidx.compose.ui.graphics.ColorFilter
+</a><a href="#h4-0-20" id="h4-0-20" class="i">+import androidx.compose.ui.unit.dp
+</a><a href="#h4-0-21" id="h4-0-21" class="i">+import me.rhunk.snapenhance.common.data.ContentType
+</a><a href="#h4-0-22" id="h4-0-22" class="i">+import me.rhunk.snapenhance.common.ui.createComposeView
+</a><a href="#h4-0-23" id="h4-0-23" class="i">+import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+</a><a href="#h4-0-24" id="h4-0-24" class="i">+import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+</a><a href="#h4-0-25" id="h4-0-25" class="i">+import me.rhunk.snapenhance.core.features.Feature
+</a><a href="#h4-0-26" id="h4-0-26" class="i">+import me.rhunk.snapenhance.core.features.FeatureLoadParams
+</a><a href="#h4-0-27" id="h4-0-27" class="i">+import me.rhunk.snapenhance.core.ui.AppleLogo
+</a><a href="#h4-0-28" id="h4-0-28" class="i">+import me.rhunk.snapenhance.core.ui.removeForegroundDrawable
+</a><a href="#h4-0-29" id="h4-0-29" class="i">+import kotlin.random.Random
+</a><a href="#h4-0-30" id="h4-0-30" class="i">+
+</a><a href="#h4-0-31" id="h4-0-31" class="i">+class MessageIndicators : Feature(&quot;Message Indicators&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+</a><a href="#h4-0-32" id="h4-0-32" class="i">+    override fun onActivityCreate() {
+</a><a href="#h4-0-33" id="h4-0-33" class="i">+        val messageIndicatorsConfig = context.config.userInterface.messageIndicators.getNullable() ?: return
+</a><a href="#h4-0-34" id="h4-0-34" class="i">+        if (messageIndicatorsConfig.isEmpty()) return
+</a><a href="#h4-0-35" id="h4-0-35" class="i">+
+</a><a href="#h4-0-36" id="h4-0-36" class="i">+        val messageInfoTag = Random.nextLong().toString()
+</a><a href="#h4-0-37" id="h4-0-37" class="i">+        val appleLogo = AppleLogo
+</a><a href="#h4-0-38" id="h4-0-38" class="i">+
+</a><a href="#h4-0-39" id="h4-0-39" class="i">+        context.event.subscribe(BindViewEvent::class) { event -&gt;
+</a><a href="#h4-0-40" id="h4-0-40" class="i">+            event.chatMessage { _, messageId -&gt;
+</a><a href="#h4-0-41" id="h4-0-41" class="i">+                val parentLinearLayout = event.view.parent as? ViewGroup ?: return@subscribe
+</a><a href="#h4-0-42" id="h4-0-42" class="i">+                parentLinearLayout.findViewWithTag&lt;View&gt;(messageInfoTag)?.let { parentLinearLayout.removeView(it) }
+</a><a href="#h4-0-43" id="h4-0-43" class="i">+
+</a><a href="#h4-0-44" id="h4-0-44" class="i">+                event.view.removeForegroundDrawable(&quot;messageIndicators&quot;)
+</a><a href="#h4-0-45" id="h4-0-45" class="i">+
+</a><a href="#h4-0-46" id="h4-0-46" class="i">+                val message = context.database.getConversationMessageFromId(messageId.toLong()) ?: return@chatMessage
+</a><a href="#h4-0-47" id="h4-0-47" class="i">+                if (message.contentType != ContentType.SNAP.id &amp;&amp; message.contentType != ContentType.EXTERNAL_MEDIA.id) return@chatMessage
+</a><a href="#h4-0-48" id="h4-0-48" class="i">+                val reader = ProtoReader(message.messageContent ?: return@chatMessage)
+</a><a href="#h4-0-49" id="h4-0-49" class="i">+
+</a><a href="#h4-0-50" id="h4-0-50" class="i">+                val hasEncryption = if (reader.containsPath(4, 3)) reader.getByteArray(4, 3, 1) == null else false
+</a><a href="#h4-0-51" id="h4-0-51" class="i">+                val sentFromIosDevice = if (reader.containsPath(4, 4, 3)) !reader.containsPath(4, 4, 3, 3, 17) else reader.getVarInt(4, 4, 11, 17, 7) != null
+</a><a href="#h4-0-52" id="h4-0-52" class="i">+                val sentFromWebApp = reader.getVarInt(4, 4, *(if (reader.containsPath(4, 4, 3)) intArrayOf(3, 3, 22, 1) else intArrayOf(11, 22, 1))) == 7L
+</a><a href="#h4-0-53" id="h4-0-53" class="i">+                val sentWithLocation = reader.getVarInt(4, 4, 11, 17, 5) != null
+</a><a href="#h4-0-54" id="h4-0-54" class="i">+
+</a><a href="#h4-0-55" id="h4-0-55" class="i">+                createComposeView(event.view.context) {
+</a><a href="#h4-0-56" id="h4-0-56" class="i">+                    Box(
+</a><a href="#h4-0-57" id="h4-0-57" class="i">+                        modifier = Modifier
+</a><a href="#h4-0-58" id="h4-0-58" class="i">+                            .fillMaxWidth()
+</a><a href="#h4-0-59" id="h4-0-59" class="i">+                            .padding(top = 4.dp, end = 1.dp),
+</a><a href="#h4-0-60" id="h4-0-60" class="i">+                        contentAlignment = Alignment.BottomEnd
+</a><a href="#h4-0-61" id="h4-0-61" class="i">+                    ) {
+</a><a href="#h4-0-62" id="h4-0-62" class="i">+                        Row {
+</a><a href="#h4-0-63" id="h4-0-63" class="i">+                            if (messageIndicatorsConfig.contains(&quot;location_indicator&quot;)) {
+</a><a href="#h4-0-64" id="h4-0-64" class="i">+                                if (sentWithLocation) {
+</a><a href="#h4-0-65" id="h4-0-65" class="i">+                                    Image(
+</a><a href="#h4-0-66" id="h4-0-66" class="i">+                                        imageVector = Icons.Default.LocationOn,
+</a><a href="#h4-0-67" id="h4-0-67" class="i">+                                        colorFilter = ColorFilter.tint(Color.Green),
+</a><a href="#h4-0-68" id="h4-0-68" class="i">+                                        contentDescription = null,
+</a><a href="#h4-0-69" id="h4-0-69" class="i">+                                        modifier = Modifier.size(15.dp)
+</a><a href="#h4-0-70" id="h4-0-70" class="i">+                                    )
+</a><a href="#h4-0-71" id="h4-0-71" class="i">+                                }
+</a><a href="#h4-0-72" id="h4-0-72" class="i">+                            }
+</a><a href="#h4-0-73" id="h4-0-73" class="i">+                            if (messageIndicatorsConfig.contains(&quot;platform_indicator&quot;)) {
+</a><a href="#h4-0-74" id="h4-0-74" class="i">+                                Image(
+</a><a href="#h4-0-75" id="h4-0-75" class="i">+                                    imageVector = when {
+</a><a href="#h4-0-76" id="h4-0-76" class="i">+                                        sentFromWebApp -&gt; Icons.Default.Laptop
+</a><a href="#h4-0-77" id="h4-0-77" class="i">+                                        sentFromIosDevice -&gt; appleLogo
+</a><a href="#h4-0-78" id="h4-0-78" class="i">+                                        else -&gt; Icons.Default.Android
+</a><a href="#h4-0-79" id="h4-0-79" class="i">+                                    },
+</a><a href="#h4-0-80" id="h4-0-80" class="i">+                                    colorFilter = ColorFilter.tint(Color.Green),
+</a><a href="#h4-0-81" id="h4-0-81" class="i">+                                    contentDescription = null,
+</a><a href="#h4-0-82" id="h4-0-82" class="i">+                                    modifier = Modifier.size(15.dp)
+</a><a href="#h4-0-83" id="h4-0-83" class="i">+                                )
+</a><a href="#h4-0-84" id="h4-0-84" class="i">+                            }
+</a><a href="#h4-0-85" id="h4-0-85" class="i">+                            if (hasEncryption &amp;&amp; messageIndicatorsConfig.contains(&quot;encryption_indicator&quot;)) {
+</a><a href="#h4-0-86" id="h4-0-86" class="i">+                                Image(
+</a><a href="#h4-0-87" id="h4-0-87" class="i">+                                    imageVector = Icons.Default.Lock,
+</a><a href="#h4-0-88" id="h4-0-88" class="i">+                                    colorFilter = ColorFilter.tint(Color.Green),
+</a><a href="#h4-0-89" id="h4-0-89" class="i">+                                    contentDescription = null,
+</a><a href="#h4-0-90" id="h4-0-90" class="i">+                                    modifier = Modifier.size(15.dp)
+</a><a href="#h4-0-91" id="h4-0-91" class="i">+                                )
+</a><a href="#h4-0-92" id="h4-0-92" class="i">+                            }
+</a><a href="#h4-0-93" id="h4-0-93" class="i">+                        }
+</a><a href="#h4-0-94" id="h4-0-94" class="i">+                    }
+</a><a href="#h4-0-95" id="h4-0-95" class="i">+                }.apply {
+</a><a href="#h4-0-96" id="h4-0-96" class="i">+                    tag = messageInfoTag
+</a><a href="#h4-0-97" id="h4-0-97" class="i">+                    addOnLayoutChangeListener { _, left, _, right, _, _, _, _, _ -&gt;
+</a><a href="#h4-0-98" id="h4-0-98" class="i">+                        layout(left, 0, right, 0)
+</a><a href="#h4-0-99" id="h4-0-99" class="i">+                    }
+</a><a href="#h4-0-100" id="h4-0-100" class="i">+                    layoutParams = FrameLayout.LayoutParams(
+</a><a href="#h4-0-101" id="h4-0-101" class="i">+                        FrameLayout.LayoutParams.MATCH_PARENT,
+</a><a href="#h4-0-102" id="h4-0-102" class="i">+                        FrameLayout.LayoutParams.WRAP_CONTENT
+</a><a href="#h4-0-103" id="h4-0-103" class="i">+                    )
+</a><a href="#h4-0-104" id="h4-0-104" class="i">+                    parentLinearLayout.addView(this)
+</a><a href="#h4-0-105" id="h4-0-105" class="i">+                }
+</a><a href="#h4-0-106" id="h4-0-106" class="i">+            }
+</a><a href="#h4-0-107" id="h4-0-107" class="i">+        }
+</a><a href="#h4-0-108" id="h4-0-108" class="i">+    }
+</a><a href="#h4-0-109" id="h4-0-109" class="i">+}</a><a href="#h4-0-110" id="h4-0-110" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/ComposeIcons.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/ComposeIcons.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/ComposeIcons.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/ComposeIcons.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -0,0 +1,77 @@
+</a><a href="#h5-0-0" id="h5-0-0" class="i">+package me.rhunk.snapenhance.core.ui
+</a><a href="#h5-0-1" id="h5-0-1" class="i">+
+</a><a href="#h5-0-2" id="h5-0-2" class="i">+import androidx.compose.ui.graphics.Color
+</a><a href="#h5-0-3" id="h5-0-3" class="i">+import androidx.compose.ui.graphics.PathFillType
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+import androidx.compose.ui.graphics.SolidColor
+</a><a href="#h5-0-5" id="h5-0-5" class="i">+import androidx.compose.ui.graphics.StrokeCap
+</a><a href="#h5-0-6" id="h5-0-6" class="i">+import androidx.compose.ui.graphics.StrokeJoin
+</a><a href="#h5-0-7" id="h5-0-7" class="i">+import androidx.compose.ui.graphics.vector.ImageVector
+</a><a href="#h5-0-8" id="h5-0-8" class="i">+import androidx.compose.ui.graphics.vector.group
+</a><a href="#h5-0-9" id="h5-0-9" class="i">+import androidx.compose.ui.graphics.vector.path
+</a><a href="#h5-0-10" id="h5-0-10" class="i">+import androidx.compose.ui.unit.dp
+</a><a href="#h5-0-11" id="h5-0-11" class="i">+
+</a><a href="#h5-0-12" id="h5-0-12" class="i">+
+</a><a href="#h5-0-13" id="h5-0-13" class="i">+val AppleLogo: ImageVector
+</a><a href="#h5-0-14" id="h5-0-14" class="i">+    get() {
+</a><a href="#h5-0-15" id="h5-0-15" class="i">+        return ImageVector.Builder(
+</a><a href="#h5-0-16" id="h5-0-16" class="i">+            defaultWidth = 800.dp,
+</a><a href="#h5-0-17" id="h5-0-17" class="i">+            defaultHeight = 800.dp,
+</a><a href="#h5-0-18" id="h5-0-18" class="i">+            viewportWidth = 27f,
+</a><a href="#h5-0-19" id="h5-0-19" class="i">+            viewportHeight = 27f,
+</a><a href="#h5-0-20" id="h5-0-20" class="i">+        ).apply {
+</a><a href="#h5-0-21" id="h5-0-21" class="i">+            group {
+</a><a href="#h5-0-22" id="h5-0-22" class="i">+                path(
+</a><a href="#h5-0-23" id="h5-0-23" class="i">+                    fill = SolidColor(Color(0xFF000000)),
+</a><a href="#h5-0-24" id="h5-0-24" class="i">+                    fillAlpha = 1.0f,
+</a><a href="#h5-0-25" id="h5-0-25" class="i">+                    stroke = null,
+</a><a href="#h5-0-26" id="h5-0-26" class="i">+                    strokeAlpha = 1.0f,
+</a><a href="#h5-0-27" id="h5-0-27" class="i">+                    strokeLineWidth = 1.0f,
+</a><a href="#h5-0-28" id="h5-0-28" class="i">+                    strokeLineCap = StrokeCap.Butt,
+</a><a href="#h5-0-29" id="h5-0-29" class="i">+                    strokeLineJoin = StrokeJoin.Miter,
+</a><a href="#h5-0-30" id="h5-0-30" class="i">+                    strokeLineMiter = 1.0f,
+</a><a href="#h5-0-31" id="h5-0-31" class="i">+                    pathFillType = PathFillType.NonZero
+</a><a href="#h5-0-32" id="h5-0-32" class="i">+                ) {
+</a><a href="#h5-0-33" id="h5-0-33" class="i">+                    moveTo(15.769f, 0f)
+</a><a href="#h5-0-34" id="h5-0-34" class="i">+                    curveToRelative(0.053f, 0f, 0.106f, 0f, 0.162f, 0f)
+</a><a href="#h5-0-35" id="h5-0-35" class="i">+                    curveToRelative(0.13f, 1.606f, -0.483f, 2.806f, -1.228f, 3.675f)
+</a><a href="#h5-0-36" id="h5-0-36" class="i">+                    curveToRelative(-0.731f, 0.863f, -1.732f, 1.7f, -3.351f, 1.573f)
+</a><a href="#h5-0-37" id="h5-0-37" class="i">+                    curveToRelative(-0.108f, -1.583f, 0.506f, -2.694f, 1.25f, -3.561f)
+</a><a href="#h5-0-38" id="h5-0-38" class="i">+                    curveTo(13.292f, 0.879f, 14.557f, 0.16f, 15.769f, 0f)
+</a><a href="#h5-0-39" id="h5-0-39" class="i">+                    close()
+</a><a href="#h5-0-40" id="h5-0-40" class="i">+                }
+</a><a href="#h5-0-41" id="h5-0-41" class="i">+                path(
+</a><a href="#h5-0-42" id="h5-0-42" class="i">+                    fill = SolidColor(Color(0xFF000000)),
+</a><a href="#h5-0-43" id="h5-0-43" class="i">+                    fillAlpha = 1.0f,
+</a><a href="#h5-0-44" id="h5-0-44" class="i">+                    stroke = null,
+</a><a href="#h5-0-45" id="h5-0-45" class="i">+                    strokeAlpha = 1.0f,
+</a><a href="#h5-0-46" id="h5-0-46" class="i">+                    strokeLineWidth = 1.0f,
+</a><a href="#h5-0-47" id="h5-0-47" class="i">+                    strokeLineCap = StrokeCap.Butt,
+</a><a href="#h5-0-48" id="h5-0-48" class="i">+                    strokeLineJoin = StrokeJoin.Miter,
+</a><a href="#h5-0-49" id="h5-0-49" class="i">+                    strokeLineMiter = 1.0f,
+</a><a href="#h5-0-50" id="h5-0-50" class="i">+                    pathFillType = PathFillType.NonZero
+</a><a href="#h5-0-51" id="h5-0-51" class="i">+                ) {
+</a><a href="#h5-0-52" id="h5-0-52" class="i">+                    moveTo(20.67f, 16.716f)
+</a><a href="#h5-0-53" id="h5-0-53" class="i">+                    curveToRelative(0f, 0.016f, 0f, 0.03f, 0f, 0.045f)
+</a><a href="#h5-0-54" id="h5-0-54" class="i">+                    curveToRelative(-0.455f, 1.378f, -1.104f, 2.559f, -1.896f, 3.655f)
+</a><a href="#h5-0-55" id="h5-0-55" class="i">+                    curveToRelative(-0.723f, 0.995f, -1.609f, 2.334f, -3.191f, 2.334f)
+</a><a href="#h5-0-56" id="h5-0-56" class="i">+                    curveToRelative(-1.367f, 0f, -2.275f, -0.879f, -3.676f, -0.903f)
+</a><a href="#h5-0-57" id="h5-0-57" class="i">+                    curveToRelative(-1.482f, -0.024f, -2.297f, 0.735f, -3.652f, 0.926f)
+</a><a href="#h5-0-58" id="h5-0-58" class="i">+                    curveToRelative(-0.155f, 0f, -0.31f, 0f, -0.462f, 0f)
+</a><a href="#h5-0-59" id="h5-0-59" class="i">+                    curveToRelative(-0.995f, -0.144f, -1.798f, -0.932f, -2.383f, -1.642f)
+</a><a href="#h5-0-60" id="h5-0-60" class="i">+                    curveToRelative(-1.725f, -2.098f, -3.058f, -4.808f, -3.306f, -8.276f)
+</a><a href="#h5-0-61" id="h5-0-61" class="i">+                    curveToRelative(0f, -0.34f, 0f, -0.679f, 0f, -1.019f)
+</a><a href="#h5-0-62" id="h5-0-62" class="i">+                    curveToRelative(0.105f, -2.482f, 1.311f, -4.5f, 2.914f, -5.478f)
+</a><a href="#h5-0-63" id="h5-0-63" class="i">+                    curveToRelative(0.846f, -0.52f, 2.009f, -0.963f, 3.304f, -0.765f)
+</a><a href="#h5-0-64" id="h5-0-64" class="i">+                    curveToRelative(0.555f, 0.086f, 1.122f, 0.276f, 1.619f, 0.464f)
+</a><a href="#h5-0-65" id="h5-0-65" class="i">+                    curveToRelative(0.471f, 0.181f, 1.06f, 0.502f, 1.618f, 0.485f)
+</a><a href="#h5-0-66" id="h5-0-66" class="i">+                    curveToRelative(0.378f, -0.011f, 0.754f, -0.208f, 1.135f, -0.347f)
+</a><a href="#h5-0-67" id="h5-0-67" class="i">+                    curveToRelative(1.116f, -0.403f, 2.21f, -0.865f, 3.652f, -0.648f)
+</a><a href="#h5-0-68" id="h5-0-68" class="i">+                    curveToRelative(1.733f, 0.262f, 2.963f, 1.032f, 3.723f, 2.22f)
+</a><a href="#h5-0-69" id="h5-0-69" class="i">+                    curveToRelative(-1.466f, 0.933f, -2.625f, 2.339f, -2.427f, 4.74f)
+</a><a href="#h5-0-70" id="h5-0-70" class="i">+                    curveTo(17.818f, 14.688f, 19.086f, 15.964f, 20.67f, 16.716f)
+</a><a href="#h5-0-71" id="h5-0-71" class="i">+                    close()
+</a><a href="#h5-0-72" id="h5-0-72" class="i">+                }
+</a><a href="#h5-0-73" id="h5-0-73" class="i">+            }
+</a><a href="#h5-0-74" id="h5-0-74" class="i">+        }.build()
+</a><a href="#h5-0-75" id="h5-0-75" class="i">+    }
+</a><a href="#h5-0-76" id="h5-0-76" class="i">+
+</a></pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Messaging.kt - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../../../../../../../../../logo.png"/>
+<link rel="alternate icon" href="../../../../../../../../../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../../../../../../../../../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../../../../../../../../../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../../../../../../../../../"><img src="../../../../../../../../../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../../../../../../../../../about.html">About</a> | <a href="../../../../../../../../../log.html">Log</a> | <a href="../../../../../../../../../files.html">Files</a> | <a href="../../../../../../../../../refs.html">Refs</a> | <a href="../../../../../../../../../file/.gitmodules.html">Submodules</a> | <a href="../../../../../../../../../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<p> Messaging.kt (6642B) - <a href="../../../../../../../../../raw/app/src/main/kotlin/me/rhunk/snapenhance/storage/Messaging.kt">raw</a></p><hr/><pre id="blob">
+<a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.storage
+<a href="#l2" class="line" id="l2">      2</a> 
+<a href="#l3" class="line" id="l3">      3</a> import me.rhunk.snapenhance.common.data.FriendStreaks
+<a href="#l4" class="line" id="l4">      4</a> import me.rhunk.snapenhance.common.data.MessagingFriendInfo
+<a href="#l5" class="line" id="l5">      5</a> import me.rhunk.snapenhance.common.data.MessagingGroupInfo
+<a href="#l6" class="line" id="l6">      6</a> import me.rhunk.snapenhance.common.data.MessagingRuleType
+<a href="#l7" class="line" id="l7">      7</a> import me.rhunk.snapenhance.common.util.ktx.getInteger
+<a href="#l8" class="line" id="l8">      8</a> import me.rhunk.snapenhance.common.util.ktx.getLongOrNull
+<a href="#l9" class="line" id="l9">      9</a> import me.rhunk.snapenhance.common.util.ktx.getStringOrNull
+<a href="#l10" class="line" id="l10">     10</a> 
+<a href="#l11" class="line" id="l11">     11</a> 
+<a href="#l12" class="line" id="l12">     12</a> fun AppDatabase.getGroups(): List&lt;MessagingGroupInfo&gt; {
+<a href="#l13" class="line" id="l13">     13</a>     return database.rawQuery(&quot;SELECT * FROM groups&quot;, null).use { cursor -&gt;
+<a href="#l14" class="line" id="l14">     14</a>         val groups = mutableListOf&lt;MessagingGroupInfo&gt;()
+<a href="#l15" class="line" id="l15">     15</a>         while (cursor.moveToNext()) {
+<a href="#l16" class="line" id="l16">     16</a>             groups.add(MessagingGroupInfo.fromCursor(cursor))
+<a href="#l17" class="line" id="l17">     17</a>         }
+<a href="#l18" class="line" id="l18">     18</a>         groups
+<a href="#l19" class="line" id="l19">     19</a>     }
+<a href="#l20" class="line" id="l20">     20</a> }
+<a href="#l21" class="line" id="l21">     21</a> 
+<a href="#l22" class="line" id="l22">     22</a> fun AppDatabase.getFriends(descOrder: Boolean = false): List&lt;MessagingFriendInfo&gt; {
+<a href="#l23" class="line" id="l23">     23</a>     return database.rawQuery(&quot;SELECT * FROM friends LEFT OUTER JOIN streaks ON friends.userId = streaks.id ORDER BY id ${if (descOrder) &quot;DESC&quot; else &quot;ASC&quot;}&quot;, null).use { cursor -&gt;
+<a href="#l24" class="line" id="l24">     24</a>         val friends = mutableListOf&lt;MessagingFriendInfo&gt;()
+<a href="#l25" class="line" id="l25">     25</a>         while (cursor.moveToNext()) {
+<a href="#l26" class="line" id="l26">     26</a>             runCatching {
+<a href="#l27" class="line" id="l27">     27</a>                 friends.add(MessagingFriendInfo.fromCursor(cursor))
+<a href="#l28" class="line" id="l28">     28</a>             }.onFailure {
+<a href="#l29" class="line" id="l29">     29</a>                 context.log.error(&quot;Failed to parse friend&quot;, it)
+<a href="#l30" class="line" id="l30">     30</a>             }
+<a href="#l31" class="line" id="l31">     31</a>         }
+<a href="#l32" class="line" id="l32">     32</a>         friends
+<a href="#l33" class="line" id="l33">     33</a>     }
+<a href="#l34" class="line" id="l34">     34</a> }
+<a href="#l35" class="line" id="l35">     35</a> 
+<a href="#l36" class="line" id="l36">     36</a> 
+<a href="#l37" class="line" id="l37">     37</a> fun AppDatabase.syncGroupInfo(conversationInfo: MessagingGroupInfo) {
+<a href="#l38" class="line" id="l38">     38</a>     executeAsync {
+<a href="#l39" class="line" id="l39">     39</a>         try {
+<a href="#l40" class="line" id="l40">     40</a>             database.execSQL(&quot;INSERT OR REPLACE INTO groups (conversationId, name, participantsCount) VALUES (?, ?, ?)&quot;, arrayOf(
+<a href="#l41" class="line" id="l41">     41</a>                 conversationInfo.conversationId,
+<a href="#l42" class="line" id="l42">     42</a>                 conversationInfo.name,
+<a href="#l43" class="line" id="l43">     43</a>                 conversationInfo.participantsCount
+<a href="#l44" class="line" id="l44">     44</a>             ))
+<a href="#l45" class="line" id="l45">     45</a>         } catch (e: Exception) {
+<a href="#l46" class="line" id="l46">     46</a>             throw e
+<a href="#l47" class="line" id="l47">     47</a>         }
+<a href="#l48" class="line" id="l48">     48</a>     }
+<a href="#l49" class="line" id="l49">     49</a> }
+<a href="#l50" class="line" id="l50">     50</a> 
+<a href="#l51" class="line" id="l51">     51</a> fun AppDatabase.syncFriend(friend: MessagingFriendInfo) {
+<a href="#l52" class="line" id="l52">     52</a>     executeAsync {
+<a href="#l53" class="line" id="l53">     53</a>         try {
+<a href="#l54" class="line" id="l54">     54</a>             database.execSQL(
+<a href="#l55" class="line" id="l55">     55</a>                 &quot;INSERT OR REPLACE INTO friends (userId, dmConversationId, displayName, mutableUsername, bitmojiId, selfieId) VALUES (?, ?, ?, ?, ?, ?)&quot;,
+<a href="#l56" class="line" id="l56">     56</a>                 arrayOf(
+<a href="#l57" class="line" id="l57">     57</a>                     friend.userId,
+<a href="#l58" class="line" id="l58">     58</a>                     friend.dmConversationId,
+<a href="#l59" class="line" id="l59">     59</a>                     friend.displayName,
+<a href="#l60" class="line" id="l60">     60</a>                     friend.mutableUsername,
+<a href="#l61" class="line" id="l61">     61</a>                     friend.bitmojiId,
+<a href="#l62" class="line" id="l62">     62</a>                     friend.selfieId
+<a href="#l63" class="line" id="l63">     63</a>                 )
+<a href="#l64" class="line" id="l64">     64</a>             )
+<a href="#l65" class="line" id="l65">     65</a>             //sync streaks
+<a href="#l66" class="line" id="l66">     66</a>             friend.streaks?.takeIf { it.length &gt; 0 }?.let {
+<a href="#l67" class="line" id="l67">     67</a>                 val streaks = getFriendStreaks(friend.userId)
+<a href="#l68" class="line" id="l68">     68</a> 
+<a href="#l69" class="line" id="l69">     69</a>                 database.execSQL(&quot;INSERT OR REPLACE INTO streaks (id, notify, expirationTimestamp, length) VALUES (?, ?, ?, ?)&quot;, arrayOf(
+<a href="#l70" class="line" id="l70">     70</a>                     friend.userId,
+<a href="#l71" class="line" id="l71">     71</a>                     streaks?.notify ?: true,
+<a href="#l72" class="line" id="l72">     72</a>                     it.expirationTimestamp,
+<a href="#l73" class="line" id="l73">     73</a>                     it.length
+<a href="#l74" class="line" id="l74">     74</a>                 ))
+<a href="#l75" class="line" id="l75">     75</a>             } ?: database.execSQL(&quot;DELETE FROM streaks WHERE id = ?&quot;, arrayOf(friend.userId))
+<a href="#l76" class="line" id="l76">     76</a>         } catch (e: Exception) {
+<a href="#l77" class="line" id="l77">     77</a>             throw e
+<a href="#l78" class="line" id="l78">     78</a>         }
+<a href="#l79" class="line" id="l79">     79</a>     }
+<a href="#l80" class="line" id="l80">     80</a> }
+<a href="#l81" class="line" id="l81">     81</a> 
+<a href="#l82" class="line" id="l82">     82</a> 
+<a href="#l83" class="line" id="l83">     83</a> 
+<a href="#l84" class="line" id="l84">     84</a> fun AppDatabase.getRules(targetUuid: String): List&lt;MessagingRuleType&gt; {
+<a href="#l85" class="line" id="l85">     85</a>     return database.rawQuery(&quot;SELECT type FROM rules WHERE targetUuid = ?&quot;, arrayOf(
+<a href="#l86" class="line" id="l86">     86</a>         targetUuid
+<a href="#l87" class="line" id="l87">     87</a>     )).use { cursor -&gt;
+<a href="#l88" class="line" id="l88">     88</a>         val rules = mutableListOf&lt;MessagingRuleType&gt;()
+<a href="#l89" class="line" id="l89">     89</a>         while (cursor.moveToNext()) {
+<a href="#l90" class="line" id="l90">     90</a>             runCatching {
+<a href="#l91" class="line" id="l91">     91</a>                 rules.add(MessagingRuleType.getByName(cursor.getStringOrNull(&quot;type&quot;)!!) ?: return@runCatching)
+<a href="#l92" class="line" id="l92">     92</a>             }.onFailure {
+<a href="#l93" class="line" id="l93">     93</a>                 context.log.error(&quot;Failed to parse rule&quot;, it)
+<a href="#l94" class="line" id="l94">     94</a>             }
+<a href="#l95" class="line" id="l95">     95</a>         }
+<a href="#l96" class="line" id="l96">     96</a>         rules
+<a href="#l97" class="line" id="l97">     97</a>     }
+<a href="#l98" class="line" id="l98">     98</a> }
+<a href="#l99" class="line" id="l99">     99</a> 
+<a href="#l100" class="line" id="l100">    100</a> fun AppDatabase.setRule(targetUuid: String, type: String, enabled: Boolean) {
+<a href="#l101" class="line" id="l101">    101</a>     executeAsync {
+<a href="#l102" class="line" id="l102">    102</a>         if (enabled) {
+<a href="#l103" class="line" id="l103">    103</a>             database.execSQL(&quot;INSERT OR REPLACE INTO rules (targetUuid, type) VALUES (?, ?)&quot;, arrayOf(
+<a href="#l104" class="line" id="l104">    104</a>                 targetUuid,
+<a href="#l105" class="line" id="l105">    105</a>                 type
+<a href="#l106" class="line" id="l106">    106</a>             ))
+<a href="#l107" class="line" id="l107">    107</a>         } else {
+<a href="#l108" class="line" id="l108">    108</a>             database.execSQL(&quot;DELETE FROM rules WHERE targetUuid = ? AND type = ?&quot;, arrayOf(
+<a href="#l109" class="line" id="l109">    109</a>                 targetUuid,
+<a href="#l110" class="line" id="l110">    110</a>                 type
+<a href="#l111" class="line" id="l111">    111</a>             ))
+<a href="#l112" class="line" id="l112">    112</a>         }
+<a href="#l113" class="line" id="l113">    113</a>     }
+<a href="#l114" class="line" id="l114">    114</a> }
+<a href="#l115" class="line" id="l115">    115</a> 
+<a href="#l116" class="line" id="l116">    116</a> fun AppDatabase.getFriendInfo(userId: String): MessagingFriendInfo? {
+<a href="#l117" class="line" id="l117">    117</a>     return database.rawQuery(&quot;SELECT * FROM friends LEFT OUTER JOIN streaks ON friends.userId = streaks.id WHERE userId = ?&quot;, arrayOf(userId)).use { cursor -&gt;
+<a href="#l118" class="line" id="l118">    118</a>         if (!cursor.moveToFirst()) return@use null
+<a href="#l119" class="line" id="l119">    119</a>         MessagingFriendInfo.fromCursor(cursor)
+<a href="#l120" class="line" id="l120">    120</a>     }
+<a href="#l121" class="line" id="l121">    121</a> }
+<a href="#l122" class="line" id="l122">    122</a> 
+<a href="#l123" class="line" id="l123">    123</a> fun AppDatabase.findFriend(conversationId: String): MessagingFriendInfo? {
+<a href="#l124" class="line" id="l124">    124</a>     return database.rawQuery(&quot;SELECT * FROM friends WHERE dmConversationId = ?&quot;, arrayOf(conversationId)).use { cursor -&gt;
+<a href="#l125" class="line" id="l125">    125</a>         if (!cursor.moveToFirst()) return@use null
+<a href="#l126" class="line" id="l126">    126</a>         MessagingFriendInfo.fromCursor(cursor)
+<a href="#l127" class="line" id="l127">    127</a>     }
+<a href="#l128" class="line" id="l128">    128</a> }
+<a href="#l129" class="line" id="l129">    129</a> 
+<a href="#l130" class="line" id="l130">    130</a> fun AppDatabase.deleteFriend(userId: String) {
+<a href="#l131" class="line" id="l131">    131</a>     executeAsync {
+<a href="#l132" class="line" id="l132">    132</a>         database.execSQL(&quot;DELETE FROM friends WHERE userId = ?&quot;, arrayOf(userId))
+<a href="#l133" class="line" id="l133">    133</a>         database.execSQL(&quot;DELETE FROM streaks WHERE id = ?&quot;, arrayOf(userId))
+<a href="#l134" class="line" id="l134">    134</a>         database.execSQL(&quot;DELETE FROM rules WHERE targetUuid = ?&quot;, arrayOf(userId))
+<a href="#l135" class="line" id="l135">    135</a>     }
+<a href="#l136" class="line" id="l136">    136</a> }
+<a href="#l137" class="line" id="l137">    137</a> 
+<a href="#l138" class="line" id="l138">    138</a> fun AppDatabase.deleteGroup(conversationId: String) {
+<a href="#l139" class="line" id="l139">    139</a>     executeAsync {
+<a href="#l140" class="line" id="l140">    140</a>         database.execSQL(&quot;DELETE FROM groups WHERE conversationId = ?&quot;, arrayOf(conversationId))
+<a href="#l141" class="line" id="l141">    141</a>         database.execSQL(&quot;DELETE FROM rules WHERE targetUuid = ?&quot;, arrayOf(conversationId))
+<a href="#l142" class="line" id="l142">    142</a>     }
+<a href="#l143" class="line" id="l143">    143</a> }
+<a href="#l144" class="line" id="l144">    144</a> 
+<a href="#l145" class="line" id="l145">    145</a> fun AppDatabase.getGroupInfo(conversationId: String): MessagingGroupInfo? {
+<a href="#l146" class="line" id="l146">    146</a>     return database.rawQuery(&quot;SELECT * FROM groups WHERE conversationId = ?&quot;, arrayOf(conversationId)).use { cursor -&gt;
+<a href="#l147" class="line" id="l147">    147</a>         if (!cursor.moveToFirst()) return@use null
+<a href="#l148" class="line" id="l148">    148</a>         MessagingGroupInfo.fromCursor(cursor)
+<a href="#l149" class="line" id="l149">    149</a>     }
+<a href="#l150" class="line" id="l150">    150</a> }
+<a href="#l151" class="line" id="l151">    151</a> 
+<a href="#l152" class="line" id="l152">    152</a> fun AppDatabase.getFriendStreaks(userId: String): FriendStreaks? {
+<a href="#l153" class="line" id="l153">    153</a>     return database.rawQuery(&quot;SELECT * FROM streaks WHERE id = ?&quot;, arrayOf(userId)).use { cursor -&gt;
+<a href="#l154" class="line" id="l154">    154</a>         if (!cursor.moveToFirst()) return@use null
+<a href="#l155" class="line" id="l155">    155</a>         FriendStreaks(
+<a href="#l156" class="line" id="l156">    156</a>             notify = cursor.getInteger(&quot;notify&quot;) == 1,
+<a href="#l157" class="line" id="l157">    157</a>             expirationTimestamp = cursor.getLongOrNull(&quot;expirationTimestamp&quot;) ?: 0L,
+<a href="#l158" class="line" id="l158">    158</a>             length = cursor.getInteger(&quot;length&quot;)
+<a href="#l159" class="line" id="l159">    159</a>         )
+<a href="#l160" class="line" id="l160">    160</a>     }
+<a href="#l161" class="line" id="l161">    161</a> }
+<a href="#l162" class="line" id="l162">    162</a> 
+<a href="#l163" class="line" id="l163">    163</a> fun AppDatabase.setFriendStreaksNotify(userId: String, notify: Boolean) {
+<a href="#l164" class="line" id="l164">    164</a>     executeAsync {
+<a href="#l165" class="line" id="l165">    165</a>         database.execSQL(&quot;UPDATE streaks SET notify = ? WHERE id = ?&quot;, arrayOf(
+<a href="#l166" class="line" id="l166">    166</a>             if (notify) 1 else 0,
+<a href="#l167" class="line" id="l167">    167</a>             userId
+<a href="#l168" class="line" id="l168">    168</a>         ))
+<a href="#l169" class="line" id="l169">    169</a>     }
+<a href="#l170" class="line" id="l170">    170</a> }
+<a href="#l171" class="line" id="l171">    171</a> 
+<a href="#l172" class="line" id="l172">    172</a> fun AppDatabase.getRuleIds(type: String): MutableList&lt;String&gt; {
+<a href="#l173" class="line" id="l173">    173</a>     return database.rawQuery(&quot;SELECT targetUuid FROM rules WHERE type = ?&quot;, arrayOf(type)).use { cursor -&gt;
+<a href="#l174" class="line" id="l174">    174</a>         val ruleIds = mutableListOf&lt;String&gt;()
+<a href="#l175" class="line" id="l175">    175</a>         while (cursor.moveToNext()) {
+<a href="#l176" class="line" id="l176">    176</a>             ruleIds.add(cursor.getStringOrNull(&quot;targetUuid&quot;)!!)
+<a href="#l177" class="line" id="l177">    177</a>         }
+<a href="#l178" class="line" id="l178">    178</a>         ruleIds
+<a href="#l179" class="line" id="l179">    179</a>     }
+<a href="#l180" class="line" id="l180">    180</a> }
+<a href="#l181" class="line" id="l181">    181</a> 
+</pre>
+</div>
+</body>
+</html>

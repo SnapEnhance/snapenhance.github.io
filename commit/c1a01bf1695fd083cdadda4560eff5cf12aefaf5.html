@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>perf(cdndownloader): bolt http resolver - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/c1a01bf1695fd083cdadda4560eff5cf12aefaf5.html">c1a01bf1695fd083cdadda4560eff5cf12aefaf5</a>
+<b>parent</b> <a href="../commit/0f711b698ee14668bd29d337fe3e07962091a60c.html">0f711b698ee14668bd29d337fe3e07962091a60c</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 28 May 2023 23:50:33 +0200
+
+perf(cdndownloader): bolt http resolver
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/util/download/CdnDownloader.kt</a></td><td> | </td><td class="num">79</td><td><span class="i">+++++++++++++++</span><span class="d">----------------------------------------------------------------</span></td></tr>
+</table></pre><pre>2 files changed, 16 insertions(+), 65 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -377,7 +377,7 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a> 
+         //download the message content
+         try {
+<a href="#h0-0-3" id="h0-0-3" class="d">-            context.longToast(&quot;Querying $urlKey. It might take a while...&quot;)
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+            context.shortToast(&quot;Querying $urlKey&quot;)
+</a>             val downloadedMedia = MediaDownloaderHelper.downloadMediaFromKey(urlKey, canMergeOverlay(), isPreviewMode) {
+                 EncryptionUtils.decryptInputStreamFromArroyo(it, contentType, messageReader)
+             }[MediaType.ORIGINAL] ?: throw Exception(&quot;Failed to download media for key $urlKey&quot;)
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/util/download/CdnDownloader.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/util/download/CdnDownloader.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/util/download/CdnDownloader.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/util/download/CdnDownloader.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,64 +1,21 @@
+</a> package me.rhunk.snapenhance.util.download
+ 
+<a href="#h1-0-2" id="h1-0-2" class="d">-import kotlinx.coroutines.Dispatchers
+</a><a href="#h1-0-3" id="h1-0-3" class="d">-import kotlinx.coroutines.Job
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-import kotlinx.coroutines.joinAll
+</a><a href="#h1-0-5" id="h1-0-5" class="d">-import kotlinx.coroutines.launch
+</a><a href="#h1-0-6" id="h1-0-6" class="d">-import kotlinx.coroutines.runBlocking
+</a> import me.rhunk.snapenhance.Constants
+<a href="#h1-0-8" id="h1-0-8" class="i">+import me.rhunk.snapenhance.util.protobuf.ProtoWriter
+</a> import java.io.InputStream
+ import java.net.URL
+<a href="#h1-0-11" id="h1-0-11" class="i">+import java.util.Base64
+</a> import javax.net.ssl.HttpsURLConnection
+ 
+ object CdnDownloader {
+<a href="#h1-0-15" id="h1-0-15" class="d">-    const val BOLT_CDN_U = &quot;https://bolt-gcdn.sc-cdn.net/u/&quot;
+</a><a href="#h1-0-16" id="h1-0-16" class="d">-    const val BOLT_CDN_X = &quot;https://bolt-gcdn.sc-cdn.net/x/&quot;
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+    private const val BOLT_HTTP_RESOLVER_URL = &quot;https://aws.api.snapchat.com/bolt-http&quot;
+</a>     const val CF_ST_CDN_D = &quot;https://cf-st.sc-cdn.net/d/&quot;
+<a href="#h1-0-19" id="h1-0-19" class="d">-    const val CF_ST_CDN_F = &quot;https://cf-st.sc-cdn.net/f/&quot;
+</a><a href="#h1-0-20" id="h1-0-20" class="d">-    const val CF_ST_CDN_H = &quot;https://cf-st.sc-cdn.net/h/&quot;
+</a><a href="#h1-0-21" id="h1-0-21" class="d">-    const val CF_ST_CDN_G = &quot;https://cf-st.sc-cdn.net/g/&quot;
+</a><a href="#h1-0-22" id="h1-0-22" class="d">-    const val CF_ST_CDN_O = &quot;https://cf-st.sc-cdn.net/o/&quot;
+</a><a href="#h1-0-23" id="h1-0-23" class="d">-    const val CF_ST_CDN_I = &quot;https://cf-st.sc-cdn.net/i/&quot;
+</a><a href="#h1-0-24" id="h1-0-24" class="d">-    const val CF_ST_CDN_J = &quot;https://cf-st.sc-cdn.net/j/&quot;
+</a><a href="#h1-0-25" id="h1-0-25" class="d">-    const val CF_ST_CDN_C = &quot;https://cf-st.sc-cdn.net/c/&quot;
+</a><a href="#h1-0-26" id="h1-0-26" class="d">-    const val CF_ST_CDN_M = &quot;https://cf-st.sc-cdn.net/m/&quot;
+</a><a href="#h1-0-27" id="h1-0-27" class="d">-    const val CF_ST_CDN_A = &quot;https://cf-st.sc-cdn.net/a/&quot;
+</a><a href="#h1-0-28" id="h1-0-28" class="d">-    const val CF_ST_CDN_AA = &quot;https://cf-st.sc-cdn.net/aa/&quot;
+</a><a href="#h1-0-29" id="h1-0-29" class="d">-
+</a><a href="#h1-0-30" id="h1-0-30" class="d">-    private val keyCache: MutableMap&lt;String, String&gt; = mutableMapOf()
+</a><a href="#h1-0-31" id="h1-0-31" class="d">-
+</a><a href="#h1-0-32" id="h1-0-32" class="d">-    fun downloadRemoteContent(
+</a><a href="#h1-0-33" id="h1-0-33" class="d">-        key: String,
+</a><a href="#h1-0-34" id="h1-0-34" class="d">-        vararg endpoints: String
+</a><a href="#h1-0-35" id="h1-0-35" class="d">-    ): InputStream? = runBlocking {
+</a><a href="#h1-0-36" id="h1-0-36" class="d">-        if (keyCache.containsKey(key)) {
+</a><a href="#h1-0-37" id="h1-0-37" class="d">-            return@runBlocking queryRemoteContent(
+</a><a href="#h1-0-38" id="h1-0-38" class="d">-                keyCache[key]!!
+</a><a href="#h1-0-39" id="h1-0-39" class="d">-            )
+</a><a href="#h1-0-40" id="h1-0-40" class="d">-        }
+</a><a href="#h1-0-41" id="h1-0-41" class="d">-        val jobs = mutableListOf&lt;Job&gt;()
+</a><a href="#h1-0-42" id="h1-0-42" class="d">-        var inputStream: InputStream? = null
+</a><a href="#h1-0-43" id="h1-0-43" class="d">-
+</a><a href="#h1-0-44" id="h1-0-44" class="d">-        endpoints.forEach {
+</a><a href="#h1-0-45" id="h1-0-45" class="d">-            launch(Dispatchers.IO) {
+</a><a href="#h1-0-46" id="h1-0-46" class="d">-                val url = it + key
+</a><a href="#h1-0-47" id="h1-0-47" class="d">-                queryRemoteContent(url)?.let { result -&gt;
+</a><a href="#h1-0-48" id="h1-0-48" class="d">-                    keyCache[key] = url
+</a><a href="#h1-0-49" id="h1-0-49" class="d">-                    inputStream = result
+</a><a href="#h1-0-50" id="h1-0-50" class="d">-                    jobs.forEach { it.cancel() }
+</a><a href="#h1-0-51" id="h1-0-51" class="d">-                }
+</a><a href="#h1-0-52" id="h1-0-52" class="d">-            }.also { jobs.add(it) }
+</a><a href="#h1-0-53" id="h1-0-53" class="d">-        }
+</a><a href="#h1-0-54" id="h1-0-54" class="d">-        jobs.joinAll()
+</a><a href="#h1-0-55" id="h1-0-55" class="d">-        inputStream
+</a><a href="#h1-0-56" id="h1-0-56" class="d">-    }
+</a><a href="#h1-0-57" id="h1-0-57" class="d">-
+</a> 
+     private fun queryRemoteContent(url: String): InputStream? {
+         try {
+             val connection = URL(url).openConnection() as HttpsURLConnection
+             connection.requestMethod = &quot;GET&quot;
+<a href="#h1-0-63" id="h1-0-63" class="d">-            connection.connectTimeout = 5000
+</a><a href="#h1-0-64" id="h1-0-64" class="i">+            connection.instanceFollowRedirects = true
+</a>             connection.setRequestProperty(&quot;User-Agent&quot;, Constants.USER_AGENT)
+             return connection.inputStream
+         } catch (ignored: Throwable) {
+<a href="#h1-1" id="h1-1" class="h">@@ -66,23 +23,17 @@ object CdnDownloader {
+</a>         return null
+     }
+ 
+<a href="#h1-1-3" id="h1-1-3" class="d">-    //TODO: automatically detect the correct endpoint
+</a>     fun downloadWithDefaultEndpoints(key: String): InputStream? {
+<a href="#h1-1-5" id="h1-1-5" class="d">-        return downloadRemoteContent(
+</a><a href="#h1-1-6" id="h1-1-6" class="d">-            key,
+</a><a href="#h1-1-7" id="h1-1-7" class="d">-            CF_ST_CDN_F,
+</a><a href="#h1-1-8" id="h1-1-8" class="d">-            CF_ST_CDN_H,
+</a><a href="#h1-1-9" id="h1-1-9" class="d">-            BOLT_CDN_U,
+</a><a href="#h1-1-10" id="h1-1-10" class="d">-            BOLT_CDN_X,
+</a><a href="#h1-1-11" id="h1-1-11" class="d">-            CF_ST_CDN_O,
+</a><a href="#h1-1-12" id="h1-1-12" class="d">-            CF_ST_CDN_I,
+</a><a href="#h1-1-13" id="h1-1-13" class="d">-            CF_ST_CDN_C,
+</a><a href="#h1-1-14" id="h1-1-14" class="d">-            CF_ST_CDN_J,
+</a><a href="#h1-1-15" id="h1-1-15" class="d">-            CF_ST_CDN_M,
+</a><a href="#h1-1-16" id="h1-1-16" class="d">-            CF_ST_CDN_A,
+</a><a href="#h1-1-17" id="h1-1-17" class="d">-            CF_ST_CDN_AA,
+</a><a href="#h1-1-18" id="h1-1-18" class="d">-            CF_ST_CDN_G,
+</a><a href="#h1-1-19" id="h1-1-19" class="d">-            CF_ST_CDN_D
+</a><a href="#h1-1-20" id="h1-1-20" class="d">-        )
+</a><a href="#h1-1-21" id="h1-1-21" class="i">+        val payload = ProtoWriter().apply {
+</a><a href="#h1-1-22" id="h1-1-22" class="i">+            write(2) {
+</a><a href="#h1-1-23" id="h1-1-23" class="i">+                writeString(2, key)
+</a><a href="#h1-1-24" id="h1-1-24" class="i">+                writeBuffer(3, byteArrayOf())
+</a><a href="#h1-1-25" id="h1-1-25" class="i">+                writeBuffer(3, byteArrayOf())
+</a><a href="#h1-1-26" id="h1-1-26" class="i">+                writeConstant(6, 6)
+</a><a href="#h1-1-27" id="h1-1-27" class="i">+                writeConstant(10, 4)
+</a><a href="#h1-1-28" id="h1-1-28" class="i">+                writeConstant(12, 1)
+</a><a href="#h1-1-29" id="h1-1-29" class="i">+            }
+</a><a href="#h1-1-30" id="h1-1-30" class="i">+        }.toByteArray()
+</a><a href="#h1-1-31" id="h1-1-31" class="i">+        return queryRemoteContent(BOLT_HTTP_RESOLVER_URL + &quot;/resolve?co=&quot; + Base64.getUrlEncoder().encodeToString(payload))
+</a>     }
+ }
+</pre>
+</div>
+</body>
+</html>

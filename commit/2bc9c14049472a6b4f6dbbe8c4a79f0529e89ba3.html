@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(messagelogger): optimize performance - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/2bc9c14049472a6b4f6dbbe8c4a79f0529e89ba3.html">2bc9c14049472a6b4f6dbbe8c4a79f0529e89ba3</a>
+<b>parent</b> <a href="../commit/4929bfd48ead9565835f5b6450d4e4f497c06529.html">4929bfd48ead9565835f5b6450d4e4f497c06529</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 20 May 2023 00:33:56 +0200
+
+fix(messagelogger): optimize performance
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/spy/MessageLogger.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">+++++++++</span><span class="d">---</span></td></tr>
+</table></pre><pre>1 file changed, 9 insertions(+), 3 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/spy/MessageLogger.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/spy/MessageLogger.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/spy/MessageLogger.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/spy/MessageLogger.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -66,9 +66,15 @@ class MessageLogger : Feature(&quot;MessageLogger&quot;, loadParams = FeatureLoadParams.IN
+</a>             }
+ 
+             if (!messageCache.containsKey(messageId)) {
+<a href="#h0-0-3" id="h0-0-3" class="d">-                val serializedMessage = context.gson.toJson(message.instanceNonNull())
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-                messageCache[messageId] = serializedMessage
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-                context.bridgeClient.addMessageLoggerMessage(messageId, serializedMessage.toByteArray(Charsets.UTF_8))
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                context.executeAsync {
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+                    val storedMessage = context.bridgeClient.getMessageLoggerMessage(messageId)?.toString(Charsets.UTF_8)
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+                    if (storedMessage == null) {
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+                        messageCache[messageId] = context.gson.toJson(message.instanceNonNull())
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+                        context.bridgeClient.addMessageLoggerMessage(messageId, messageCache[messageId]!!.toByteArray(Charsets.UTF_8))
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+                        return@executeAsync
+</a><a href="#h0-0-12" id="h0-0-12" class="i">+                    }
+</a><a href="#h0-0-13" id="h0-0-13" class="i">+                    messageCache[messageId] = storedMessage
+</a><a href="#h0-0-14" id="h0-0-14" class="i">+                }
+</a>             }
+         }
+     }
+</pre>
+</div>
+</body>
+</html>

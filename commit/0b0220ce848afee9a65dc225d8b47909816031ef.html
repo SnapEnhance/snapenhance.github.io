@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(app/ui): home section redesign - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/0b0220ce848afee9a65dc225d8b47909816031ef.html">0b0220ce848afee9a65dc225d8b47909816031ef</a>
+<b>parent</b> <a href="../commit/fcb84661a6fe8af93f55deceffc3ab3d459873fb.html">fcb84661a6fe8af93f55deceffc3ab3d459873fb</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed,  3 Jan 2024 01:33:49 +0100
+
+feat(app/ui): home section redesign
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Navigation.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Section.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/home/HomeSection.kt</a></td><td> | </td><td class="num">200</td><td><span class="i">+++++++++++++++++++++++++++++++</span><span class="d">------------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/home/HomeSubSection.kt</a></td><td> | </td><td class="num">58</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/home/SettingsSection.kt</a></td><td> | </td><td class="num">10</td><td><span class="i">+++++++++</span><span class="d">-</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h5">app/src/main/res/drawable/ic_github.xml</a></td><td> | </td><td class="num">11</td><td><span class="i">+++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h6">app/src/main/res/drawable/ic_telegram.xml</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">common/src/main/kotlin/me/rhunk/snapenhance/common/action/EnumAction.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+</table></pre><pre>8 files changed, 164 insertions(+), 129 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Navigation.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Navigation.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Navigation.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Navigation.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -65,7 +65,7 @@ class Navigation(
+</a>         val currentSection = getCurrentSection(currentDestination)
+ 
+         TopAppBar(title = {
+<a href="#h0-0-3" id="h0-0-3" class="d">-            Text(text = currentSection.sectionTopBarName())
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+            currentSection.Title()
+</a>         }, navigationIcon =  {
+             val backButtonAnimation by animateFloatAsState(if (currentSection.canGoBack()) 1f else 0f,
+                 label = &quot;backButtonAnimation&quot;
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Section.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Section.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Section.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Section.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -3,6 +3,7 @@ package me.rhunk.snapenhance.ui.manager
+</a> import androidx.compose.foundation.layout.RowScope
+ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.filled.*
+<a href="#h1-0-3" id="h1-0-3" class="i">+import androidx.compose.material3.Text
+</a> import androidx.compose.runtime.Composable
+ import androidx.compose.ui.graphics.vector.ImageVector
+ import androidx.navigation.NavController
+<a href="#h1-1" id="h1-1" class="h">@@ -71,6 +72,9 @@ open class Section {
+</a>     open fun canGoBack(): Boolean = false
+ 
+     @Composable
+<a href="#h1-1-3" id="h1-1-3" class="i">+    open fun Title() { Text(text = sectionTopBarName()) }
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+    @Composable
+</a>     open fun Content() { NotImplemented() }
+ 
+     @Composable
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/home/HomeSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/home/HomeSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/home/HomeSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/home/HomeSection.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -4,16 +4,15 @@ import android.content.Intent
+</a> import android.net.Uri
+ import androidx.compose.foundation.Image
+ import androidx.compose.foundation.ScrollState
+<a href="#h2-0-3" id="h2-0-3" class="i">+import androidx.compose.foundation.clickable
+</a> import androidx.compose.foundation.layout.*
+ import androidx.compose.foundation.verticalScroll
+ import androidx.compose.material.icons.Icons
+<a href="#h2-0-7" id="h2-0-7" class="d">-import androidx.compose.material.icons.filled.*
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+import androidx.compose.material.icons.filled.BugReport
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+import androidx.compose.material.icons.filled.Settings
+</a> import androidx.compose.material3.*
+ import androidx.compose.runtime.Composable
+<a href="#h2-0-12" id="h2-0-12" class="d">-import androidx.compose.runtime.getValue
+</a><a href="#h2-0-13" id="h2-0-13" class="d">-import androidx.compose.runtime.mutableStateOf
+</a> import androidx.compose.runtime.remember
+<a href="#h2-0-15" id="h2-0-15" class="d">-import androidx.compose.runtime.setValue
+</a> import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.draw.scale
+<a href="#h2-1" id="h2-1" class="h">@@ -21,7 +20,11 @@ import androidx.compose.ui.graphics.ColorFilter
+</a> import androidx.compose.ui.graphics.vector.ImageVector
+ import androidx.compose.ui.layout.ContentScale
+ import androidx.compose.ui.res.painterResource
+<a href="#h2-1-3" id="h2-1-3" class="i">+import androidx.compose.ui.res.vectorResource
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+import androidx.compose.ui.text.font.Font
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+import androidx.compose.ui.text.font.FontFamily
+</a> import androidx.compose.ui.text.font.FontWeight
+<a href="#h2-1-7" id="h2-1-7" class="i">+import androidx.compose.ui.text.style.TextAlign
+</a> import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+<a href="#h2-2" id="h2-2" class="h">@@ -30,12 +33,11 @@ import androidx.navigation.compose.composable
+</a> import androidx.navigation.navigation
+ import kotlinx.coroutines.launch
+ import me.rhunk.snapenhance.R
+<a href="#h2-2-3" id="h2-2-3" class="i">+import me.rhunk.snapenhance.common.BuildConfig
+</a> import me.rhunk.snapenhance.ui.manager.Section
+ import me.rhunk.snapenhance.ui.manager.data.InstallationSummary
+ import me.rhunk.snapenhance.ui.manager.data.Updater
+<a href="#h2-2-7" id="h2-2-7" class="d">-import me.rhunk.snapenhance.ui.setup.Requirements
+</a> import me.rhunk.snapenhance.ui.util.ActivityLauncherHelper
+<a href="#h2-2-9" id="h2-2-9" class="d">-import me.rhunk.snapenhance.ui.util.saveFile
+</a> import java.util.Locale
+ 
+ class HomeSection : Section() {
+<a href="#h2-3" id="h2-3" class="h">@@ -57,31 +59,6 @@ class HomeSection : Section() {
+</a>     }
+ 
+     @Composable
+<a href="#h2-3-3" id="h2-3-3" class="d">-    private fun SummaryCardRow(icon: ImageVector? = null, title: String, action: @Composable () -&gt; Unit) {
+</a><a href="#h2-3-4" id="h2-3-4" class="d">-        Row(
+</a><a href="#h2-3-5" id="h2-3-5" class="d">-            modifier = Modifier.padding(all = 16.dp),
+</a><a href="#h2-3-6" id="h2-3-6" class="d">-            horizontalArrangement = Arrangement.SpaceBetween
+</a><a href="#h2-3-7" id="h2-3-7" class="d">-        ) {
+</a><a href="#h2-3-8" id="h2-3-8" class="d">-            icon?.let {
+</a><a href="#h2-3-9" id="h2-3-9" class="d">-                Icon(
+</a><a href="#h2-3-10" id="h2-3-10" class="d">-                    imageVector = it,
+</a><a href="#h2-3-11" id="h2-3-11" class="d">-                    contentDescription = null,
+</a><a href="#h2-3-12" id="h2-3-12" class="d">-                    modifier = Modifier
+</a><a href="#h2-3-13" id="h2-3-13" class="d">-                        .padding(end = 10.dp)
+</a><a href="#h2-3-14" id="h2-3-14" class="d">-                        .align(Alignment.CenterVertically)
+</a><a href="#h2-3-15" id="h2-3-15" class="d">-                )
+</a><a href="#h2-3-16" id="h2-3-16" class="d">-            }
+</a><a href="#h2-3-17" id="h2-3-17" class="d">-            Text(text = title, modifier = Modifier
+</a><a href="#h2-3-18" id="h2-3-18" class="d">-                .weight(1f)
+</a><a href="#h2-3-19" id="h2-3-19" class="d">-                .align(Alignment.CenterVertically)
+</a><a href="#h2-3-20" id="h2-3-20" class="d">-            )
+</a><a href="#h2-3-21" id="h2-3-21" class="d">-            Column {
+</a><a href="#h2-3-22" id="h2-3-22" class="d">-                action()
+</a><a href="#h2-3-23" id="h2-3-23" class="d">-            }
+</a><a href="#h2-3-24" id="h2-3-24" class="d">-        }
+</a><a href="#h2-3-25" id="h2-3-25" class="d">-    }
+</a><a href="#h2-3-26" id="h2-3-26" class="d">-
+</a><a href="#h2-3-27" id="h2-3-27" class="d">-    @Composable
+</a>     private fun SummaryCards(installationSummary: InstallationSummary) {
+         val summaryInfo = remember {
+             mapOf(
+<a href="#h2-4" id="h2-4" class="h">@@ -130,35 +107,6 @@ class HomeSection : Section() {
+</a>                 }
+             }
+         }
+<a href="#h2-4-3" id="h2-4-3" class="d">-
+</a><a href="#h2-4-4" id="h2-4-4" class="d">-        OutlinedCard(
+</a><a href="#h2-4-5" id="h2-4-5" class="d">-            modifier = Modifier
+</a><a href="#h2-4-6" id="h2-4-6" class="d">-                .padding(all = cardMargin)
+</a><a href="#h2-4-7" id="h2-4-7" class="d">-                .fillMaxWidth()
+</a><a href="#h2-4-8" id="h2-4-8" class="d">-        ) {
+</a><a href="#h2-4-9" id="h2-4-9" class="d">-            SummaryCardRow(
+</a><a href="#h2-4-10" id="h2-4-10" class="d">-                icon = Icons.Filled.Map,
+</a><a href="#h2-4-11" id="h2-4-11" class="d">-                title = if (installationSummary.modInfo == null || installationSummary.modInfo.mappingsOutdated == true) {
+</a><a href="#h2-4-12" id="h2-4-12" class="d">-                    &quot;Mappings ${if (installationSummary.modInfo == null) &quot;not generated&quot; else &quot;outdated&quot;}&quot;
+</a><a href="#h2-4-13" id="h2-4-13" class="d">-                } else {
+</a><a href="#h2-4-14" id="h2-4-14" class="d">-                    &quot;Mappings are up-to-date&quot;
+</a><a href="#h2-4-15" id="h2-4-15" class="d">-                }
+</a><a href="#h2-4-16" id="h2-4-16" class="d">-            ) {
+</a><a href="#h2-4-17" id="h2-4-17" class="d">-                Button(onClick = {
+</a><a href="#h2-4-18" id="h2-4-18" class="d">-                    context.checkForRequirements(Requirements.MAPPINGS)
+</a><a href="#h2-4-19" id="h2-4-19" class="d">-                }, modifier = Modifier.height(40.dp)) {
+</a><a href="#h2-4-20" id="h2-4-20" class="d">-                    Icon(Icons.Filled.Refresh, contentDescription = null)
+</a><a href="#h2-4-21" id="h2-4-21" class="d">-                }
+</a><a href="#h2-4-22" id="h2-4-22" class="d">-            }
+</a><a href="#h2-4-23" id="h2-4-23" class="d">-
+</a><a href="#h2-4-24" id="h2-4-24" class="d">-            SummaryCardRow(icon = Icons.Filled.Language, title = userLocale ?: &quot;Unknown&quot;) {
+</a><a href="#h2-4-25" id="h2-4-25" class="d">-                Button(onClick = {
+</a><a href="#h2-4-26" id="h2-4-26" class="d">-                    context.checkForRequirements(Requirements.LANGUAGE)
+</a><a href="#h2-4-27" id="h2-4-27" class="d">-                }, modifier = Modifier.height(40.dp)) {
+</a><a href="#h2-4-28" id="h2-4-28" class="d">-                    Icon(Icons.Filled.OpenInNew, contentDescription = null)
+</a><a href="#h2-4-29" id="h2-4-29" class="d">-                }
+</a><a href="#h2-4-30" id="h2-4-30" class="d">-            }
+</a><a href="#h2-4-31" id="h2-4-31" class="d">-        }
+</a>     }
+ 
+     override fun onResumed() {
+<a href="#h2-5" id="h2-5" class="h">@@ -173,7 +121,9 @@ class HomeSection : Section() {
+</a>                 context.longToast(&quot;SnapEnhance failed to load installation summary: ${it.message}&quot;)
+             }
+             runCatching {
+<a href="#h2-5-3" id="h2-5-3" class="d">-                latestUpdate = Updater.checkForLatestRelease()
+</a><a href="#h2-5-4" id="h2-5-4" class="i">+                if (!BuildConfig.DEBUG) {
+</a><a href="#h2-5-5" id="h2-5-5" class="i">+                    latestUpdate = Updater.checkForLatestRelease()
+</a><a href="#h2-5-6" id="h2-5-6" class="i">+                }
+</a>             }.onFailure {
+                 context.longToast(&quot;SnapEnhance failed to check for updates: ${it.message}&quot;)
+             }
+<a href="#h2-6" id="h2-6" class="h">@@ -211,48 +161,7 @@ class HomeSection : Section() {
+</a>                     }
+                 }
+                 LOGS_SECTION_ROUTE -&gt; {
+<a href="#h2-6-3" id="h2-6-3" class="d">-                    var showDropDown by remember { mutableStateOf(false) }
+</a><a href="#h2-6-4" id="h2-6-4" class="d">-
+</a><a href="#h2-6-5" id="h2-6-5" class="d">-                    IconButton(onClick = {
+</a><a href="#h2-6-6" id="h2-6-6" class="d">-                        showDropDown = true
+</a><a href="#h2-6-7" id="h2-6-7" class="d">-                    }) {
+</a><a href="#h2-6-8" id="h2-6-8" class="d">-                        Icon(Icons.Filled.MoreVert, contentDescription = null)
+</a><a href="#h2-6-9" id="h2-6-9" class="d">-                    }
+</a><a href="#h2-6-10" id="h2-6-10" class="d">-
+</a><a href="#h2-6-11" id="h2-6-11" class="d">-                    DropdownMenu(
+</a><a href="#h2-6-12" id="h2-6-12" class="d">-                        expanded = showDropDown,
+</a><a href="#h2-6-13" id="h2-6-13" class="d">-                        onDismissRequest = { showDropDown = false },
+</a><a href="#h2-6-14" id="h2-6-14" class="d">-                        modifier = Modifier.align(Alignment.CenterVertically)
+</a><a href="#h2-6-15" id="h2-6-15" class="d">-                    ) {
+</a><a href="#h2-6-16" id="h2-6-16" class="d">-                        DropdownMenuItem(onClick = {
+</a><a href="#h2-6-17" id="h2-6-17" class="d">-                            context.log.clearLogs()
+</a><a href="#h2-6-18" id="h2-6-18" class="d">-                            navController.navigate(LOGS_SECTION_ROUTE)
+</a><a href="#h2-6-19" id="h2-6-19" class="d">-                            showDropDown = false
+</a><a href="#h2-6-20" id="h2-6-20" class="d">-                        }, text = {
+</a><a href="#h2-6-21" id="h2-6-21" class="d">-                            Text(
+</a><a href="#h2-6-22" id="h2-6-22" class="d">-                                text = context.translation[&quot;manager.sections.home.logs.clear_logs_button&quot;]
+</a><a href="#h2-6-23" id="h2-6-23" class="d">-                            )
+</a><a href="#h2-6-24" id="h2-6-24" class="d">-                        })
+</a><a href="#h2-6-25" id="h2-6-25" class="d">-
+</a><a href="#h2-6-26" id="h2-6-26" class="d">-                        DropdownMenuItem(onClick = {
+</a><a href="#h2-6-27" id="h2-6-27" class="d">-                            activityLauncherHelper.saveFile(&quot;snapenhance-logs-${System.currentTimeMillis()}.zip&quot;, &quot;application/zip&quot;) { uri -&gt;
+</a><a href="#h2-6-28" id="h2-6-28" class="d">-                                context.androidContext.contentResolver.openOutputStream(Uri.parse(uri))?.use {
+</a><a href="#h2-6-29" id="h2-6-29" class="d">-                                    runCatching {
+</a><a href="#h2-6-30" id="h2-6-30" class="d">-                                        context.log.exportLogsToZip(it)
+</a><a href="#h2-6-31" id="h2-6-31" class="d">-                                        context.longToast(&quot;Saved logs to $uri&quot;)
+</a><a href="#h2-6-32" id="h2-6-32" class="d">-                                    }.onFailure {
+</a><a href="#h2-6-33" id="h2-6-33" class="d">-                                        context.longToast(&quot;Failed to save logs to $uri!&quot;)
+</a><a href="#h2-6-34" id="h2-6-34" class="d">-                                        context.log.error(&quot;Failed to save logs to $uri!&quot;, it)
+</a><a href="#h2-6-35" id="h2-6-35" class="d">-                                    }
+</a><a href="#h2-6-36" id="h2-6-36" class="d">-                                }
+</a><a href="#h2-6-37" id="h2-6-37" class="d">-                            }
+</a><a href="#h2-6-38" id="h2-6-38" class="d">-                            showDropDown = false
+</a><a href="#h2-6-39" id="h2-6-39" class="d">-                        }, text = {
+</a><a href="#h2-6-40" id="h2-6-40" class="d">-                            Text(
+</a><a href="#h2-6-41" id="h2-6-41" class="d">-                                text = context.translation[&quot;manager.sections.home.logs.export_logs_button&quot;]
+</a><a href="#h2-6-42" id="h2-6-42" class="d">-                            )
+</a><a href="#h2-6-43" id="h2-6-43" class="d">-                        })
+</a><a href="#h2-6-44" id="h2-6-44" class="d">-                    }
+</a><a href="#h2-6-45" id="h2-6-45" class="i">+                    homeSubSection.LogsTopBarButtons(activityLauncherHelper, navController, this)
+</a>                 }
+             }
+         }
+<a href="#h2-7" id="h2-7" class="h">@@ -279,30 +188,84 @@ class HomeSection : Section() {
+</a>     @Composable
+     @Preview
+     override fun Content() {
+<a href="#h2-7-3" id="h2-7-3" class="i">+        val avenirNextFontFamily = remember {
+</a><a href="#h2-7-4" id="h2-7-4" class="i">+            FontFamily(
+</a><a href="#h2-7-5" id="h2-7-5" class="i">+                Font(R.font.avenir_next_medium, FontWeight.Medium)
+</a><a href="#h2-7-6" id="h2-7-6" class="i">+            )
+</a><a href="#h2-7-7" id="h2-7-7" class="i">+        }
+</a><a href="#h2-7-8" id="h2-7-8" class="i">+
+</a>         Column(
+             modifier = Modifier
+                 .verticalScroll(ScrollState(0))
+         ) {
+<a href="#h2-7-13" id="h2-7-13" class="d">-            Column(
+</a><a href="#h2-7-14" id="h2-7-14" class="i">+
+</a><a href="#h2-7-15" id="h2-7-15" class="i">+            Image(
+</a><a href="#h2-7-16" id="h2-7-16" class="i">+                painter = painterResource(id = R.drawable.launcher_icon_monochrome),
+</a><a href="#h2-7-17" id="h2-7-17" class="i">+                contentDescription = null,
+</a><a href="#h2-7-18" id="h2-7-18" class="i">+                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
+</a><a href="#h2-7-19" id="h2-7-19" class="i">+                contentScale = ContentScale.FillHeight,
+</a><a href="#h2-7-20" id="h2-7-20" class="i">+                modifier = Modifier
+</a><a href="#h2-7-21" id="h2-7-21" class="i">+                    .fillMaxWidth()
+</a><a href="#h2-7-22" id="h2-7-22" class="i">+                    .scale(1.8f)
+</a><a href="#h2-7-23" id="h2-7-23" class="i">+                    .height(90.dp)
+</a><a href="#h2-7-24" id="h2-7-24" class="i">+            )
+</a><a href="#h2-7-25" id="h2-7-25" class="i">+
+</a><a href="#h2-7-26" id="h2-7-26" class="i">+            Text(
+</a><a href="#h2-7-27" id="h2-7-27" class="i">+                text = arrayOf(&quot;\u0020&quot;, &quot;\u0065&quot;, &quot;\u0063&quot;, &quot;\u006e&quot;, &quot;\u0061&quot;, &quot;\u0068&quot;, &quot;\u006e&quot;, &quot;\u0045&quot;, &quot;\u0070&quot;, &quot;\u0061&quot;, &quot;\u006e&quot;, &quot;\u0053&quot;).reversed().joinToString(&quot;&quot;),
+</a><a href="#h2-7-28" id="h2-7-28" class="i">+                fontSize = 30.sp,
+</a><a href="#h2-7-29" id="h2-7-29" class="i">+                fontFamily = avenirNextFontFamily,
+</a><a href="#h2-7-30" id="h2-7-30" class="i">+                modifier = Modifier.align(Alignment.CenterHorizontally),
+</a><a href="#h2-7-31" id="h2-7-31" class="i">+            )
+</a><a href="#h2-7-32" id="h2-7-32" class="i">+
+</a><a href="#h2-7-33" id="h2-7-33" class="i">+            Text(
+</a><a href="#h2-7-34" id="h2-7-34" class="i">+                text = &quot;v&quot; + BuildConfig.VERSION_NAME + &quot; \u00b7 by rhunk&quot;,
+</a><a href="#h2-7-35" id="h2-7-35" class="i">+                fontSize = 12.sp,
+</a><a href="#h2-7-36" id="h2-7-36" class="i">+                fontFamily = avenirNextFontFamily,
+</a><a href="#h2-7-37" id="h2-7-37" class="i">+                modifier = Modifier.align(Alignment.CenterHorizontally),
+</a><a href="#h2-7-38" id="h2-7-38" class="i">+            )
+</a><a href="#h2-7-39" id="h2-7-39" class="i">+
+</a><a href="#h2-7-40" id="h2-7-40" class="i">+            Text(
+</a><a href="#h2-7-41" id="h2-7-41" class="i">+                text = &quot;An Xposed module made to enhance your Snapchat experience&quot;,
+</a>                 modifier = Modifier
+<a href="#h2-7-43" id="h2-7-43" class="i">+                    .padding(16.dp)
+</a>                     .fillMaxWidth(),
+<a href="#h2-7-45" id="h2-7-45" class="d">-                horizontalAlignment = Alignment.CenterHorizontally
+</a><a href="#h2-7-46" id="h2-7-46" class="i">+                textAlign = TextAlign.Center,
+</a><a href="#h2-7-47" id="h2-7-47" class="i">+            )
+</a><a href="#h2-7-48" id="h2-7-48" class="i">+
+</a><a href="#h2-7-49" id="h2-7-49" class="i">+            Row(
+</a><a href="#h2-7-50" id="h2-7-50" class="i">+                horizontalArrangement = Arrangement.spacedBy(15.dp, Alignment.CenterHorizontally),
+</a><a href="#h2-7-51" id="h2-7-51" class="i">+                modifier = Modifier
+</a><a href="#h2-7-52" id="h2-7-52" class="i">+                    .fillMaxWidth()
+</a><a href="#h2-7-53" id="h2-7-53" class="i">+                    .padding(all = 10.dp)
+</a>             ) {
+<a href="#h2-7-55" id="h2-7-55" class="d">-                Image(
+</a><a href="#h2-7-56" id="h2-7-56" class="d">-                    painter = painterResource(id = R.drawable.launcher_icon_monochrome),
+</a><a href="#h2-7-57" id="h2-7-57" class="i">+                Icon(
+</a><a href="#h2-7-58" id="h2-7-58" class="i">+                    imageVector = ImageVector.vectorResource(id = R.drawable.ic_github),
+</a>                     contentDescription = null,
+<a href="#h2-7-60" id="h2-7-60" class="d">-                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
+</a><a href="#h2-7-61" id="h2-7-61" class="d">-                    contentScale = ContentScale.FillHeight,
+</a><a href="#h2-7-62" id="h2-7-62" class="d">-                    modifier = Modifier
+</a><a href="#h2-7-63" id="h2-7-63" class="d">-                        .height(120.dp)
+</a><a href="#h2-7-64" id="h2-7-64" class="d">-                        .scale(1.75f)
+</a><a href="#h2-7-65" id="h2-7-65" class="i">+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+</a><a href="#h2-7-66" id="h2-7-66" class="i">+                    modifier = Modifier.size(32.dp).clickable {
+</a><a href="#h2-7-67" id="h2-7-67" class="i">+                        context.activity?.startActivity(
+</a><a href="#h2-7-68" id="h2-7-68" class="i">+                            Intent(Intent.ACTION_VIEW).apply {
+</a><a href="#h2-7-69" id="h2-7-69" class="i">+                                data = Uri.parse(&quot;https://github.com/rhunk/SnapEnhance&quot;)
+</a><a href="#h2-7-70" id="h2-7-70" class="i">+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+</a><a href="#h2-7-71" id="h2-7-71" class="i">+                            }
+</a><a href="#h2-7-72" id="h2-7-72" class="i">+                        )
+</a><a href="#h2-7-73" id="h2-7-73" class="i">+                    }
+</a>                 )
+<a href="#h2-7-75" id="h2-7-75" class="d">-                Text(
+</a><a href="#h2-7-76" id="h2-7-76" class="d">-                    text = arrayOf(&quot;\u0065&quot;, &quot;\u0063&quot;, &quot;\u006e&quot;, &quot;\u0061&quot;, &quot;\u0068&quot;, &quot;\u006e&quot;, &quot;\u0045&quot;, &quot;\u0070&quot;, &quot;\u0061&quot;, &quot;\u006e&quot;, &quot;\u0053&quot;).reversed().joinToString(&quot;&quot;),
+</a><a href="#h2-7-77" id="h2-7-77" class="d">-                    fontSize = 30.sp,
+</a><a href="#h2-7-78" id="h2-7-78" class="d">-                    modifier = Modifier.padding(16.dp),
+</a><a href="#h2-7-79" id="h2-7-79" class="i">+                Icon(
+</a><a href="#h2-7-80" id="h2-7-80" class="i">+                    imageVector = ImageVector.vectorResource(id = R.drawable.ic_telegram),
+</a><a href="#h2-7-81" id="h2-7-81" class="i">+                    contentDescription = null,
+</a><a href="#h2-7-82" id="h2-7-82" class="i">+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+</a><a href="#h2-7-83" id="h2-7-83" class="i">+                    modifier = Modifier.size(32.dp).clickable {
+</a><a href="#h2-7-84" id="h2-7-84" class="i">+                        context.activity?.startActivity(
+</a><a href="#h2-7-85" id="h2-7-85" class="i">+                            Intent(Intent.ACTION_VIEW).apply {
+</a><a href="#h2-7-86" id="h2-7-86" class="i">+                                data = Uri.parse(&quot;https://t.me/snapenhance&quot;)
+</a><a href="#h2-7-87" id="h2-7-87" class="i">+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+</a><a href="#h2-7-88" id="h2-7-88" class="i">+                            }
+</a><a href="#h2-7-89" id="h2-7-89" class="i">+                        )
+</a><a href="#h2-7-90" id="h2-7-90" class="i">+                    }
+</a>                 )
+             }
+<a href="#h2-7-93" id="h2-7-93" class="i">+            Spacer(modifier = Modifier.height(20.dp))
+</a> 
+             if (latestUpdate != null) {
+                 OutlinedCard(
+<a href="#h2-8" id="h2-8" class="h">@@ -345,11 +308,6 @@ class HomeSection : Section() {
+</a>                 }
+             }
+ 
+<a href="#h2-8-3" id="h2-8-3" class="d">-            Text(
+</a><a href="#h2-8-4" id="h2-8-4" class="d">-                text = &quot;An Xposed module made to enhance your Snapchat experience&quot;,
+</a><a href="#h2-8-5" id="h2-8-5" class="d">-                modifier = Modifier.padding(16.dp)
+</a><a href="#h2-8-6" id="h2-8-6" class="d">-            )
+</a><a href="#h2-8-7" id="h2-8-7" class="d">-
+</a>             SummaryCards(installationSummary = installationSummary ?: return)
+         }
+     }
+<b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/home/HomeSubSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/home/HomeSubSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/home/HomeSubSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/home/HomeSubSection.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -1,5 +1,6 @@
+</a> package me.rhunk.snapenhance.ui.manager.sections.home
+ 
+<a href="#h3-0-2" id="h3-0-2" class="i">+import android.net.Uri
+</a> import androidx.compose.foundation.ScrollState
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.gestures.detectTapGestures
+<a href="#h3-1" id="h3-1" class="h">@@ -10,14 +11,12 @@ import androidx.compose.foundation.lazy.LazyListState
+</a> import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
+ import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
+<a href="#h3-1-3" id="h3-1-3" class="i">+import androidx.compose.material.icons.filled.MoreVert
+</a> import androidx.compose.material.icons.outlined.BugReport
+ import androidx.compose.material.icons.outlined.Info
+ import androidx.compose.material.icons.outlined.Report
+ import androidx.compose.material.icons.outlined.Warning
+<a href="#h3-1-8" id="h3-1-8" class="d">-import androidx.compose.material3.FilledIconButton
+</a><a href="#h3-1-9" id="h3-1-9" class="d">-import androidx.compose.material3.Icon
+</a><a href="#h3-1-10" id="h3-1-10" class="d">-import androidx.compose.material3.MaterialTheme
+</a><a href="#h3-1-11" id="h3-1-11" class="d">-import androidx.compose.material3.Text
+</a><a href="#h3-1-12" id="h3-1-12" class="i">+import androidx.compose.material3.*
+</a> import androidx.compose.runtime.*
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+<a href="#h3-2" id="h3-2" class="h">@@ -28,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
+</a> import androidx.compose.ui.text.style.TextOverflow
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+<a href="#h3-2-3" id="h3-2-3" class="i">+import androidx.navigation.NavController
+</a> import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.delay
+ import kotlinx.coroutines.launch
+<a href="#h3-3" id="h3-3" class="h">@@ -36,8 +36,10 @@ import me.rhunk.snapenhance.LogReader
+</a> import me.rhunk.snapenhance.RemoteSideContext
+ import me.rhunk.snapenhance.common.logger.LogChannel
+ import me.rhunk.snapenhance.common.logger.LogLevel
+<a href="#h3-3-3" id="h3-3-3" class="i">+import me.rhunk.snapenhance.ui.util.ActivityLauncherHelper
+</a> import me.rhunk.snapenhance.ui.util.pullrefresh.PullRefreshIndicator
+ import me.rhunk.snapenhance.ui.util.pullrefresh.rememberPullRefreshState
+<a href="#h3-3-6" id="h3-3-6" class="i">+import me.rhunk.snapenhance.ui.util.saveFile
+</a> 
+ class HomeSubSection(
+     private val context: RemoteSideContext
+<a href="#h3-4" id="h3-4" class="h">@@ -171,6 +173,54 @@ class HomeSubSection(
+</a>     }
+ 
+     @Composable
+<a href="#h3-4-3" id="h3-4-3" class="i">+    fun LogsTopBarButtons(activityLauncherHelper: ActivityLauncherHelper, navController: NavController, rowScope: RowScope) {
+</a><a href="#h3-4-4" id="h3-4-4" class="i">+        var showDropDown by remember { mutableStateOf(false) }
+</a><a href="#h3-4-5" id="h3-4-5" class="i">+
+</a><a href="#h3-4-6" id="h3-4-6" class="i">+        IconButton(onClick = {
+</a><a href="#h3-4-7" id="h3-4-7" class="i">+            showDropDown = true
+</a><a href="#h3-4-8" id="h3-4-8" class="i">+        }) {
+</a><a href="#h3-4-9" id="h3-4-9" class="i">+            Icon(Icons.Filled.MoreVert, contentDescription = null)
+</a><a href="#h3-4-10" id="h3-4-10" class="i">+        }
+</a><a href="#h3-4-11" id="h3-4-11" class="i">+
+</a><a href="#h3-4-12" id="h3-4-12" class="i">+        rowScope.apply {
+</a><a href="#h3-4-13" id="h3-4-13" class="i">+            DropdownMenu(
+</a><a href="#h3-4-14" id="h3-4-14" class="i">+                expanded = showDropDown,
+</a><a href="#h3-4-15" id="h3-4-15" class="i">+                onDismissRequest = { showDropDown = false },
+</a><a href="#h3-4-16" id="h3-4-16" class="i">+                modifier = Modifier.align(Alignment.CenterVertically)
+</a><a href="#h3-4-17" id="h3-4-17" class="i">+            ) {
+</a><a href="#h3-4-18" id="h3-4-18" class="i">+                DropdownMenuItem(onClick = {
+</a><a href="#h3-4-19" id="h3-4-19" class="i">+                    context.log.clearLogs()
+</a><a href="#h3-4-20" id="h3-4-20" class="i">+                    navController.navigate(HomeSection.LOGS_SECTION_ROUTE)
+</a><a href="#h3-4-21" id="h3-4-21" class="i">+                    showDropDown = false
+</a><a href="#h3-4-22" id="h3-4-22" class="i">+                }, text = {
+</a><a href="#h3-4-23" id="h3-4-23" class="i">+                    Text(
+</a><a href="#h3-4-24" id="h3-4-24" class="i">+                        text = context.translation[&quot;manager.sections.home.logs.clear_logs_button&quot;]
+</a><a href="#h3-4-25" id="h3-4-25" class="i">+                    )
+</a><a href="#h3-4-26" id="h3-4-26" class="i">+                })
+</a><a href="#h3-4-27" id="h3-4-27" class="i">+
+</a><a href="#h3-4-28" id="h3-4-28" class="i">+                DropdownMenuItem(onClick = {
+</a><a href="#h3-4-29" id="h3-4-29" class="i">+                    activityLauncherHelper.saveFile(&quot;snapenhance-logs-${System.currentTimeMillis()}.zip&quot;, &quot;application/zip&quot;) { uri -&gt;
+</a><a href="#h3-4-30" id="h3-4-30" class="i">+                        context.androidContext.contentResolver.openOutputStream(Uri.parse(uri))?.use {
+</a><a href="#h3-4-31" id="h3-4-31" class="i">+                            runCatching {
+</a><a href="#h3-4-32" id="h3-4-32" class="i">+                                context.log.exportLogsToZip(it)
+</a><a href="#h3-4-33" id="h3-4-33" class="i">+                                context.longToast(&quot;Saved logs to $uri&quot;)
+</a><a href="#h3-4-34" id="h3-4-34" class="i">+                            }.onFailure {
+</a><a href="#h3-4-35" id="h3-4-35" class="i">+                                context.longToast(&quot;Failed to save logs to $uri!&quot;)
+</a><a href="#h3-4-36" id="h3-4-36" class="i">+                                context.log.error(&quot;Failed to save logs to $uri!&quot;, it)
+</a><a href="#h3-4-37" id="h3-4-37" class="i">+                            }
+</a><a href="#h3-4-38" id="h3-4-38" class="i">+                        }
+</a><a href="#h3-4-39" id="h3-4-39" class="i">+                    }
+</a><a href="#h3-4-40" id="h3-4-40" class="i">+                    showDropDown = false
+</a><a href="#h3-4-41" id="h3-4-41" class="i">+                }, text = {
+</a><a href="#h3-4-42" id="h3-4-42" class="i">+                    Text(
+</a><a href="#h3-4-43" id="h3-4-43" class="i">+                        text = context.translation[&quot;manager.sections.home.logs.export_logs_button&quot;]
+</a><a href="#h3-4-44" id="h3-4-44" class="i">+                    )
+</a><a href="#h3-4-45" id="h3-4-45" class="i">+                })
+</a><a href="#h3-4-46" id="h3-4-46" class="i">+            }
+</a><a href="#h3-4-47" id="h3-4-47" class="i">+        }
+</a><a href="#h3-4-48" id="h3-4-48" class="i">+    }
+</a><a href="#h3-4-49" id="h3-4-49" class="i">+
+</a><a href="#h3-4-50" id="h3-4-50" class="i">+    @Composable
+</a>     fun LogsActionButtons() {
+         val coroutineScope = rememberCoroutineScope()
+         Column(
+<b>diff --git a/<a id="h4" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/home/SettingsSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/home/SettingsSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/home/SettingsSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/home/SettingsSection.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -21,6 +21,7 @@ import me.rhunk.snapenhance.common.Constants
+</a> import me.rhunk.snapenhance.common.action.EnumAction
+ import me.rhunk.snapenhance.common.bridge.types.BridgeFileType
+ import me.rhunk.snapenhance.ui.manager.Section
+<a href="#h4-0-3" id="h4-0-3" class="i">+import me.rhunk.snapenhance.ui.setup.Requirements
+</a> import me.rhunk.snapenhance.ui.util.ActivityLauncherHelper
+ import me.rhunk.snapenhance.ui.util.AlertDialogs
+ import me.rhunk.snapenhance.ui.util.saveFile
+<a href="#h4-1" id="h4-1" class="h">@@ -63,7 +64,7 @@ class SettingsSection(
+</a>         ShiftedRow(
+             modifier = Modifier
+                 .fillMaxWidth()
+<a href="#h4-1-3" id="h4-1-3" class="d">-                .height(65.dp)
+</a><a href="#h4-1-4" id="h4-1-4" class="i">+                .height(55.dp)
+</a>                 .clickable {
+                     takeAction()
+                 },
+<a href="#h4-2" id="h4-2" class="h">@@ -116,6 +117,12 @@ class SettingsSection(
+</a>                     launchActionIntent(enumAction)
+                 }
+             }
+<a href="#h4-2-3" id="h4-2-3" class="i">+            RowAction(title = &quot;Regenerate Mappings&quot;) {
+</a><a href="#h4-2-4" id="h4-2-4" class="i">+                context.checkForRequirements(Requirements.MAPPINGS)
+</a><a href="#h4-2-5" id="h4-2-5" class="i">+            }
+</a><a href="#h4-2-6" id="h4-2-6" class="i">+            RowAction(title = &quot;Change Language&quot;) {
+</a><a href="#h4-2-7" id="h4-2-7" class="i">+                context.checkForRequirements(Requirements.LANGUAGE)
+</a><a href="#h4-2-8" id="h4-2-8" class="i">+            }
+</a>             RowTitle(title = &quot;Message Logger&quot;)
+             ShiftedRow {
+                 Column(
+<a href="#h4-3" id="h4-3" class="h">@@ -227,6 +234,7 @@ class SettingsSection(
+</a>                     Text(text = &quot;Clear&quot;)
+                 }
+             }
+<a href="#h4-3-3" id="h4-3-3" class="i">+            Spacer(modifier = Modifier.height(50.dp))
+</a>         }
+     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h5" href="../file/app/src/main/res/drawable/ic_github.xml.html">app/src/main/res/drawable/ic_github.xml</a> b/<a href="../file/app/src/main/res/drawable/ic_github.xml.html">app/src/main/res/drawable/ic_github.xml</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -0,0 +1,11 @@
+</a><a href="#h5-0-0" id="h5-0-0" class="i">+&lt;vector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+</a><a href="#h5-0-1" id="h5-0-1" class="i">+    xmlns:tools=&quot;http://schemas.android.com/tools&quot;
+</a><a href="#h5-0-2" id="h5-0-2" class="i">+    android:width=&quot;24dp&quot;
+</a><a href="#h5-0-3" id="h5-0-3" class="i">+    android:height=&quot;24dp&quot;
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+    android:viewportWidth=&quot;24&quot;
+</a><a href="#h5-0-5" id="h5-0-5" class="i">+    android:viewportHeight=&quot;24&quot;&gt;
+</a><a href="#h5-0-6" id="h5-0-6" class="i">+  &lt;path
+</a><a href="#h5-0-7" id="h5-0-7" class="i">+      android:fillColor=&quot;#FF000000&quot;
+</a><a href="#h5-0-8" id="h5-0-8" class="i">+      android:pathData=&quot;M12,0c-6.626,0 -12,5.373 -12,12 0,5.302 3.438,9.8 8.207,11.387 0.599,0.111 0.793,-0.261 0.793,-0.577v-2.234c-3.338,0.726 -4.033,-1.416 -4.033,-1.416 -0.546,-1.387 -1.333,-1.756 -1.333,-1.756 -1.089,-0.745 0.083,-0.729 0.083,-0.729 1.205,0.084 1.839,1.237 1.839,1.237 1.07,1.834 2.807,1.304 3.492,0.997 0.107,-0.775 0.418,-1.305 0.762,-1.604 -2.665,-0.305 -5.467,-1.334 -5.467,-5.931 0,-1.311 0.469,-2.381 1.236,-3.221 -0.124,-0.303 -0.535,-1.524 0.117,-3.176 0,0 1.008,-0.322 3.301,1.23 0.957,-0.266 1.983,-0.399 3.003,-0.404 1.02,0.005 2.047,0.138 3.006,0.404 2.291,-1.552 3.297,-1.23 3.297,-1.23 0.653,1.653 0.242,2.874 0.118,3.176 0.77,0.84 1.235,1.911 1.235,3.221 0,4.609 -2.807,5.624 -5.479,5.921 0.43,0.372 0.823,1.102 0.823,2.222v3.293c0,0.319 0.192,0.694 0.801,0.576 4.765,-1.589 8.199,-6.086 8.199,-11.386 0,-6.627 -5.373,-12 -12,-12z&quot;
+</a><a href="#h5-0-9" id="h5-0-9" class="i">+      tools:ignore=&quot;VectorPath&quot; /&gt;
+</a><a href="#h5-0-10" id="h5-0-10" class="i">+&lt;/vector&gt;
+</a><b>diff --git a/<a id="h6" href="../file/app/src/main/res/drawable/ic_telegram.xml.html">app/src/main/res/drawable/ic_telegram.xml</a> b/<a href="../file/app/src/main/res/drawable/ic_telegram.xml.html">app/src/main/res/drawable/ic_telegram.xml</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -0,0 +1,4 @@
+</a><a href="#h6-0-0" id="h6-0-0" class="i">+&lt;vector android:height=&quot;24dp&quot; android:viewportHeight=&quot;32&quot;
+</a><a href="#h6-0-1" id="h6-0-1" class="i">+    android:viewportWidth=&quot;32&quot; android:width=&quot;24dp&quot; xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;&gt;
+</a><a href="#h6-0-2" id="h6-0-2" class="i">+    &lt;path android:fillColor=&quot;#FF000000&quot; android:pathData=&quot;m16,0.5c-8.563,0 -15.5,6.938 -15.5,15.5s6.938,15.5 15.5,15.5c8.563,0 15.5,-6.938 15.5,-15.5s-6.938,-15.5 -15.5,-15.5zM23.613,11.119 L21.069,23.107c-0.188,0.85 -0.694,1.056 -1.4,0.656l-3.875,-2.856 -1.869,1.8c-0.206,0.206 -0.381,0.381 -0.781,0.381l0.275,-3.944 7.181,-6.488c0.313,-0.275 -0.069,-0.431 -0.482,-0.156l-8.875,5.587 -3.825,-1.194c-0.831,-0.262 -0.85,-0.831 0.175,-1.231l14.944,-5.763c0.694,-0.25 1.3,0.169 1.075,1.219z&quot;/&gt;
+</a><a href="#h6-0-3" id="h6-0-3" class="i">+&lt;/vector&gt;
+</a><b>diff --git a/<a id="h7" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/action/EnumAction.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/action/EnumAction.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/action/EnumAction.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/action/EnumAction.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -7,10 +7,10 @@ enum class EnumAction(
+</a>     val exitOnFinish: Boolean = false,
+     val isCritical: Boolean = false,
+ ) {
+<a href="#h7-0-3" id="h7-0-3" class="d">-    CLEAN_CACHE(&quot;clean_snapchat_cache&quot;, exitOnFinish = true),
+</a>     EXPORT_CHAT_MESSAGES(&quot;export_chat_messages&quot;),
+     EXPORT_MEMORIES(&quot;export_memories&quot;),
+<a href="#h7-0-6" id="h7-0-6" class="d">-    BULK_MESSAGING_ACTION(&quot;bulk_messaging_action&quot;);
+</a><a href="#h7-0-7" id="h7-0-7" class="i">+    BULK_MESSAGING_ACTION(&quot;bulk_messaging_action&quot;),
+</a><a href="#h7-0-8" id="h7-0-8" class="i">+    CLEAN_CACHE(&quot;clean_snapchat_cache&quot;, exitOnFinish = true);
+</a> 
+     companion object {
+         const val ACTION_PARAMETER = &quot;se_action&quot;
+</pre>
+</div>
+</body>
+</html>

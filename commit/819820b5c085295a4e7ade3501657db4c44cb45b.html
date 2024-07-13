@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(tracker): auto purge, filters, export - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/819820b5c085295a4e7ade3501657db4c44cb45b.html">819820b5c085295a4e7ade3501657db4c44cb45b</a>
+<b>parent</b> <a href="../commit/dd8590d274d9496ef35b8dd1bdfd46561af53a23.html">dd8590d274d9496ef35b8dd1bdfd46561af53a23</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 24 May 2024 23:18:07 +0200
+
+feat(tracker): auto purge, filters, export
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></td><td> | </td><td class="num">10</td><td><span class="i">++++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/tracker/FriendTrackerManagerRoot.kt</a></td><td> | </td><td class="num">285</td><td><span class="i">+++++++++++++</span><span class="d">------------------------------------------------------------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/tracker/LogsTab.kt</a></td><td> | </td><td class="num">598</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt</a></td><td> | </td><td class="num">39</td><td><span class="i">+++++++++++++++++++++++++++++++++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">common/src/main/kotlin/me/rhunk/snapenhance/common/config/ConfigObjects.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/FriendTrackerConfig.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">+++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt</a></td><td> | </td><td class="num">25</td><td><span class="i">++++++</span><span class="d">-------------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h8">common/src/main/kotlin/me/rhunk/snapenhance/common/util/Purge.kt</a></td><td> | </td><td class="num">25</td><td><span class="i">+++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>9 files changed, 734 insertions(+), 265 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -28,6 +28,7 @@ import me.rhunk.snapenhance.common.bridge.wrapper.LocaleWrapper
+</a> import me.rhunk.snapenhance.common.bridge.wrapper.LoggerWrapper
+ import me.rhunk.snapenhance.common.bridge.wrapper.MappingsWrapper
+ import me.rhunk.snapenhance.common.config.ModConfig
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.common.util.getPurgeTime
+</a> import me.rhunk.snapenhance.e2ee.E2EEImplementation
+ import me.rhunk.snapenhance.scripting.RemoteScriptManager
+ import me.rhunk.snapenhance.storage.AppDatabase
+<a href="#h0-1" id="h0-1" class="h">@@ -44,7 +45,6 @@ import java.io.ByteArrayInputStream
+</a> import java.lang.ref.WeakReference
+ import java.security.cert.CertificateFactory
+ import java.security.cert.X509Certificate
+<a href="#h0-1-3" id="h0-1-3" class="d">-import kotlin.time.Duration.Companion.days
+</a> 
+ 
+ class RemoteSideContext(
+<a href="#h0-2" id="h0-2" class="h">@@ -117,9 +117,15 @@ class RemoteSideContext(
+</a>                     taskManager.init()
+                     config.root.messaging.messageLogger.takeIf {
+                         it.globalState == true
+<a href="#h0-2-3" id="h0-2-3" class="d">-                    }?.getAutoPurgeTime()?.let {
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+                    }?.autoPurge?.let { getPurgeTime(it.getNullable()) }?.let {
+</a>                         messageLogger.purgeAll(it)
+                     }
+<a href="#h0-2-7" id="h0-2-7" class="i">+
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+                    config.root.friendTracker.takeIf {
+</a><a href="#h0-2-9" id="h0-2-9" class="i">+                        it.globalState == true
+</a><a href="#h0-2-10" id="h0-2-10" class="i">+                    }?.autoPurge?.let { getPurgeTime(it.getNullable()) }?.let {
+</a><a href="#h0-2-11" id="h0-2-11" class="i">+                        messageLogger.purgeTrackerLogs(it)
+</a><a href="#h0-2-12" id="h0-2-12" class="i">+                    }
+</a>                 }
+             }
+         }.onFailure {
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/tracker/FriendTrackerManagerRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/tracker/FriendTrackerManagerRoot.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/tracker/FriendTrackerManagerRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/tracker/FriendTrackerManagerRoot.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -14,10 +14,14 @@ import androidx.compose.foundation.shape.CircleShape
+</a> import androidx.compose.foundation.shape.RoundedCornerShape
+ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.filled.Add
+<a href="#h1-0-3" id="h1-0-3" class="d">-import androidx.compose.material.icons.filled.Clear
+</a> import androidx.compose.material.icons.filled.DeleteOutline
+<a href="#h1-0-5" id="h1-0-5" class="i">+import androidx.compose.material.icons.filled.SaveAlt
+</a> import androidx.compose.material3.*
+<a href="#h1-0-7" id="h1-0-7" class="d">-import androidx.compose.runtime.*
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+import androidx.compose.runtime.Composable
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+import androidx.compose.runtime.getValue
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+import androidx.compose.runtime.mutableIntStateOf
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+import androidx.compose.runtime.rememberCoroutineScope
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+import androidx.compose.runtime.setValue
+</a> import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.draw.clip
+<a href="#h1-1" id="h1-1" class="h">@@ -27,25 +31,17 @@ import androidx.compose.ui.text.style.TextAlign
+</a> import androidx.compose.ui.text.style.TextOverflow
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+<a href="#h1-1-3" id="h1-1-3" class="d">-import androidx.compose.ui.window.PopupProperties
+</a> import androidx.navigation.NavBackStackEntry
+<a href="#h1-1-5" id="h1-1-5" class="d">-import kotlinx.coroutines.Dispatchers
+</a><a href="#h1-1-6" id="h1-1-6" class="d">-import kotlinx.coroutines.Job
+</a><a href="#h1-1-7" id="h1-1-7" class="d">-import kotlinx.coroutines.delay
+</a> import kotlinx.coroutines.launch
+<a href="#h1-1-9" id="h1-1-9" class="d">-import kotlinx.coroutines.withContext
+</a><a href="#h1-1-10" id="h1-1-10" class="d">-import me.rhunk.snapenhance.common.bridge.wrapper.TrackerLog
+</a><a href="#h1-1-11" id="h1-1-11" class="d">-import me.rhunk.snapenhance.common.data.MessagingFriendInfo
+</a><a href="#h1-1-12" id="h1-1-12" class="d">-import me.rhunk.snapenhance.common.data.TrackerEventType
+</a> import me.rhunk.snapenhance.common.ui.rememberAsyncMutableState
+ import me.rhunk.snapenhance.common.ui.rememberAsyncMutableStateList
+ import me.rhunk.snapenhance.common.ui.rememberAsyncUpdateDispatcher
+ import me.rhunk.snapenhance.common.util.snap.BitmojiSelfie
+ import me.rhunk.snapenhance.storage.*
+ import me.rhunk.snapenhance.ui.manager.Routes
+<a href="#h1-1-19" id="h1-1-19" class="i">+import me.rhunk.snapenhance.ui.util.ActivityLauncherHelper
+</a> import me.rhunk.snapenhance.ui.util.coil.BitmojiImage
+ import me.rhunk.snapenhance.ui.util.pagerTabIndicatorOffset
+<a href="#h1-1-22" id="h1-1-22" class="d">-import java.text.DateFormat
+</a> 
+ 
+ @OptIn(ExperimentalFoundationApi::class)
+<a href="#h1-2" id="h1-2" class="h">@@ -56,242 +52,48 @@ class FriendTrackerManagerRoot : Routes.Route() {
+</a> 
+     private val titles = listOf(&quot;Logs&quot;, &quot;Rules&quot;)
+     private var currentPage by mutableIntStateOf(0)
+<a href="#h1-2-3" id="h1-2-3" class="i">+    private lateinit var logDeleteAction : () -&gt; Unit
+</a><a href="#h1-2-4" id="h1-2-4" class="i">+    private lateinit var exportAction : () -&gt; Unit
+</a> 
+<a href="#h1-2-6" id="h1-2-6" class="d">-    override val floatingActionButton: @Composable () -&gt; Unit = {
+</a><a href="#h1-2-7" id="h1-2-7" class="d">-        if (currentPage == 1) {
+</a><a href="#h1-2-8" id="h1-2-8" class="d">-            ExtendedFloatingActionButton(
+</a><a href="#h1-2-9" id="h1-2-9" class="d">-                icon = { Icon(Icons.Default.Add, contentDescription = &quot;Add Rule&quot;) },
+</a><a href="#h1-2-10" id="h1-2-10" class="d">-                expanded = true,
+</a><a href="#h1-2-11" id="h1-2-11" class="d">-                text = { Text(&quot;Add Rule&quot;) },
+</a><a href="#h1-2-12" id="h1-2-12" class="d">-                onClick = { routes.editRule.navigate() }
+</a><a href="#h1-2-13" id="h1-2-13" class="d">-            )
+</a><a href="#h1-2-14" id="h1-2-14" class="d">-        }
+</a><a href="#h1-2-15" id="h1-2-15" class="d">-    }
+</a><a href="#h1-2-16" id="h1-2-16" class="d">-
+</a><a href="#h1-2-17" id="h1-2-17" class="d">-    @OptIn(ExperimentalMaterial3Api::class)
+</a><a href="#h1-2-18" id="h1-2-18" class="d">-    @Composable
+</a><a href="#h1-2-19" id="h1-2-19" class="d">-    private fun LogsTab() {
+</a><a href="#h1-2-20" id="h1-2-20" class="d">-        val coroutineScope = rememberCoroutineScope()
+</a><a href="#h1-2-21" id="h1-2-21" class="d">-
+</a><a href="#h1-2-22" id="h1-2-22" class="d">-        val logs = remember { mutableStateListOf&lt;TrackerLog&gt;() }
+</a><a href="#h1-2-23" id="h1-2-23" class="d">-        var lastTimestamp by remember { mutableLongStateOf(Long.MAX_VALUE) }
+</a><a href="#h1-2-24" id="h1-2-24" class="d">-        var filterType by remember { mutableStateOf(FilterType.USERNAME) }
+</a><a href="#h1-2-25" id="h1-2-25" class="d">-
+</a><a href="#h1-2-26" id="h1-2-26" class="d">-        var filter by remember { mutableStateOf(&quot;&quot;) }
+</a><a href="#h1-2-27" id="h1-2-27" class="d">-        var searchTimeoutJob by remember { mutableStateOf&lt;Job?&gt;(null) }
+</a><a href="#h1-2-28" id="h1-2-28" class="d">-
+</a><a href="#h1-2-29" id="h1-2-29" class="d">-        suspend fun loadNewLogs() {
+</a><a href="#h1-2-30" id="h1-2-30" class="d">-            withContext(Dispatchers.IO) {
+</a><a href="#h1-2-31" id="h1-2-31" class="d">-                logs.addAll(context.messageLogger.getLogs(lastTimestamp, filter = {
+</a><a href="#h1-2-32" id="h1-2-32" class="d">-                    when (filterType) {
+</a><a href="#h1-2-33" id="h1-2-33" class="d">-                        FilterType.USERNAME -&gt; it.username.contains(filter, ignoreCase = true)
+</a><a href="#h1-2-34" id="h1-2-34" class="d">-                        FilterType.CONVERSATION -&gt; it.conversationTitle?.contains(filter, ignoreCase = true) == true || (it.username == filter &amp;&amp; !it.isGroup)
+</a><a href="#h1-2-35" id="h1-2-35" class="d">-                        FilterType.EVENT -&gt; it.eventType.contains(filter, ignoreCase = true)
+</a><a href="#h1-2-36" id="h1-2-36" class="d">-                    }
+</a><a href="#h1-2-37" id="h1-2-37" class="d">-                }).apply {
+</a><a href="#h1-2-38" id="h1-2-38" class="d">-                    lastTimestamp = minOfOrNull { it.timestamp } ?: lastTimestamp
+</a><a href="#h1-2-39" id="h1-2-39" class="d">-                })
+</a><a href="#h1-2-40" id="h1-2-40" class="d">-            }
+</a><a href="#h1-2-41" id="h1-2-41" class="d">-        }
+</a><a href="#h1-2-42" id="h1-2-42" class="i">+    private lateinit var activityLauncherHelper: ActivityLauncherHelper
+</a> 
+<a href="#h1-2-44" id="h1-2-44" class="d">-        suspend fun resetAndLoadLogs() {
+</a><a href="#h1-2-45" id="h1-2-45" class="d">-            logs.clear()
+</a><a href="#h1-2-46" id="h1-2-46" class="d">-            lastTimestamp = Long.MAX_VALUE
+</a><a href="#h1-2-47" id="h1-2-47" class="d">-            loadNewLogs()
+</a><a href="#h1-2-48" id="h1-2-48" class="d">-        }
+</a><a href="#h1-2-49" id="h1-2-49" class="d">-
+</a><a href="#h1-2-50" id="h1-2-50" class="d">-        Column(
+</a><a href="#h1-2-51" id="h1-2-51" class="d">-            modifier = Modifier.fillMaxSize()
+</a><a href="#h1-2-52" id="h1-2-52" class="d">-        ) {
+</a><a href="#h1-2-53" id="h1-2-53" class="d">-            Row(
+</a><a href="#h1-2-54" id="h1-2-54" class="d">-                modifier = Modifier.fillMaxWidth(),
+</a><a href="#h1-2-55" id="h1-2-55" class="d">-                verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h1-2-56" id="h1-2-56" class="d">-            ) {
+</a><a href="#h1-2-57" id="h1-2-57" class="d">-                var showAutoComplete by remember { mutableStateOf(false) }
+</a><a href="#h1-2-58" id="h1-2-58" class="d">-                var dropDownExpanded by remember { mutableStateOf(false) }
+</a><a href="#h1-2-59" id="h1-2-59" class="i">+    override val init: () -&gt; Unit = {
+</a><a href="#h1-2-60" id="h1-2-60" class="i">+        activityLauncherHelper = ActivityLauncherHelper(context.activity!!)
+</a><a href="#h1-2-61" id="h1-2-61" class="i">+    }
+</a> 
+<a href="#h1-2-63" id="h1-2-63" class="d">-                ExposedDropdownMenuBox(
+</a><a href="#h1-2-64" id="h1-2-64" class="d">-                    expanded = showAutoComplete,
+</a><a href="#h1-2-65" id="h1-2-65" class="d">-                    onExpandedChange = { showAutoComplete = it },
+</a><a href="#h1-2-66" id="h1-2-66" class="i">+    override val floatingActionButton: @Composable () -&gt; Unit = {
+</a><a href="#h1-2-67" id="h1-2-67" class="i">+        when (currentPage) {
+</a><a href="#h1-2-68" id="h1-2-68" class="i">+            0 -&gt; {
+</a><a href="#h1-2-69" id="h1-2-69" class="i">+                Column(
+</a><a href="#h1-2-70" id="h1-2-70" class="i">+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+</a>                 ) {
+<a href="#h1-2-72" id="h1-2-72" class="d">-                    TextField(
+</a><a href="#h1-2-73" id="h1-2-73" class="d">-                        value = filter,
+</a><a href="#h1-2-74" id="h1-2-74" class="d">-                        modifier = Modifier
+</a><a href="#h1-2-75" id="h1-2-75" class="d">-                            .fillMaxWidth()
+</a><a href="#h1-2-76" id="h1-2-76" class="d">-                            .menuAnchor()
+</a><a href="#h1-2-77" id="h1-2-77" class="d">-                            .padding(8.dp),
+</a><a href="#h1-2-78" id="h1-2-78" class="d">-                        onValueChange = {
+</a><a href="#h1-2-79" id="h1-2-79" class="d">-                            filter = it
+</a><a href="#h1-2-80" id="h1-2-80" class="d">-                            coroutineScope.launch {
+</a><a href="#h1-2-81" id="h1-2-81" class="d">-                                searchTimeoutJob?.cancel()
+</a><a href="#h1-2-82" id="h1-2-82" class="d">-                                searchTimeoutJob = coroutineScope.launch {
+</a><a href="#h1-2-83" id="h1-2-83" class="d">-                                    delay(200)
+</a><a href="#h1-2-84" id="h1-2-84" class="d">-                                    showAutoComplete = true
+</a><a href="#h1-2-85" id="h1-2-85" class="d">-                                    resetAndLoadLogs()
+</a><a href="#h1-2-86" id="h1-2-86" class="d">-                                }
+</a><a href="#h1-2-87" id="h1-2-87" class="d">-                            }
+</a><a href="#h1-2-88" id="h1-2-88" class="d">-                        },
+</a><a href="#h1-2-89" id="h1-2-89" class="d">-                        placeholder = { Text(&quot;Search&quot;) },
+</a><a href="#h1-2-90" id="h1-2-90" class="d">-                        colors = TextFieldDefaults.colors(
+</a><a href="#h1-2-91" id="h1-2-91" class="d">-                            focusedContainerColor = Color.Transparent,
+</a><a href="#h1-2-92" id="h1-2-92" class="d">-                            unfocusedContainerColor = Color.Transparent
+</a><a href="#h1-2-93" id="h1-2-93" class="d">-                        ),
+</a><a href="#h1-2-94" id="h1-2-94" class="d">-                        maxLines = 1,
+</a><a href="#h1-2-95" id="h1-2-95" class="d">-                        leadingIcon = {
+</a><a href="#h1-2-96" id="h1-2-96" class="d">-                            ExposedDropdownMenuBox(
+</a><a href="#h1-2-97" id="h1-2-97" class="d">-                                expanded = dropDownExpanded,
+</a><a href="#h1-2-98" id="h1-2-98" class="d">-                                onExpandedChange = { dropDownExpanded = it },
+</a><a href="#h1-2-99" id="h1-2-99" class="d">-                            ) {
+</a><a href="#h1-2-100" id="h1-2-100" class="d">-                                ElevatedCard(
+</a><a href="#h1-2-101" id="h1-2-101" class="d">-                                    modifier = Modifier
+</a><a href="#h1-2-102" id="h1-2-102" class="d">-                                        .menuAnchor()
+</a><a href="#h1-2-103" id="h1-2-103" class="d">-                                        .padding(2.dp)
+</a><a href="#h1-2-104" id="h1-2-104" class="d">-                                ) {
+</a><a href="#h1-2-105" id="h1-2-105" class="d">-                                    Text(filterType.name, modifier = Modifier.padding(8.dp))
+</a><a href="#h1-2-106" id="h1-2-106" class="d">-                                }
+</a><a href="#h1-2-107" id="h1-2-107" class="d">-                                DropdownMenu(expanded = dropDownExpanded, onDismissRequest = {
+</a><a href="#h1-2-108" id="h1-2-108" class="d">-                                    dropDownExpanded = false
+</a><a href="#h1-2-109" id="h1-2-109" class="d">-                                }) {
+</a><a href="#h1-2-110" id="h1-2-110" class="d">-                                    FilterType.entries.forEach { type -&gt;
+</a><a href="#h1-2-111" id="h1-2-111" class="d">-                                        DropdownMenuItem(onClick = {
+</a><a href="#h1-2-112" id="h1-2-112" class="d">-                                            filter = &quot;&quot;
+</a><a href="#h1-2-113" id="h1-2-113" class="d">-                                            filterType = type
+</a><a href="#h1-2-114" id="h1-2-114" class="d">-                                            dropDownExpanded = false
+</a><a href="#h1-2-115" id="h1-2-115" class="d">-                                            coroutineScope.launch {
+</a><a href="#h1-2-116" id="h1-2-116" class="d">-                                                resetAndLoadLogs()
+</a><a href="#h1-2-117" id="h1-2-117" class="d">-                                            }
+</a><a href="#h1-2-118" id="h1-2-118" class="d">-                                        }, text = {
+</a><a href="#h1-2-119" id="h1-2-119" class="d">-                                            Text(type.name)
+</a><a href="#h1-2-120" id="h1-2-120" class="d">-                                        })
+</a><a href="#h1-2-121" id="h1-2-121" class="d">-                                    }
+</a><a href="#h1-2-122" id="h1-2-122" class="d">-                                }
+</a><a href="#h1-2-123" id="h1-2-123" class="d">-                            }
+</a><a href="#h1-2-124" id="h1-2-124" class="d">-                        },
+</a><a href="#h1-2-125" id="h1-2-125" class="d">-                        trailingIcon = {
+</a><a href="#h1-2-126" id="h1-2-126" class="d">-                            if (filter != &quot;&quot;) {
+</a><a href="#h1-2-127" id="h1-2-127" class="d">-                                IconButton(onClick = {
+</a><a href="#h1-2-128" id="h1-2-128" class="d">-                                    filter = &quot;&quot;
+</a><a href="#h1-2-129" id="h1-2-129" class="d">-                                    coroutineScope.launch {
+</a><a href="#h1-2-130" id="h1-2-130" class="d">-                                        resetAndLoadLogs()
+</a><a href="#h1-2-131" id="h1-2-131" class="d">-                                    }
+</a><a href="#h1-2-132" id="h1-2-132" class="d">-                                }) {
+</a><a href="#h1-2-133" id="h1-2-133" class="d">-                                    Icon(Icons.Default.Clear, contentDescription = &quot;Clear&quot;)
+</a><a href="#h1-2-134" id="h1-2-134" class="d">-                                }
+</a><a href="#h1-2-135" id="h1-2-135" class="d">-                            }
+</a><a href="#h1-2-136" id="h1-2-136" class="d">-
+</a><a href="#h1-2-137" id="h1-2-137" class="d">-                            DropdownMenu(
+</a><a href="#h1-2-138" id="h1-2-138" class="d">-                                expanded = showAutoComplete,
+</a><a href="#h1-2-139" id="h1-2-139" class="d">-                                onDismissRequest = {
+</a><a href="#h1-2-140" id="h1-2-140" class="d">-                                    showAutoComplete = false
+</a><a href="#h1-2-141" id="h1-2-141" class="d">-                                },
+</a><a href="#h1-2-142" id="h1-2-142" class="d">-                                properties = PopupProperties(focusable = false),
+</a><a href="#h1-2-143" id="h1-2-143" class="d">-                            ) {
+</a><a href="#h1-2-144" id="h1-2-144" class="d">-                                val suggestedEntries = remember(filter) {
+</a><a href="#h1-2-145" id="h1-2-145" class="d">-                                    mutableStateListOf&lt;String&gt;()
+</a><a href="#h1-2-146" id="h1-2-146" class="d">-                                }
+</a><a href="#h1-2-147" id="h1-2-147" class="d">-
+</a><a href="#h1-2-148" id="h1-2-148" class="d">-                                LaunchedEffect(filter) {
+</a><a href="#h1-2-149" id="h1-2-149" class="d">-                                    launch(Dispatchers.IO) {
+</a><a href="#h1-2-150" id="h1-2-150" class="d">-                                        suggestedEntries.addAll(when (filterType) {
+</a><a href="#h1-2-151" id="h1-2-151" class="d">-                                            FilterType.USERNAME -&gt; context.messageLogger.findUsername(filter)
+</a><a href="#h1-2-152" id="h1-2-152" class="d">-                                            FilterType.CONVERSATION -&gt; context.messageLogger.findConversation(filter) + context.messageLogger.findUsername(filter)
+</a><a href="#h1-2-153" id="h1-2-153" class="d">-                                            FilterType.EVENT -&gt; TrackerEventType.entries.filter { it.name.contains(filter, ignoreCase = true) }.map { it.key }
+</a><a href="#h1-2-154" id="h1-2-154" class="d">-                                        }.take(5))
+</a><a href="#h1-2-155" id="h1-2-155" class="d">-                                    }
+</a><a href="#h1-2-156" id="h1-2-156" class="d">-                                }
+</a><a href="#h1-2-157" id="h1-2-157" class="d">-
+</a><a href="#h1-2-158" id="h1-2-158" class="d">-                                suggestedEntries.forEach { entry -&gt;
+</a><a href="#h1-2-159" id="h1-2-159" class="d">-                                    DropdownMenuItem(onClick = {
+</a><a href="#h1-2-160" id="h1-2-160" class="d">-                                        filter = entry
+</a><a href="#h1-2-161" id="h1-2-161" class="d">-                                        coroutineScope.launch {
+</a><a href="#h1-2-162" id="h1-2-162" class="d">-                                            resetAndLoadLogs()
+</a><a href="#h1-2-163" id="h1-2-163" class="d">-                                        }
+</a><a href="#h1-2-164" id="h1-2-164" class="d">-                                        showAutoComplete = false
+</a><a href="#h1-2-165" id="h1-2-165" class="d">-                                    }, text = {
+</a><a href="#h1-2-166" id="h1-2-166" class="d">-                                        Text(entry)
+</a><a href="#h1-2-167" id="h1-2-167" class="d">-                                    })
+</a><a href="#h1-2-168" id="h1-2-168" class="d">-                                }
+</a><a href="#h1-2-169" id="h1-2-169" class="d">-                            }
+</a><a href="#h1-2-170" id="h1-2-170" class="d">-                        },
+</a><a href="#h1-2-171" id="h1-2-171" class="i">+                    ExtendedFloatingActionButton(
+</a><a href="#h1-2-172" id="h1-2-172" class="i">+                        icon = { Icon(Icons.Default.SaveAlt, contentDescription = &quot;Export&quot;) },
+</a><a href="#h1-2-173" id="h1-2-173" class="i">+                        expanded = true,
+</a><a href="#h1-2-174" id="h1-2-174" class="i">+                        text = { Text(&quot;Export&quot;) },
+</a><a href="#h1-2-175" id="h1-2-175" class="i">+                        onClick = {
+</a><a href="#h1-2-176" id="h1-2-176" class="i">+                            context.coroutineScope.launch { exportAction() }
+</a><a href="#h1-2-177" id="h1-2-177" class="i">+                        }
+</a>                     )
+<a href="#h1-2-179" id="h1-2-179" class="d">-                }
+</a><a href="#h1-2-180" id="h1-2-180" class="d">-            }
+</a><a href="#h1-2-181" id="h1-2-181" class="d">-
+</a><a href="#h1-2-182" id="h1-2-182" class="d">-            LazyColumn(
+</a><a href="#h1-2-183" id="h1-2-183" class="d">-                modifier = Modifier.weight(1f)
+</a><a href="#h1-2-184" id="h1-2-184" class="d">-            ) {
+</a><a href="#h1-2-185" id="h1-2-185" class="d">-                item {
+</a><a href="#h1-2-186" id="h1-2-186" class="d">-                    if (logs.isEmpty()) {
+</a><a href="#h1-2-187" id="h1-2-187" class="d">-                        Text(&quot;No logs found&quot;, modifier = Modifier
+</a><a href="#h1-2-188" id="h1-2-188" class="d">-                            .padding(16.dp)
+</a><a href="#h1-2-189" id="h1-2-189" class="d">-                            .fillMaxWidth(), textAlign = TextAlign.Center, fontWeight = FontWeight.Light)
+</a><a href="#h1-2-190" id="h1-2-190" class="d">-                    }
+</a><a href="#h1-2-191" id="h1-2-191" class="d">-                }
+</a><a href="#h1-2-192" id="h1-2-192" class="d">-                items(logs, key = { it.userId + it.id }) { log -&gt;
+</a><a href="#h1-2-193" id="h1-2-193" class="d">-                    ElevatedCard(
+</a><a href="#h1-2-194" id="h1-2-194" class="d">-                        modifier = Modifier
+</a><a href="#h1-2-195" id="h1-2-195" class="d">-                            .fillMaxWidth()
+</a><a href="#h1-2-196" id="h1-2-196" class="d">-                            .padding(5.dp)
+</a><a href="#h1-2-197" id="h1-2-197" class="d">-                    ) {
+</a><a href="#h1-2-198" id="h1-2-198" class="d">-                        Row(
+</a><a href="#h1-2-199" id="h1-2-199" class="d">-                            modifier = Modifier
+</a><a href="#h1-2-200" id="h1-2-200" class="d">-                                .fillMaxWidth()
+</a><a href="#h1-2-201" id="h1-2-201" class="d">-                                .padding(4.dp),
+</a><a href="#h1-2-202" id="h1-2-202" class="d">-                            verticalAlignment = Alignment.CenterVertically
+</a><a href="#h1-2-203" id="h1-2-203" class="d">-                        ) {
+</a><a href="#h1-2-204" id="h1-2-204" class="d">-                            var databaseFriend by remember { mutableStateOf&lt;MessagingFriendInfo?&gt;(null) }
+</a><a href="#h1-2-205" id="h1-2-205" class="d">-
+</a><a href="#h1-2-206" id="h1-2-206" class="d">-                            LaunchedEffect(Unit) {
+</a><a href="#h1-2-207" id="h1-2-207" class="d">-                                launch(Dispatchers.IO) {
+</a><a href="#h1-2-208" id="h1-2-208" class="d">-                                    databaseFriend = context.database.getFriendInfo(log.userId)
+</a><a href="#h1-2-209" id="h1-2-209" class="d">-                                }
+</a><a href="#h1-2-210" id="h1-2-210" class="d">-                            }
+</a><a href="#h1-2-211" id="h1-2-211" class="d">-                            BitmojiImage(
+</a><a href="#h1-2-212" id="h1-2-212" class="d">-                                modifier = Modifier.padding(10.dp),
+</a><a href="#h1-2-213" id="h1-2-213" class="d">-                                size = 70,
+</a><a href="#h1-2-214" id="h1-2-214" class="d">-                                context = context,
+</a><a href="#h1-2-215" id="h1-2-215" class="d">-                                url = databaseFriend?.takeIf { it.bitmojiId != null }?.let {
+</a><a href="#h1-2-216" id="h1-2-216" class="d">-                                    BitmojiSelfie.getBitmojiSelfie(it.selfieId, it.bitmojiId, BitmojiSelfie.BitmojiSelfieType.NEW_THREE_D)
+</a><a href="#h1-2-217" id="h1-2-217" class="d">-                                },
+</a><a href="#h1-2-218" id="h1-2-218" class="d">-                            )
+</a><a href="#h1-2-219" id="h1-2-219" class="d">-
+</a><a href="#h1-2-220" id="h1-2-220" class="d">-                            Column(
+</a><a href="#h1-2-221" id="h1-2-221" class="d">-                                modifier = Modifier
+</a><a href="#h1-2-222" id="h1-2-222" class="d">-                                    .weight(1f),
+</a><a href="#h1-2-223" id="h1-2-223" class="d">-                            ) {
+</a><a href="#h1-2-224" id="h1-2-224" class="d">-                                Text(databaseFriend?.displayName?.let {
+</a><a href="#h1-2-225" id="h1-2-225" class="d">-                                    &quot;$it (${log.username})&quot;
+</a><a href="#h1-2-226" id="h1-2-226" class="d">-                                } ?: log.username, lineHeight = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+</a><a href="#h1-2-227" id="h1-2-227" class="d">-                                Text(&quot;${log.eventType} in ${log.conversationTitle}&quot;, fontSize = 15.sp, fontWeight = FontWeight.Light, lineHeight = 20.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+</a><a href="#h1-2-228" id="h1-2-228" class="d">-                                Text(
+</a><a href="#h1-2-229" id="h1-2-229" class="d">-                                    DateFormat.getDateTimeInstance().format(log.timestamp),
+</a><a href="#h1-2-230" id="h1-2-230" class="d">-                                    fontSize = 10.sp,
+</a><a href="#h1-2-231" id="h1-2-231" class="d">-                                    fontWeight = FontWeight.Light,
+</a><a href="#h1-2-232" id="h1-2-232" class="d">-                                    lineHeight = 15.sp,
+</a><a href="#h1-2-233" id="h1-2-233" class="d">-                                )
+</a><a href="#h1-2-234" id="h1-2-234" class="d">-                            }
+</a><a href="#h1-2-235" id="h1-2-235" class="d">-
+</a><a href="#h1-2-236" id="h1-2-236" class="d">-                            OutlinedIconButton(
+</a><a href="#h1-2-237" id="h1-2-237" class="d">-                                onClick = {
+</a><a href="#h1-2-238" id="h1-2-238" class="d">-                                    context.messageLogger.deleteTrackerLog(log.id)
+</a><a href="#h1-2-239" id="h1-2-239" class="d">-                                    logs.remove(log)
+</a><a href="#h1-2-240" id="h1-2-240" class="d">-                                }
+</a><a href="#h1-2-241" id="h1-2-241" class="d">-                            ) {
+</a><a href="#h1-2-242" id="h1-2-242" class="d">-                                Icon(Icons.Default.DeleteOutline, contentDescription = &quot;Delete&quot;)
+</a><a href="#h1-2-243" id="h1-2-243" class="d">-                            }
+</a><a href="#h1-2-244" id="h1-2-244" class="i">+                    ExtendedFloatingActionButton(
+</a><a href="#h1-2-245" id="h1-2-245" class="i">+                        icon = { Icon(Icons.Default.DeleteOutline, contentDescription = &quot;Delete&quot;) },
+</a><a href="#h1-2-246" id="h1-2-246" class="i">+                        expanded = true,
+</a><a href="#h1-2-247" id="h1-2-247" class="i">+                        text = { Text(&quot;Delete&quot;) },
+</a><a href="#h1-2-248" id="h1-2-248" class="i">+                        onClick = {
+</a><a href="#h1-2-249" id="h1-2-249" class="i">+                            context.coroutineScope.launch { logDeleteAction() }
+</a>                         }
+<a href="#h1-2-251" id="h1-2-251" class="d">-                    }
+</a><a href="#h1-2-252" id="h1-2-252" class="d">-                }
+</a><a href="#h1-2-253" id="h1-2-253" class="d">-                item {
+</a><a href="#h1-2-254" id="h1-2-254" class="d">-                    Spacer(modifier = Modifier.height(16.dp))
+</a><a href="#h1-2-255" id="h1-2-255" class="d">-
+</a><a href="#h1-2-256" id="h1-2-256" class="d">-                    LaunchedEffect(lastTimestamp) {
+</a><a href="#h1-2-257" id="h1-2-257" class="d">-                        loadNewLogs()
+</a><a href="#h1-2-258" id="h1-2-258" class="d">-                    }
+</a><a href="#h1-2-259" id="h1-2-259" class="i">+                    )
+</a>                 }
+             }
+<a href="#h1-2-262" id="h1-2-262" class="i">+            1 -&gt; {
+</a><a href="#h1-2-263" id="h1-2-263" class="i">+                ExtendedFloatingActionButton(
+</a><a href="#h1-2-264" id="h1-2-264" class="i">+                    icon = { Icon(Icons.Default.Add, contentDescription = &quot;Add Rule&quot;) },
+</a><a href="#h1-2-265" id="h1-2-265" class="i">+                    expanded = true,
+</a><a href="#h1-2-266" id="h1-2-266" class="i">+                    text = { Text(&quot;Add Rule&quot;) },
+</a><a href="#h1-2-267" id="h1-2-267" class="i">+                    onClick = { routes.editRule.navigate() }
+</a><a href="#h1-2-268" id="h1-2-268" class="i">+                )
+</a><a href="#h1-2-269" id="h1-2-269" class="i">+            }
+</a>         }
+<a href="#h1-2-271" id="h1-2-271" class="d">-
+</a>     }
+ 
+     @Composable
+<a href="#h1-3" id="h1-3" class="h">@@ -461,7 +263,12 @@ class FriendTrackerManagerRoot : Routes.Route() {
+</a>                 state = pagerState
+             ) { page -&gt;
+                 when (page) {
+<a href="#h1-3-3" id="h1-3-3" class="d">-                    0 -&gt; LogsTab()
+</a><a href="#h1-3-4" id="h1-3-4" class="i">+                    0 -&gt; LogsTab(
+</a><a href="#h1-3-5" id="h1-3-5" class="i">+                        context = context,
+</a><a href="#h1-3-6" id="h1-3-6" class="i">+                        activityLauncherHelper = activityLauncherHelper,
+</a><a href="#h1-3-7" id="h1-3-7" class="i">+                        deleteAction = { logDeleteAction = it },
+</a><a href="#h1-3-8" id="h1-3-8" class="i">+                        exportAction = { exportAction = it }
+</a><a href="#h1-3-9" id="h1-3-9" class="i">+                    )
+</a>                     1 -&gt; ConfigRulesTab()
+                 }
+             }
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/tracker/LogsTab.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/tracker/LogsTab.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/tracker/LogsTab.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/tracker/LogsTab.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -0,0 +1,597 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="i">+package me.rhunk.snapenhance.ui.manager.pages.tracker
+</a><a href="#h2-0-1" id="h2-0-1" class="i">+
+</a><a href="#h2-0-2" id="h2-0-2" class="i">+import android.net.Uri
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+import androidx.compose.foundation.layout.*
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import androidx.compose.foundation.lazy.LazyColumn
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+import androidx.compose.foundation.lazy.items
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+import androidx.compose.material.icons.Icons
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+import androidx.compose.material.icons.filled.Clear
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+import androidx.compose.material.icons.filled.DeleteOutline
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+import androidx.compose.material.icons.filled.FilterList
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+import androidx.compose.material3.*
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+import androidx.compose.runtime.*
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+import androidx.compose.ui.Alignment
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+import androidx.compose.ui.Modifier
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+import androidx.compose.ui.graphics.Color
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+import androidx.compose.ui.text.font.FontWeight
+</a><a href="#h2-0-16" id="h2-0-16" class="i">+import androidx.compose.ui.text.style.TextAlign
+</a><a href="#h2-0-17" id="h2-0-17" class="i">+import androidx.compose.ui.text.style.TextOverflow
+</a><a href="#h2-0-18" id="h2-0-18" class="i">+import androidx.compose.ui.unit.dp
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+import androidx.compose.ui.unit.sp
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+import androidx.compose.ui.window.PopupProperties
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+import com.google.gson.stream.JsonWriter
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+import kotlinx.coroutines.Dispatchers
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+import kotlinx.coroutines.Job
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+import kotlinx.coroutines.delay
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+import kotlinx.coroutines.launch
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+import kotlinx.coroutines.withContext
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+import me.rhunk.snapenhance.RemoteSideContext
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+import me.rhunk.snapenhance.common.bridge.wrapper.TrackerLog
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+import me.rhunk.snapenhance.common.data.MessagingFriendInfo
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+import me.rhunk.snapenhance.common.data.TrackerEventType
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+import me.rhunk.snapenhance.common.util.snap.BitmojiSelfie
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+import me.rhunk.snapenhance.storage.getFriendInfo
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+import me.rhunk.snapenhance.ui.util.ActivityLauncherHelper
+</a><a href="#h2-0-34" id="h2-0-34" class="i">+import me.rhunk.snapenhance.ui.util.coil.BitmojiImage
+</a><a href="#h2-0-35" id="h2-0-35" class="i">+import me.rhunk.snapenhance.ui.util.saveFile
+</a><a href="#h2-0-36" id="h2-0-36" class="i">+import java.text.DateFormat
+</a><a href="#h2-0-37" id="h2-0-37" class="i">+
+</a><a href="#h2-0-38" id="h2-0-38" class="i">+
+</a><a href="#h2-0-39" id="h2-0-39" class="i">+@OptIn(ExperimentalMaterial3Api::class)
+</a><a href="#h2-0-40" id="h2-0-40" class="i">+@Composable
+</a><a href="#h2-0-41" id="h2-0-41" class="i">+fun LogsTab(
+</a><a href="#h2-0-42" id="h2-0-42" class="i">+    context: RemoteSideContext,
+</a><a href="#h2-0-43" id="h2-0-43" class="i">+    activityLauncherHelper: ActivityLauncherHelper,
+</a><a href="#h2-0-44" id="h2-0-44" class="i">+    deleteAction: (() -&gt; Unit) -&gt; Unit,
+</a><a href="#h2-0-45" id="h2-0-45" class="i">+    exportAction: (() -&gt; Unit) -&gt; Unit,
+</a><a href="#h2-0-46" id="h2-0-46" class="i">+) {
+</a><a href="#h2-0-47" id="h2-0-47" class="i">+    val coroutineScope = rememberCoroutineScope()
+</a><a href="#h2-0-48" id="h2-0-48" class="i">+
+</a><a href="#h2-0-49" id="h2-0-49" class="i">+    val logs = remember { mutableStateListOf&lt;TrackerLog&gt;() }
+</a><a href="#h2-0-50" id="h2-0-50" class="i">+    var isLoading by remember { mutableStateOf(false) }
+</a><a href="#h2-0-51" id="h2-0-51" class="i">+    var pageIndex by remember { mutableIntStateOf(0) }
+</a><a href="#h2-0-52" id="h2-0-52" class="i">+    var filterType by remember { mutableStateOf(FriendTrackerManagerRoot.FilterType.USERNAME) }
+</a><a href="#h2-0-53" id="h2-0-53" class="i">+    var reverseSortOrder by remember { mutableStateOf(true) }
+</a><a href="#h2-0-54" id="h2-0-54" class="i">+    val sinceDatePickerState = rememberDatePickerState(
+</a><a href="#h2-0-55" id="h2-0-55" class="i">+        initialDisplayMode = DisplayMode.Picker
+</a><a href="#h2-0-56" id="h2-0-56" class="i">+    )
+</a><a href="#h2-0-57" id="h2-0-57" class="i">+
+</a><a href="#h2-0-58" id="h2-0-58" class="i">+    var filter by remember { mutableStateOf(&quot;&quot;) }
+</a><a href="#h2-0-59" id="h2-0-59" class="i">+    var searchTimeoutJob by remember { mutableStateOf&lt;Job?&gt;(null) }
+</a><a href="#h2-0-60" id="h2-0-60" class="i">+
+</a><a href="#h2-0-61" id="h2-0-61" class="i">+    fun getPaginatedLogs(pageIndex: Int) = context.messageLogger.getLogs(
+</a><a href="#h2-0-62" id="h2-0-62" class="i">+        pageIndex = pageIndex,
+</a><a href="#h2-0-63" id="h2-0-63" class="i">+        pageSize = 30,
+</a><a href="#h2-0-64" id="h2-0-64" class="i">+        timestamp = sinceDatePickerState.selectedDateMillis,
+</a><a href="#h2-0-65" id="h2-0-65" class="i">+        reverseOrder = reverseSortOrder,
+</a><a href="#h2-0-66" id="h2-0-66" class="i">+        filter = {
+</a><a href="#h2-0-67" id="h2-0-67" class="i">+        when (filterType) {
+</a><a href="#h2-0-68" id="h2-0-68" class="i">+            FriendTrackerManagerRoot.FilterType.USERNAME -&gt; it.username.contains(filter, ignoreCase = true)
+</a><a href="#h2-0-69" id="h2-0-69" class="i">+            FriendTrackerManagerRoot.FilterType.CONVERSATION -&gt; it.conversationTitle?.contains(filter, ignoreCase = true) == true || (it.username == filter &amp;&amp; !it.isGroup)
+</a><a href="#h2-0-70" id="h2-0-70" class="i">+            FriendTrackerManagerRoot.FilterType.EVENT -&gt; it.eventType.contains(filter, ignoreCase = true)
+</a><a href="#h2-0-71" id="h2-0-71" class="i">+        }
+</a><a href="#h2-0-72" id="h2-0-72" class="i">+    })
+</a><a href="#h2-0-73" id="h2-0-73" class="i">+
+</a><a href="#h2-0-74" id="h2-0-74" class="i">+    suspend fun loadNewLogs() {
+</a><a href="#h2-0-75" id="h2-0-75" class="i">+        withContext(Dispatchers.IO) {
+</a><a href="#h2-0-76" id="h2-0-76" class="i">+            logs.addAll(getPaginatedLogs(pageIndex).apply {
+</a><a href="#h2-0-77" id="h2-0-77" class="i">+                pageIndex += 1
+</a><a href="#h2-0-78" id="h2-0-78" class="i">+            })
+</a><a href="#h2-0-79" id="h2-0-79" class="i">+        }
+</a><a href="#h2-0-80" id="h2-0-80" class="i">+    }
+</a><a href="#h2-0-81" id="h2-0-81" class="i">+
+</a><a href="#h2-0-82" id="h2-0-82" class="i">+    suspend fun resetAndLoadLogs() {
+</a><a href="#h2-0-83" id="h2-0-83" class="i">+        isLoading = true
+</a><a href="#h2-0-84" id="h2-0-84" class="i">+        logs.clear()
+</a><a href="#h2-0-85" id="h2-0-85" class="i">+        pageIndex = 0
+</a><a href="#h2-0-86" id="h2-0-86" class="i">+        loadNewLogs()
+</a><a href="#h2-0-87" id="h2-0-87" class="i">+        isLoading = false
+</a><a href="#h2-0-88" id="h2-0-88" class="i">+    }
+</a><a href="#h2-0-89" id="h2-0-89" class="i">+
+</a><a href="#h2-0-90" id="h2-0-90" class="i">+    var showDeleteDialog by remember { mutableStateOf(false) }
+</a><a href="#h2-0-91" id="h2-0-91" class="i">+    var showExportSelectionDialog by remember { mutableStateOf(false) }
+</a><a href="#h2-0-92" id="h2-0-92" class="i">+
+</a><a href="#h2-0-93" id="h2-0-93" class="i">+    LaunchedEffect(Unit) {
+</a><a href="#h2-0-94" id="h2-0-94" class="i">+        deleteAction { showDeleteDialog = true }
+</a><a href="#h2-0-95" id="h2-0-95" class="i">+        exportAction { showExportSelectionDialog = true }
+</a><a href="#h2-0-96" id="h2-0-96" class="i">+    }
+</a><a href="#h2-0-97" id="h2-0-97" class="i">+
+</a><a href="#h2-0-98" id="h2-0-98" class="i">+    if (showDeleteDialog) {
+</a><a href="#h2-0-99" id="h2-0-99" class="i">+        val deleteCoroutineScope = rememberCoroutineScope { Dispatchers.IO }
+</a><a href="#h2-0-100" id="h2-0-100" class="i">+        var deleteLogsTask by remember { mutableStateOf&lt;Job?&gt;(null) }
+</a><a href="#h2-0-101" id="h2-0-101" class="i">+        var deletedLogsCount by remember { mutableIntStateOf(0) }
+</a><a href="#h2-0-102" id="h2-0-102" class="i">+
+</a><a href="#h2-0-103" id="h2-0-103" class="i">+        fun deleteLogs() {
+</a><a href="#h2-0-104" id="h2-0-104" class="i">+            deleteLogsTask = deleteCoroutineScope.launch {
+</a><a href="#h2-0-105" id="h2-0-105" class="i">+                var index = 0
+</a><a href="#h2-0-106" id="h2-0-106" class="i">+                while (true) {
+</a><a href="#h2-0-107" id="h2-0-107" class="i">+                    val newLogs = getPaginatedLogs(index++)
+</a><a href="#h2-0-108" id="h2-0-108" class="i">+                    if (newLogs.isEmpty()) {
+</a><a href="#h2-0-109" id="h2-0-109" class="i">+                        break
+</a><a href="#h2-0-110" id="h2-0-110" class="i">+                    }
+</a><a href="#h2-0-111" id="h2-0-111" class="i">+                    newLogs.forEach {
+</a><a href="#h2-0-112" id="h2-0-112" class="i">+                        context.messageLogger.deleteTrackerLog(it.id)
+</a><a href="#h2-0-113" id="h2-0-113" class="i">+                        deletedLogsCount++
+</a><a href="#h2-0-114" id="h2-0-114" class="i">+                    }
+</a><a href="#h2-0-115" id="h2-0-115" class="i">+                }
+</a><a href="#h2-0-116" id="h2-0-116" class="i">+
+</a><a href="#h2-0-117" id="h2-0-117" class="i">+                withContext(Dispatchers.Main) {
+</a><a href="#h2-0-118" id="h2-0-118" class="i">+                    delay(500)
+</a><a href="#h2-0-119" id="h2-0-119" class="i">+                    resetAndLoadLogs()
+</a><a href="#h2-0-120" id="h2-0-120" class="i">+                    context.shortToast(&quot;Deleted $deletedLogsCount logs&quot;)
+</a><a href="#h2-0-121" id="h2-0-121" class="i">+                    showDeleteDialog = false
+</a><a href="#h2-0-122" id="h2-0-122" class="i">+                }
+</a><a href="#h2-0-123" id="h2-0-123" class="i">+            }
+</a><a href="#h2-0-124" id="h2-0-124" class="i">+        }
+</a><a href="#h2-0-125" id="h2-0-125" class="i">+
+</a><a href="#h2-0-126" id="h2-0-126" class="i">+        DisposableEffect(Unit) {
+</a><a href="#h2-0-127" id="h2-0-127" class="i">+            onDispose {
+</a><a href="#h2-0-128" id="h2-0-128" class="i">+                deleteLogsTask?.cancel()
+</a><a href="#h2-0-129" id="h2-0-129" class="i">+            }
+</a><a href="#h2-0-130" id="h2-0-130" class="i">+        }
+</a><a href="#h2-0-131" id="h2-0-131" class="i">+
+</a><a href="#h2-0-132" id="h2-0-132" class="i">+        AlertDialog(
+</a><a href="#h2-0-133" id="h2-0-133" class="i">+            onDismissRequest = { showDeleteDialog = false },
+</a><a href="#h2-0-134" id="h2-0-134" class="i">+            title = { Text(&quot;Delete logs?&quot;) },
+</a><a href="#h2-0-135" id="h2-0-135" class="i">+            text = {
+</a><a href="#h2-0-136" id="h2-0-136" class="i">+                if (deleteLogsTask != null) {
+</a><a href="#h2-0-137" id="h2-0-137" class="i">+                    Text(&quot;Deleting $deletedLogsCount logs...&quot;)
+</a><a href="#h2-0-138" id="h2-0-138" class="i">+                } else {
+</a><a href="#h2-0-139" id="h2-0-139" class="i">+                    Text(&quot;This will delete logs based on the current filter and the search query. This action cannot be undone.&quot;)
+</a><a href="#h2-0-140" id="h2-0-140" class="i">+                }
+</a><a href="#h2-0-141" id="h2-0-141" class="i">+            },
+</a><a href="#h2-0-142" id="h2-0-142" class="i">+            confirmButton = {
+</a><a href="#h2-0-143" id="h2-0-143" class="i">+                Button(
+</a><a href="#h2-0-144" id="h2-0-144" class="i">+                    enabled = deleteLogsTask == null,
+</a><a href="#h2-0-145" id="h2-0-145" class="i">+                    onClick = {
+</a><a href="#h2-0-146" id="h2-0-146" class="i">+                        deleteLogs()
+</a><a href="#h2-0-147" id="h2-0-147" class="i">+                    }
+</a><a href="#h2-0-148" id="h2-0-148" class="i">+                ) {
+</a><a href="#h2-0-149" id="h2-0-149" class="i">+                    if (deleteLogsTask != null) {
+</a><a href="#h2-0-150" id="h2-0-150" class="i">+                        CircularProgressIndicator(modifier = Modifier
+</a><a href="#h2-0-151" id="h2-0-151" class="i">+                            .size(30.dp),
+</a><a href="#h2-0-152" id="h2-0-152" class="i">+                            strokeWidth = 3.dp
+</a><a href="#h2-0-153" id="h2-0-153" class="i">+                        )
+</a><a href="#h2-0-154" id="h2-0-154" class="i">+                    } else {
+</a><a href="#h2-0-155" id="h2-0-155" class="i">+                        Text(&quot;Delete&quot;)
+</a><a href="#h2-0-156" id="h2-0-156" class="i">+                    }
+</a><a href="#h2-0-157" id="h2-0-157" class="i">+                }
+</a><a href="#h2-0-158" id="h2-0-158" class="i">+            },
+</a><a href="#h2-0-159" id="h2-0-159" class="i">+            dismissButton = {
+</a><a href="#h2-0-160" id="h2-0-160" class="i">+                Button(onClick = { showDeleteDialog = false }) {
+</a><a href="#h2-0-161" id="h2-0-161" class="i">+                    Text(context.translation[&quot;button.cancel&quot;])
+</a><a href="#h2-0-162" id="h2-0-162" class="i">+                }
+</a><a href="#h2-0-163" id="h2-0-163" class="i">+            }
+</a><a href="#h2-0-164" id="h2-0-164" class="i">+        )
+</a><a href="#h2-0-165" id="h2-0-165" class="i">+    }
+</a><a href="#h2-0-166" id="h2-0-166" class="i">+
+</a><a href="#h2-0-167" id="h2-0-167" class="i">+    if (showExportSelectionDialog) {
+</a><a href="#h2-0-168" id="h2-0-168" class="i">+        val exportCoroutineScope = rememberCoroutineScope { Dispatchers.IO }
+</a><a href="#h2-0-169" id="h2-0-169" class="i">+        var exportTask by remember { mutableStateOf&lt;Job?&gt;(null) }
+</a><a href="#h2-0-170" id="h2-0-170" class="i">+        var exportType by remember { mutableStateOf(&quot;json&quot;) }
+</a><a href="#h2-0-171" id="h2-0-171" class="i">+
+</a><a href="#h2-0-172" id="h2-0-172" class="i">+        fun exportLogs() {
+</a><a href="#h2-0-173" id="h2-0-173" class="i">+            activityLauncherHelper.saveFile(&quot;tracker_logs_${System.currentTimeMillis()}.$exportType&quot;) { uri -&gt;
+</a><a href="#h2-0-174" id="h2-0-174" class="i">+                exportTask = exportCoroutineScope.launch {
+</a><a href="#h2-0-175" id="h2-0-175" class="i">+                    context.androidContext.contentResolver.openOutputStream(Uri.parse(uri))?.use {
+</a><a href="#h2-0-176" id="h2-0-176" class="i">+                        val writer = it.writer()
+</a><a href="#h2-0-177" id="h2-0-177" class="i">+                        val jsonWriter by lazy {
+</a><a href="#h2-0-178" id="h2-0-178" class="i">+                            JsonWriter(writer).apply {
+</a><a href="#h2-0-179" id="h2-0-179" class="i">+                                setIndent(&quot;  &quot;)
+</a><a href="#h2-0-180" id="h2-0-180" class="i">+                                beginArray()
+</a><a href="#h2-0-181" id="h2-0-181" class="i">+                            }
+</a><a href="#h2-0-182" id="h2-0-182" class="i">+                        }
+</a><a href="#h2-0-183" id="h2-0-183" class="i">+
+</a><a href="#h2-0-184" id="h2-0-184" class="i">+                        var index = 0
+</a><a href="#h2-0-185" id="h2-0-185" class="i">+                        while (true) {
+</a><a href="#h2-0-186" id="h2-0-186" class="i">+                            val newLogs = getPaginatedLogs(index++)
+</a><a href="#h2-0-187" id="h2-0-187" class="i">+                            if (newLogs.isEmpty()) {
+</a><a href="#h2-0-188" id="h2-0-188" class="i">+                                break
+</a><a href="#h2-0-189" id="h2-0-189" class="i">+                            }
+</a><a href="#h2-0-190" id="h2-0-190" class="i">+                            newLogs.forEach { log -&gt;
+</a><a href="#h2-0-191" id="h2-0-191" class="i">+                                when (exportType) {
+</a><a href="#h2-0-192" id="h2-0-192" class="i">+                                    &quot;json&quot; -&gt; {
+</a><a href="#h2-0-193" id="h2-0-193" class="i">+                                        jsonWriter.jsonValue(log.toJson().toString())
+</a><a href="#h2-0-194" id="h2-0-194" class="i">+                                    }
+</a><a href="#h2-0-195" id="h2-0-195" class="i">+                                    &quot;csv&quot; -&gt; {
+</a><a href="#h2-0-196" id="h2-0-196" class="i">+                                        writer.write(log.toCsv())
+</a><a href="#h2-0-197" id="h2-0-197" class="i">+                                        writer.write(&quot;\n&quot;)
+</a><a href="#h2-0-198" id="h2-0-198" class="i">+                                    }
+</a><a href="#h2-0-199" id="h2-0-199" class="i">+                                }
+</a><a href="#h2-0-200" id="h2-0-200" class="i">+                                writer.flush()
+</a><a href="#h2-0-201" id="h2-0-201" class="i">+                            }
+</a><a href="#h2-0-202" id="h2-0-202" class="i">+                        }
+</a><a href="#h2-0-203" id="h2-0-203" class="i">+                        when (exportType) {
+</a><a href="#h2-0-204" id="h2-0-204" class="i">+                            &quot;json&quot; -&gt; {
+</a><a href="#h2-0-205" id="h2-0-205" class="i">+                                jsonWriter.endArray()
+</a><a href="#h2-0-206" id="h2-0-206" class="i">+                                jsonWriter.close()
+</a><a href="#h2-0-207" id="h2-0-207" class="i">+                            }
+</a><a href="#h2-0-208" id="h2-0-208" class="i">+                            &quot;csv&quot; -&gt; writer.close()
+</a><a href="#h2-0-209" id="h2-0-209" class="i">+                        }
+</a><a href="#h2-0-210" id="h2-0-210" class="i">+                    }
+</a><a href="#h2-0-211" id="h2-0-211" class="i">+                }.apply {
+</a><a href="#h2-0-212" id="h2-0-212" class="i">+                    invokeOnCompletion {
+</a><a href="#h2-0-213" id="h2-0-213" class="i">+                        exportTask = null
+</a><a href="#h2-0-214" id="h2-0-214" class="i">+                        showExportSelectionDialog = false
+</a><a href="#h2-0-215" id="h2-0-215" class="i">+                        if (it == null) {
+</a><a href="#h2-0-216" id="h2-0-216" class="i">+                            context.shortToast(&quot;Exported logs!&quot;)
+</a><a href="#h2-0-217" id="h2-0-217" class="i">+                        } else {
+</a><a href="#h2-0-218" id="h2-0-218" class="i">+                            context.log.error(&quot;Failed to export logs&quot;, it)
+</a><a href="#h2-0-219" id="h2-0-219" class="i">+                            context.shortToast(&quot;Failed to export logs. Check logcat for more details.&quot;)
+</a><a href="#h2-0-220" id="h2-0-220" class="i">+                        }
+</a><a href="#h2-0-221" id="h2-0-221" class="i">+                    }
+</a><a href="#h2-0-222" id="h2-0-222" class="i">+                }
+</a><a href="#h2-0-223" id="h2-0-223" class="i">+            }
+</a><a href="#h2-0-224" id="h2-0-224" class="i">+        }
+</a><a href="#h2-0-225" id="h2-0-225" class="i">+
+</a><a href="#h2-0-226" id="h2-0-226" class="i">+        AlertDialog(
+</a><a href="#h2-0-227" id="h2-0-227" class="i">+            onDismissRequest = { showExportSelectionDialog = false },
+</a><a href="#h2-0-228" id="h2-0-228" class="i">+            title = { Text(&quot;Export logs?&quot;) },
+</a><a href="#h2-0-229" id="h2-0-229" class="i">+            text = {
+</a><a href="#h2-0-230" id="h2-0-230" class="i">+                Column(
+</a><a href="#h2-0-231" id="h2-0-231" class="i">+                    modifier = Modifier.fillMaxWidth(),
+</a><a href="#h2-0-232" id="h2-0-232" class="i">+                    horizontalAlignment = Alignment.CenterHorizontally,
+</a><a href="#h2-0-233" id="h2-0-233" class="i">+                ) {
+</a><a href="#h2-0-234" id="h2-0-234" class="i">+                    if (exportTask != null) {
+</a><a href="#h2-0-235" id="h2-0-235" class="i">+                        Text(&quot;Exporting logs...&quot;)
+</a><a href="#h2-0-236" id="h2-0-236" class="i">+                    } else {
+</a><a href="#h2-0-237" id="h2-0-237" class="i">+                        Text(&quot;This will export logs based on the current filter and the search query.&quot;)
+</a><a href="#h2-0-238" id="h2-0-238" class="i">+                        Spacer(modifier = Modifier.height(10.dp))
+</a><a href="#h2-0-239" id="h2-0-239" class="i">+                        var expanded by remember { mutableStateOf(false) }
+</a><a href="#h2-0-240" id="h2-0-240" class="i">+                        ExposedDropdownMenuBox(
+</a><a href="#h2-0-241" id="h2-0-241" class="i">+                            expanded = expanded,
+</a><a href="#h2-0-242" id="h2-0-242" class="i">+                            onExpandedChange = { expanded = it },
+</a><a href="#h2-0-243" id="h2-0-243" class="i">+                        ) {
+</a><a href="#h2-0-244" id="h2-0-244" class="i">+                            Card(
+</a><a href="#h2-0-245" id="h2-0-245" class="i">+                                modifier = Modifier
+</a><a href="#h2-0-246" id="h2-0-246" class="i">+                                    .menuAnchor()
+</a><a href="#h2-0-247" id="h2-0-247" class="i">+                                    .padding(2.dp)
+</a><a href="#h2-0-248" id="h2-0-248" class="i">+                            ) {
+</a><a href="#h2-0-249" id="h2-0-249" class="i">+                                Text(&quot;Export as $exportType&quot;, modifier = Modifier.padding(8.dp))
+</a><a href="#h2-0-250" id="h2-0-250" class="i">+                            }
+</a><a href="#h2-0-251" id="h2-0-251" class="i">+                            DropdownMenu(expanded = expanded, onDismissRequest = {
+</a><a href="#h2-0-252" id="h2-0-252" class="i">+                                expanded = false
+</a><a href="#h2-0-253" id="h2-0-253" class="i">+                            }) {
+</a><a href="#h2-0-254" id="h2-0-254" class="i">+                                listOf(&quot;json&quot;, &quot;csv&quot;).forEach { type -&gt;
+</a><a href="#h2-0-255" id="h2-0-255" class="i">+                                    DropdownMenuItem(onClick = {
+</a><a href="#h2-0-256" id="h2-0-256" class="i">+                                        exportType = type
+</a><a href="#h2-0-257" id="h2-0-257" class="i">+                                        expanded = false
+</a><a href="#h2-0-258" id="h2-0-258" class="i">+                                    }, text = {
+</a><a href="#h2-0-259" id="h2-0-259" class="i">+                                        Text(type)
+</a><a href="#h2-0-260" id="h2-0-260" class="i">+                                    })
+</a><a href="#h2-0-261" id="h2-0-261" class="i">+                                }
+</a><a href="#h2-0-262" id="h2-0-262" class="i">+                            }
+</a><a href="#h2-0-263" id="h2-0-263" class="i">+                        }
+</a><a href="#h2-0-264" id="h2-0-264" class="i">+                    }
+</a><a href="#h2-0-265" id="h2-0-265" class="i">+                }
+</a><a href="#h2-0-266" id="h2-0-266" class="i">+            },
+</a><a href="#h2-0-267" id="h2-0-267" class="i">+            confirmButton = {
+</a><a href="#h2-0-268" id="h2-0-268" class="i">+                Button(
+</a><a href="#h2-0-269" id="h2-0-269" class="i">+                    enabled = exportTask == null,
+</a><a href="#h2-0-270" id="h2-0-270" class="i">+                    onClick = {
+</a><a href="#h2-0-271" id="h2-0-271" class="i">+                        exportLogs()
+</a><a href="#h2-0-272" id="h2-0-272" class="i">+                    }
+</a><a href="#h2-0-273" id="h2-0-273" class="i">+                ) {
+</a><a href="#h2-0-274" id="h2-0-274" class="i">+                    if (exportTask != null) {
+</a><a href="#h2-0-275" id="h2-0-275" class="i">+                        CircularProgressIndicator(modifier = Modifier
+</a><a href="#h2-0-276" id="h2-0-276" class="i">+                            .size(30.dp),
+</a><a href="#h2-0-277" id="h2-0-277" class="i">+                            strokeWidth = 3.dp
+</a><a href="#h2-0-278" id="h2-0-278" class="i">+                        )
+</a><a href="#h2-0-279" id="h2-0-279" class="i">+                    } else {
+</a><a href="#h2-0-280" id="h2-0-280" class="i">+                        Text(&quot;Export&quot;)
+</a><a href="#h2-0-281" id="h2-0-281" class="i">+                    }
+</a><a href="#h2-0-282" id="h2-0-282" class="i">+                }
+</a><a href="#h2-0-283" id="h2-0-283" class="i">+            },
+</a><a href="#h2-0-284" id="h2-0-284" class="i">+            dismissButton = {
+</a><a href="#h2-0-285" id="h2-0-285" class="i">+                Button(onClick = { showExportSelectionDialog = false }) {
+</a><a href="#h2-0-286" id="h2-0-286" class="i">+                    Text(context.translation[&quot;button.cancel&quot;])
+</a><a href="#h2-0-287" id="h2-0-287" class="i">+                }
+</a><a href="#h2-0-288" id="h2-0-288" class="i">+            }
+</a><a href="#h2-0-289" id="h2-0-289" class="i">+        )
+</a><a href="#h2-0-290" id="h2-0-290" class="i">+    }
+</a><a href="#h2-0-291" id="h2-0-291" class="i">+
+</a><a href="#h2-0-292" id="h2-0-292" class="i">+
+</a><a href="#h2-0-293" id="h2-0-293" class="i">+    @Composable
+</a><a href="#h2-0-294" id="h2-0-294" class="i">+    fun FilterSelection(
+</a><a href="#h2-0-295" id="h2-0-295" class="i">+        selectionExpanded: MutableState&lt;Boolean&gt;
+</a><a href="#h2-0-296" id="h2-0-296" class="i">+    ) {
+</a><a href="#h2-0-297" id="h2-0-297" class="i">+        var dropDownExpanded by remember { mutableStateOf(false) }
+</a><a href="#h2-0-298" id="h2-0-298" class="i">+        var showDatePicker by remember { mutableStateOf(false) }
+</a><a href="#h2-0-299" id="h2-0-299" class="i">+
+</a><a href="#h2-0-300" id="h2-0-300" class="i">+        if (showDatePicker) {
+</a><a href="#h2-0-301" id="h2-0-301" class="i">+            DatePickerDialog(onDismissRequest = {
+</a><a href="#h2-0-302" id="h2-0-302" class="i">+                showDatePicker = false
+</a><a href="#h2-0-303" id="h2-0-303" class="i">+            }, confirmButton = {}) {
+</a><a href="#h2-0-304" id="h2-0-304" class="i">+                DatePicker(
+</a><a href="#h2-0-305" id="h2-0-305" class="i">+                    state = sinceDatePickerState,
+</a><a href="#h2-0-306" id="h2-0-306" class="i">+                    modifier = Modifier.weight(1f),
+</a><a href="#h2-0-307" id="h2-0-307" class="i">+                )
+</a><a href="#h2-0-308" id="h2-0-308" class="i">+                Row(
+</a><a href="#h2-0-309" id="h2-0-309" class="i">+                    modifier = Modifier
+</a><a href="#h2-0-310" id="h2-0-310" class="i">+                        .fillMaxWidth()
+</a><a href="#h2-0-311" id="h2-0-311" class="i">+                        .padding(8.dp),
+</a><a href="#h2-0-312" id="h2-0-312" class="i">+                    horizontalArrangement = Arrangement.SpaceEvenly
+</a><a href="#h2-0-313" id="h2-0-313" class="i">+                ) {
+</a><a href="#h2-0-314" id="h2-0-314" class="i">+                    Button(onClick = {
+</a><a href="#h2-0-315" id="h2-0-315" class="i">+                        showDatePicker = false
+</a><a href="#h2-0-316" id="h2-0-316" class="i">+                        sinceDatePickerState.selectedDateMillis = null
+</a><a href="#h2-0-317" id="h2-0-317" class="i">+                    }) {
+</a><a href="#h2-0-318" id="h2-0-318" class="i">+                        Text(context.translation[&quot;button.cancel&quot;])
+</a><a href="#h2-0-319" id="h2-0-319" class="i">+                    }
+</a><a href="#h2-0-320" id="h2-0-320" class="i">+                    Button(onClick = {
+</a><a href="#h2-0-321" id="h2-0-321" class="i">+                        showDatePicker = false
+</a><a href="#h2-0-322" id="h2-0-322" class="i">+                    }) {
+</a><a href="#h2-0-323" id="h2-0-323" class="i">+                        Text(context.translation[&quot;button.ok&quot;])
+</a><a href="#h2-0-324" id="h2-0-324" class="i">+                    }
+</a><a href="#h2-0-325" id="h2-0-325" class="i">+                }
+</a><a href="#h2-0-326" id="h2-0-326" class="i">+            }
+</a><a href="#h2-0-327" id="h2-0-327" class="i">+        }
+</a><a href="#h2-0-328" id="h2-0-328" class="i">+
+</a><a href="#h2-0-329" id="h2-0-329" class="i">+        DropdownMenu(expanded = selectionExpanded.value, onDismissRequest = {
+</a><a href="#h2-0-330" id="h2-0-330" class="i">+            selectionExpanded.value = false
+</a><a href="#h2-0-331" id="h2-0-331" class="i">+        }) {
+</a><a href="#h2-0-332" id="h2-0-332" class="i">+            Column(
+</a><a href="#h2-0-333" id="h2-0-333" class="i">+                modifier = Modifier
+</a><a href="#h2-0-334" id="h2-0-334" class="i">+                    .padding(16.dp),
+</a><a href="#h2-0-335" id="h2-0-335" class="i">+                verticalArrangement = Arrangement.spacedBy(4.dp),
+</a><a href="#h2-0-336" id="h2-0-336" class="i">+            ) {
+</a><a href="#h2-0-337" id="h2-0-337" class="i">+                val rowHSpacing = 10.dp
+</a><a href="#h2-0-338" id="h2-0-338" class="i">+
+</a><a href="#h2-0-339" id="h2-0-339" class="i">+                Text(&quot;Filters&quot;, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+</a><a href="#h2-0-340" id="h2-0-340" class="i">+                Row(
+</a><a href="#h2-0-341" id="h2-0-341" class="i">+                    horizontalArrangement = Arrangement.spacedBy(rowHSpacing),
+</a><a href="#h2-0-342" id="h2-0-342" class="i">+                    verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h2-0-343" id="h2-0-343" class="i">+                ) {
+</a><a href="#h2-0-344" id="h2-0-344" class="i">+                    Text(&quot;Search by&quot;)
+</a><a href="#h2-0-345" id="h2-0-345" class="i">+                    ExposedDropdownMenuBox(
+</a><a href="#h2-0-346" id="h2-0-346" class="i">+                        expanded = dropDownExpanded,
+</a><a href="#h2-0-347" id="h2-0-347" class="i">+                        onExpandedChange = { dropDownExpanded = it },
+</a><a href="#h2-0-348" id="h2-0-348" class="i">+                    ) {
+</a><a href="#h2-0-349" id="h2-0-349" class="i">+                        Card(
+</a><a href="#h2-0-350" id="h2-0-350" class="i">+                            modifier = Modifier
+</a><a href="#h2-0-351" id="h2-0-351" class="i">+                                .menuAnchor()
+</a><a href="#h2-0-352" id="h2-0-352" class="i">+                                .padding(2.dp)
+</a><a href="#h2-0-353" id="h2-0-353" class="i">+                        ) {
+</a><a href="#h2-0-354" id="h2-0-354" class="i">+                            Text(filterType.name, modifier = Modifier.padding(8.dp))
+</a><a href="#h2-0-355" id="h2-0-355" class="i">+                        }
+</a><a href="#h2-0-356" id="h2-0-356" class="i">+                        DropdownMenu(expanded = dropDownExpanded, onDismissRequest = {
+</a><a href="#h2-0-357" id="h2-0-357" class="i">+                            dropDownExpanded = false
+</a><a href="#h2-0-358" id="h2-0-358" class="i">+                        }) {
+</a><a href="#h2-0-359" id="h2-0-359" class="i">+                            FriendTrackerManagerRoot.FilterType.entries.forEach { type -&gt;
+</a><a href="#h2-0-360" id="h2-0-360" class="i">+                                DropdownMenuItem(onClick = {
+</a><a href="#h2-0-361" id="h2-0-361" class="i">+                                    filter = &quot;&quot;
+</a><a href="#h2-0-362" id="h2-0-362" class="i">+                                    filterType = type
+</a><a href="#h2-0-363" id="h2-0-363" class="i">+                                    dropDownExpanded = false
+</a><a href="#h2-0-364" id="h2-0-364" class="i">+                                    coroutineScope.launch {
+</a><a href="#h2-0-365" id="h2-0-365" class="i">+                                        resetAndLoadLogs()
+</a><a href="#h2-0-366" id="h2-0-366" class="i">+                                    }
+</a><a href="#h2-0-367" id="h2-0-367" class="i">+                                }, text = {
+</a><a href="#h2-0-368" id="h2-0-368" class="i">+                                    Text(type.name)
+</a><a href="#h2-0-369" id="h2-0-369" class="i">+                                })
+</a><a href="#h2-0-370" id="h2-0-370" class="i">+                            }
+</a><a href="#h2-0-371" id="h2-0-371" class="i">+                        }
+</a><a href="#h2-0-372" id="h2-0-372" class="i">+                    }
+</a><a href="#h2-0-373" id="h2-0-373" class="i">+                }
+</a><a href="#h2-0-374" id="h2-0-374" class="i">+                Row(
+</a><a href="#h2-0-375" id="h2-0-375" class="i">+                    horizontalArrangement = Arrangement.spacedBy(rowHSpacing),
+</a><a href="#h2-0-376" id="h2-0-376" class="i">+                    verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h2-0-377" id="h2-0-377" class="i">+                ) {
+</a><a href="#h2-0-378" id="h2-0-378" class="i">+                    Text(&quot;Newest first&quot;)
+</a><a href="#h2-0-379" id="h2-0-379" class="i">+                    Switch(
+</a><a href="#h2-0-380" id="h2-0-380" class="i">+                        checked = reverseSortOrder,
+</a><a href="#h2-0-381" id="h2-0-381" class="i">+                        onCheckedChange = {
+</a><a href="#h2-0-382" id="h2-0-382" class="i">+                            reverseSortOrder = it
+</a><a href="#h2-0-383" id="h2-0-383" class="i">+                            selectionExpanded.value = false
+</a><a href="#h2-0-384" id="h2-0-384" class="i">+                        }
+</a><a href="#h2-0-385" id="h2-0-385" class="i">+                    )
+</a><a href="#h2-0-386" id="h2-0-386" class="i">+                }
+</a><a href="#h2-0-387" id="h2-0-387" class="i">+                Row(
+</a><a href="#h2-0-388" id="h2-0-388" class="i">+                    horizontalArrangement = Arrangement.spacedBy(rowHSpacing),
+</a><a href="#h2-0-389" id="h2-0-389" class="i">+                    verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h2-0-390" id="h2-0-390" class="i">+                ) {
+</a><a href="#h2-0-391" id="h2-0-391" class="i">+                    Text(if (reverseSortOrder) &quot;Since&quot; else &quot;Until&quot;)
+</a><a href="#h2-0-392" id="h2-0-392" class="i">+                    Button(onClick = {
+</a><a href="#h2-0-393" id="h2-0-393" class="i">+                        showDatePicker = true
+</a><a href="#h2-0-394" id="h2-0-394" class="i">+                    }) {
+</a><a href="#h2-0-395" id="h2-0-395" class="i">+                        Text(remember(showDatePicker) {
+</a><a href="#h2-0-396" id="h2-0-396" class="i">+                            sinceDatePickerState.selectedDateMillis?.let {
+</a><a href="#h2-0-397" id="h2-0-397" class="i">+                                DateFormat.getDateInstance().format(it)
+</a><a href="#h2-0-398" id="h2-0-398" class="i">+                            } ?: &quot;Pick a date&quot;
+</a><a href="#h2-0-399" id="h2-0-399" class="i">+                        })
+</a><a href="#h2-0-400" id="h2-0-400" class="i">+                    }
+</a><a href="#h2-0-401" id="h2-0-401" class="i">+                }
+</a><a href="#h2-0-402" id="h2-0-402" class="i">+            }
+</a><a href="#h2-0-403" id="h2-0-403" class="i">+        }
+</a><a href="#h2-0-404" id="h2-0-404" class="i">+    }
+</a><a href="#h2-0-405" id="h2-0-405" class="i">+
+</a><a href="#h2-0-406" id="h2-0-406" class="i">+    Column(
+</a><a href="#h2-0-407" id="h2-0-407" class="i">+        modifier = Modifier.fillMaxSize()
+</a><a href="#h2-0-408" id="h2-0-408" class="i">+    ) {
+</a><a href="#h2-0-409" id="h2-0-409" class="i">+        Row(
+</a><a href="#h2-0-410" id="h2-0-410" class="i">+            modifier = Modifier.fillMaxWidth(),
+</a><a href="#h2-0-411" id="h2-0-411" class="i">+            verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h2-0-412" id="h2-0-412" class="i">+        ) {
+</a><a href="#h2-0-413" id="h2-0-413" class="i">+            var showAutoComplete by remember { mutableStateOf(false) }
+</a><a href="#h2-0-414" id="h2-0-414" class="i">+            val showFilterSelection = remember { mutableStateOf(false) }
+</a><a href="#h2-0-415" id="h2-0-415" class="i">+
+</a><a href="#h2-0-416" id="h2-0-416" class="i">+            ExposedDropdownMenuBox(
+</a><a href="#h2-0-417" id="h2-0-417" class="i">+                expanded = showAutoComplete,
+</a><a href="#h2-0-418" id="h2-0-418" class="i">+                onExpandedChange = { showAutoComplete = it },
+</a><a href="#h2-0-419" id="h2-0-419" class="i">+            ) {
+</a><a href="#h2-0-420" id="h2-0-420" class="i">+                TextField(
+</a><a href="#h2-0-421" id="h2-0-421" class="i">+                    value = filter,
+</a><a href="#h2-0-422" id="h2-0-422" class="i">+                    modifier = Modifier
+</a><a href="#h2-0-423" id="h2-0-423" class="i">+                        .fillMaxWidth()
+</a><a href="#h2-0-424" id="h2-0-424" class="i">+                        .menuAnchor()
+</a><a href="#h2-0-425" id="h2-0-425" class="i">+                        .padding(8.dp),
+</a><a href="#h2-0-426" id="h2-0-426" class="i">+                    onValueChange = {
+</a><a href="#h2-0-427" id="h2-0-427" class="i">+                        filter = it
+</a><a href="#h2-0-428" id="h2-0-428" class="i">+                        coroutineScope.launch {
+</a><a href="#h2-0-429" id="h2-0-429" class="i">+                            searchTimeoutJob?.cancel()
+</a><a href="#h2-0-430" id="h2-0-430" class="i">+                            searchTimeoutJob = coroutineScope.launch {
+</a><a href="#h2-0-431" id="h2-0-431" class="i">+                                delay(200)
+</a><a href="#h2-0-432" id="h2-0-432" class="i">+                                showAutoComplete = true
+</a><a href="#h2-0-433" id="h2-0-433" class="i">+                                resetAndLoadLogs()
+</a><a href="#h2-0-434" id="h2-0-434" class="i">+                            }
+</a><a href="#h2-0-435" id="h2-0-435" class="i">+                        }
+</a><a href="#h2-0-436" id="h2-0-436" class="i">+                    },
+</a><a href="#h2-0-437" id="h2-0-437" class="i">+                    placeholder = { Text(&quot;Search&quot;) },
+</a><a href="#h2-0-438" id="h2-0-438" class="i">+                    colors = TextFieldDefaults.colors(
+</a><a href="#h2-0-439" id="h2-0-439" class="i">+                        focusedContainerColor = Color.Transparent,
+</a><a href="#h2-0-440" id="h2-0-440" class="i">+                        unfocusedContainerColor = Color.Transparent
+</a><a href="#h2-0-441" id="h2-0-441" class="i">+                    ),
+</a><a href="#h2-0-442" id="h2-0-442" class="i">+                    maxLines = 1,
+</a><a href="#h2-0-443" id="h2-0-443" class="i">+                    leadingIcon = {
+</a><a href="#h2-0-444" id="h2-0-444" class="i">+                        IconButton(
+</a><a href="#h2-0-445" id="h2-0-445" class="i">+                            onClick = {
+</a><a href="#h2-0-446" id="h2-0-446" class="i">+                                showFilterSelection.value = !showFilterSelection.value
+</a><a href="#h2-0-447" id="h2-0-447" class="i">+                            },
+</a><a href="#h2-0-448" id="h2-0-448" class="i">+                            modifier = Modifier
+</a><a href="#h2-0-449" id="h2-0-449" class="i">+                                .padding(2.dp)
+</a><a href="#h2-0-450" id="h2-0-450" class="i">+                        ) {
+</a><a href="#h2-0-451" id="h2-0-451" class="i">+                            Icon(Icons.Default.FilterList, contentDescription = &quot;Filter&quot;)
+</a><a href="#h2-0-452" id="h2-0-452" class="i">+                        }
+</a><a href="#h2-0-453" id="h2-0-453" class="i">+                        FilterSelection(showFilterSelection)
+</a><a href="#h2-0-454" id="h2-0-454" class="i">+                        if (showFilterSelection.value) {
+</a><a href="#h2-0-455" id="h2-0-455" class="i">+                            DisposableEffect(Unit) {
+</a><a href="#h2-0-456" id="h2-0-456" class="i">+                                onDispose {
+</a><a href="#h2-0-457" id="h2-0-457" class="i">+                                    coroutineScope.launch {
+</a><a href="#h2-0-458" id="h2-0-458" class="i">+                                        resetAndLoadLogs()
+</a><a href="#h2-0-459" id="h2-0-459" class="i">+                                    }
+</a><a href="#h2-0-460" id="h2-0-460" class="i">+                                }
+</a><a href="#h2-0-461" id="h2-0-461" class="i">+                            }
+</a><a href="#h2-0-462" id="h2-0-462" class="i">+                        }
+</a><a href="#h2-0-463" id="h2-0-463" class="i">+                    },
+</a><a href="#h2-0-464" id="h2-0-464" class="i">+                    trailingIcon = {
+</a><a href="#h2-0-465" id="h2-0-465" class="i">+                        if (filter != &quot;&quot;) {
+</a><a href="#h2-0-466" id="h2-0-466" class="i">+                            IconButton(onClick = {
+</a><a href="#h2-0-467" id="h2-0-467" class="i">+                                filter = &quot;&quot;
+</a><a href="#h2-0-468" id="h2-0-468" class="i">+                                coroutineScope.launch {
+</a><a href="#h2-0-469" id="h2-0-469" class="i">+                                    resetAndLoadLogs()
+</a><a href="#h2-0-470" id="h2-0-470" class="i">+                                }
+</a><a href="#h2-0-471" id="h2-0-471" class="i">+                            }) {
+</a><a href="#h2-0-472" id="h2-0-472" class="i">+                                Icon(Icons.Default.Clear, contentDescription = &quot;Clear&quot;)
+</a><a href="#h2-0-473" id="h2-0-473" class="i">+                            }
+</a><a href="#h2-0-474" id="h2-0-474" class="i">+                        }
+</a><a href="#h2-0-475" id="h2-0-475" class="i">+
+</a><a href="#h2-0-476" id="h2-0-476" class="i">+                        DropdownMenu(
+</a><a href="#h2-0-477" id="h2-0-477" class="i">+                            expanded = showAutoComplete,
+</a><a href="#h2-0-478" id="h2-0-478" class="i">+                            onDismissRequest = {
+</a><a href="#h2-0-479" id="h2-0-479" class="i">+                                showAutoComplete = false
+</a><a href="#h2-0-480" id="h2-0-480" class="i">+                            },
+</a><a href="#h2-0-481" id="h2-0-481" class="i">+                            properties = PopupProperties(focusable = false),
+</a><a href="#h2-0-482" id="h2-0-482" class="i">+                        ) {
+</a><a href="#h2-0-483" id="h2-0-483" class="i">+                            val suggestedEntries = remember(filter) {
+</a><a href="#h2-0-484" id="h2-0-484" class="i">+                                mutableStateListOf&lt;String&gt;()
+</a><a href="#h2-0-485" id="h2-0-485" class="i">+                            }
+</a><a href="#h2-0-486" id="h2-0-486" class="i">+
+</a><a href="#h2-0-487" id="h2-0-487" class="i">+                            LaunchedEffect(filter) {
+</a><a href="#h2-0-488" id="h2-0-488" class="i">+                                launch(Dispatchers.IO) {
+</a><a href="#h2-0-489" id="h2-0-489" class="i">+                                    suggestedEntries.addAll(when (filterType) {
+</a><a href="#h2-0-490" id="h2-0-490" class="i">+                                        FriendTrackerManagerRoot.FilterType.USERNAME -&gt; context.messageLogger.findUsername(filter)
+</a><a href="#h2-0-491" id="h2-0-491" class="i">+                                        FriendTrackerManagerRoot.FilterType.CONVERSATION -&gt; context.messageLogger.findConversation(filter) + context.messageLogger.findUsername(filter)
+</a><a href="#h2-0-492" id="h2-0-492" class="i">+                                        FriendTrackerManagerRoot.FilterType.EVENT -&gt; TrackerEventType.entries.filter { it.name.contains(filter, ignoreCase = true) }.map { it.key }
+</a><a href="#h2-0-493" id="h2-0-493" class="i">+                                    }.take(5))
+</a><a href="#h2-0-494" id="h2-0-494" class="i">+                                }
+</a><a href="#h2-0-495" id="h2-0-495" class="i">+                            }
+</a><a href="#h2-0-496" id="h2-0-496" class="i">+
+</a><a href="#h2-0-497" id="h2-0-497" class="i">+                            suggestedEntries.forEach { entry -&gt;
+</a><a href="#h2-0-498" id="h2-0-498" class="i">+                                DropdownMenuItem(onClick = {
+</a><a href="#h2-0-499" id="h2-0-499" class="i">+                                    filter = entry
+</a><a href="#h2-0-500" id="h2-0-500" class="i">+                                    coroutineScope.launch {
+</a><a href="#h2-0-501" id="h2-0-501" class="i">+                                        resetAndLoadLogs()
+</a><a href="#h2-0-502" id="h2-0-502" class="i">+                                    }
+</a><a href="#h2-0-503" id="h2-0-503" class="i">+                                    showAutoComplete = false
+</a><a href="#h2-0-504" id="h2-0-504" class="i">+                                }, text = {
+</a><a href="#h2-0-505" id="h2-0-505" class="i">+                                    Text(entry)
+</a><a href="#h2-0-506" id="h2-0-506" class="i">+                                })
+</a><a href="#h2-0-507" id="h2-0-507" class="i">+                            }
+</a><a href="#h2-0-508" id="h2-0-508" class="i">+                        }
+</a><a href="#h2-0-509" id="h2-0-509" class="i">+                    },
+</a><a href="#h2-0-510" id="h2-0-510" class="i">+                )
+</a><a href="#h2-0-511" id="h2-0-511" class="i">+            }
+</a><a href="#h2-0-512" id="h2-0-512" class="i">+        }
+</a><a href="#h2-0-513" id="h2-0-513" class="i">+
+</a><a href="#h2-0-514" id="h2-0-514" class="i">+        LazyColumn(
+</a><a href="#h2-0-515" id="h2-0-515" class="i">+            modifier = Modifier.weight(1f)
+</a><a href="#h2-0-516" id="h2-0-516" class="i">+        ) {
+</a><a href="#h2-0-517" id="h2-0-517" class="i">+            item {
+</a><a href="#h2-0-518" id="h2-0-518" class="i">+                Row(
+</a><a href="#h2-0-519" id="h2-0-519" class="i">+                    modifier = Modifier
+</a><a href="#h2-0-520" id="h2-0-520" class="i">+                        .fillMaxWidth(),
+</a><a href="#h2-0-521" id="h2-0-521" class="i">+                    horizontalArrangement = Arrangement.Center
+</a><a href="#h2-0-522" id="h2-0-522" class="i">+                ) {
+</a><a href="#h2-0-523" id="h2-0-523" class="i">+                    if (logs.isEmpty() &amp;&amp; !isLoading) {
+</a><a href="#h2-0-524" id="h2-0-524" class="i">+                        Text(&quot;No logs found&quot;, modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Light, textAlign = TextAlign.Center)
+</a><a href="#h2-0-525" id="h2-0-525" class="i">+                    }
+</a><a href="#h2-0-526" id="h2-0-526" class="i">+                }
+</a><a href="#h2-0-527" id="h2-0-527" class="i">+            }
+</a><a href="#h2-0-528" id="h2-0-528" class="i">+            items(logs, key = { it.userId + it.id }) { log -&gt;
+</a><a href="#h2-0-529" id="h2-0-529" class="i">+                var databaseFriend by remember { mutableStateOf&lt;MessagingFriendInfo?&gt;(null) }
+</a><a href="#h2-0-530" id="h2-0-530" class="i">+                LaunchedEffect(Unit) {
+</a><a href="#h2-0-531" id="h2-0-531" class="i">+                    launch(Dispatchers.IO) {
+</a><a href="#h2-0-532" id="h2-0-532" class="i">+                        databaseFriend = context.database.getFriendInfo(log.userId)
+</a><a href="#h2-0-533" id="h2-0-533" class="i">+                    }
+</a><a href="#h2-0-534" id="h2-0-534" class="i">+                }
+</a><a href="#h2-0-535" id="h2-0-535" class="i">+                ElevatedCard(
+</a><a href="#h2-0-536" id="h2-0-536" class="i">+                    modifier = Modifier
+</a><a href="#h2-0-537" id="h2-0-537" class="i">+                        .fillMaxWidth()
+</a><a href="#h2-0-538" id="h2-0-538" class="i">+                        .padding(3.dp)
+</a><a href="#h2-0-539" id="h2-0-539" class="i">+                ) {
+</a><a href="#h2-0-540" id="h2-0-540" class="i">+                    Row(
+</a><a href="#h2-0-541" id="h2-0-541" class="i">+                        modifier = Modifier
+</a><a href="#h2-0-542" id="h2-0-542" class="i">+                            .fillMaxWidth()
+</a><a href="#h2-0-543" id="h2-0-543" class="i">+                            .padding(4.dp),
+</a><a href="#h2-0-544" id="h2-0-544" class="i">+                        verticalAlignment = Alignment.CenterVertically
+</a><a href="#h2-0-545" id="h2-0-545" class="i">+                    ) {
+</a><a href="#h2-0-546" id="h2-0-546" class="i">+
+</a><a href="#h2-0-547" id="h2-0-547" class="i">+                        BitmojiImage(
+</a><a href="#h2-0-548" id="h2-0-548" class="i">+                            modifier = Modifier.padding(5.dp),
+</a><a href="#h2-0-549" id="h2-0-549" class="i">+                            size = 55,
+</a><a href="#h2-0-550" id="h2-0-550" class="i">+                            context = context,
+</a><a href="#h2-0-551" id="h2-0-551" class="i">+                            url = databaseFriend?.takeIf { it.bitmojiId != null }?.let {
+</a><a href="#h2-0-552" id="h2-0-552" class="i">+                                BitmojiSelfie.getBitmojiSelfie(it.selfieId, it.bitmojiId, BitmojiSelfie.BitmojiSelfieType.NEW_THREE_D)
+</a><a href="#h2-0-553" id="h2-0-553" class="i">+                            },
+</a><a href="#h2-0-554" id="h2-0-554" class="i">+                        )
+</a><a href="#h2-0-555" id="h2-0-555" class="i">+
+</a><a href="#h2-0-556" id="h2-0-556" class="i">+                        Column(
+</a><a href="#h2-0-557" id="h2-0-557" class="i">+                            modifier = Modifier
+</a><a href="#h2-0-558" id="h2-0-558" class="i">+                                .weight(1f),
+</a><a href="#h2-0-559" id="h2-0-559" class="i">+                        ) {
+</a><a href="#h2-0-560" id="h2-0-560" class="i">+                            Text(databaseFriend?.displayName?.let {
+</a><a href="#h2-0-561" id="h2-0-561" class="i">+                                &quot;$it (${log.username})&quot;
+</a><a href="#h2-0-562" id="h2-0-562" class="i">+                            } ?: log.username, lineHeight = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 14.sp)
+</a><a href="#h2-0-563" id="h2-0-563" class="i">+                            Text(&quot;${log.eventType} in ${log.conversationTitle}&quot;, fontSize = 10.sp, fontWeight = FontWeight.Light, lineHeight = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+</a><a href="#h2-0-564" id="h2-0-564" class="i">+                            Text(
+</a><a href="#h2-0-565" id="h2-0-565" class="i">+                                DateFormat.getDateTimeInstance().format(log.timestamp),
+</a><a href="#h2-0-566" id="h2-0-566" class="i">+                                fontSize = 10.sp,
+</a><a href="#h2-0-567" id="h2-0-567" class="i">+                                fontWeight = FontWeight.Light,
+</a><a href="#h2-0-568" id="h2-0-568" class="i">+                                lineHeight = 15.sp,
+</a><a href="#h2-0-569" id="h2-0-569" class="i">+                            )
+</a><a href="#h2-0-570" id="h2-0-570" class="i">+                        }
+</a><a href="#h2-0-571" id="h2-0-571" class="i">+
+</a><a href="#h2-0-572" id="h2-0-572" class="i">+                        IconButton(
+</a><a href="#h2-0-573" id="h2-0-573" class="i">+                            onClick = {
+</a><a href="#h2-0-574" id="h2-0-574" class="i">+                                context.messageLogger.deleteTrackerLog(log.id)
+</a><a href="#h2-0-575" id="h2-0-575" class="i">+                                logs.remove(log)
+</a><a href="#h2-0-576" id="h2-0-576" class="i">+                            }
+</a><a href="#h2-0-577" id="h2-0-577" class="i">+                        ) {
+</a><a href="#h2-0-578" id="h2-0-578" class="i">+                            Icon(Icons.Default.DeleteOutline, contentDescription = &quot;Delete&quot;)
+</a><a href="#h2-0-579" id="h2-0-579" class="i">+                        }
+</a><a href="#h2-0-580" id="h2-0-580" class="i">+                    }
+</a><a href="#h2-0-581" id="h2-0-581" class="i">+                }
+</a><a href="#h2-0-582" id="h2-0-582" class="i">+            }
+</a><a href="#h2-0-583" id="h2-0-583" class="i">+            item {
+</a><a href="#h2-0-584" id="h2-0-584" class="i">+                Spacer(modifier = Modifier.height(16.dp))
+</a><a href="#h2-0-585" id="h2-0-585" class="i">+
+</a><a href="#h2-0-586" id="h2-0-586" class="i">+                LaunchedEffect(pageIndex) {
+</a><a href="#h2-0-587" id="h2-0-587" class="i">+                    loadNewLogs()
+</a><a href="#h2-0-588" id="h2-0-588" class="i">+                }
+</a><a href="#h2-0-589" id="h2-0-589" class="i">+            }
+</a><a href="#h2-0-590" id="h2-0-590" class="i">+
+</a><a href="#h2-0-591" id="h2-0-591" class="i">+            item {
+</a><a href="#h2-0-592" id="h2-0-592" class="i">+                Spacer(modifier = Modifier.height(100.dp))
+</a><a href="#h2-0-593" id="h2-0-593" class="i">+            }
+</a><a href="#h2-0-594" id="h2-0-594" class="i">+        }
+</a><a href="#h2-0-595" id="h2-0-595" class="i">+    }
+</a><a href="#h2-0-596" id="h2-0-596" class="i">+}</a><a href="#h2-0-597" id="h2-0-597" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h3" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -1081,6 +1081,10 @@
+</a>                     &quot;allow_running_in_background&quot;: {
+                         &quot;name&quot;: &quot;Allow Running in Background&quot;,
+                         &quot;description&quot;: &quot;Allows the tracker to run in the background. Note: This will significantly drain your battery&quot;
+<a href="#h3-0-3" id="h3-0-3" class="i">+                    },
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+                    &quot;auto_purge&quot;: {
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+                        &quot;name&quot;: &quot;Auto Purge&quot;,
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+                        &quot;description&quot;: &quot;Automatically deletes cached events that are older than the specified amount of time&quot;
+</a>                     }
+                 }
+             }
+<b>diff --git a/<a id="h4" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -38,7 +38,25 @@ class TrackerLog(
+</a>     val userId: String,
+     val eventType: String,
+     val data: String
+<a href="#h4-0-3" id="h4-0-3" class="d">-)
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+) {
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+    fun toJson(): JsonObject {
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+        return JsonObject().apply {
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+            addProperty(&quot;id&quot;, id)
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+            addProperty(&quot;timestamp&quot;, timestamp)
+</a><a href="#h4-0-9" id="h4-0-9" class="i">+            addProperty(&quot;conversationId&quot;, conversationId)
+</a><a href="#h4-0-10" id="h4-0-10" class="i">+            addProperty(&quot;conversationTitle&quot;, conversationTitle)
+</a><a href="#h4-0-11" id="h4-0-11" class="i">+            addProperty(&quot;isGroup&quot;, isGroup)
+</a><a href="#h4-0-12" id="h4-0-12" class="i">+            addProperty(&quot;username&quot;, username)
+</a><a href="#h4-0-13" id="h4-0-13" class="i">+            addProperty(&quot;userId&quot;, userId)
+</a><a href="#h4-0-14" id="h4-0-14" class="i">+            addProperty(&quot;eventType&quot;, eventType)
+</a><a href="#h4-0-15" id="h4-0-15" class="i">+            addProperty(&quot;data&quot;, data)
+</a><a href="#h4-0-16" id="h4-0-16" class="i">+        }
+</a><a href="#h4-0-17" id="h4-0-17" class="i">+    }
+</a><a href="#h4-0-18" id="h4-0-18" class="i">+
+</a><a href="#h4-0-19" id="h4-0-19" class="i">+    fun toCsv(): String {
+</a><a href="#h4-0-20" id="h4-0-20" class="i">+        return &quot;$id,$timestamp,$conversationId,$conversationTitle,$isGroup,$username,$userId,$eventType,$data&quot;
+</a><a href="#h4-0-21" id="h4-0-21" class="i">+    }
+</a><a href="#h4-0-22" id="h4-0-22" class="i">+}
+</a> 
+ class LoggerWrapper(
+     val databaseFile: File
+<a href="#h4-1" id="h4-1" class="h">@@ -283,12 +301,18 @@ class LoggerWrapper(
+</a>     }
+ 
+     fun getLogs(
+<a href="#h4-1-3" id="h4-1-3" class="d">-        lastTimestamp: Long,
+</a><a href="#h4-1-4" id="h4-1-4" class="i">+        pageIndex: Int,
+</a><a href="#h4-1-5" id="h4-1-5" class="i">+        pageSize: Int,
+</a><a href="#h4-1-6" id="h4-1-6" class="i">+        reverseOrder: Boolean = true,
+</a><a href="#h4-1-7" id="h4-1-7" class="i">+        timestamp: Long? = null,
+</a>         filter: ((TrackerLog) -&gt; Boolean)? = null
+     ): List&lt;TrackerLog&gt; {
+<a href="#h4-1-10" id="h4-1-10" class="d">-        return database.rawQuery(&quot;SELECT * FROM tracker_events WHERE timestamp &lt; ? ORDER BY timestamp DESC&quot;, arrayOf(lastTimestamp.toString())).use {
+</a><a href="#h4-1-11" id="h4-1-11" class="i">+        return database.rawQuery(&quot;SELECT * FROM tracker_events &quot; +
+</a><a href="#h4-1-12" id="h4-1-12" class="i">+                &quot;WHERE timestamp ${if (reverseOrder) &quot;&lt;&quot; else &quot;&gt;&quot;} ? &quot; +
+</a><a href="#h4-1-13" id="h4-1-13" class="i">+                &quot;ORDER BY timestamp ${if (reverseOrder) &quot;DESC&quot; else &quot;&quot;} &quot; +
+</a><a href="#h4-1-14" id="h4-1-14" class="i">+                &quot;LIMIT $pageSize OFFSET ${pageIndex * pageSize}&quot;, arrayOf((timestamp ?: if (reverseOrder) Long.MAX_VALUE else 0).toString())).use {
+</a>             val logs = mutableListOf&lt;TrackerLog&gt;()
+<a href="#h4-1-16" id="h4-1-16" class="d">-            while (it.moveToNext() &amp;&amp; logs.size &lt; 50) {
+</a><a href="#h4-1-17" id="h4-1-17" class="i">+            while (it.moveToNext()) {
+</a>                 val log = TrackerLog(
+                     id = it.getIntOrNull(&quot;id&quot;) ?: continue,
+                     timestamp = it.getLongOrNull(&quot;timestamp&quot;) ?: continue,
+<a href="#h4-2" id="h4-2" class="h">@@ -307,6 +331,13 @@ class LoggerWrapper(
+</a>         }
+     }
+ 
+<a href="#h4-2-3" id="h4-2-3" class="i">+    fun purgeTrackerLogs(maxAge: Long) {
+</a><a href="#h4-2-4" id="h4-2-4" class="i">+        coroutineScope.launch {
+</a><a href="#h4-2-5" id="h4-2-5" class="i">+            val maxTime = System.currentTimeMillis() - maxAge
+</a><a href="#h4-2-6" id="h4-2-6" class="i">+            database.execSQL(&quot;DELETE FROM tracker_events WHERE timestamp &lt; ?&quot;, arrayOf(maxTime.toString()))
+</a><a href="#h4-2-7" id="h4-2-7" class="i">+        }
+</a><a href="#h4-2-8" id="h4-2-8" class="i">+    }
+</a><a href="#h4-2-9" id="h4-2-9" class="i">+
+</a>     fun findConversation(search: String): List&lt;String&gt; {
+         return database.rawQuery(&quot;SELECT DISTINCT conversation_id FROM tracker_events WHERE is_group = 1 AND conversation_id LIKE ?&quot;, arrayOf(&quot;%$search%&quot;)).use {
+             val conversations = mutableListOf&lt;String&gt;()
+<b>diff --git a/<a id="h5" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/ConfigObjects.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/ConfigObjects.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/ConfigObjects.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/ConfigObjects.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -99,7 +99,11 @@ data class PropertyKey&lt;T&gt;(
+</a> 
+     fun propertyOption(translation: LocaleWrapper, key: String): String {
+         if (key == &quot;null&quot;) {
+<a href="#h5-0-3" id="h5-0-3" class="d">-            return translation[params.disabledKey ?: &quot;manager.sections.features.disabled&quot;]
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+            return translation[params.disabledKey?.let { disabledKey -&gt;
+</a><a href="#h5-0-5" id="h5-0-5" class="i">+                params.customOptionTranslationPath?.let {
+</a><a href="#h5-0-6" id="h5-0-6" class="i">+                    &quot;$it.$disabledKey&quot;
+</a><a href="#h5-0-7" id="h5-0-7" class="i">+                } ?: key
+</a><a href="#h5-0-8" id="h5-0-8" class="i">+            } ?: &quot;manager.sections.features.disabled&quot;]
+</a>         }
+ 
+         return if (!params.flags.contains(ConfigFlag.NO_TRANSLATE))
+<b>diff --git a/<a id="h6" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/FriendTrackerConfig.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/FriendTrackerConfig.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/FriendTrackerConfig.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/FriendTrackerConfig.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -1,8 +1,15 @@
+</a> package me.rhunk.snapenhance.common.config.impl
+ 
+ import me.rhunk.snapenhance.common.config.ConfigContainer
+<a href="#h6-0-3" id="h6-0-3" class="i">+import me.rhunk.snapenhance.common.util.PURGE_DISABLED_KEY
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+import me.rhunk.snapenhance.common.util.PURGE_VALUES
+</a><a href="#h6-0-5" id="h6-0-5" class="i">+import me.rhunk.snapenhance.common.util.PURGE_TRANSLATION_KEY
+</a> 
+ class FriendTrackerConfig: ConfigContainer(hasGlobalState = true) {
+     val recordMessagingEvents = boolean(&quot;record_messaging_events&quot;, false)
+     val allowRunningInBackground = boolean(&quot;allow_running_in_background&quot;, false)
+<a href="#h6-0-10" id="h6-0-10" class="i">+    val autoPurge = unique(&quot;auto_purge&quot;, *PURGE_VALUES) {
+</a><a href="#h6-0-11" id="h6-0-11" class="i">+        customOptionTranslationPath = PURGE_TRANSLATION_KEY
+</a><a href="#h6-0-12" id="h6-0-12" class="i">+        disabledKey = PURGE_DISABLED_KEY
+</a><a href="#h6-0-13" id="h6-0-13" class="i">+    }.apply { set(PURGE_DISABLED_KEY) }
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h7" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -4,6 +4,9 @@ import me.rhunk.snapenhance.common.config.ConfigContainer
+</a> import me.rhunk.snapenhance.common.config.FeatureNotice
+ import me.rhunk.snapenhance.common.config.PropertyValue
+ import me.rhunk.snapenhance.common.data.NotificationType
+<a href="#h7-0-3" id="h7-0-3" class="i">+import me.rhunk.snapenhance.common.util.PURGE_DISABLED_KEY
+</a><a href="#h7-0-4" id="h7-0-4" class="i">+import me.rhunk.snapenhance.common.util.PURGE_TRANSLATION_KEY
+</a><a href="#h7-0-5" id="h7-0-5" class="i">+import me.rhunk.snapenhance.common.util.PURGE_VALUES
+</a> 
+ class MessagingTweaks : ConfigContainer() {
+     inner class HalfSwipeNotifierConfig : ConfigContainer(hasGlobalState = true) {
+<a href="#h7-1" id="h7-1" class="h">@@ -17,27 +20,11 @@ class MessagingTweaks : ConfigContainer() {
+</a> 
+     inner class MessageLoggerConfig : ConfigContainer(hasGlobalState = true) {
+         val keepMyOwnMessages = boolean(&quot;keep_my_own_messages&quot;)
+<a href="#h7-1-3" id="h7-1-3" class="d">-        private val autoPurge = unique(&quot;auto_purge&quot;, &quot;1_hour&quot;, &quot;3_hours&quot;, &quot;6_hours&quot;, &quot;12_hours&quot;, &quot;1_day&quot;, &quot;3_days&quot;, &quot;1_week&quot;, &quot;2_weeks&quot;, &quot;1_month&quot;, &quot;3_months&quot;, &quot;6_months&quot;) {
+</a><a href="#h7-1-4" id="h7-1-4" class="d">-            disabledKey = &quot;features.options.auto_purge.never&quot;
+</a><a href="#h7-1-5" id="h7-1-5" class="i">+        val autoPurge = unique(&quot;auto_purge&quot;, *PURGE_VALUES) {
+</a><a href="#h7-1-6" id="h7-1-6" class="i">+            customOptionTranslationPath = PURGE_TRANSLATION_KEY
+</a><a href="#h7-1-7" id="h7-1-7" class="i">+            disabledKey = PURGE_DISABLED_KEY
+</a>         }.apply { set(&quot;3_days&quot;) }
+ 
+<a href="#h7-1-10" id="h7-1-10" class="d">-        fun getAutoPurgeTime(): Long? {
+</a><a href="#h7-1-11" id="h7-1-11" class="d">-            return when (autoPurge.getNullable()) {
+</a><a href="#h7-1-12" id="h7-1-12" class="d">-                &quot;1_hour&quot; -&gt; 3600000L
+</a><a href="#h7-1-13" id="h7-1-13" class="d">-                &quot;3_hours&quot; -&gt; 10800000L
+</a><a href="#h7-1-14" id="h7-1-14" class="d">-                &quot;6_hours&quot; -&gt; 21600000L
+</a><a href="#h7-1-15" id="h7-1-15" class="d">-                &quot;12_hours&quot; -&gt; 43200000L
+</a><a href="#h7-1-16" id="h7-1-16" class="d">-                &quot;1_day&quot; -&gt; 86400000L
+</a><a href="#h7-1-17" id="h7-1-17" class="d">-                &quot;3_days&quot; -&gt; 259200000L
+</a><a href="#h7-1-18" id="h7-1-18" class="d">-                &quot;1_week&quot; -&gt; 604800000L
+</a><a href="#h7-1-19" id="h7-1-19" class="d">-                &quot;2_weeks&quot; -&gt; 1209600000L
+</a><a href="#h7-1-20" id="h7-1-20" class="d">-                &quot;1_month&quot; -&gt; 2592000000L
+</a><a href="#h7-1-21" id="h7-1-21" class="d">-                &quot;3_months&quot; -&gt; 7776000000L
+</a><a href="#h7-1-22" id="h7-1-22" class="d">-                &quot;6_months&quot; -&gt; 15552000000L
+</a><a href="#h7-1-23" id="h7-1-23" class="d">-                else -&gt; null
+</a><a href="#h7-1-24" id="h7-1-24" class="d">-            }
+</a><a href="#h7-1-25" id="h7-1-25" class="d">-        }
+</a><a href="#h7-1-26" id="h7-1-26" class="d">-
+</a>         val messageFilter = multiple(&quot;message_filter&quot;, &quot;CHAT&quot;,
+             &quot;SNAP&quot;,
+             &quot;NOTE&quot;,
+<b>diff --git a/<a id="h8" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/Purge.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/Purge.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/Purge.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/Purge.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -0,0 +1,24 @@
+</a><a href="#h8-0-0" id="h8-0-0" class="i">+package me.rhunk.snapenhance.common.util
+</a><a href="#h8-0-1" id="h8-0-1" class="i">+
+</a><a href="#h8-0-2" id="h8-0-2" class="i">+val PURGE_VALUES = arrayOf(&quot;1_hour&quot;, &quot;3_hours&quot;, &quot;6_hours&quot;, &quot;12_hours&quot;, &quot;1_day&quot;, &quot;3_days&quot;, &quot;1_week&quot;, &quot;2_weeks&quot;, &quot;1_month&quot;, &quot;3_months&quot;, &quot;6_months&quot;)
+</a><a href="#h8-0-3" id="h8-0-3" class="i">+const val PURGE_TRANSLATION_KEY = &quot;features.options.auto_purge&quot;
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+const val PURGE_DISABLED_KEY = &quot;never&quot;
+</a><a href="#h8-0-5" id="h8-0-5" class="i">+
+</a><a href="#h8-0-6" id="h8-0-6" class="i">+fun getPurgeTime(
+</a><a href="#h8-0-7" id="h8-0-7" class="i">+    value: String?
+</a><a href="#h8-0-8" id="h8-0-8" class="i">+): Long? {
+</a><a href="#h8-0-9" id="h8-0-9" class="i">+    return when (value) {
+</a><a href="#h8-0-10" id="h8-0-10" class="i">+        &quot;1_hour&quot; -&gt; 3600000L
+</a><a href="#h8-0-11" id="h8-0-11" class="i">+        &quot;3_hours&quot; -&gt; 10800000L
+</a><a href="#h8-0-12" id="h8-0-12" class="i">+        &quot;6_hours&quot; -&gt; 21600000L
+</a><a href="#h8-0-13" id="h8-0-13" class="i">+        &quot;12_hours&quot; -&gt; 43200000L
+</a><a href="#h8-0-14" id="h8-0-14" class="i">+        &quot;1_day&quot; -&gt; 86400000L
+</a><a href="#h8-0-15" id="h8-0-15" class="i">+        &quot;3_days&quot; -&gt; 259200000L
+</a><a href="#h8-0-16" id="h8-0-16" class="i">+        &quot;1_week&quot; -&gt; 604800000L
+</a><a href="#h8-0-17" id="h8-0-17" class="i">+        &quot;2_weeks&quot; -&gt; 1209600000L
+</a><a href="#h8-0-18" id="h8-0-18" class="i">+        &quot;1_month&quot; -&gt; 2592000000L
+</a><a href="#h8-0-19" id="h8-0-19" class="i">+        &quot;3_months&quot; -&gt; 7776000000L
+</a><a href="#h8-0-20" id="h8-0-20" class="i">+        &quot;6_months&quot; -&gt; 15552000000L
+</a><a href="#h8-0-21" id="h8-0-21" class="i">+        else -&gt; null
+</a><a href="#h8-0-22" id="h8-0-22" class="i">+    }
+</a><a href="#h8-0-23" id="h8-0-23" class="i">+}</a><a href="#h8-0-24" id="h8-0-24" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

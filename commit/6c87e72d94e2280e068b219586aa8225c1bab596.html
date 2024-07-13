@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(bridge): auto bridge restart on SnapEnhance update - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/6c87e72d94e2280e068b219586aa8225c1bab596.html">6c87e72d94e2280e068b219586aa8225c1bab596</a>
+<b>parent</b> <a href="../commit/248100b8b9c9a373e7575be4a0166d6a003099ea.html">248100b8b9c9a373e7575be4a0166d6a003099ea</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 12 Jun 2024 16:20:24 +0200
+
+fix(bridge): auto bridge restart on SnapEnhance update
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/FriendFeedInfoMenu.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+</table></pre><pre>3 files changed, 11 insertions(+), 3 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl</a> b/<a href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -15,7 +15,7 @@ import me.rhunk.snapenhance.bridge.location.LocationManager;
+</a> 
+ interface BridgeInterface {
+     /**
+<a href="#h0-0-3" id="h0-0-3" class="d">-    * Get the application APK path (assets for the conversation exporter)
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+    * Get the SnapEnhance APK path (used in LSPatch updater and for auto bridge restart)
+</a>     */
+     String getApplicationApkPath();
+ 
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -42,6 +42,7 @@ class BridgeClient(
+</a>     private lateinit var service: BridgeInterface
+ 
+     private val onConnectedCallbacks = mutableListOf&lt;suspend () -&gt; Unit&gt;()
+<a href="#h1-0-3" id="h1-0-3" class="i">+    private var cacheSnapEnhanceApkPath: String? = null
+</a> 
+     fun addOnConnectedCallback(callback: suspend () -&gt; Unit) {
+         synchronized(onConnectedCallbacks) {
+<a href="#h1-1" id="h1-1" class="h">@@ -123,6 +124,13 @@ class BridgeClient(
+</a>                 }
+             }
+         }
+<a href="#h1-1-3" id="h1-1-3" class="i">+        cacheSnapEnhanceApkPath = this.service.applicationApkPath.also {
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+            if (cacheSnapEnhanceApkPath != null &amp;&amp; cacheSnapEnhanceApkPath != it) {
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+                context.log.verbose(&quot;Restarting Snapchat due to SnapEnhance update&quot;)
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+                context.softRestartApp()
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+                return
+</a><a href="#h1-1-8" id="h1-1-8" class="i">+            }
+</a><a href="#h1-1-9" id="h1-1-9" class="i">+        }
+</a>         resumeContinuation(true)
+     }
+ 
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/FriendFeedInfoMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/FriendFeedInfoMenu.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/FriendFeedInfoMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/FriendFeedInfoMenu.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -414,8 +414,8 @@ class FriendFeedInfoMenu : AbstractMenu() {
+</a>                         state = !ruleFeature.getState(conversationId)
+                         ruleFeature.setState(conversationId, state)
+                         context.inAppOverlay.showStatusToast(
+<a href="#h2-0-3" id="h2-0-3" class="d">-                            if (ruleFeature.getState(conversationId)) Icons.Default.CheckCircleOutline else Icons.Default.NotInterested,
+</a><a href="#h2-0-4" id="h2-0-4" class="d">-                            context.translation.format(&quot;rules.toasts.${if (ruleFeature.getState(conversationId)) &quot;enabled&quot; else &quot;disabled&quot;}&quot;, &quot;ruleName&quot; to context.translation[ruleFeature.ruleType.translateOptionKey(ruleState.key)]),
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+                            if (state) Icons.Default.CheckCircleOutline else Icons.Default.NotInterested,
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+                            context.translation.format(&quot;rules.toasts.${if (state) &quot;enabled&quot; else &quot;disabled&quot;}&quot;, &quot;ruleName&quot; to context.translation[ruleFeature.ruleType.translateOptionKey(ruleState.key)]),
+</a>                             durationMs = 1500
+                         )
+                         context.mainActivity?.triggerRootCloseTouchEvent()
+</pre>
+</div>
+</body>
+</html>

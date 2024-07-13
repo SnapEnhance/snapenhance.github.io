@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(experimental): edit messages - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/29f7e2aa1cdebb716ad038d4fc2e9d519ef41ca3.html">29f7e2aa1cdebb716ad038d4fc2e9d519ef41ca3</a>
+<b>parent</b> <a href="../commit/9f084afebed1391dfd0a704e34e0a656ab613a8d.html">9f084afebed1391dfd0a704e34e0a656ab613a8d</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Mon, 11 Mar 2024 22:47:13 +0100
+
+feat(experimental): edit messages
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">+++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt</a></td><td> | </td><td class="num">78</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/NewChatActionMenu.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt</a></td><td> | </td><td class="num">16</td><td><span class="i">++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/MessageMetadata.kt</a></td><td> | </td><td class="num">14</td><td><span class="i">++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>7 files changed, 120 insertions(+), 3 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -704,6 +704,10 @@
+</a>                             }
+                         }
+                     },
+<a href="#h0-0-3" id="h0-0-3" class="i">+                    &quot;edit_message&quot;: {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                        &quot;name&quot;: &quot;Edit Messages&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+                        &quot;description&quot;: &quot;Allows you to edit messages in conversations&quot;
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                    },
+</a>                     &quot;app_passcode&quot;: {
+                         &quot;name&quot;: &quot;App Passcode&quot;,
+                         &quot;description&quot;: &quot;Sets a passcode to lock the app&quot;
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -31,6 +31,7 @@ class Experimental : ConfigContainer() {
+</a>     val storyLogger = boolean(&quot;story_logger&quot;) { requireRestart(); addNotices(FeatureNotice.UNSTABLE); }
+     val callRecorder = boolean(&quot;call_recorder&quot;) { requireRestart(); addNotices(FeatureNotice.UNSTABLE); }
+     val accountSwitcher = container(&quot;account_switcher&quot;, AccountSwitcherConfig()) { requireRestart(); addNotices(FeatureNotice.UNSTABLE) }
+<a href="#h1-0-3" id="h1-0-3" class="i">+    val editMessage = boolean(&quot;edit_message&quot;) { requireRestart(); addNotices(FeatureNotice.BAN_RISK) }
+</a>     val appPasscode = string(&quot;app_passcode&quot;)
+     val appLockOnResume = boolean(&quot;app_lock_on_resume&quot;)
+     val infiniteStoryBoost = boolean(&quot;infinite_story_boost&quot;)
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -20,6 +20,7 @@ import me.rhunk.snapenhance.core.wrapper.impl.Snapchatter
+</a> import me.rhunk.snapenhance.core.wrapper.impl.toSnapUUID
+ import me.rhunk.snapenhance.mapper.impl.CallbackMapper
+ import me.rhunk.snapenhance.mapper.impl.FriendsFeedEventDispatcherMapper
+<a href="#h2-0-3" id="h2-0-3" class="i">+import java.util.UUID
+</a> import java.util.concurrent.Future
+ 
+ class Messaging : Feature(&quot;Messaging&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC or FeatureLoadParams.INIT_ASYNC or FeatureLoadParams.INIT_SYNC) {
+<a href="#h2-1" id="h2-1" class="h">@@ -93,7 +94,12 @@ class Messaging : Feature(&quot;Messaging&quot;, loadParams = FeatureLoadParams.ACTIVITY_C
+</a>         })
+     }
+ 
+<a href="#h2-1-3" id="h2-1-3" class="d">-    fun localUpdateMessage(conversationId: String, message: Message) {
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+    fun localUpdateMessage(conversationId: String, message: Message, forceUpdate: Boolean = false) {
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+        if (forceUpdate) {
+</a><a href="#h2-1-6" id="h2-1-6" class="i">+            message.messageMetadata?.screenRecordedBy = ArrayList&lt;SnapUUID&gt;(message.messageMetadata?.screenRecordedBy ?: emptyList()).apply {
+</a><a href="#h2-1-7" id="h2-1-7" class="i">+                add(SnapUUID(UUID.randomUUID().toString()))
+</a><a href="#h2-1-8" id="h2-1-8" class="i">+            }
+</a><a href="#h2-1-9" id="h2-1-9" class="i">+        }
+</a>         conversationManagerDelegate?.let {
+             it::class.java.methods.first { method -&gt;
+                 method.name == &quot;onConversationUpdated&quot;
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -4,11 +4,17 @@ import android.view.View
+</a> import android.view.ViewGroup
+ import android.view.ViewGroup.MarginLayoutParams
+ import android.widget.Button
+<a href="#h3-0-3" id="h3-0-3" class="i">+import android.widget.EditText
+</a> import android.widget.LinearLayout
+<a href="#h3-0-5" id="h3-0-5" class="i">+import kotlinx.coroutines.Dispatchers
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+import kotlinx.coroutines.launch
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+import me.rhunk.snapenhance.common.util.protobuf.ProtoWriter
+</a> import me.rhunk.snapenhance.core.features.impl.downloader.MediaDownloader
+ import me.rhunk.snapenhance.core.features.impl.experiments.ConvertMessageLocally
+ import me.rhunk.snapenhance.core.features.impl.messaging.Messaging
+ import me.rhunk.snapenhance.core.features.impl.spying.MessageLogger
+<a href="#h3-0-13" id="h3-0-13" class="i">+import me.rhunk.snapenhance.core.ui.ViewAppearanceHelper
+</a> import me.rhunk.snapenhance.core.ui.ViewTagState
+ import me.rhunk.snapenhance.core.ui.applyTheme
+ import me.rhunk.snapenhance.core.ui.menu.AbstractMenu
+<a href="#h3-1" id="h3-1" class="h">@@ -58,7 +64,11 @@ class ChatActionMenu : AbstractMenu() {
+</a>         val viewGroup = parent.parent.parent as? ViewGroup ?: return
+         if (viewTagState[viewGroup]) return
+         //close the action menu using a touch event
+<a href="#h3-1-3" id="h3-1-3" class="d">-        val closeActionMenu = { parent.triggerCloseTouchEvent() }
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+        val closeActionMenu = {
+</a><a href="#h3-1-5" id="h3-1-5" class="i">+            context.runOnUiThread {
+</a><a href="#h3-1-6" id="h3-1-6" class="i">+                parent.triggerCloseTouchEvent()
+</a><a href="#h3-1-7" id="h3-1-7" class="i">+            }
+</a><a href="#h3-1-8" id="h3-1-8" class="i">+        }
+</a> 
+         val messaging = context.feature(Messaging::class)
+         val messageLogger = context.feature(MessageLogger::class)
+<a href="#h3-2" id="h3-2" class="h">@@ -129,6 +139,72 @@ class ChatActionMenu : AbstractMenu() {
+</a>             })
+         }
+ 
+<a href="#h3-2-3" id="h3-2-3" class="i">+        if (context.config.experimental.editMessage.get() &amp;&amp; messaging.conversationManager?.isEditMessageSupported() == true) {
+</a><a href="#h3-2-4" id="h3-2-4" class="i">+            injectButton(Button(viewGroup.context).apply button@{
+</a><a href="#h3-2-5" id="h3-2-5" class="i">+                text = &quot;Edit Message&quot;
+</a><a href="#h3-2-6" id="h3-2-6" class="i">+                setOnClickListener {
+</a><a href="#h3-2-7" id="h3-2-7" class="i">+                    messaging.conversationManager?.fetchMessage(
+</a><a href="#h3-2-8" id="h3-2-8" class="i">+                        messaging.openedConversationUUID.toString(),
+</a><a href="#h3-2-9" id="h3-2-9" class="i">+                        messaging.lastFocusedMessageId,
+</a><a href="#h3-2-10" id="h3-2-10" class="i">+                        onSuccess = onSuccess@{ message -&gt;
+</a><a href="#h3-2-11" id="h3-2-11" class="i">+                            closeActionMenu()
+</a><a href="#h3-2-12" id="h3-2-12" class="i">+                            if (message.senderId.toString() != this@ChatActionMenu.context.database.myUserId) {
+</a><a href="#h3-2-13" id="h3-2-13" class="i">+                                this@ChatActionMenu.context.shortToast(&quot;You can only edit your own messages&quot;)
+</a><a href="#h3-2-14" id="h3-2-14" class="i">+                                return@onSuccess
+</a><a href="#h3-2-15" id="h3-2-15" class="i">+                            }
+</a><a href="#h3-2-16" id="h3-2-16" class="i">+
+</a><a href="#h3-2-17" id="h3-2-17" class="i">+                            val editText = EditText(viewGroup.context).apply {
+</a><a href="#h3-2-18" id="h3-2-18" class="i">+                                setText(ProtoReader(message.messageContent?.content ?: return@apply).getString(2, 1) ?: run {
+</a><a href="#h3-2-19" id="h3-2-19" class="i">+                                    this@ChatActionMenu.context.shortToast(&quot;You can only edit text messages&quot;)
+</a><a href="#h3-2-20" id="h3-2-20" class="i">+                                    return@onSuccess
+</a><a href="#h3-2-21" id="h3-2-21" class="i">+                                })
+</a><a href="#h3-2-22" id="h3-2-22" class="i">+                                setTextColor(resources.getColor(android.R.color.white, context.theme))
+</a><a href="#h3-2-23" id="h3-2-23" class="i">+                                postDelayed({
+</a><a href="#h3-2-24" id="h3-2-24" class="i">+                                    requestFocus()
+</a><a href="#h3-2-25" id="h3-2-25" class="i">+                                    setSelection(text.length)
+</a><a href="#h3-2-26" id="h3-2-26" class="i">+                                    context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
+</a><a href="#h3-2-27" id="h3-2-27" class="i">+                                        .let { it as android.view.inputmethod.InputMethodManager }
+</a><a href="#h3-2-28" id="h3-2-28" class="i">+                                        .showSoftInput(this, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+</a><a href="#h3-2-29" id="h3-2-29" class="i">+                                }, 200)
+</a><a href="#h3-2-30" id="h3-2-30" class="i">+                            }
+</a><a href="#h3-2-31" id="h3-2-31" class="i">+
+</a><a href="#h3-2-32" id="h3-2-32" class="i">+                            this@ChatActionMenu.context.runOnUiThread {
+</a><a href="#h3-2-33" id="h3-2-33" class="i">+                                ViewAppearanceHelper.newAlertDialogBuilder(this@ChatActionMenu.context.mainActivity!!)
+</a><a href="#h3-2-34" id="h3-2-34" class="i">+                                    .setPositiveButton(&quot;Save&quot;) { _, _ -&gt;
+</a><a href="#h3-2-35" id="h3-2-35" class="i">+                                        val newMessageContent = ProtoWriter().apply {
+</a><a href="#h3-2-36" id="h3-2-36" class="i">+                                            from(2) { addString(1, editText.text.toString()) }
+</a><a href="#h3-2-37" id="h3-2-37" class="i">+                                        }.toByteArray()
+</a><a href="#h3-2-38" id="h3-2-38" class="i">+                                        message.messageContent?.content = newMessageContent
+</a><a href="#h3-2-39" id="h3-2-39" class="i">+                                        messaging.conversationManager?.editMessage(
+</a><a href="#h3-2-40" id="h3-2-40" class="i">+                                            message.messageDescriptor?.conversationId.toString(),
+</a><a href="#h3-2-41" id="h3-2-41" class="i">+                                            message.messageDescriptor?.messageId ?: return@setPositiveButton,
+</a><a href="#h3-2-42" id="h3-2-42" class="i">+                                            newMessageContent,
+</a><a href="#h3-2-43" id="h3-2-43" class="i">+                                            onSuccess = {
+</a><a href="#h3-2-44" id="h3-2-44" class="i">+                                                this@ChatActionMenu.context.coroutineScope.launch(Dispatchers.Main) {
+</a><a href="#h3-2-45" id="h3-2-45" class="i">+                                                    message.messageMetadata?.isEdited = true
+</a><a href="#h3-2-46" id="h3-2-46" class="i">+                                                    messaging.localUpdateMessage(
+</a><a href="#h3-2-47" id="h3-2-47" class="i">+                                                        message.messageDescriptor?.conversationId.toString(),
+</a><a href="#h3-2-48" id="h3-2-48" class="i">+                                                        message,
+</a><a href="#h3-2-49" id="h3-2-49" class="i">+                                                        forceUpdate = true
+</a><a href="#h3-2-50" id="h3-2-50" class="i">+                                                    )
+</a><a href="#h3-2-51" id="h3-2-51" class="i">+                                                }
+</a><a href="#h3-2-52" id="h3-2-52" class="i">+                                            },
+</a><a href="#h3-2-53" id="h3-2-53" class="i">+                                            onError = {
+</a><a href="#h3-2-54" id="h3-2-54" class="i">+                                                this@ChatActionMenu.context.shortToast(&quot;Failed to edit message: $it&quot;)
+</a><a href="#h3-2-55" id="h3-2-55" class="i">+                                            }
+</a><a href="#h3-2-56" id="h3-2-56" class="i">+                                        )
+</a><a href="#h3-2-57" id="h3-2-57" class="i">+                                    }
+</a><a href="#h3-2-58" id="h3-2-58" class="i">+                                    .setNegativeButton(&quot;Cancel&quot;) { dialog, _ -&gt; dialog.dismiss() }
+</a><a href="#h3-2-59" id="h3-2-59" class="i">+                                    .setView(editText)
+</a><a href="#h3-2-60" id="h3-2-60" class="i">+                                    .setTitle(&quot;Edit message content&quot;)
+</a><a href="#h3-2-61" id="h3-2-61" class="i">+                                    .show()
+</a><a href="#h3-2-62" id="h3-2-62" class="i">+                            }
+</a><a href="#h3-2-63" id="h3-2-63" class="i">+                        }
+</a><a href="#h3-2-64" id="h3-2-64" class="i">+                    )
+</a><a href="#h3-2-65" id="h3-2-65" class="i">+                }
+</a><a href="#h3-2-66" id="h3-2-66" class="i">+            })
+</a><a href="#h3-2-67" id="h3-2-67" class="i">+        }
+</a><a href="#h3-2-68" id="h3-2-68" class="i">+
+</a>         if (context.config.experimental.convertMessageLocally.get()) {
+             injectButton(Button(viewGroup.context).apply {
+                 text = this@ChatActionMenu.context.translation[&quot;chat_action_menu.convert_message&quot;]
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/NewChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/NewChatActionMenu.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/NewChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/NewChatActionMenu.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -80,7 +80,7 @@ class NewChatActionMenu : AbstractMenu() {
+</a>                 FlowRow(
+                     modifier = Modifier
+                         .fillMaxWidth()
+<a href="#h4-0-3" id="h4-0-3" class="d">-                        .padding(5.dp),
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+                        .padding(2.dp),
+</a>                     horizontalArrangement = Arrangement.SpaceEvenly,
+                 ) {
+                     Button(onClick = {
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -159,4 +159,20 @@ class ConversationManager(
+</a>             .override(&quot;onError&quot;) { onError(it.arg&lt;Any&gt;(0).toString()) }.build()
+         getOneOnOneConversationIds.invoke(instanceNonNull(), userIds.map { it.toSnapUUID().instanceNonNull() }.toMutableList(), callback)
+     }
+<a href="#h5-0-3" id="h5-0-3" class="i">+
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+    fun editMessage(conversationId: String, messageId: Long, content: ByteArray, onSuccess: () -&gt; Unit, onError: (error: String) -&gt; Unit) {
+</a><a href="#h5-0-5" id="h5-0-5" class="i">+        val editMessageMethod = instanceNonNull()::class.java.methods.first { it.name == &quot;editMessage&quot; }
+</a><a href="#h5-0-6" id="h5-0-6" class="i">+        editMessageMethod.invoke(instanceNonNull(), editMessageMethod.parameterTypes[0].dataBuilder {
+</a><a href="#h5-0-7" id="h5-0-7" class="i">+            set(&quot;mConversationId&quot;, conversationId.toSnapUUID().instanceNonNull())
+</a><a href="#h5-0-8" id="h5-0-8" class="i">+            set(&quot;mMessageId&quot;, messageId)
+</a><a href="#h5-0-9" id="h5-0-9" class="i">+        }, editMessageMethod.parameterTypes[1].dataBuilder {
+</a><a href="#h5-0-10" id="h5-0-10" class="i">+            set(&quot;mContent&quot;, content)
+</a><a href="#h5-0-11" id="h5-0-11" class="i">+            set(&quot;mMentionInfo&quot;, null)
+</a><a href="#h5-0-12" id="h5-0-12" class="i">+        }, CallbackBuilder(getCallbackClass(&quot;Callback&quot;))
+</a><a href="#h5-0-13" id="h5-0-13" class="i">+            .override(&quot;onSuccess&quot;) { onSuccess() }
+</a><a href="#h5-0-14" id="h5-0-14" class="i">+            .override(&quot;onError&quot;) { onError(it.arg&lt;Any&gt;(0).toString()) }.build()
+</a><a href="#h5-0-15" id="h5-0-15" class="i">+        )
+</a><a href="#h5-0-16" id="h5-0-16" class="i">+    }
+</a><a href="#h5-0-17" id="h5-0-17" class="i">+
+</a><a href="#h5-0-18" id="h5-0-18" class="i">+    fun isEditMessageSupported() = instanceNonNull()::class.java.methods.any { it.name == &quot;editMessage&quot; }
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/MessageMetadata.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/MessageMetadata.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/MessageMetadata.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/MessageMetadata.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -20,9 +20,23 @@ class MessageMetadata(obj: Any?) : AbstractWrapper(obj){
+</a>     @get:JSGetter @set:JSSetter
+     var seenBy by field(&quot;mSeenBy&quot;, uuidArrayListMapper)
+     @get:JSGetter @set:JSSetter
+<a href="#h6-0-3" id="h6-0-3" class="i">+    var screenRecordedBy by field(&quot;mScreenRecordedBy&quot;, uuidArrayListMapper)
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+    @get:JSGetter @set:JSSetter
+</a><a href="#h6-0-5" id="h6-0-5" class="i">+    var screenShottedBy by field(&quot;mScreenShottedBy&quot;, uuidArrayListMapper)
+</a><a href="#h6-0-6" id="h6-0-6" class="i">+    @get:JSGetter @set:JSSetter
+</a>     var reactions by field(&quot;mReactions&quot;) {
+         (it as ArrayList&lt;*&gt;).map { i -&gt; UserIdToReaction(i) }.toMutableList()
+     }
+     @get:JSGetter @set:JSSetter
+     var isSaveable by field&lt;Boolean&gt;(&quot;mIsSaveable&quot;)
+<a href="#h6-0-12" id="h6-0-12" class="i">+    @get:JSGetter @set:JSSetter
+</a><a href="#h6-0-13" id="h6-0-13" class="i">+    var isEditable by field&lt;Boolean&gt;(&quot;mIsEditable&quot;)
+</a><a href="#h6-0-14" id="h6-0-14" class="i">+    @get:JSGetter @set:JSSetter
+</a><a href="#h6-0-15" id="h6-0-15" class="i">+    var isEdited by field&lt;Boolean&gt;(&quot;mIsEdited&quot;)
+</a><a href="#h6-0-16" id="h6-0-16" class="i">+    @get:JSGetter @set:JSSetter
+</a><a href="#h6-0-17" id="h6-0-17" class="i">+    var isErasable by field&lt;Boolean&gt;(&quot;mIsErasable&quot;)
+</a><a href="#h6-0-18" id="h6-0-18" class="i">+    @get:JSGetter @set:JSSetter
+</a><a href="#h6-0-19" id="h6-0-19" class="i">+    var isFriendLinkPending by field&lt;Boolean&gt;(&quot;mIsFriendLinkPending&quot;)
+</a><a href="#h6-0-20" id="h6-0-20" class="i">+    @get:JSGetter @set:JSSetter
+</a><a href="#h6-0-21" id="h6-0-21" class="i">+    var isReactable by field&lt;Boolean&gt;(&quot;mIsReactable&quot;)
+</a> } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

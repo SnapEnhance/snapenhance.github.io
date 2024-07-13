@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix: dialog overlay not showing - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/284417b87da057a05f51878ad4c12fbd3966e673.html">284417b87da057a05f51878ad4c12fbd3966e673</a>
+<b>parent</b> <a href="../commit/5d370776a55bc4f0be02813426fe3002cd93eaab.html">5d370776a55bc4f0be02813426fe3002cd93eaab</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 26 Nov 2023 12:31:14 +0100
+
+fix: dialog overlay not showing
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/SharedContextHolder.kt</a></td><td> | </td><td class="num">5</td><td><span class="i">++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/AndroidDialogCustom.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">+</span><span class="d">--</span></td></tr>
+</table></pre><pre>3 files changed, 6 insertions(+), 4 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -113,7 +113,7 @@ class RemoteSideContext(
+</a>         }
+ 
+         scriptManager.runtime.eachModule {
+<a href="#h0-0-3" id="h0-0-3" class="d">-            callFunction(&quot;module.onManagerLoad&quot;,androidContext)
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+            callFunction(&quot;module.onManagerLoad&quot;, androidContext)
+</a>         }
+     }
+ 
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/SharedContextHolder.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/SharedContextHolder.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/SharedContextHolder.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/SharedContextHolder.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,5 +1,6 @@
+</a> package me.rhunk.snapenhance
+ 
+<a href="#h1-0-2" id="h1-0-2" class="i">+import android.app.Activity
+</a> import android.content.Context
+ import java.lang.ref.WeakReference
+ 
+<a href="#h1-1" id="h1-1" class="h">@@ -8,7 +9,9 @@ object SharedContextHolder {
+</a> 
+     fun remote(context: Context): RemoteSideContext {
+         if (!::_remoteSideContext.isInitialized || _remoteSideContext.get() == null) {
+<a href="#h1-1-3" id="h1-1-3" class="d">-            _remoteSideContext = WeakReference(RemoteSideContext(context))
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+            _remoteSideContext = WeakReference(RemoteSideContext(context.let {
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+                if (it is Activity) it.applicationContext else it
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+            }))
+</a>             _remoteSideContext.get()?.reload()
+         }
+ 
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/util/AndroidDialogCustom.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/AndroidDialogCustom.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/util/AndroidDialogCustom.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/AndroidDialogCustom.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -82,7 +82,6 @@ fun Dialog(
+</a>     properties: DialogProperties = DialogProperties(),
+     content: @Composable () -&gt; Unit
+ ) {
+<a href="#h2-0-3" id="h2-0-3" class="d">-    val context = LocalContext.current
+</a>     val view = LocalView.current
+     val density = LocalDensity.current
+     val layoutDirection = LocalLayoutDirection.current
+<a href="#h2-1" id="h2-1" class="h">@@ -112,7 +111,7 @@ fun Dialog(
+</a> 
+     DisposableEffect(dialog) {
+         // Set the dialog&#39;s window type to TYPE_APPLICATION_OVERLAY so it&#39;s compatible with compose overlays
+<a href="#h2-1-3" id="h2-1-3" class="d">-        if (Settings.canDrawOverlays(view.context) &amp;&amp; context !is Activity) {
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+        if (Settings.canDrawOverlays(view.context) &amp;&amp; view.context !is Activity) {
+</a>             dialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
+         }
+         dialog.show()
+</pre>
+</div>
+</body>
+</html>

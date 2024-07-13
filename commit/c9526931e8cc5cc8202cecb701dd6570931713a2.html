@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(scripting): auto reload - refactor ScriptsSection - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/c9526931e8cc5cc8202cecb701dd6570931713a2.html">c9526931e8cc5cc8202cecb701dd6570931713a2</a>
+<b>parent</b> <a href="../commit/80e37306a4a52ef79aedf6c2a1acaf0601a1fc26.html">80e37306a4a52ef79aedf6c2a1acaf0601a1fc26</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun,  3 Dec 2023 23:48:34 +0100
+
+feat(scripting): auto reload
+- refactor ScriptsSection
+
+<b>Diffstat:</b>
+<table><tr><td class="A">A</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/scripting/AutoReloadHandler.kt</a></td><td> | </td><td class="num">42</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></td><td> | </td><td class="num">28</td><td><span class="i">+++++++++++++++++++++++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/InterfaceManager.kt</a></td><td> | </td><td class="num">13</td><td><span class="i">+++++++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/components/NodeType.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h4">app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/components/impl/ActionNode.kt</a></td><td> | </td><td class="num">16</td><td><span class="i">++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptInterface.kt</a></td><td> | </td><td class="num">22</td><td><span class="i">++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a></td><td> | </td><td class="num">124</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-----------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h7">common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/AutoReloadListener.aidl</a></td><td> | </td><td class="num">6</td><td><span class="i">++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl</a></td><td> | </td><td class="num">3</td><td><span class="i">+++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">8</td><td><span class="i">++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Scripting.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h11">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h12">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ktx/RhinoKtx.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h13">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h14">core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt</a></td><td> | </td><td class="num">13</td><td><span class="i">++++++++++</span><span class="d">---</span></td></tr>
+</table></pre><pre>15 files changed, 246 insertions(+), 40 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/AutoReloadHandler.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/AutoReloadHandler.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/AutoReloadHandler.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/AutoReloadHandler.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -0,0 +1,41 @@
+</a><a href="#h0-0-0" id="h0-0-0" class="i">+package me.rhunk.snapenhance.scripting
+</a><a href="#h0-0-1" id="h0-0-1" class="i">+
+</a><a href="#h0-0-2" id="h0-0-2" class="i">+import android.net.Uri
+</a><a href="#h0-0-3" id="h0-0-3" class="i">+import androidx.documentfile.provider.DocumentFile
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+import kotlinx.coroutines.CoroutineScope
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+import kotlinx.coroutines.Dispatchers
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+import kotlinx.coroutines.delay
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+import kotlinx.coroutines.launch
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+class AutoReloadHandler(
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+    private val coroutineScope: CoroutineScope,
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+    private val onReload: (DocumentFile) -&gt; Unit,
+</a><a href="#h0-0-12" id="h0-0-12" class="i">+) {
+</a><a href="#h0-0-13" id="h0-0-13" class="i">+    private val files = mutableListOf&lt;DocumentFile&gt;()
+</a><a href="#h0-0-14" id="h0-0-14" class="i">+    private val lastModifiedMap = mutableMapOf&lt;Uri, Long&gt;()
+</a><a href="#h0-0-15" id="h0-0-15" class="i">+
+</a><a href="#h0-0-16" id="h0-0-16" class="i">+    fun addFile(file: DocumentFile) {
+</a><a href="#h0-0-17" id="h0-0-17" class="i">+        files.add(file)
+</a><a href="#h0-0-18" id="h0-0-18" class="i">+        lastModifiedMap[file.uri] = file.lastModified()
+</a><a href="#h0-0-19" id="h0-0-19" class="i">+    }
+</a><a href="#h0-0-20" id="h0-0-20" class="i">+
+</a><a href="#h0-0-21" id="h0-0-21" class="i">+    fun start() {
+</a><a href="#h0-0-22" id="h0-0-22" class="i">+        coroutineScope.launch(Dispatchers.IO) {
+</a><a href="#h0-0-23" id="h0-0-23" class="i">+            while (true) {
+</a><a href="#h0-0-24" id="h0-0-24" class="i">+                files.forEach { file -&gt;
+</a><a href="#h0-0-25" id="h0-0-25" class="i">+                    val lastModified = lastModifiedMap[file.uri] ?: return@forEach
+</a><a href="#h0-0-26" id="h0-0-26" class="i">+                    runCatching {
+</a><a href="#h0-0-27" id="h0-0-27" class="i">+                        val newLastModified = file.lastModified()
+</a><a href="#h0-0-28" id="h0-0-28" class="i">+                        if (newLastModified &gt; lastModified) {
+</a><a href="#h0-0-29" id="h0-0-29" class="i">+                            lastModifiedMap[file.uri] = newLastModified
+</a><a href="#h0-0-30" id="h0-0-30" class="i">+                            onReload(file)
+</a><a href="#h0-0-31" id="h0-0-31" class="i">+                        }
+</a><a href="#h0-0-32" id="h0-0-32" class="i">+                    }.onFailure {
+</a><a href="#h0-0-33" id="h0-0-33" class="i">+                        it.printStackTrace()
+</a><a href="#h0-0-34" id="h0-0-34" class="i">+                    }
+</a><a href="#h0-0-35" id="h0-0-35" class="i">+                }
+</a><a href="#h0-0-36" id="h0-0-36" class="i">+                delay(1000)
+</a><a href="#h0-0-37" id="h0-0-37" class="i">+            }
+</a><a href="#h0-0-38" id="h0-0-38" class="i">+        }
+</a><a href="#h0-0-39" id="h0-0-39" class="i">+    }
+</a><a href="#h0-0-40" id="h0-0-40" class="i">+}</a><a href="#h0-0-41" id="h0-0-41" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -3,6 +3,7 @@ package me.rhunk.snapenhance.scripting
+</a> import android.net.Uri
+ import androidx.documentfile.provider.DocumentFile
+ import me.rhunk.snapenhance.RemoteSideContext
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.bridge.scripting.AutoReloadListener
+</a> import me.rhunk.snapenhance.bridge.scripting.IPCListener
+ import me.rhunk.snapenhance.bridge.scripting.IScripting
+ import me.rhunk.snapenhance.common.scripting.ScriptRuntime
+<a href="#h1-1" id="h1-1" class="h">@@ -15,12 +16,30 @@ import me.rhunk.snapenhance.scripting.impl.RemoteScriptConfig
+</a> import me.rhunk.snapenhance.scripting.impl.ui.InterfaceManager
+ import java.io.File
+ import java.io.InputStream
+<a href="#h1-1-3" id="h1-1-3" class="i">+import kotlin.system.exitProcess
+</a> 
+ class RemoteScriptManager(
+     val context: RemoteSideContext,
+ ) : IScripting.Stub() {
+     val runtime = ScriptRuntime(context.androidContext, context.log)
+ 
+<a href="#h1-1-10" id="h1-1-10" class="i">+    private var autoReloadListener: AutoReloadListener? = null
+</a><a href="#h1-1-11" id="h1-1-11" class="i">+    private val autoReloadHandler by lazy {
+</a><a href="#h1-1-12" id="h1-1-12" class="i">+        AutoReloadHandler(context.coroutineScope) {
+</a><a href="#h1-1-13" id="h1-1-13" class="i">+            runCatching {
+</a><a href="#h1-1-14" id="h1-1-14" class="i">+                autoReloadListener?.restartApp()
+</a><a href="#h1-1-15" id="h1-1-15" class="i">+                if (context.config.root.scripting.autoReload.getNullable() == &quot;all&quot;) {
+</a><a href="#h1-1-16" id="h1-1-16" class="i">+                    exitProcess(1)
+</a><a href="#h1-1-17" id="h1-1-17" class="i">+                }
+</a><a href="#h1-1-18" id="h1-1-18" class="i">+            }.onFailure {
+</a><a href="#h1-1-19" id="h1-1-19" class="i">+                context.log.warn(&quot;Failed to restart app&quot;)
+</a><a href="#h1-1-20" id="h1-1-20" class="i">+                autoReloadListener = null
+</a><a href="#h1-1-21" id="h1-1-21" class="i">+            }
+</a><a href="#h1-1-22" id="h1-1-22" class="i">+        }.apply {
+</a><a href="#h1-1-23" id="h1-1-23" class="i">+            start()
+</a><a href="#h1-1-24" id="h1-1-24" class="i">+        }
+</a><a href="#h1-1-25" id="h1-1-25" class="i">+    }
+</a><a href="#h1-1-26" id="h1-1-26" class="i">+
+</a>     private val cachedModuleInfo = mutableMapOf&lt;String, ModuleInfo&gt;()
+     private val ipcListeners = IPCListeners()
+ 
+<a href="#h1-2" id="h1-2" class="h">@@ -57,6 +76,9 @@ class RemoteScriptManager(
+</a> 
+     fun loadScript(name: String) {
+         val content = getScriptContent(name) ?: return
+<a href="#h1-2-3" id="h1-2-3" class="i">+        if (context.config.root.scripting.autoReload.getNullable() != null) {
+</a><a href="#h1-2-4" id="h1-2-4" class="i">+            autoReloadHandler.addFile(getScriptsFolder()?.findFile(name) ?: return)
+</a><a href="#h1-2-5" id="h1-2-5" class="i">+        }
+</a>         runtime.load(name, content)
+     }
+ 
+<a href="#h1-3" id="h1-3" class="h">@@ -73,7 +95,7 @@ class RemoteScriptManager(
+</a>         }
+     }
+ 
+<a href="#h1-3-3" id="h1-3-3" class="d">-    private fun getScriptsFolder() = runCatching {
+</a><a href="#h1-3-4" id="h1-3-4" class="i">+    fun getScriptsFolder() = runCatching {
+</a>         DocumentFile.fromTreeUri(context.androidContext, Uri.parse(context.config.root.scripting.moduleFolder.get()))
+     }.onFailure {
+         context.log.warn(&quot;Failed to get scripts folder&quot;)
+<a href="#h1-4" id="h1-4" class="h">@@ -141,4 +163,8 @@ class RemoteScriptManager(
+</a>             context.log.error(&quot;Failed to perform config transaction&quot;, it)
+         }.getOrDefault(&quot;&quot;)
+     }
+<a href="#h1-4-3" id="h1-4-3" class="i">+
+</a><a href="#h1-4-4" id="h1-4-4" class="i">+    override fun registerAutoReloadListener(listener: AutoReloadListener?) {
+</a><a href="#h1-4-5" id="h1-4-5" class="i">+        autoReloadListener = listener
+</a><a href="#h1-4-6" id="h1-4-6" class="i">+    }
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/InterfaceManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/InterfaceManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/InterfaceManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/InterfaceManager.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -4,6 +4,8 @@ import me.rhunk.snapenhance.common.logger.AbstractLogger
+</a> import me.rhunk.snapenhance.common.scripting.type.ModuleInfo
+ import me.rhunk.snapenhance.scripting.impl.ui.components.Node
+ import me.rhunk.snapenhance.scripting.impl.ui.components.NodeType
+<a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.scripting.impl.ui.components.impl.ActionNode
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import me.rhunk.snapenhance.scripting.impl.ui.components.impl.ActionType
+</a> import me.rhunk.snapenhance.scripting.impl.ui.components.impl.RowColumnNode
+ import org.mozilla.javascript.Context
+ import org.mozilla.javascript.Function
+<a href="#h2-1" id="h2-1" class="h">@@ -14,13 +16,20 @@ class InterfaceBuilder {
+</a>     val nodes = mutableListOf&lt;Node&gt;()
+     var onDisposeCallback: (() -&gt; Unit)? = null
+ 
+<a href="#h2-1-3" id="h2-1-3" class="d">-
+</a>     private fun createNode(type: NodeType, block: Node.() -&gt; Unit): Node {
+         return Node(type).apply(block).also { nodes.add(it) }
+     }
+ 
+     fun onDispose(block: () -&gt; Unit) {
+<a href="#h2-1-9" id="h2-1-9" class="d">-        onDisposeCallback = block
+</a><a href="#h2-1-10" id="h2-1-10" class="i">+        nodes.add(ActionNode(ActionType.DISPOSE, callback = block))
+</a><a href="#h2-1-11" id="h2-1-11" class="i">+    }
+</a><a href="#h2-1-12" id="h2-1-12" class="i">+
+</a><a href="#h2-1-13" id="h2-1-13" class="i">+    fun onLaunched(block: () -&gt; Unit) {
+</a><a href="#h2-1-14" id="h2-1-14" class="i">+        onLaunched(Unit, block)
+</a><a href="#h2-1-15" id="h2-1-15" class="i">+    }
+</a><a href="#h2-1-16" id="h2-1-16" class="i">+
+</a><a href="#h2-1-17" id="h2-1-17" class="i">+    fun onLaunched(key: Any, block: () -&gt; Unit) {
+</a><a href="#h2-1-18" id="h2-1-18" class="i">+        nodes.add(ActionNode(ActionType.LAUNCHED, key, block))
+</a>     }
+ 
+     fun row(block: (InterfaceBuilder) -&gt; Unit) = RowColumnNode(NodeType.ROW).apply {
+<b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/components/NodeType.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/components/NodeType.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/components/NodeType.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/components/NodeType.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -6,5 +6,6 @@ enum class NodeType {
+</a>     SWITCH,
+     BUTTON,
+     SLIDER,
+<a href="#h3-0-3" id="h3-0-3" class="d">-    LIST
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+    LIST,
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+    ACTION
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h4" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/components/impl/ActionNode.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/components/impl/ActionNode.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/components/impl/ActionNode.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/components/impl/ActionNode.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -0,0 +1,15 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="i">+package me.rhunk.snapenhance.scripting.impl.ui.components.impl
+</a><a href="#h4-0-1" id="h4-0-1" class="i">+
+</a><a href="#h4-0-2" id="h4-0-2" class="i">+import me.rhunk.snapenhance.scripting.impl.ui.components.Node
+</a><a href="#h4-0-3" id="h4-0-3" class="i">+import me.rhunk.snapenhance.scripting.impl.ui.components.NodeType
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+enum class ActionType {
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+    LAUNCHED,
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+    DISPOSE
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+}
+</a><a href="#h4-0-9" id="h4-0-9" class="i">+
+</a><a href="#h4-0-10" id="h4-0-10" class="i">+class ActionNode(
+</a><a href="#h4-0-11" id="h4-0-11" class="i">+    val actionType: ActionType,
+</a><a href="#h4-0-12" id="h4-0-12" class="i">+    val key: Any = Unit,
+</a><a href="#h4-0-13" id="h4-0-13" class="i">+    val callback: () -&gt; Unit
+</a><a href="#h4-0-14" id="h4-0-14" class="i">+): Node(NodeType.ACTION)</a><a href="#h4-0-15" id="h4-0-15" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h5" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptInterface.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptInterface.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptInterface.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptInterface.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -16,6 +16,8 @@ import me.rhunk.snapenhance.common.logger.AbstractLogger
+</a> import me.rhunk.snapenhance.scripting.impl.ui.InterfaceBuilder
+ import me.rhunk.snapenhance.scripting.impl.ui.components.Node
+ import me.rhunk.snapenhance.scripting.impl.ui.components.NodeType
+<a href="#h5-0-3" id="h5-0-3" class="i">+import me.rhunk.snapenhance.scripting.impl.ui.components.impl.ActionNode
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+import me.rhunk.snapenhance.scripting.impl.ui.components.impl.ActionType
+</a> import kotlin.math.abs
+ 
+ 
+<a href="#h5-1" id="h5-1" class="h">@@ -68,6 +70,26 @@ private fun DrawNode(node: Node) {
+</a>     }
+ 
+     when (node.type) {
+<a href="#h5-1-3" id="h5-1-3" class="i">+        NodeType.ACTION -&gt; {
+</a><a href="#h5-1-4" id="h5-1-4" class="i">+            when ((node as ActionNode).actionType) {
+</a><a href="#h5-1-5" id="h5-1-5" class="i">+                ActionType.LAUNCHED -&gt; {
+</a><a href="#h5-1-6" id="h5-1-6" class="i">+                    LaunchedEffect(node.key) {
+</a><a href="#h5-1-7" id="h5-1-7" class="i">+                        runCallbackSafe {
+</a><a href="#h5-1-8" id="h5-1-8" class="i">+                            node.callback()
+</a><a href="#h5-1-9" id="h5-1-9" class="i">+                        }
+</a><a href="#h5-1-10" id="h5-1-10" class="i">+                    }
+</a><a href="#h5-1-11" id="h5-1-11" class="i">+                }
+</a><a href="#h5-1-12" id="h5-1-12" class="i">+                ActionType.DISPOSE -&gt; {
+</a><a href="#h5-1-13" id="h5-1-13" class="i">+                    DisposableEffect(Unit) {
+</a><a href="#h5-1-14" id="h5-1-14" class="i">+                        onDispose {
+</a><a href="#h5-1-15" id="h5-1-15" class="i">+                            runCallbackSafe {
+</a><a href="#h5-1-16" id="h5-1-16" class="i">+                                node.callback()
+</a><a href="#h5-1-17" id="h5-1-17" class="i">+                            }
+</a><a href="#h5-1-18" id="h5-1-18" class="i">+                        }
+</a><a href="#h5-1-19" id="h5-1-19" class="i">+                    }
+</a><a href="#h5-1-20" id="h5-1-20" class="i">+                }
+</a><a href="#h5-1-21" id="h5-1-21" class="i">+            }
+</a><a href="#h5-1-22" id="h5-1-22" class="i">+        }
+</a>         NodeType.COLUMN -&gt; {
+             Column(
+                 verticalArrangement = arrangement as? Arrangement.Vertical ?: spacing?.let { Arrangement.spacedBy(it.dp) } ?: Arrangement.Top,
+<b>diff --git a/<a id="h6" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -1,9 +1,12 @@
+</a> package me.rhunk.snapenhance.ui.manager.sections.scripting
+ 
+<a href="#h6-0-2" id="h6-0-2" class="i">+import android.content.Intent
+</a> import androidx.compose.foundation.clickable
+ import androidx.compose.foundation.layout.*
+ import androidx.compose.foundation.lazy.LazyColumn
+ import androidx.compose.material.icons.Icons
+<a href="#h6-0-7" id="h6-0-7" class="i">+import androidx.compose.material.icons.filled.FolderOpen
+</a><a href="#h6-0-8" id="h6-0-8" class="i">+import androidx.compose.material.icons.filled.Link
+</a> import androidx.compose.material.icons.filled.Settings
+ import androidx.compose.material3.*
+ import androidx.compose.runtime.*
+<a href="#h6-1" id="h6-1" class="h">@@ -11,16 +14,25 @@ import androidx.compose.ui.Alignment
+</a> import androidx.compose.ui.Modifier
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+<a href="#h6-1-3" id="h6-1-3" class="i">+import androidx.documentfile.provider.DocumentFile
+</a> import kotlinx.coroutines.delay
+ import kotlinx.coroutines.launch
+ import me.rhunk.snapenhance.common.scripting.type.ModuleInfo
+ import me.rhunk.snapenhance.scripting.impl.ui.InterfaceManager
+ import me.rhunk.snapenhance.ui.manager.Section
+<a href="#h6-1-9" id="h6-1-9" class="i">+import me.rhunk.snapenhance.ui.util.ActivityLauncherHelper
+</a><a href="#h6-1-10" id="h6-1-10" class="i">+import me.rhunk.snapenhance.ui.util.chooseFolder
+</a> import me.rhunk.snapenhance.ui.util.pullrefresh.PullRefreshIndicator
+ import me.rhunk.snapenhance.ui.util.pullrefresh.pullRefresh
+ import me.rhunk.snapenhance.ui.util.pullrefresh.rememberPullRefreshState
+ 
+ class ScriptsSection : Section() {
+<a href="#h6-1-16" id="h6-1-16" class="i">+    private lateinit var activityLauncherHelper: ActivityLauncherHelper
+</a><a href="#h6-1-17" id="h6-1-17" class="i">+
+</a><a href="#h6-1-18" id="h6-1-18" class="i">+    override fun init() {
+</a><a href="#h6-1-19" id="h6-1-19" class="i">+        activityLauncherHelper = ActivityLauncherHelper(context.activity!!)
+</a><a href="#h6-1-20" id="h6-1-20" class="i">+    }
+</a><a href="#h6-1-21" id="h6-1-21" class="i">+
+</a>     @Composable
+     fun ModuleItem(script: ModuleInfo) {
+         var enabled by remember {
+<a href="#h6-2" id="h6-2" class="h">@@ -50,22 +62,11 @@ class ScriptsSection : Section() {
+</a>                         .weight(1f)
+                         .padding(end = 8.dp)
+                 ) {
+<a href="#h6-2-3" id="h6-2-3" class="d">-                    Text(
+</a><a href="#h6-2-4" id="h6-2-4" class="d">-                        text = script.name,
+</a><a href="#h6-2-5" id="h6-2-5" class="d">-                        fontSize = 20.sp,
+</a><a href="#h6-2-6" id="h6-2-6" class="d">-                    )
+</a><a href="#h6-2-7" id="h6-2-7" class="d">-                    Text(
+</a><a href="#h6-2-8" id="h6-2-8" class="d">-                        text = script.description ?: &quot;No description&quot;,
+</a><a href="#h6-2-9" id="h6-2-9" class="d">-                        fontSize = 14.sp,
+</a><a href="#h6-2-10" id="h6-2-10" class="d">-                    )
+</a><a href="#h6-2-11" id="h6-2-11" class="i">+                    Text(text = script.name, fontSize = 20.sp,)
+</a><a href="#h6-2-12" id="h6-2-12" class="i">+                    Text(text = script.description ?: &quot;No description&quot;, fontSize = 14.sp,)
+</a>                 }
+<a href="#h6-2-14" id="h6-2-14" class="d">-                IconButton(onClick = {
+</a><a href="#h6-2-15" id="h6-2-15" class="d">-                    openSettings = !openSettings
+</a><a href="#h6-2-16" id="h6-2-16" class="d">-                }) {
+</a><a href="#h6-2-17" id="h6-2-17" class="d">-                    Icon(
+</a><a href="#h6-2-18" id="h6-2-18" class="d">-                        imageVector = Icons.Default.Settings,
+</a><a href="#h6-2-19" id="h6-2-19" class="d">-                        contentDescription = &quot;Settings&quot;,
+</a><a href="#h6-2-20" id="h6-2-20" class="d">-                    )
+</a><a href="#h6-2-21" id="h6-2-21" class="i">+                IconButton(onClick = { openSettings = !openSettings }) {
+</a><a href="#h6-2-22" id="h6-2-22" class="i">+                    Icon(imageVector = Icons.Default.Settings, contentDescription = &quot;Settings&quot;,)
+</a>                 }
+                 Switch(
+                     checked = enabled,
+<a href="#h6-3" id="h6-3" class="h">@@ -85,43 +86,94 @@ class ScriptsSection : Section() {
+</a>         }
+     }
+ 
+<a href="#h6-3-3" id="h6-3-3" class="i">+    @Composable
+</a><a href="#h6-3-4" id="h6-3-4" class="i">+    override fun FloatingActionButton() {
+</a><a href="#h6-3-5" id="h6-3-5" class="i">+        Column(
+</a><a href="#h6-3-6" id="h6-3-6" class="i">+            verticalArrangement = Arrangement.spacedBy(8.dp),
+</a><a href="#h6-3-7" id="h6-3-7" class="i">+            horizontalAlignment = Alignment.End,
+</a><a href="#h6-3-8" id="h6-3-8" class="i">+        ) {
+</a><a href="#h6-3-9" id="h6-3-9" class="i">+            ExtendedFloatingActionButton(
+</a><a href="#h6-3-10" id="h6-3-10" class="i">+                onClick = {
+</a><a href="#h6-3-11" id="h6-3-11" class="i">+
+</a><a href="#h6-3-12" id="h6-3-12" class="i">+                },
+</a><a href="#h6-3-13" id="h6-3-13" class="i">+                icon= { Icon(imageVector = Icons.Default.Link, contentDescription = &quot;Link&quot;) },
+</a><a href="#h6-3-14" id="h6-3-14" class="i">+                text = {
+</a><a href="#h6-3-15" id="h6-3-15" class="i">+                    Text(text = &quot;Import from URL&quot;)
+</a><a href="#h6-3-16" id="h6-3-16" class="i">+                },
+</a><a href="#h6-3-17" id="h6-3-17" class="i">+            )
+</a><a href="#h6-3-18" id="h6-3-18" class="i">+            ExtendedFloatingActionButton(
+</a><a href="#h6-3-19" id="h6-3-19" class="i">+                onClick = {
+</a><a href="#h6-3-20" id="h6-3-20" class="i">+                    context.scriptManager.getScriptsFolder()?.let {
+</a><a href="#h6-3-21" id="h6-3-21" class="i">+                        context.androidContext.startActivity(
+</a><a href="#h6-3-22" id="h6-3-22" class="i">+                            Intent(Intent.ACTION_VIEW).apply {
+</a><a href="#h6-3-23" id="h6-3-23" class="i">+                                data = it.uri
+</a><a href="#h6-3-24" id="h6-3-24" class="i">+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+</a><a href="#h6-3-25" id="h6-3-25" class="i">+                            }
+</a><a href="#h6-3-26" id="h6-3-26" class="i">+                        )
+</a><a href="#h6-3-27" id="h6-3-27" class="i">+                    }
+</a><a href="#h6-3-28" id="h6-3-28" class="i">+                },
+</a><a href="#h6-3-29" id="h6-3-29" class="i">+                icon= { Icon(imageVector = Icons.Default.FolderOpen, contentDescription = &quot;Folder&quot;) },
+</a><a href="#h6-3-30" id="h6-3-30" class="i">+                text = {
+</a><a href="#h6-3-31" id="h6-3-31" class="i">+                    Text(text = &quot;Open Scripts Folder&quot;)
+</a><a href="#h6-3-32" id="h6-3-32" class="i">+                },
+</a><a href="#h6-3-33" id="h6-3-33" class="i">+            )
+</a><a href="#h6-3-34" id="h6-3-34" class="i">+        }
+</a><a href="#h6-3-35" id="h6-3-35" class="i">+    }
+</a><a href="#h6-3-36" id="h6-3-36" class="i">+
+</a> 
+     @Composable
+     fun ScriptSettings(script: ModuleInfo) {
+<a href="#h6-3-40" id="h6-3-40" class="i">+        var settingsError by remember {
+</a><a href="#h6-3-41" id="h6-3-41" class="i">+            mutableStateOf(null as Throwable?)
+</a><a href="#h6-3-42" id="h6-3-42" class="i">+        }
+</a><a href="#h6-3-43" id="h6-3-43" class="i">+
+</a>         val settingsInterface = remember {
+             val module = context.scriptManager.runtime.getModuleByName(script.name) ?: return@remember null
+<a href="#h6-3-46" id="h6-3-46" class="d">-            (module.extras[&quot;im&quot;] as? InterfaceManager)?.buildInterface(&quot;settings&quot;)
+</a><a href="#h6-3-47" id="h6-3-47" class="d">-        } ?: run {
+</a><a href="#h6-3-48" id="h6-3-48" class="i">+            runCatching {
+</a><a href="#h6-3-49" id="h6-3-49" class="i">+                (module.extras[&quot;im&quot;] as? InterfaceManager)?.buildInterface(&quot;settings&quot;)
+</a><a href="#h6-3-50" id="h6-3-50" class="i">+            }.onFailure {
+</a><a href="#h6-3-51" id="h6-3-51" class="i">+                settingsError = it
+</a><a href="#h6-3-52" id="h6-3-52" class="i">+            }.getOrNull()
+</a><a href="#h6-3-53" id="h6-3-53" class="i">+        }
+</a><a href="#h6-3-54" id="h6-3-54" class="i">+
+</a><a href="#h6-3-55" id="h6-3-55" class="i">+        if (settingsInterface == null) {
+</a>             Text(
+<a href="#h6-3-57" id="h6-3-57" class="d">-                text = &quot;This module does not have any settings&quot;,
+</a><a href="#h6-3-58" id="h6-3-58" class="i">+                text = settingsError?.message ?: &quot;This module does not have any settings&quot;,
+</a>                 style = MaterialTheme.typography.bodySmall,
+                 modifier = Modifier.padding(8.dp)
+             )
+<a href="#h6-3-62" id="h6-3-62" class="d">-            return
+</a><a href="#h6-3-63" id="h6-3-63" class="i">+        } else  {
+</a><a href="#h6-3-64" id="h6-3-64" class="i">+            ScriptInterface(interfaceBuilder = settingsInterface)
+</a>         }
+<a href="#h6-3-66" id="h6-3-66" class="d">-
+</a><a href="#h6-3-67" id="h6-3-67" class="d">-        ScriptInterface(interfaceBuilder = settingsInterface)
+</a>     }
+ 
+     @Composable
+     override fun Content() {
+<a href="#h6-3-72" id="h6-3-72" class="d">-        var scriptModules by remember {
+</a><a href="#h6-3-73" id="h6-3-73" class="d">-            mutableStateOf(context.modDatabase.getScripts())
+</a><a href="#h6-3-74" id="h6-3-74" class="d">-        }
+</a><a href="#h6-3-75" id="h6-3-75" class="i">+        var scriptModules by remember { mutableStateOf(listOf&lt;ModuleInfo&gt;()) }
+</a><a href="#h6-3-76" id="h6-3-76" class="i">+        var scriptingFolder by remember { mutableStateOf(null as DocumentFile?) }
+</a>         val coroutineScope = rememberCoroutineScope()
+ 
+         var refreshing by remember {
+             mutableStateOf(false)
+         }
+ 
+<a href="#h6-3-83" id="h6-3-83" class="d">-        val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = {
+</a><a href="#h6-3-84" id="h6-3-84" class="d">-            refreshing = true
+</a><a href="#h6-3-85" id="h6-3-85" class="i">+        fun syncScripts() {
+</a>             runCatching {
+<a href="#h6-3-87" id="h6-3-87" class="i">+                scriptingFolder = context.scriptManager.getScriptsFolder()
+</a>                 context.scriptManager.sync()
+                 scriptModules = context.modDatabase.getScripts()
+             }.onFailure {
+                 context.log.error(&quot;Failed to sync scripts&quot;, it)
+             }
+<a href="#h6-3-93" id="h6-3-93" class="i">+        }
+</a><a href="#h6-3-94" id="h6-3-94" class="i">+
+</a><a href="#h6-3-95" id="h6-3-95" class="i">+        LaunchedEffect(Unit) {
+</a><a href="#h6-3-96" id="h6-3-96" class="i">+            syncScripts()
+</a><a href="#h6-3-97" id="h6-3-97" class="i">+        }
+</a><a href="#h6-3-98" id="h6-3-98" class="i">+
+</a><a href="#h6-3-99" id="h6-3-99" class="i">+        val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = {
+</a><a href="#h6-3-100" id="h6-3-100" class="i">+            refreshing = true
+</a><a href="#h6-3-101" id="h6-3-101" class="i">+            syncScripts()
+</a>             coroutineScope.launch {
+                 delay(300)
+                 refreshing = false
+<a href="#h6-4" id="h6-4" class="h">@@ -138,7 +190,25 @@ class ScriptsSection : Section() {
+</a>                 horizontalAlignment = Alignment.CenterHorizontally
+             ) {
+                 item {
+<a href="#h6-4-3" id="h6-4-3" class="d">-                    if (scriptModules.isEmpty()) {
+</a><a href="#h6-4-4" id="h6-4-4" class="i">+                    if (scriptingFolder == null) {
+</a><a href="#h6-4-5" id="h6-4-5" class="i">+                        Text(
+</a><a href="#h6-4-6" id="h6-4-6" class="i">+                            text = &quot;No scripts folder selected&quot;,
+</a><a href="#h6-4-7" id="h6-4-7" class="i">+                            style = MaterialTheme.typography.bodySmall,
+</a><a href="#h6-4-8" id="h6-4-8" class="i">+                            modifier = Modifier.padding(8.dp)
+</a><a href="#h6-4-9" id="h6-4-9" class="i">+                        )
+</a><a href="#h6-4-10" id="h6-4-10" class="i">+                        Spacer(modifier = Modifier.height(8.dp))
+</a><a href="#h6-4-11" id="h6-4-11" class="i">+                        Button(onClick = {
+</a><a href="#h6-4-12" id="h6-4-12" class="i">+                            activityLauncherHelper.chooseFolder {
+</a><a href="#h6-4-13" id="h6-4-13" class="i">+                                context.config.root.scripting.moduleFolder.set(it)
+</a><a href="#h6-4-14" id="h6-4-14" class="i">+                                context.config.writeConfig()
+</a><a href="#h6-4-15" id="h6-4-15" class="i">+                                coroutineScope.launch {
+</a><a href="#h6-4-16" id="h6-4-16" class="i">+                                    syncScripts()
+</a><a href="#h6-4-17" id="h6-4-17" class="i">+                                }
+</a><a href="#h6-4-18" id="h6-4-18" class="i">+                            }
+</a><a href="#h6-4-19" id="h6-4-19" class="i">+                        }) {
+</a><a href="#h6-4-20" id="h6-4-20" class="i">+                            Text(text = &quot;Select folder&quot;)
+</a><a href="#h6-4-21" id="h6-4-21" class="i">+                        }
+</a><a href="#h6-4-22" id="h6-4-22" class="i">+                    } else if (scriptModules.isEmpty()) {
+</a>                         Text(
+                             text = &quot;No scripts found&quot;,
+                             style = MaterialTheme.typography.bodySmall,
+<b>diff --git a/<a id="h7" href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/AutoReloadListener.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/AutoReloadListener.aidl</a> b/<a href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/AutoReloadListener.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/AutoReloadListener.aidl</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -0,0 +1,5 @@
+</a><a href="#h7-0-0" id="h7-0-0" class="i">+package me.rhunk.snapenhance.bridge.scripting;
+</a><a href="#h7-0-1" id="h7-0-1" class="i">+
+</a><a href="#h7-0-2" id="h7-0-2" class="i">+interface AutoReloadListener {
+</a><a href="#h7-0-3" id="h7-0-3" class="i">+    oneway void restartApp();
+</a><a href="#h7-0-4" id="h7-0-4" class="i">+}</a><a href="#h7-0-5" id="h7-0-5" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h8" href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl</a> b/<a href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -1,6 +1,7 @@
+</a> package me.rhunk.snapenhance.bridge.scripting;
+ 
+ import me.rhunk.snapenhance.bridge.scripting.IPCListener;
+<a href="#h8-0-3" id="h8-0-3" class="i">+import me.rhunk.snapenhance.bridge.scripting.AutoReloadListener;
+</a> 
+ interface IScripting {
+     List&lt;String&gt; getEnabledScripts();
+<a href="#h8-1" id="h8-1" class="h">@@ -12,4 +13,6 @@ interface IScripting {
+</a>     void sendIPCMessage(String channel, String eventName, in String[] args);
+ 
+     @nullable String configTransaction(String module, String action, @nullable String key, @nullable String value, boolean save);
+<a href="#h8-1-3" id="h8-1-3" class="i">+
+</a><a href="#h8-1-4" id="h8-1-4" class="i">+    void registerAutoReloadListener(in AutoReloadListener listener);
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h9" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -663,8 +663,8 @@
+</a>                         &quot;name&quot;: &quot;Module Folder&quot;,
+                         &quot;description&quot;: &quot;The folder where the scripts are located&quot;
+                     },
+<a href="#h9-0-3" id="h9-0-3" class="d">-                    &quot;hot_reload&quot;: {
+</a><a href="#h9-0-4" id="h9-0-4" class="d">-                        &quot;name&quot;: &quot;Hot Reload&quot;,
+</a><a href="#h9-0-5" id="h9-0-5" class="i">+                    &quot;auto_reload&quot;: {
+</a><a href="#h9-0-6" id="h9-0-6" class="i">+                        &quot;name&quot;: &quot;Auto Reload&quot;,
+</a>                         &quot;description&quot;: &quot;Automatically reloads scripts when they change&quot;
+                     },
+                     &quot;disable_log_anonymization&quot;: {
+<a href="#h9-1" id="h9-1" class="h">@@ -790,6 +790,10 @@
+</a>                 &quot;hide_friend&quot;: &quot;Hide Friend&quot;,
+                 &quot;hide_conversation&quot;: &quot;Hide Conversation&quot;,
+                 &quot;clear_conversation&quot;: &quot;Clear Conversation from Friend Feed&quot;
+<a href="#h9-1-3" id="h9-1-3" class="i">+            },
+</a><a href="#h9-1-4" id="h9-1-4" class="i">+            &quot;auto_reload&quot;: {
+</a><a href="#h9-1-5" id="h9-1-5" class="i">+                &quot;snapchat_only&quot;: &quot;Snapchat Only&quot;,
+</a><a href="#h9-1-6" id="h9-1-6" class="i">+                &quot;all&quot;: &quot;All (Snapchat + SnapEnhance)&quot;
+</a>             }
+         }
+     },
+<b>diff --git a/<a id="h10" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Scripting.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Scripting.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Scripting.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Scripting.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -6,6 +6,6 @@ import me.rhunk.snapenhance.common.config.ConfigFlag
+</a> class Scripting : ConfigContainer() {
+     val developerMode = boolean(&quot;developer_mode&quot;, false) { requireRestart() }
+     val moduleFolder = string(&quot;module_folder&quot;, &quot;modules&quot;) { addFlags(ConfigFlag.FOLDER); requireRestart()  }
+<a href="#h10-0-3" id="h10-0-3" class="d">-    val hotReload = boolean(&quot;hot_reload&quot;, false)
+</a><a href="#h10-0-4" id="h10-0-4" class="i">+    val autoReload = unique(&quot;auto_reload&quot;, &quot;snapchat_only&quot;, &quot;all&quot;)
+</a>     val disableLogAnonymization = boolean(&quot;disable_log_anonymization&quot;, false) { requireRestart() }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h11" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a></b>
+<a href="#h11-0" id="h11-0" class="h">@@ -81,7 +81,7 @@ class JSModule(
+</a>                         putFunction(method.name) { args -&gt;
+                             clazz.declaredMethods.find {
+                                 it.name == method.name &amp;&amp; it.parameterTypes.zip(args ?: emptyArray()).all { (type, arg) -&gt;
+<a href="#h11-0-3" id="h11-0-3" class="d">-                                    type.isAssignableFrom(arg.javaClass)
+</a><a href="#h11-0-4" id="h11-0-4" class="i">+                                    type.isAssignableFrom(arg?.javaClass ?: return@all false)
+</a>                                 }
+                             }?.invoke(null, *args ?: emptyArray())
+                         }
+<b>diff --git a/<a id="h12" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ktx/RhinoKtx.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ktx/RhinoKtx.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ktx/RhinoKtx.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ktx/RhinoKtx.kt</a></b>
+<a href="#h12-0" id="h12-0" class="h">@@ -23,7 +23,7 @@ fun Scriptable.function(name: String): Function? {
+</a>     return this.get(name, this) as? Function
+ }
+ 
+<a href="#h12-0-3" id="h12-0-3" class="d">-fun ScriptableObject.putFunction(name: String, proxy: Scriptable.(Array&lt;out Any&gt;?) -&gt; Any?) {
+</a><a href="#h12-0-4" id="h12-0-4" class="i">+fun ScriptableObject.putFunction(name: String, proxy: Scriptable.(Array&lt;out Any?&gt;?) -&gt; Any?) {
+</a>     this.putConst(name, this, object: org.mozilla.javascript.BaseFunction() {
+         override fun call(
+             cx: Context?,
+<b>diff --git a/<a id="h13" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></b>
+<a href="#h13-0" id="h13-0" class="h">@@ -62,7 +62,7 @@ class ModContext(
+</a>     val event = EventBus(this)
+     val eventDispatcher = EventDispatcher(this)
+     val native = NativeLib()
+<a href="#h13-0-3" id="h13-0-3" class="d">-    val scriptRuntime by lazy { CoreScriptRuntime(androidContext, log) }
+</a><a href="#h13-0-4" id="h13-0-4" class="i">+    val scriptRuntime by lazy { CoreScriptRuntime(this, log) }
+</a>     val messagingBridge = CoreMessagingBridge(this)
+ 
+     val isDeveloper by lazy { config.scripting.developerMode.get() }
+<b>diff --git a/<a id="h14" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt</a></b>
+<a href="#h14-0" id="h14-0" class="h">@@ -1,17 +1,18 @@
+</a> package me.rhunk.snapenhance.core.scripting
+ 
+<a href="#h14-0-2" id="h14-0-2" class="d">-import android.content.Context
+</a><a href="#h14-0-3" id="h14-0-3" class="i">+import me.rhunk.snapenhance.bridge.scripting.AutoReloadListener
+</a> import me.rhunk.snapenhance.bridge.scripting.IScripting
+ import me.rhunk.snapenhance.common.logger.AbstractLogger
+ import me.rhunk.snapenhance.common.scripting.ScriptRuntime
+<a href="#h14-0-7" id="h14-0-7" class="i">+import me.rhunk.snapenhance.core.ModContext
+</a> import me.rhunk.snapenhance.core.scripting.impl.CoreIPC
+ import me.rhunk.snapenhance.core.scripting.impl.CoreScriptConfig
+ import me.rhunk.snapenhance.core.scripting.impl.ScriptHooker
+ 
+ class CoreScriptRuntime(
+<a href="#h14-0-13" id="h14-0-13" class="d">-    androidContext: Context,
+</a><a href="#h14-0-14" id="h14-0-14" class="i">+    private val modContext: ModContext,
+</a>     logger: AbstractLogger,
+<a href="#h14-0-16" id="h14-0-16" class="d">-): ScriptRuntime(androidContext, logger) {
+</a><a href="#h14-0-17" id="h14-0-17" class="i">+): ScriptRuntime(modContext.androidContext, logger) {
+</a>     private val scriptHookers = mutableListOf&lt;ScriptHooker&gt;()
+ 
+     fun connect(scriptingInterface: IScripting) {
+<a href="#h14-1" id="h14-1" class="h">@@ -31,6 +32,12 @@ class CoreScriptRuntime(
+</a>                     logger.error(&quot;Failed to load script $path&quot;, it)
+                 }
+             }
+<a href="#h14-1-3" id="h14-1-3" class="i">+
+</a><a href="#h14-1-4" id="h14-1-4" class="i">+            registerAutoReloadListener(object : AutoReloadListener.Stub() {
+</a><a href="#h14-1-5" id="h14-1-5" class="i">+                override fun restartApp() {
+</a><a href="#h14-1-6" id="h14-1-6" class="i">+                    modContext.softRestartApp()
+</a><a href="#h14-1-7" id="h14-1-7" class="i">+                }
+</a><a href="#h14-1-8" id="h14-1-8" class="i">+            })
+</a>         }
+     }
+ } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

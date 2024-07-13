@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>perf(core): database access - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/96183921dc5febaa4bbbfdea936f08f038e6c0a6.html">96183921dc5febaa4bbbfdea936f08f038e6c0a6</a>
+<b>parent</b> <a href="../commit/da8561cddb1543af1bfeaa5f6f2a4ee22df94444.html">da8561cddb1543af1bfeaa5f6f2a4ee22df94444</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 11 Nov 2023 23:14:42 +0100
+
+perf(core): database access
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a></td><td> | </td><td class="num">81</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++</span><span class="d">---------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt</a></td><td> | </td><td class="num">14</td><td><span class="i">+++++++++</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/FriendFeedMessagePreview.kt</a></td><td> | </td><td class="num">160</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">------------------------------</span></td></tr>
+</table></pre><pre>3 files changed, 149 insertions(+), 106 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -2,6 +2,7 @@ package me.rhunk.snapenhance.core.database
+</a> 
+ import android.database.Cursor
+ import android.database.sqlite.SQLiteDatabase
+<a href="#h0-0-3" id="h0-0-3" class="i">+import android.database.sqlite.SQLiteDatabase.OpenParams
+</a> import android.database.sqlite.SQLiteDatabaseCorruptException
+ import me.rhunk.snapenhance.common.database.DatabaseObject
+ import me.rhunk.snapenhance.common.database.impl.ConversationMessage
+<a href="#h0-1" id="h0-1" class="h">@@ -9,12 +10,11 @@ import me.rhunk.snapenhance.common.database.impl.FriendFeedEntry
+</a> import me.rhunk.snapenhance.common.database.impl.FriendInfo
+ import me.rhunk.snapenhance.common.database.impl.StoryEntry
+ import me.rhunk.snapenhance.common.database.impl.UserConversationLink
+<a href="#h0-1-3" id="h0-1-3" class="i">+import me.rhunk.snapenhance.common.util.ktx.getIntOrNull
+</a> import me.rhunk.snapenhance.common.util.ktx.getInteger
+ import me.rhunk.snapenhance.common.util.ktx.getStringOrNull
+ import me.rhunk.snapenhance.core.ModContext
+ import me.rhunk.snapenhance.core.manager.Manager
+<a href="#h0-1-8" id="h0-1-8" class="d">-import me.rhunk.snapenhance.core.ui.ViewAppearanceHelper
+</a><a href="#h0-1-9" id="h0-1-9" class="d">-import java.io.File
+</a> 
+ 
+ class DatabaseAccess(
+<a href="#h0-2" id="h0-2" class="h">@@ -25,51 +25,32 @@ class DatabaseAccess(
+</a> 
+     private inline fun &lt;T&gt; SQLiteDatabase.performOperation(crossinline query: SQLiteDatabase.() -&gt; T?): T? {
+         return runCatching {
+<a href="#h0-2-3" id="h0-2-3" class="d">-            query()
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+            synchronized(this) {
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+                query()
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+            }
+</a>         }.onFailure {
+             context.log.error(&quot;Database operation failed&quot;, it)
+         }.getOrNull()
+     }
+ 
+<a href="#h0-2-12" id="h0-2-12" class="d">-    private var hasShownDatabaseError = false
+</a><a href="#h0-2-13" id="h0-2-13" class="d">-
+</a><a href="#h0-2-14" id="h0-2-14" class="d">-    private fun showDatabaseError(databasePath: String, throwable: Throwable) {
+</a><a href="#h0-2-15" id="h0-2-15" class="d">-        if (hasShownDatabaseError) return
+</a><a href="#h0-2-16" id="h0-2-16" class="d">-        hasShownDatabaseError = true
+</a><a href="#h0-2-17" id="h0-2-17" class="d">-        context.runOnUiThread {
+</a><a href="#h0-2-18" id="h0-2-18" class="d">-            if (context.mainActivity == null) return@runOnUiThread
+</a><a href="#h0-2-19" id="h0-2-19" class="d">-            ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity)
+</a><a href="#h0-2-20" id="h0-2-20" class="d">-                .setTitle(&quot;SnapEnhance&quot;)
+</a><a href="#h0-2-21" id="h0-2-21" class="d">-                .setMessage(&quot;Failed to query $databasePath database!\n\n${throwable.localizedMessage}\n\nRestarting Snapchat may fix this issue. If the issue persists, try to clean the app data and cache.&quot;)
+</a><a href="#h0-2-22" id="h0-2-22" class="d">-                .setPositiveButton(&quot;Restart Snapchat&quot;) { _, _ -&gt;
+</a><a href="#h0-2-23" id="h0-2-23" class="d">-                    File(databasePath).takeIf { it.exists() }?.delete()
+</a><a href="#h0-2-24" id="h0-2-24" class="d">-                    context.softRestartApp()
+</a><a href="#h0-2-25" id="h0-2-25" class="d">-                }
+</a><a href="#h0-2-26" id="h0-2-26" class="d">-                .setNegativeButton(&quot;Dismiss&quot;) { dialog, _ -&gt;
+</a><a href="#h0-2-27" id="h0-2-27" class="d">-                    dialog.dismiss()
+</a><a href="#h0-2-28" id="h0-2-28" class="d">-                }.show()
+</a><a href="#h0-2-29" id="h0-2-29" class="d">-        }
+</a><a href="#h0-2-30" id="h0-2-30" class="d">-    }
+</a><a href="#h0-2-31" id="h0-2-31" class="d">-
+</a>     private fun SQLiteDatabase.safeRawQuery(query: String, args: Array&lt;String&gt;? = null): Cursor? {
+         return runCatching {
+             rawQuery(query, args)
+         }.onFailure {
+             if (it !is SQLiteDatabaseCorruptException) {
+                 context.log.error(&quot;Failed to execute query $query&quot;, it)
+<a href="#h0-2-38" id="h0-2-38" class="d">-                showDatabaseError(this.path, it)
+</a>                 return@onFailure
+             }
+<a href="#h0-2-41" id="h0-2-41" class="d">-            context.log.warn(&quot;Database ${this.path} is corrupted!&quot;)
+</a><a href="#h0-2-42" id="h0-2-42" class="i">+            context.longToast(&quot;Database ${this.path} is corrupted! Restarting ...&quot;)
+</a>             context.androidContext.deleteDatabase(this.path)
+<a href="#h0-2-44" id="h0-2-44" class="d">-            showDatabaseError(this.path, it)
+</a><a href="#h0-2-45" id="h0-2-45" class="i">+            context.crash(&quot;Database ${this.path} is corrupted!&quot;, it)
+</a>         }.getOrNull()
+     }
+ 
+     private val dmOtherParticipantCache by lazy {
+         (arroyoDb?.performOperation {
+             safeRawQuery(
+<a href="#h0-2-52" id="h0-2-52" class="d">-                &quot;SELECT client_conversation_id, user_id FROM user_conversation WHERE conversation_type = 0 AND user_id != ?&quot;,
+</a><a href="#h0-2-53" id="h0-2-53" class="i">+                &quot;SELECT client_conversation_id, conversation_type, user_id FROM user_conversation WHERE user_id != ?&quot;,
+</a>                 arrayOf(myUserId)
+             )?.use { query -&gt;
+                 val participants = mutableMapOf&lt;String, String?&gt;()
+<a href="#h0-3" id="h0-3" class="h">@@ -77,7 +58,13 @@ class DatabaseAccess(
+</a>                     return@performOperation null
+                 }
+                 do {
+<a href="#h0-3-3" id="h0-3-3" class="d">-                    participants[query.getStringOrNull(&quot;client_conversation_id&quot;)!!] = query.getStringOrNull(&quot;user_id&quot;)!!
+</a><a href="#h0-3-4" id="h0-3-4" class="i">+                    val conversationId = query.getStringOrNull(&quot;client_conversation_id&quot;) ?: continue
+</a><a href="#h0-3-5" id="h0-3-5" class="i">+                    val userId = query.getStringOrNull(&quot;user_id&quot;) ?: continue
+</a><a href="#h0-3-6" id="h0-3-6" class="i">+                    participants[conversationId] = when (query.getIntOrNull(&quot;conversation_type&quot;)) {
+</a><a href="#h0-3-7" id="h0-3-7" class="i">+                        0 -&gt; userId
+</a><a href="#h0-3-8" id="h0-3-8" class="i">+                        else -&gt; null
+</a><a href="#h0-3-9" id="h0-3-9" class="i">+                    }
+</a><a href="#h0-3-10" id="h0-3-10" class="i">+                    participants[userId] = null
+</a>                 } while (query.moveToNext())
+                 participants
+             }
+<a href="#h0-4" id="h0-4" class="h">@@ -89,13 +76,16 @@ class DatabaseAccess(
+</a>         if (!dbPath.exists()) return null
+         return runCatching {
+             SQLiteDatabase.openDatabase(
+<a href="#h0-4-3" id="h0-4-3" class="d">-                dbPath.absolutePath,
+</a><a href="#h0-4-4" id="h0-4-4" class="d">-                null,
+</a><a href="#h0-4-5" id="h0-4-5" class="d">-                SQLiteDatabase.OPEN_READONLY or SQLiteDatabase.NO_LOCALIZED_COLLATORS
+</a><a href="#h0-4-6" id="h0-4-6" class="i">+                dbPath,
+</a><a href="#h0-4-7" id="h0-4-7" class="i">+                OpenParams.Builder()
+</a><a href="#h0-4-8" id="h0-4-8" class="i">+                    .setOpenFlags(SQLiteDatabase.OPEN_READONLY)
+</a><a href="#h0-4-9" id="h0-4-9" class="i">+                    .setErrorHandler {
+</a><a href="#h0-4-10" id="h0-4-10" class="i">+                        context.androidContext.deleteDatabase(dbPath.absolutePath)
+</a><a href="#h0-4-11" id="h0-4-11" class="i">+                        context.softRestartApp()
+</a><a href="#h0-4-12" id="h0-4-12" class="i">+                    }.build()
+</a>             )
+         }.onFailure {
+             context.log.error(&quot;Failed to open database $fileName!&quot;, it)
+<a href="#h0-4-16" id="h0-4-16" class="d">-            showDatabaseError(dbPath.absolutePath, it)
+</a>         }.getOrNull()
+     }
+ 
+<a href="#h0-5" id="h0-5" class="h">@@ -137,6 +127,7 @@ class DatabaseAccess(
+</a>     }
+ 
+     val myUserId by lazy {
+<a href="#h0-5-3" id="h0-5-3" class="i">+        context.androidContext.getSharedPreferences(&quot;user_session_shared_pref&quot;, 0).getString(&quot;key_user_id&quot;, null) ?:
+</a>         arroyoDb?.performOperation {
+             safeRawQuery(buildString {
+                 append(&quot;SELECT value FROM required_values WHERE key = &#39;USERID&#39;&quot;)
+<a href="#h0-6" id="h0-6" class="h">@@ -146,7 +137,7 @@ class DatabaseAccess(
+</a>                 }
+                 query.getStringOrNull(&quot;value&quot;)!!
+             }
+<a href="#h0-6-3" id="h0-6-3" class="d">-        } ?: context.androidContext.getSharedPreferences(&quot;user_session_shared_pref&quot;, 0).getString(&quot;key_user_id&quot;, null)!!
+</a><a href="#h0-6-4" id="h0-6-4" class="i">+        }!!
+</a>     }
+ 
+     fun getFeedEntryByConversationId(conversationId: String): FriendFeedEntry? {
+<a href="#h0-7" id="h0-7" class="h">@@ -241,8 +232,8 @@ class DatabaseAccess(
+</a>                     participants.add(query.getStringOrNull(&quot;user_id&quot;)!!)
+                 } while (query.moveToNext())
+                 participants.firstOrNull { it != myUserId }
+<a href="#h0-7-3" id="h0-7-3" class="d">-            }
+</a><a href="#h0-7-4" id="h0-7-4" class="d">-        }.also { dmOtherParticipantCache[conversationId] = it }
+</a><a href="#h0-7-5" id="h0-7-5" class="i">+            }.also { dmOtherParticipantCache[conversationId] = it }
+</a><a href="#h0-7-6" id="h0-7-6" class="i">+        }
+</a>     }
+ 
+ 
+<a href="#h0-8" id="h0-8" class="h">@@ -253,18 +244,28 @@ class DatabaseAccess(
+</a>     }
+ 
+     fun getConversationParticipants(conversationId: String): List&lt;String&gt;? {
+<a href="#h0-8-3" id="h0-8-3" class="i">+        if (dmOtherParticipantCache[conversationId] != null) return dmOtherParticipantCache[conversationId]?.let { listOf(myUserId, it) }
+</a>         return arroyoDb?.performOperation {
+             safeRawQuery(
+<a href="#h0-8-6" id="h0-8-6" class="d">-                &quot;SELECT user_id FROM user_conversation WHERE client_conversation_id = ?&quot;,
+</a><a href="#h0-8-7" id="h0-8-7" class="i">+                &quot;SELECT user_id, conversation_type FROM user_conversation WHERE client_conversation_id = ?&quot;,
+</a>                 arrayOf(conversationId)
+<a href="#h0-8-9" id="h0-8-9" class="d">-            )?.use {
+</a><a href="#h0-8-10" id="h0-8-10" class="d">-                if (!it.moveToFirst()) {
+</a><a href="#h0-8-11" id="h0-8-11" class="i">+            )?.use { cursor -&gt;
+</a><a href="#h0-8-12" id="h0-8-12" class="i">+                if (!cursor.moveToFirst()) {
+</a>                     return@performOperation null
+                 }
+                 val participants = mutableListOf&lt;String&gt;()
+<a href="#h0-8-16" id="h0-8-16" class="i">+                var conversationType = -1
+</a>                 do {
+<a href="#h0-8-18" id="h0-8-18" class="d">-                    participants.add(it.getStringOrNull(&quot;user_id&quot;)!!)
+</a><a href="#h0-8-19" id="h0-8-19" class="d">-                } while (it.moveToNext())
+</a><a href="#h0-8-20" id="h0-8-20" class="i">+                    if (conversationType == -1) conversationType = cursor.getInteger(&quot;conversation_type&quot;)
+</a><a href="#h0-8-21" id="h0-8-21" class="i">+                    participants.add(cursor.getStringOrNull(&quot;user_id&quot;)!!)
+</a><a href="#h0-8-22" id="h0-8-22" class="i">+                } while (cursor.moveToNext())
+</a><a href="#h0-8-23" id="h0-8-23" class="i">+
+</a><a href="#h0-8-24" id="h0-8-24" class="i">+                if (!dmOtherParticipantCache.containsKey(conversationId)) {
+</a><a href="#h0-8-25" id="h0-8-25" class="i">+                    dmOtherParticipantCache[conversationId] = when (conversationType) {
+</a><a href="#h0-8-26" id="h0-8-26" class="i">+                        0 -&gt; participants.firstOrNull { it != myUserId }
+</a><a href="#h0-8-27" id="h0-8-27" class="i">+                        else -&gt; null
+</a><a href="#h0-8-28" id="h0-8-28" class="i">+                    }
+</a><a href="#h0-8-29" id="h0-8-29" class="i">+                }
+</a>                 participants
+             }
+         }
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -18,11 +18,13 @@ class EventBus(
+</a>     private val subscribers = mutableMapOf&lt;KClass&lt;out Event&gt;, MutableMap&lt;Int, IListener&lt;out Event&gt;&gt;&gt;()
+ 
+     fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;, listener: IListener&lt;T&gt;, priority: Int? = null) {
+<a href="#h1-0-3" id="h1-0-3" class="d">-        if (!subscribers.containsKey(event)) {
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-            subscribers[event] = sortedMapOf()
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+        synchronized(subscribers) {
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+            if (!subscribers.containsKey(event)) {
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+                subscribers[event] = sortedMapOf()
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+            }
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+            val lastSubscriber = subscribers[event]?.keys?.lastOrNull() ?: 0
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+            subscribers[event]?.put(priority ?: (lastSubscriber + 1), listener)
+</a>         }
+<a href="#h1-0-12" id="h1-0-12" class="d">-        val lastSubscriber = subscribers[event]?.keys?.lastOrNull() ?: 0
+</a><a href="#h1-0-13" id="h1-0-13" class="d">-        subscribers[event]?.put(priority ?: (lastSubscriber + 1), listener)
+</a>     }
+ 
+     inline fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;, priority: Int? = null, crossinline listener: (T) -&gt; Unit) = subscribe(event, { true }, priority, listener)
+<a href="#h1-1" id="h1-1" class="h">@@ -43,7 +45,9 @@ class EventBus(
+</a>     }
+ 
+     fun &lt;T : Event&gt; unsubscribe(event: KClass&lt;T&gt;, listener: IListener&lt;T&gt;) {
+<a href="#h1-1-3" id="h1-1-3" class="d">-        subscribers[event]?.values?.remove(listener)
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+        synchronized(subscribers) {
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+            subscribers[event]?.values?.remove(listener)
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+        }
+</a>     }
+ 
+     fun &lt;T : Event&gt; post(event: T, afterBlock: T.() -&gt; Unit = {}): T? {
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/FriendFeedMessagePreview.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/FriendFeedMessagePreview.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/FriendFeedMessagePreview.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/FriendFeedMessagePreview.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,6 +1,5 @@
+</a> package me.rhunk.snapenhance.core.features.impl.ui
+ 
+<a href="#h2-0-2" id="h2-0-2" class="d">-import android.annotation.SuppressLint
+</a> import android.graphics.Canvas
+ import android.graphics.Paint
+ import android.graphics.Rect
+<a href="#h2-1" id="h2-1" class="h">@@ -9,9 +8,14 @@ import android.graphics.drawable.shapes.Shape
+</a> import android.text.TextPaint
+ import android.view.View
+ import android.view.ViewGroup
+<a href="#h2-1-3" id="h2-1-3" class="i">+import kotlinx.coroutines.Dispatchers
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+import kotlinx.coroutines.ExperimentalCoroutinesApi
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+import kotlinx.coroutines.launch
+</a><a href="#h2-1-6" id="h2-1-6" class="i">+import kotlinx.coroutines.withContext
+</a> import me.rhunk.snapenhance.common.data.ContentType
+ import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+<a href="#h2-1-10" id="h2-1-10" class="i">+import me.rhunk.snapenhance.core.event.events.impl.BuildMessageEvent
+</a> import me.rhunk.snapenhance.core.features.Feature
+ import me.rhunk.snapenhance.core.features.FeatureLoadParams
+ import me.rhunk.snapenhance.core.features.impl.experiments.EndToEndEncryption
+<a href="#h2-2" id="h2-2" class="h">@@ -21,25 +25,65 @@ import me.rhunk.snapenhance.core.util.EvictingMap
+</a> import me.rhunk.snapenhance.core.util.ktx.getDimens
+ import me.rhunk.snapenhance.core.util.ktx.getId
+ import me.rhunk.snapenhance.core.util.ktx.getIdentifier
+<a href="#h2-2-3" id="h2-2-3" class="i">+import java.util.WeakHashMap
+</a> import kotlin.math.absoluteValue
+ 
+<a href="#h2-2-6" id="h2-2-6" class="d">-@SuppressLint(&quot;DiscouragedApi&quot;)
+</a> class FriendFeedMessagePreview : Feature(&quot;FriendFeedMessagePreview&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+<a href="#h2-2-8" id="h2-2-8" class="i">+    private val endToEndEncryption by lazy { context.feature(EndToEndEncryption::class) }
+</a><a href="#h2-2-9" id="h2-2-9" class="i">+    @OptIn(ExperimentalCoroutinesApi::class)
+</a><a href="#h2-2-10" id="h2-2-10" class="i">+    private val coroutineDispatcher = Dispatchers.IO.limitedParallelism(1)
+</a><a href="#h2-2-11" id="h2-2-11" class="i">+    private val setting get() = context.config.userInterface.friendFeedMessagePreview
+</a><a href="#h2-2-12" id="h2-2-12" class="i">+    private val hasE2EE get() = context.config.experimental.e2eEncryption.globalState == true
+</a><a href="#h2-2-13" id="h2-2-13" class="i">+
+</a>     private val sigColorTextPrimary by lazy {
+         context.mainActivity!!.theme.obtainStyledAttributes(
+             intArrayOf(context.resources.getIdentifier(&quot;sigColorTextPrimary&quot;, &quot;attr&quot;))
+         ).getColor(0, 0)
+     }
+ 
+<a href="#h2-2-20" id="h2-2-20" class="i">+    private val cachedLayouts = WeakHashMap&lt;String, View&gt;()
+</a><a href="#h2-2-21" id="h2-2-21" class="i">+    private val messageCache = EvictingMap&lt;String, List&lt;String&gt;&gt;(100)
+</a>     private val friendNameCache = EvictingMap&lt;String, String&gt;(100)
+ 
+<a href="#h2-2-24" id="h2-2-24" class="i">+    private suspend fun fetchMessages(conversationId: String, callback: suspend () -&gt; Unit) {
+</a><a href="#h2-2-25" id="h2-2-25" class="i">+        val messages = context.database.getMessagesFromConversationId(conversationId, setting.amount.get().absoluteValue)?.mapNotNull { message -&gt;
+</a><a href="#h2-2-26" id="h2-2-26" class="i">+            val messageContainer =
+</a><a href="#h2-2-27" id="h2-2-27" class="i">+                message.messageContent
+</a><a href="#h2-2-28" id="h2-2-28" class="i">+                    ?.let { ProtoReader(it) }
+</a><a href="#h2-2-29" id="h2-2-29" class="i">+                    ?.followPath(4, 4)?.let { messageReader -&gt;
+</a><a href="#h2-2-30" id="h2-2-30" class="i">+                        takeIf { hasE2EE }?.let takeIf@{
+</a><a href="#h2-2-31" id="h2-2-31" class="i">+                            endToEndEncryption.tryDecryptMessage(
+</a><a href="#h2-2-32" id="h2-2-32" class="i">+                                senderId = message.senderId ?: return@takeIf null,
+</a><a href="#h2-2-33" id="h2-2-33" class="i">+                                clientMessageId = message.clientMessageId.toLong(),
+</a><a href="#h2-2-34" id="h2-2-34" class="i">+                                conversationId =  message.clientConversationId ?: return@takeIf null,
+</a><a href="#h2-2-35" id="h2-2-35" class="i">+                                contentType = ContentType.fromId(message.contentType),
+</a><a href="#h2-2-36" id="h2-2-36" class="i">+                                messageBuffer = messageReader.getBuffer()
+</a><a href="#h2-2-37" id="h2-2-37" class="i">+                            ).second
+</a><a href="#h2-2-38" id="h2-2-38" class="i">+                        }?.let { ProtoReader(it) } ?: messageReader
+</a><a href="#h2-2-39" id="h2-2-39" class="i">+                    }
+</a><a href="#h2-2-40" id="h2-2-40" class="i">+                    ?: return@mapNotNull null
+</a><a href="#h2-2-41" id="h2-2-41" class="i">+
+</a><a href="#h2-2-42" id="h2-2-42" class="i">+            val messageString = messageContainer.getString(2, 1)
+</a><a href="#h2-2-43" id="h2-2-43" class="i">+                ?: ContentType.fromMessageContainer(messageContainer)?.name
+</a><a href="#h2-2-44" id="h2-2-44" class="i">+                ?: return@mapNotNull null
+</a><a href="#h2-2-45" id="h2-2-45" class="i">+
+</a><a href="#h2-2-46" id="h2-2-46" class="i">+            val friendName = friendNameCache.getOrPut(message.senderId ?: return@mapNotNull null) {
+</a><a href="#h2-2-47" id="h2-2-47" class="i">+                context.database.getFriendInfo(message.senderId ?: return@mapNotNull null)?.let { it.displayName?: it.mutableUsername } ?: &quot;Unknown&quot;
+</a><a href="#h2-2-48" id="h2-2-48" class="i">+            }
+</a><a href="#h2-2-49" id="h2-2-49" class="i">+            &quot;$friendName: $messageString&quot;
+</a><a href="#h2-2-50" id="h2-2-50" class="i">+        }?.takeIf { it.isNotEmpty() }?.reversed()
+</a><a href="#h2-2-51" id="h2-2-51" class="i">+
+</a><a href="#h2-2-52" id="h2-2-52" class="i">+        withContext(Dispatchers.Main) {
+</a><a href="#h2-2-53" id="h2-2-53" class="i">+            messages?.also { messageCache[conversationId] = it } ?: run {
+</a><a href="#h2-2-54" id="h2-2-54" class="i">+                messageCache.remove(conversationId)
+</a><a href="#h2-2-55" id="h2-2-55" class="i">+            }
+</a><a href="#h2-2-56" id="h2-2-56" class="i">+            callback()
+</a><a href="#h2-2-57" id="h2-2-57" class="i">+        }
+</a><a href="#h2-2-58" id="h2-2-58" class="i">+    }
+</a><a href="#h2-2-59" id="h2-2-59" class="i">+
+</a>     override fun onActivityCreate() {
+<a href="#h2-2-61" id="h2-2-61" class="d">-        val setting = context.config.userInterface.friendFeedMessagePreview
+</a>         if (setting.globalState != true) return
+ 
+<a href="#h2-2-64" id="h2-2-64" class="d">-        val hasE2EE = context.config.experimental.e2eEncryption.globalState == true
+</a><a href="#h2-2-65" id="h2-2-65" class="d">-        val endToEndEncryption by lazy { context.feature(EndToEndEncryption::class) }
+</a><a href="#h2-2-66" id="h2-2-66" class="d">-
+</a>         val ffItemId = context.resources.getId(&quot;ff_item&quot;)
+ 
+         val secondaryTextSize = context.resources.getDimens(&quot;ff_feed_cell_secondary_text_size&quot;).toFloat()
+<a href="#h2-3" id="h2-3" class="h">@@ -54,71 +98,65 @@ class FriendFeedMessagePreview : Feature(&quot;FriendFeedMessagePreview&quot;, loadParams 
+</a>             textSize = secondaryTextSize
+         }
+ 
+<a href="#h2-3-3" id="h2-3-3" class="i">+        context.event.subscribe(BuildMessageEvent::class) { param -&gt;
+</a><a href="#h2-3-4" id="h2-3-4" class="i">+            val conversationId = param.message.messageDescriptor?.conversationId?.toString() ?: return@subscribe
+</a><a href="#h2-3-5" id="h2-3-5" class="i">+            val cachedView = cachedLayouts[conversationId] ?: return@subscribe
+</a><a href="#h2-3-6" id="h2-3-6" class="i">+            context.coroutineScope.launch {
+</a><a href="#h2-3-7" id="h2-3-7" class="i">+                fetchMessages(conversationId) {
+</a><a href="#h2-3-8" id="h2-3-8" class="i">+                    cachedView.postInvalidateDelayed(100L)
+</a><a href="#h2-3-9" id="h2-3-9" class="i">+                }
+</a><a href="#h2-3-10" id="h2-3-10" class="i">+            }
+</a><a href="#h2-3-11" id="h2-3-11" class="i">+        }
+</a><a href="#h2-3-12" id="h2-3-12" class="i">+
+</a>         context.event.subscribe(BindViewEvent::class) { param -&gt;
+             param.friendFeedItem { conversationId -&gt;
+                 val frameLayout = param.view as ViewGroup
+                 val ffItem = frameLayout.findViewById&lt;View&gt;(ffItemId)
+ 
+<a href="#h2-3-18" id="h2-3-18" class="d">-                ffItem.layoutParams = ffItem.layoutParams.apply {
+</a><a href="#h2-3-19" id="h2-3-19" class="d">-                    height = ViewGroup.LayoutParams.MATCH_PARENT
+</a><a href="#h2-3-20" id="h2-3-20" class="d">-                }
+</a><a href="#h2-3-21" id="h2-3-21" class="d">-                frameLayout.removeForegroundDrawable(&quot;ffItem&quot;)
+</a><a href="#h2-3-22" id="h2-3-22" class="d">-
+</a><a href="#h2-3-23" id="h2-3-23" class="d">-                val stringMessages = context.database.getMessagesFromConversationId(conversationId, setting.amount.get().absoluteValue)?.mapNotNull { message -&gt;
+</a><a href="#h2-3-24" id="h2-3-24" class="d">-                    val messageContainer =
+</a><a href="#h2-3-25" id="h2-3-25" class="d">-                        message.messageContent
+</a><a href="#h2-3-26" id="h2-3-26" class="d">-                            ?.let { ProtoReader(it) }
+</a><a href="#h2-3-27" id="h2-3-27" class="d">-                            ?.followPath(4, 4)?.let { messageReader -&gt;
+</a><a href="#h2-3-28" id="h2-3-28" class="d">-                                takeIf { hasE2EE }?.let takeIf@{
+</a><a href="#h2-3-29" id="h2-3-29" class="d">-                                    endToEndEncryption.tryDecryptMessage(
+</a><a href="#h2-3-30" id="h2-3-30" class="d">-                                        senderId = message.senderId ?: return@takeIf null,
+</a><a href="#h2-3-31" id="h2-3-31" class="d">-                                        clientMessageId = message.clientMessageId.toLong(),
+</a><a href="#h2-3-32" id="h2-3-32" class="d">-                                        conversationId =  message.clientConversationId ?: return@takeIf null,
+</a><a href="#h2-3-33" id="h2-3-33" class="d">-                                        contentType = ContentType.fromId(message.contentType),
+</a><a href="#h2-3-34" id="h2-3-34" class="d">-                                        messageBuffer = messageReader.getBuffer()
+</a><a href="#h2-3-35" id="h2-3-35" class="d">-                                    ).second
+</a><a href="#h2-3-36" id="h2-3-36" class="d">-                                }?.let { ProtoReader(it) } ?: messageReader
+</a><a href="#h2-3-37" id="h2-3-37" class="d">-                            }
+</a><a href="#h2-3-38" id="h2-3-38" class="d">-                        ?: return@mapNotNull null
+</a><a href="#h2-3-39" id="h2-3-39" class="d">-
+</a><a href="#h2-3-40" id="h2-3-40" class="d">-                    val messageString = messageContainer.getString(2, 1)
+</a><a href="#h2-3-41" id="h2-3-41" class="d">-                        ?: ContentType.fromMessageContainer(messageContainer)?.name
+</a><a href="#h2-3-42" id="h2-3-42" class="d">-                        ?: return@mapNotNull null
+</a><a href="#h2-3-43" id="h2-3-43" class="d">-
+</a><a href="#h2-3-44" id="h2-3-44" class="d">-                    val friendName = friendNameCache.getOrPut(message.senderId ?: return@mapNotNull null) {
+</a><a href="#h2-3-45" id="h2-3-45" class="d">-                        context.database.getFriendInfo(message.senderId ?: return@mapNotNull null)?.let { it.displayName?: it.mutableUsername } ?: &quot;Unknown&quot;
+</a><a href="#h2-3-46" id="h2-3-46" class="i">+                context.coroutineScope.launch(coroutineDispatcher) {
+</a><a href="#h2-3-47" id="h2-3-47" class="i">+                    withContext(Dispatchers.Main) {
+</a><a href="#h2-3-48" id="h2-3-48" class="i">+                        cachedLayouts.remove(conversationId)
+</a><a href="#h2-3-49" id="h2-3-49" class="i">+                        frameLayout.removeForegroundDrawable(&quot;ffItem&quot;)
+</a>                     }
+<a href="#h2-3-51" id="h2-3-51" class="d">-                    &quot;$friendName: $messageString&quot;
+</a><a href="#h2-3-52" id="h2-3-52" class="d">-                }?.reversed() ?: return@friendFeedItem
+</a><a href="#h2-3-53" id="h2-3-53" class="d">-
+</a><a href="#h2-3-54" id="h2-3-54" class="d">-                var maxTextHeight = 0
+</a><a href="#h2-3-55" id="h2-3-55" class="d">-                val previewContainerHeight = stringMessages.sumOf { msg -&gt;
+</a><a href="#h2-3-56" id="h2-3-56" class="d">-                    val rect = Rect()
+</a><a href="#h2-3-57" id="h2-3-57" class="d">-                    textPaint.getTextBounds(msg, 0, msg.length, rect)
+</a><a href="#h2-3-58" id="h2-3-58" class="d">-                    rect.height().also {
+</a><a href="#h2-3-59" id="h2-3-59" class="d">-                        if (it &gt; maxTextHeight) maxTextHeight = it
+</a><a href="#h2-3-60" id="h2-3-60" class="d">-                    }.plus(separatorHeight)
+</a><a href="#h2-3-61" id="h2-3-61" class="d">-                }
+</a> 
+<a href="#h2-3-63" id="h2-3-63" class="d">-                ffItem.layoutParams = ffItem.layoutParams.apply {
+</a><a href="#h2-3-64" id="h2-3-64" class="d">-                    height = feedEntryHeight + previewContainerHeight + separatorHeight
+</a><a href="#h2-3-65" id="h2-3-65" class="d">-                }
+</a><a href="#h2-3-66" id="h2-3-66" class="i">+                    fetchMessages(conversationId) {
+</a><a href="#h2-3-67" id="h2-3-67" class="i">+                        var maxTextHeight = 0
+</a><a href="#h2-3-68" id="h2-3-68" class="i">+                        val previewContainerHeight = messageCache[conversationId]?.sumOf { msg -&gt;
+</a><a href="#h2-3-69" id="h2-3-69" class="i">+                            val rect = Rect()
+</a><a href="#h2-3-70" id="h2-3-70" class="i">+                            textPaint.getTextBounds(msg, 0, msg.length, rect)
+</a><a href="#h2-3-71" id="h2-3-71" class="i">+                            rect.height().also {
+</a><a href="#h2-3-72" id="h2-3-72" class="i">+                                if (it &gt; maxTextHeight) maxTextHeight = it
+</a><a href="#h2-3-73" id="h2-3-73" class="i">+                            }.plus(separatorHeight)
+</a><a href="#h2-3-74" id="h2-3-74" class="i">+                        } ?: run {
+</a><a href="#h2-3-75" id="h2-3-75" class="i">+                            ffItem.layoutParams = ffItem.layoutParams.apply {
+</a><a href="#h2-3-76" id="h2-3-76" class="i">+                                height = ViewGroup.LayoutParams.MATCH_PARENT
+</a><a href="#h2-3-77" id="h2-3-77" class="i">+                            }
+</a><a href="#h2-3-78" id="h2-3-78" class="i">+                            return@fetchMessages
+</a><a href="#h2-3-79" id="h2-3-79" class="i">+                        }
+</a> 
+<a href="#h2-3-81" id="h2-3-81" class="d">-                frameLayout.addForegroundDrawable(&quot;ffItem&quot;, ShapeDrawable(object: Shape() {
+</a><a href="#h2-3-82" id="h2-3-82" class="d">-                    override fun draw(canvas: Canvas, paint: Paint) {
+</a><a href="#h2-3-83" id="h2-3-83" class="d">-                        val offsetY = canvas.height.toFloat() - previewContainerHeight
+</a><a href="#h2-3-84" id="h2-3-84" class="d">-
+</a><a href="#h2-3-85" id="h2-3-85" class="d">-                        stringMessages.forEachIndexed { index, messageString -&gt;
+</a><a href="#h2-3-86" id="h2-3-86" class="d">-                            paint.textSize = secondaryTextSize
+</a><a href="#h2-3-87" id="h2-3-87" class="d">-                            paint.color = sigColorTextPrimary
+</a><a href="#h2-3-88" id="h2-3-88" class="d">-                            canvas.drawText(messageString,
+</a><a href="#h2-3-89" id="h2-3-89" class="d">-                                feedEntryHeight + ffSdlPrimaryTextStartMargin,
+</a><a href="#h2-3-90" id="h2-3-90" class="d">-                                offsetY + index * maxTextHeight,
+</a><a href="#h2-3-91" id="h2-3-91" class="d">-                                paint
+</a><a href="#h2-3-92" id="h2-3-92" class="d">-                            )
+</a><a href="#h2-3-93" id="h2-3-93" class="i">+                        ffItem.layoutParams = ffItem.layoutParams.apply {
+</a><a href="#h2-3-94" id="h2-3-94" class="i">+                            height = feedEntryHeight + previewContainerHeight + separatorHeight
+</a>                         }
+<a href="#h2-3-96" id="h2-3-96" class="i">+
+</a><a href="#h2-3-97" id="h2-3-97" class="i">+                        cachedLayouts[conversationId] = frameLayout
+</a><a href="#h2-3-98" id="h2-3-98" class="i">+
+</a><a href="#h2-3-99" id="h2-3-99" class="i">+                        frameLayout.addForegroundDrawable(&quot;ffItem&quot;, ShapeDrawable(object: Shape() {
+</a><a href="#h2-3-100" id="h2-3-100" class="i">+                            override fun draw(canvas: Canvas, paint: Paint) {
+</a><a href="#h2-3-101" id="h2-3-101" class="i">+                                val offsetY = canvas.height.toFloat() - previewContainerHeight
+</a><a href="#h2-3-102" id="h2-3-102" class="i">+
+</a><a href="#h2-3-103" id="h2-3-103" class="i">+                                messageCache[conversationId]?.forEachIndexed { index, messageString -&gt;
+</a><a href="#h2-3-104" id="h2-3-104" class="i">+                                    paint.textSize = secondaryTextSize
+</a><a href="#h2-3-105" id="h2-3-105" class="i">+                                    paint.color = sigColorTextPrimary
+</a><a href="#h2-3-106" id="h2-3-106" class="i">+                                    canvas.drawText(messageString,
+</a><a href="#h2-3-107" id="h2-3-107" class="i">+                                        feedEntryHeight + ffSdlPrimaryTextStartMargin,
+</a><a href="#h2-3-108" id="h2-3-108" class="i">+                                        offsetY + index * maxTextHeight,
+</a><a href="#h2-3-109" id="h2-3-109" class="i">+                                        paint
+</a><a href="#h2-3-110" id="h2-3-110" class="i">+                                    )
+</a><a href="#h2-3-111" id="h2-3-111" class="i">+                                }
+</a><a href="#h2-3-112" id="h2-3-112" class="i">+                            }
+</a><a href="#h2-3-113" id="h2-3-113" class="i">+                        }))
+</a>                     }
+<a href="#h2-3-115" id="h2-3-115" class="d">-                }))
+</a><a href="#h2-3-116" id="h2-3-116" class="i">+                }
+</a>             }
+         }
+     }
+</pre>
+</div>
+</body>
+</html>

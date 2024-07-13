@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(better_location): edit coordinates - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/d901cba8288986674db0acaf0474b4a1ae0403ce.html">d901cba8288986674db0acaf0474b4a1ae0403ce</a>
+<b>parent</b> <a href="../commit/4623c5cb1ae3aabb6dcdb3ca04383a13526b96f7.html">4623c5cb1ae3aabb6dcdb3ca04383a13526b96f7</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed,  5 Jun 2024 01:22:05 +0200
+
+feat(better_location): edit coordinates
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Routes.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/BetterLocationRoot.kt</a></td><td> | </td><td class="num">389</td><td><span class="i"></span><span class="d">-------------------------------------------------------------------------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/location/AddCoordinatesDialog.kt</a></td><td> | </td><td class="num">92</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/location/BetterLocationRoot.kt</a></td><td> | </td><td class="num">446</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+</table></pre><pre>5 files changed, 541 insertions(+), 390 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Routes.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Routes.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Routes.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Routes.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -11,7 +11,7 @@ import androidx.navigation.NavDestination.Companion.hierarchy
+</a> import androidx.navigation.NavGraph.Companion.findStartDestination
+ import androidx.navigation.NavGraphBuilder
+ import me.rhunk.snapenhance.RemoteSideContext
+<a href="#h0-0-3" id="h0-0-3" class="d">-import me.rhunk.snapenhance.ui.manager.pages.BetterLocationRoot
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+import me.rhunk.snapenhance.ui.manager.pages.location.BetterLocationRoot
+</a> import me.rhunk.snapenhance.ui.manager.pages.FileImportsRoot
+ import me.rhunk.snapenhance.ui.manager.pages.LoggerHistoryRoot
+ import me.rhunk.snapenhance.ui.manager.pages.TasksRootSection
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/BetterLocationRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/BetterLocationRoot.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/BetterLocationRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/BetterLocationRoot.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,388 +0,0 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="d">-package me.rhunk.snapenhance.ui.manager.pages
+</a><a href="#h1-0-1" id="h1-0-1" class="d">-
+</a><a href="#h1-0-2" id="h1-0-2" class="d">-import androidx.compose.foundation.clickable
+</a><a href="#h1-0-3" id="h1-0-3" class="d">-import androidx.compose.foundation.layout.*
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-import androidx.compose.foundation.lazy.LazyColumn
+</a><a href="#h1-0-5" id="h1-0-5" class="d">-import androidx.compose.foundation.lazy.items
+</a><a href="#h1-0-6" id="h1-0-6" class="d">-import androidx.compose.material.icons.Icons
+</a><a href="#h1-0-7" id="h1-0-7" class="d">-import androidx.compose.material.icons.filled.DeleteOutline
+</a><a href="#h1-0-8" id="h1-0-8" class="d">-import androidx.compose.material3.*
+</a><a href="#h1-0-9" id="h1-0-9" class="d">-import androidx.compose.runtime.*
+</a><a href="#h1-0-10" id="h1-0-10" class="d">-import androidx.compose.ui.Alignment
+</a><a href="#h1-0-11" id="h1-0-11" class="d">-import androidx.compose.ui.Modifier
+</a><a href="#h1-0-12" id="h1-0-12" class="d">-import androidx.compose.ui.draw.clipToBounds
+</a><a href="#h1-0-13" id="h1-0-13" class="d">-import androidx.compose.ui.focus.FocusRequester
+</a><a href="#h1-0-14" id="h1-0-14" class="d">-import androidx.compose.ui.focus.focusRequester
+</a><a href="#h1-0-15" id="h1-0-15" class="d">-import androidx.compose.ui.layout.onGloballyPositioned
+</a><a href="#h1-0-16" id="h1-0-16" class="d">-import androidx.compose.ui.text.font.FontWeight
+</a><a href="#h1-0-17" id="h1-0-17" class="d">-import androidx.compose.ui.text.style.TextAlign
+</a><a href="#h1-0-18" id="h1-0-18" class="d">-import androidx.compose.ui.unit.dp
+</a><a href="#h1-0-19" id="h1-0-19" class="d">-import androidx.compose.ui.unit.sp
+</a><a href="#h1-0-20" id="h1-0-20" class="d">-import androidx.navigation.NavBackStackEntry
+</a><a href="#h1-0-21" id="h1-0-21" class="d">-import kotlinx.coroutines.launch
+</a><a href="#h1-0-22" id="h1-0-22" class="d">-import me.rhunk.snapenhance.bridge.location.FriendLocation
+</a><a href="#h1-0-23" id="h1-0-23" class="d">-import me.rhunk.snapenhance.bridge.location.LocationCoordinates
+</a><a href="#h1-0-24" id="h1-0-24" class="d">-import me.rhunk.snapenhance.common.ui.rememberAsyncMutableStateList
+</a><a href="#h1-0-25" id="h1-0-25" class="d">-import me.rhunk.snapenhance.common.ui.rememberAsyncUpdateDispatcher
+</a><a href="#h1-0-26" id="h1-0-26" class="d">-import me.rhunk.snapenhance.common.util.snap.BitmojiSelfie
+</a><a href="#h1-0-27" id="h1-0-27" class="d">-import me.rhunk.snapenhance.storage.addOrUpdateLocationCoordinate
+</a><a href="#h1-0-28" id="h1-0-28" class="d">-import me.rhunk.snapenhance.storage.getLocationCoordinates
+</a><a href="#h1-0-29" id="h1-0-29" class="d">-import me.rhunk.snapenhance.storage.removeLocationCoordinate
+</a><a href="#h1-0-30" id="h1-0-30" class="d">-import me.rhunk.snapenhance.ui.manager.Routes
+</a><a href="#h1-0-31" id="h1-0-31" class="d">-import me.rhunk.snapenhance.ui.util.AlertDialogs
+</a><a href="#h1-0-32" id="h1-0-32" class="d">-import me.rhunk.snapenhance.ui.util.DialogProperties
+</a><a href="#h1-0-33" id="h1-0-33" class="d">-import me.rhunk.snapenhance.ui.util.coil.BitmojiImage
+</a><a href="#h1-0-34" id="h1-0-34" class="d">-import org.osmdroid.util.GeoPoint
+</a><a href="#h1-0-35" id="h1-0-35" class="d">-import org.osmdroid.views.MapView
+</a><a href="#h1-0-36" id="h1-0-36" class="d">-import org.osmdroid.views.overlay.Marker
+</a><a href="#h1-0-37" id="h1-0-37" class="d">-
+</a><a href="#h1-0-38" id="h1-0-38" class="d">-class BetterLocationRoot : Routes.Route() {
+</a><a href="#h1-0-39" id="h1-0-39" class="d">-    private val alertDialogs by lazy { AlertDialogs(context.translation) }
+</a><a href="#h1-0-40" id="h1-0-40" class="d">-
+</a><a href="#h1-0-41" id="h1-0-41" class="d">-    @Composable
+</a><a href="#h1-0-42" id="h1-0-42" class="d">-    private fun FriendLocationItem(
+</a><a href="#h1-0-43" id="h1-0-43" class="d">-        friendLocation: FriendLocation,
+</a><a href="#h1-0-44" id="h1-0-44" class="d">-        dismiss: () -&gt; Unit
+</a><a href="#h1-0-45" id="h1-0-45" class="d">-    ) {
+</a><a href="#h1-0-46" id="h1-0-46" class="d">-        ElevatedCard(onClick = {
+</a><a href="#h1-0-47" id="h1-0-47" class="d">-            context.config.root.global.betterLocation.coordinates.setAny(friendLocation.latitude to friendLocation.longitude)
+</a><a href="#h1-0-48" id="h1-0-48" class="d">-            dismiss()
+</a><a href="#h1-0-49" id="h1-0-49" class="d">-        }, modifier = Modifier.padding(4.dp)) {
+</a><a href="#h1-0-50" id="h1-0-50" class="d">-            Row(
+</a><a href="#h1-0-51" id="h1-0-51" class="d">-                modifier = Modifier
+</a><a href="#h1-0-52" id="h1-0-52" class="d">-                    .padding(8.dp)
+</a><a href="#h1-0-53" id="h1-0-53" class="d">-                    .fillMaxWidth(),
+</a><a href="#h1-0-54" id="h1-0-54" class="d">-                verticalAlignment = Alignment.CenterVertically
+</a><a href="#h1-0-55" id="h1-0-55" class="d">-            ) {
+</a><a href="#h1-0-56" id="h1-0-56" class="d">-                BitmojiImage(
+</a><a href="#h1-0-57" id="h1-0-57" class="d">-                    context = context,
+</a><a href="#h1-0-58" id="h1-0-58" class="d">-                    url = BitmojiSelfie.getBitmojiSelfie(
+</a><a href="#h1-0-59" id="h1-0-59" class="d">-                        friendLocation.bitmojiSelfieId,
+</a><a href="#h1-0-60" id="h1-0-60" class="d">-                        friendLocation.bitmojiId,
+</a><a href="#h1-0-61" id="h1-0-61" class="d">-                        BitmojiSelfie.BitmojiSelfieType.NEW_THREE_D
+</a><a href="#h1-0-62" id="h1-0-62" class="d">-                    ),
+</a><a href="#h1-0-63" id="h1-0-63" class="d">-                    size = 48,
+</a><a href="#h1-0-64" id="h1-0-64" class="d">-                    modifier = Modifier.padding(6.dp)
+</a><a href="#h1-0-65" id="h1-0-65" class="d">-                )
+</a><a href="#h1-0-66" id="h1-0-66" class="d">-                Column(
+</a><a href="#h1-0-67" id="h1-0-67" class="d">-                    modifier = Modifier.weight(1f),
+</a><a href="#h1-0-68" id="h1-0-68" class="d">-                ) {
+</a><a href="#h1-0-69" id="h1-0-69" class="d">-                    Text(friendLocation.displayName?.let { &quot;$it (${friendLocation.username})&quot; }
+</a><a href="#h1-0-70" id="h1-0-70" class="d">-                        ?: friendLocation.username, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+</a><a href="#h1-0-71" id="h1-0-71" class="d">-                    Text(
+</a><a href="#h1-0-72" id="h1-0-72" class="d">-                        text = buildString {
+</a><a href="#h1-0-73" id="h1-0-73" class="d">-                            append(friendLocation.localityPieces.joinToString(&quot;, &quot;))
+</a><a href="#h1-0-74" id="h1-0-74" class="d">-                            append(&quot;\n&quot;)
+</a><a href="#h1-0-75" id="h1-0-75" class="d">-                            append(&quot;Lat: ${friendLocation.latitude.toFloat()}, Lng: ${friendLocation.longitude.toFloat()}&quot;)
+</a><a href="#h1-0-76" id="h1-0-76" class="d">-                        },
+</a><a href="#h1-0-77" id="h1-0-77" class="d">-                        fontSize = 10.sp,
+</a><a href="#h1-0-78" id="h1-0-78" class="d">-                        fontWeight = FontWeight.Light,
+</a><a href="#h1-0-79" id="h1-0-79" class="d">-                        lineHeight = 15.sp
+</a><a href="#h1-0-80" id="h1-0-80" class="d">-                    )
+</a><a href="#h1-0-81" id="h1-0-81" class="d">-                }
+</a><a href="#h1-0-82" id="h1-0-82" class="d">-            }
+</a><a href="#h1-0-83" id="h1-0-83" class="d">-        }
+</a><a href="#h1-0-84" id="h1-0-84" class="d">-    }
+</a><a href="#h1-0-85" id="h1-0-85" class="d">-
+</a><a href="#h1-0-86" id="h1-0-86" class="d">-    @Composable
+</a><a href="#h1-0-87" id="h1-0-87" class="d">-    private fun FriendLocationsDialogs(
+</a><a href="#h1-0-88" id="h1-0-88" class="d">-        friendsLocation: List&lt;FriendLocation&gt;,
+</a><a href="#h1-0-89" id="h1-0-89" class="d">-        dismiss: () -&gt; Unit
+</a><a href="#h1-0-90" id="h1-0-90" class="d">-    ) {
+</a><a href="#h1-0-91" id="h1-0-91" class="d">-        var search by remember { mutableStateOf(&quot;&quot;) }
+</a><a href="#h1-0-92" id="h1-0-92" class="d">-        val filteredFriendsLocation = rememberAsyncMutableStateList(defaultValue = friendsLocation, keys = arrayOf(search)) {
+</a><a href="#h1-0-93" id="h1-0-93" class="d">-            search.takeIf { it.isNotBlank() }?.let {
+</a><a href="#h1-0-94" id="h1-0-94" class="d">-                friendsLocation.filter {
+</a><a href="#h1-0-95" id="h1-0-95" class="d">-                    it.displayName?.contains(search, ignoreCase = true) == true || it.username.contains(search, ignoreCase = true)
+</a><a href="#h1-0-96" id="h1-0-96" class="d">-                }
+</a><a href="#h1-0-97" id="h1-0-97" class="d">-            }  ?: friendsLocation
+</a><a href="#h1-0-98" id="h1-0-98" class="d">-        }
+</a><a href="#h1-0-99" id="h1-0-99" class="d">-
+</a><a href="#h1-0-100" id="h1-0-100" class="d">-        ElevatedCard(
+</a><a href="#h1-0-101" id="h1-0-101" class="d">-            shape = MaterialTheme.shapes.large,
+</a><a href="#h1-0-102" id="h1-0-102" class="d">-            modifier = Modifier.padding(top = 32.dp, bottom = 32.dp)
+</a><a href="#h1-0-103" id="h1-0-103" class="d">-        ) {
+</a><a href="#h1-0-104" id="h1-0-104" class="d">-            Text(
+</a><a href="#h1-0-105" id="h1-0-105" class="d">-                translation[&quot;teleport_to_friend_title&quot;],
+</a><a href="#h1-0-106" id="h1-0-106" class="d">-                fontSize = 20.sp,
+</a><a href="#h1-0-107" id="h1-0-107" class="d">-                fontWeight = FontWeight.Bold,
+</a><a href="#h1-0-108" id="h1-0-108" class="d">-                textAlign = TextAlign.Center,
+</a><a href="#h1-0-109" id="h1-0-109" class="d">-                modifier = Modifier
+</a><a href="#h1-0-110" id="h1-0-110" class="d">-                    .fillMaxWidth()
+</a><a href="#h1-0-111" id="h1-0-111" class="d">-                    .padding(12.dp)
+</a><a href="#h1-0-112" id="h1-0-112" class="d">-            )
+</a><a href="#h1-0-113" id="h1-0-113" class="d">-            OutlinedTextField(
+</a><a href="#h1-0-114" id="h1-0-114" class="d">-                modifier = Modifier
+</a><a href="#h1-0-115" id="h1-0-115" class="d">-                    .fillMaxWidth()
+</a><a href="#h1-0-116" id="h1-0-116" class="d">-                    .padding(8.dp),
+</a><a href="#h1-0-117" id="h1-0-117" class="d">-                value = search,
+</a><a href="#h1-0-118" id="h1-0-118" class="d">-                onValueChange = { search = it },
+</a><a href="#h1-0-119" id="h1-0-119" class="d">-                label = { Text(translation[&quot;search_bar&quot;]) }
+</a><a href="#h1-0-120" id="h1-0-120" class="d">-            )
+</a><a href="#h1-0-121" id="h1-0-121" class="d">-            LazyColumn(
+</a><a href="#h1-0-122" id="h1-0-122" class="d">-                modifier = Modifier
+</a><a href="#h1-0-123" id="h1-0-123" class="d">-                    .fillMaxSize()
+</a><a href="#h1-0-124" id="h1-0-124" class="d">-            ) {
+</a><a href="#h1-0-125" id="h1-0-125" class="d">-                item {
+</a><a href="#h1-0-126" id="h1-0-126" class="d">-                    if (friendsLocation.isEmpty()) {
+</a><a href="#h1-0-127" id="h1-0-127" class="d">-                        Text(
+</a><a href="#h1-0-128" id="h1-0-128" class="d">-                            translation[&quot;no_friends_map&quot;],
+</a><a href="#h1-0-129" id="h1-0-129" class="d">-                            fontSize = 16.sp,
+</a><a href="#h1-0-130" id="h1-0-130" class="d">-                            modifier = Modifier.padding(16.dp),
+</a><a href="#h1-0-131" id="h1-0-131" class="d">-                            fontWeight = FontWeight.Light
+</a><a href="#h1-0-132" id="h1-0-132" class="d">-                        )
+</a><a href="#h1-0-133" id="h1-0-133" class="d">-                    } else if (filteredFriendsLocation.isEmpty()) {
+</a><a href="#h1-0-134" id="h1-0-134" class="d">-                        Text(
+</a><a href="#h1-0-135" id="h1-0-135" class="d">-                            translation[&quot;no_friends_found&quot;],
+</a><a href="#h1-0-136" id="h1-0-136" class="d">-                            fontSize = 16.sp,
+</a><a href="#h1-0-137" id="h1-0-137" class="d">-                            modifier = Modifier.padding(16.dp),
+</a><a href="#h1-0-138" id="h1-0-138" class="d">-                            fontWeight = FontWeight.Light
+</a><a href="#h1-0-139" id="h1-0-139" class="d">-                        )
+</a><a href="#h1-0-140" id="h1-0-140" class="d">-                    }
+</a><a href="#h1-0-141" id="h1-0-141" class="d">-                }
+</a><a href="#h1-0-142" id="h1-0-142" class="d">-                items(filteredFriendsLocation) { friendLocation -&gt;
+</a><a href="#h1-0-143" id="h1-0-143" class="d">-                    FriendLocationItem(friendLocation, dismiss)
+</a><a href="#h1-0-144" id="h1-0-144" class="d">-                }
+</a><a href="#h1-0-145" id="h1-0-145" class="d">-            }
+</a><a href="#h1-0-146" id="h1-0-146" class="d">-        }
+</a><a href="#h1-0-147" id="h1-0-147" class="d">-    }
+</a><a href="#h1-0-148" id="h1-0-148" class="d">-
+</a><a href="#h1-0-149" id="h1-0-149" class="d">-    override val content: @Composable (NavBackStackEntry) -&gt; Unit = {
+</a><a href="#h1-0-150" id="h1-0-150" class="d">-        val coordinatesProperty = remember {
+</a><a href="#h1-0-151" id="h1-0-151" class="d">-            context.config.root.global.betterLocation.getPropertyPair(&quot;coordinates&quot;)
+</a><a href="#h1-0-152" id="h1-0-152" class="d">-        }
+</a><a href="#h1-0-153" id="h1-0-153" class="d">-
+</a><a href="#h1-0-154" id="h1-0-154" class="d">-        val updateDispatcher = rememberAsyncUpdateDispatcher()
+</a><a href="#h1-0-155" id="h1-0-155" class="d">-        val savedCoordinates = rememberAsyncMutableStateList(
+</a><a href="#h1-0-156" id="h1-0-156" class="d">-            defaultValue = listOf(),
+</a><a href="#h1-0-157" id="h1-0-157" class="d">-            updateDispatcher = updateDispatcher
+</a><a href="#h1-0-158" id="h1-0-158" class="d">-        ) {
+</a><a href="#h1-0-159" id="h1-0-159" class="d">-            context.database.getLocationCoordinates()
+</a><a href="#h1-0-160" id="h1-0-160" class="d">-        }
+</a><a href="#h1-0-161" id="h1-0-161" class="d">-        var showMap by remember { mutableStateOf(false) }
+</a><a href="#h1-0-162" id="h1-0-162" class="d">-        var addSavedCoordinateDialog by remember { mutableStateOf(false) }
+</a><a href="#h1-0-163" id="h1-0-163" class="d">-        var showTeleportDialog by remember { mutableStateOf(false) }
+</a><a href="#h1-0-164" id="h1-0-164" class="d">-
+</a><a href="#h1-0-165" id="h1-0-165" class="d">-        val marker = remember { mutableStateOf&lt;Marker?&gt;(null) }
+</a><a href="#h1-0-166" id="h1-0-166" class="d">-        val mapView = remember { mutableStateOf&lt;MapView?&gt;(null) }
+</a><a href="#h1-0-167" id="h1-0-167" class="d">-        var spoofedCoordinates by remember(showTeleportDialog, showMap) { mutableStateOf(coordinatesProperty.value.get() as? Pair&lt;*, *&gt;) }
+</a><a href="#h1-0-168" id="h1-0-168" class="d">-
+</a><a href="#h1-0-169" id="h1-0-169" class="d">-        fun addSavedCoordinate(id: Int?, locationCoordinates: LocationCoordinates) {
+</a><a href="#h1-0-170" id="h1-0-170" class="d">-            context.coroutineScope.launch {
+</a><a href="#h1-0-171" id="h1-0-171" class="d">-                context.database.addOrUpdateLocationCoordinate(id, locationCoordinates)
+</a><a href="#h1-0-172" id="h1-0-172" class="d">-                updateDispatcher.dispatch()
+</a><a href="#h1-0-173" id="h1-0-173" class="d">-            }
+</a><a href="#h1-0-174" id="h1-0-174" class="d">-        }
+</a><a href="#h1-0-175" id="h1-0-175" class="d">-
+</a><a href="#h1-0-176" id="h1-0-176" class="d">-        if (showTeleportDialog) {
+</a><a href="#h1-0-177" id="h1-0-177" class="d">-            me.rhunk.snapenhance.ui.util.Dialog(
+</a><a href="#h1-0-178" id="h1-0-178" class="d">-                properties = DialogProperties(usePlatformDefaultWidth = false),
+</a><a href="#h1-0-179" id="h1-0-179" class="d">-                onDismissRequest = { showTeleportDialog = false },
+</a><a href="#h1-0-180" id="h1-0-180" class="d">-                content = {
+</a><a href="#h1-0-181" id="h1-0-181" class="d">-                    FriendLocationsDialogs(remember { context.locationManager.friendsLocation }) {
+</a><a href="#h1-0-182" id="h1-0-182" class="d">-                        showTeleportDialog = false
+</a><a href="#h1-0-183" id="h1-0-183" class="d">-                        context.coroutineScope.launch {
+</a><a href="#h1-0-184" id="h1-0-184" class="d">-                            context.config.writeConfig()
+</a><a href="#h1-0-185" id="h1-0-185" class="d">-                        }
+</a><a href="#h1-0-186" id="h1-0-186" class="d">-                    }
+</a><a href="#h1-0-187" id="h1-0-187" class="d">-                }
+</a><a href="#h1-0-188" id="h1-0-188" class="d">-            )
+</a><a href="#h1-0-189" id="h1-0-189" class="d">-        }
+</a><a href="#h1-0-190" id="h1-0-190" class="d">-
+</a><a href="#h1-0-191" id="h1-0-191" class="d">-        Column(
+</a><a href="#h1-0-192" id="h1-0-192" class="d">-            modifier = Modifier
+</a><a href="#h1-0-193" id="h1-0-193" class="d">-                .fillMaxSize()
+</a><a href="#h1-0-194" id="h1-0-194" class="d">-        ) {
+</a><a href="#h1-0-195" id="h1-0-195" class="d">-            Text(
+</a><a href="#h1-0-196" id="h1-0-196" class="d">-                translation.format(
+</a><a href="#h1-0-197" id="h1-0-197" class="d">-                    &quot;spoofed_coordinates_title&quot;,
+</a><a href="#h1-0-198" id="h1-0-198" class="d">-                    &quot;latitude&quot; to ((spoofedCoordinates?.first as? Double)?.toFloat() ?: &quot;0.0&quot;).toString(),
+</a><a href="#h1-0-199" id="h1-0-199" class="d">-                    &quot;longitude&quot; to ((spoofedCoordinates?.second as? Double)?.toFloat() ?: &quot;0.0&quot;).toString()
+</a><a href="#h1-0-200" id="h1-0-200" class="d">-                ),
+</a><a href="#h1-0-201" id="h1-0-201" class="d">-                fontSize = 20.sp,
+</a><a href="#h1-0-202" id="h1-0-202" class="d">-                fontWeight = FontWeight.Bold,
+</a><a href="#h1-0-203" id="h1-0-203" class="d">-                textAlign = TextAlign.Center,
+</a><a href="#h1-0-204" id="h1-0-204" class="d">-                modifier = Modifier
+</a><a href="#h1-0-205" id="h1-0-205" class="d">-                    .fillMaxWidth()
+</a><a href="#h1-0-206" id="h1-0-206" class="d">-                    .padding(12.dp)
+</a><a href="#h1-0-207" id="h1-0-207" class="d">-            )
+</a><a href="#h1-0-208" id="h1-0-208" class="d">-
+</a><a href="#h1-0-209" id="h1-0-209" class="d">-            if (addSavedCoordinateDialog) {
+</a><a href="#h1-0-210" id="h1-0-210" class="d">-                var savedName by remember { mutableStateOf(&quot;&quot;) }
+</a><a href="#h1-0-211" id="h1-0-211" class="d">-                me.rhunk.snapenhance.ui.util.Dialog(
+</a><a href="#h1-0-212" id="h1-0-212" class="d">-                    onDismissRequest = { addSavedCoordinateDialog = false },
+</a><a href="#h1-0-213" id="h1-0-213" class="d">-                    content = {
+</a><a href="#h1-0-214" id="h1-0-214" class="d">-                        alertDialogs.DefaultDialogCard {
+</a><a href="#h1-0-215" id="h1-0-215" class="d">-                            val focusRequester = remember { FocusRequester() }
+</a><a href="#h1-0-216" id="h1-0-216" class="d">-                            Column(
+</a><a href="#h1-0-217" id="h1-0-217" class="d">-                                modifier = Modifier.padding(8.dp),
+</a><a href="#h1-0-218" id="h1-0-218" class="d">-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+</a><a href="#h1-0-219" id="h1-0-219" class="d">-                            ) {
+</a><a href="#h1-0-220" id="h1-0-220" class="d">-                                Text(translation[&quot;save_coordinates_dialog_title&quot;], fontSize = 20.sp, fontWeight = FontWeight.Bold)
+</a><a href="#h1-0-221" id="h1-0-221" class="d">-                                OutlinedTextField(
+</a><a href="#h1-0-222" id="h1-0-222" class="d">-                                    modifier = Modifier
+</a><a href="#h1-0-223" id="h1-0-223" class="d">-                                        .focusRequester(focusRequester)
+</a><a href="#h1-0-224" id="h1-0-224" class="d">-                                        .onGloballyPositioned {
+</a><a href="#h1-0-225" id="h1-0-225" class="d">-                                            focusRequester.requestFocus()
+</a><a href="#h1-0-226" id="h1-0-226" class="d">-                                        },
+</a><a href="#h1-0-227" id="h1-0-227" class="d">-                                    value = savedName,
+</a><a href="#h1-0-228" id="h1-0-228" class="d">-                                    onValueChange = { savedName = it },
+</a><a href="#h1-0-229" id="h1-0-229" class="d">-                                    label = { Text(translation[&quot;saved_name_dialog_hint&quot;]) }
+</a><a href="#h1-0-230" id="h1-0-230" class="d">-                                )
+</a><a href="#h1-0-231" id="h1-0-231" class="d">-                                Row(
+</a><a href="#h1-0-232" id="h1-0-232" class="d">-                                    modifier = Modifier.fillMaxWidth(),
+</a><a href="#h1-0-233" id="h1-0-233" class="d">-                                    horizontalArrangement = Arrangement.End
+</a><a href="#h1-0-234" id="h1-0-234" class="d">-                                ) {
+</a><a href="#h1-0-235" id="h1-0-235" class="d">-                                    Button(
+</a><a href="#h1-0-236" id="h1-0-236" class="d">-                                        onClick = {
+</a><a href="#h1-0-237" id="h1-0-237" class="d">-                                            addSavedCoordinateDialog = false
+</a><a href="#h1-0-238" id="h1-0-238" class="d">-                                            addSavedCoordinate(null, LocationCoordinates().apply {
+</a><a href="#h1-0-239" id="h1-0-239" class="d">-                                                this.name = savedName
+</a><a href="#h1-0-240" id="h1-0-240" class="d">-                                                this.latitude = marker.value?.position?.latitude as Double
+</a><a href="#h1-0-241" id="h1-0-241" class="d">-                                                this.longitude = marker.value?.position?.longitude as Double
+</a><a href="#h1-0-242" id="h1-0-242" class="d">-                                            })
+</a><a href="#h1-0-243" id="h1-0-243" class="d">-                                        },
+</a><a href="#h1-0-244" id="h1-0-244" class="d">-                                        enabled = savedName.isNotBlank()
+</a><a href="#h1-0-245" id="h1-0-245" class="d">-                                    ) {
+</a><a href="#h1-0-246" id="h1-0-246" class="d">-                                        Text(translation[&quot;save_dialog_button&quot;])
+</a><a href="#h1-0-247" id="h1-0-247" class="d">-                                    }
+</a><a href="#h1-0-248" id="h1-0-248" class="d">-                                }
+</a><a href="#h1-0-249" id="h1-0-249" class="d">-                            }
+</a><a href="#h1-0-250" id="h1-0-250" class="d">-                        }
+</a><a href="#h1-0-251" id="h1-0-251" class="d">-                    }
+</a><a href="#h1-0-252" id="h1-0-252" class="d">-                )
+</a><a href="#h1-0-253" id="h1-0-253" class="d">-            }
+</a><a href="#h1-0-254" id="h1-0-254" class="d">-
+</a><a href="#h1-0-255" id="h1-0-255" class="d">-            if (showMap) {
+</a><a href="#h1-0-256" id="h1-0-256" class="d">-                me.rhunk.snapenhance.ui.util.Dialog(
+</a><a href="#h1-0-257" id="h1-0-257" class="d">-                    onDismissRequest = { showMap = false },
+</a><a href="#h1-0-258" id="h1-0-258" class="d">-                    content = {
+</a><a href="#h1-0-259" id="h1-0-259" class="d">-                        alertDialogs.ChooseLocationDialog(property = coordinatesProperty, marker, mapView, saveCoordinates = {
+</a><a href="#h1-0-260" id="h1-0-260" class="d">-                            addSavedCoordinateDialog = true
+</a><a href="#h1-0-261" id="h1-0-261" class="d">-                        }) {
+</a><a href="#h1-0-262" id="h1-0-262" class="d">-                            showMap = false
+</a><a href="#h1-0-263" id="h1-0-263" class="d">-                            context.config.writeConfig()
+</a><a href="#h1-0-264" id="h1-0-264" class="d">-                        }
+</a><a href="#h1-0-265" id="h1-0-265" class="d">-                    }
+</a><a href="#h1-0-266" id="h1-0-266" class="d">-                )
+</a><a href="#h1-0-267" id="h1-0-267" class="d">-            }
+</a><a href="#h1-0-268" id="h1-0-268" class="d">-
+</a><a href="#h1-0-269" id="h1-0-269" class="d">-            LazyColumn(
+</a><a href="#h1-0-270" id="h1-0-270" class="d">-                modifier = Modifier
+</a><a href="#h1-0-271" id="h1-0-271" class="d">-                    .fillMaxSize()
+</a><a href="#h1-0-272" id="h1-0-272" class="d">-                    .clipToBounds()
+</a><a href="#h1-0-273" id="h1-0-273" class="d">-            ) {
+</a><a href="#h1-0-274" id="h1-0-274" class="d">-                item {
+</a><a href="#h1-0-275" id="h1-0-275" class="d">-                    Row(
+</a><a href="#h1-0-276" id="h1-0-276" class="d">-                        modifier = Modifier
+</a><a href="#h1-0-277" id="h1-0-277" class="d">-                            .fillMaxWidth()
+</a><a href="#h1-0-278" id="h1-0-278" class="d">-                            .padding(16.dp),
+</a><a href="#h1-0-279" id="h1-0-279" class="d">-                        horizontalArrangement = Arrangement.SpaceEvenly,
+</a><a href="#h1-0-280" id="h1-0-280" class="d">-                        verticalAlignment = Alignment.CenterVertically
+</a><a href="#h1-0-281" id="h1-0-281" class="d">-                    ) {
+</a><a href="#h1-0-282" id="h1-0-282" class="d">-                        Button(onClick = { showMap = true }) {
+</a><a href="#h1-0-283" id="h1-0-283" class="d">-                            Text(translation[&quot;choose_location_button&quot;])
+</a><a href="#h1-0-284" id="h1-0-284" class="d">-                        }
+</a><a href="#h1-0-285" id="h1-0-285" class="d">-                        Button(onClick = { showTeleportDialog = true }) {
+</a><a href="#h1-0-286" id="h1-0-286" class="d">-                            Text(translation[&quot;teleport_to_friend_button&quot;])
+</a><a href="#h1-0-287" id="h1-0-287" class="d">-                        }
+</a><a href="#h1-0-288" id="h1-0-288" class="d">-                    }
+</a><a href="#h1-0-289" id="h1-0-289" class="d">-                }
+</a><a href="#h1-0-290" id="h1-0-290" class="d">-                item {
+</a><a href="#h1-0-291" id="h1-0-291" class="d">-                    Row(
+</a><a href="#h1-0-292" id="h1-0-292" class="d">-                        modifier = Modifier.padding(16.dp),
+</a><a href="#h1-0-293" id="h1-0-293" class="d">-                        verticalAlignment = Alignment.CenterVertically
+</a><a href="#h1-0-294" id="h1-0-294" class="d">-                    ) {
+</a><a href="#h1-0-295" id="h1-0-295" class="d">-                        Text(text = translation[&quot;spoof_location_toggle&quot;])
+</a><a href="#h1-0-296" id="h1-0-296" class="d">-                        Spacer(modifier = Modifier.weight(1f))
+</a><a href="#h1-0-297" id="h1-0-297" class="d">-                        var isSpoofing by remember { mutableStateOf(context.config.root.global.betterLocation.spoofLocation.get()) }
+</a><a href="#h1-0-298" id="h1-0-298" class="d">-                        Switch(
+</a><a href="#h1-0-299" id="h1-0-299" class="d">-                            checked = isSpoofing,
+</a><a href="#h1-0-300" id="h1-0-300" class="d">-                            onCheckedChange = {
+</a><a href="#h1-0-301" id="h1-0-301" class="d">-                                isSpoofing = it
+</a><a href="#h1-0-302" id="h1-0-302" class="d">-                                context.config.root.global.betterLocation.spoofLocation.set(it)
+</a><a href="#h1-0-303" id="h1-0-303" class="d">-                            }
+</a><a href="#h1-0-304" id="h1-0-304" class="d">-                        )
+</a><a href="#h1-0-305" id="h1-0-305" class="d">-                    }
+</a><a href="#h1-0-306" id="h1-0-306" class="d">-                }
+</a><a href="#h1-0-307" id="h1-0-307" class="d">-                item {
+</a><a href="#h1-0-308" id="h1-0-308" class="d">-                    Text(
+</a><a href="#h1-0-309" id="h1-0-309" class="d">-                        translation[&quot;saved_coordinates_title&quot;],
+</a><a href="#h1-0-310" id="h1-0-310" class="d">-                        fontSize = 20.sp,
+</a><a href="#h1-0-311" id="h1-0-311" class="d">-                        fontWeight = FontWeight.Bold,
+</a><a href="#h1-0-312" id="h1-0-312" class="d">-                        modifier = Modifier.padding(start = 16.dp)
+</a><a href="#h1-0-313" id="h1-0-313" class="d">-                    )
+</a><a href="#h1-0-314" id="h1-0-314" class="d">-                }
+</a><a href="#h1-0-315" id="h1-0-315" class="d">-                item {
+</a><a href="#h1-0-316" id="h1-0-316" class="d">-                    if (savedCoordinates.isEmpty()) {
+</a><a href="#h1-0-317" id="h1-0-317" class="d">-                        Text(
+</a><a href="#h1-0-318" id="h1-0-318" class="d">-                            translation[&quot;no_saved_coordinates_hint&quot;],
+</a><a href="#h1-0-319" id="h1-0-319" class="d">-                            fontSize = 16.sp,
+</a><a href="#h1-0-320" id="h1-0-320" class="d">-                            modifier = Modifier.padding(start = 20.dp),
+</a><a href="#h1-0-321" id="h1-0-321" class="d">-                            fontWeight = FontWeight.Light
+</a><a href="#h1-0-322" id="h1-0-322" class="d">-                        )
+</a><a href="#h1-0-323" id="h1-0-323" class="d">-                    }
+</a><a href="#h1-0-324" id="h1-0-324" class="d">-                }
+</a><a href="#h1-0-325" id="h1-0-325" class="d">-                items(savedCoordinates) { coordinates -&gt;
+</a><a href="#h1-0-326" id="h1-0-326" class="d">-                    var showDeleteDialog by remember { mutableStateOf(false) }
+</a><a href="#h1-0-327" id="h1-0-327" class="d">-
+</a><a href="#h1-0-328" id="h1-0-328" class="d">-                    if (showDeleteDialog) {
+</a><a href="#h1-0-329" id="h1-0-329" class="d">-                        me.rhunk.snapenhance.ui.util.Dialog(
+</a><a href="#h1-0-330" id="h1-0-330" class="d">-                            onDismissRequest = { showDeleteDialog = false },
+</a><a href="#h1-0-331" id="h1-0-331" class="d">-                            content = {
+</a><a href="#h1-0-332" id="h1-0-332" class="d">-                                alertDialogs.ConfirmDialog(
+</a><a href="#h1-0-333" id="h1-0-333" class="d">-                                    title = translation[&quot;delete_dialog_title&quot;],
+</a><a href="#h1-0-334" id="h1-0-334" class="d">-                                    message = translation[&quot;delete_dialog_message&quot;],
+</a><a href="#h1-0-335" id="h1-0-335" class="d">-                                    onConfirm = {
+</a><a href="#h1-0-336" id="h1-0-336" class="d">-                                        showDeleteDialog = false
+</a><a href="#h1-0-337" id="h1-0-337" class="d">-                                        context.coroutineScope.launch {
+</a><a href="#h1-0-338" id="h1-0-338" class="d">-                                            context.database.removeLocationCoordinate(coordinates.id)
+</a><a href="#h1-0-339" id="h1-0-339" class="d">-                                            updateDispatcher.dispatch()
+</a><a href="#h1-0-340" id="h1-0-340" class="d">-                                        }
+</a><a href="#h1-0-341" id="h1-0-341" class="d">-                                    },
+</a><a href="#h1-0-342" id="h1-0-342" class="d">-                                    onDismiss = { showDeleteDialog = false }
+</a><a href="#h1-0-343" id="h1-0-343" class="d">-                                )
+</a><a href="#h1-0-344" id="h1-0-344" class="d">-                            }
+</a><a href="#h1-0-345" id="h1-0-345" class="d">-                        )
+</a><a href="#h1-0-346" id="h1-0-346" class="d">-                    }
+</a><a href="#h1-0-347" id="h1-0-347" class="d">-
+</a><a href="#h1-0-348" id="h1-0-348" class="d">-                    Row(
+</a><a href="#h1-0-349" id="h1-0-349" class="d">-                        modifier = Modifier
+</a><a href="#h1-0-350" id="h1-0-350" class="d">-                            .fillMaxWidth()
+</a><a href="#h1-0-351" id="h1-0-351" class="d">-                            .padding(start = 16.dp, end = 16.dp),
+</a><a href="#h1-0-352" id="h1-0-352" class="d">-                        verticalAlignment = Alignment.CenterVertically
+</a><a href="#h1-0-353" id="h1-0-353" class="d">-                    ) {
+</a><a href="#h1-0-354" id="h1-0-354" class="d">-                        Text(
+</a><a href="#h1-0-355" id="h1-0-355" class="d">-                            text = &quot;${coordinates.name} (${coordinates.latitude.toFloat()}, ${coordinates.longitude.toFloat()})&quot;,
+</a><a href="#h1-0-356" id="h1-0-356" class="d">-                            fontWeight = if (spoofedCoordinates == coordinates.latitude to coordinates.longitude) FontWeight.Bold else FontWeight.Light,
+</a><a href="#h1-0-357" id="h1-0-357" class="d">-                            modifier = Modifier
+</a><a href="#h1-0-358" id="h1-0-358" class="d">-                                .padding(8.dp)
+</a><a href="#h1-0-359" id="h1-0-359" class="d">-                                .weight(1f)
+</a><a href="#h1-0-360" id="h1-0-360" class="d">-                                .clickable {
+</a><a href="#h1-0-361" id="h1-0-361" class="d">-                                    spoofedCoordinates =
+</a><a href="#h1-0-362" id="h1-0-362" class="d">-                                        coordinates.latitude to coordinates.longitude
+</a><a href="#h1-0-363" id="h1-0-363" class="d">-                                    coordinatesProperty.value.setAny(spoofedCoordinates)
+</a><a href="#h1-0-364" id="h1-0-364" class="d">-                                    context.coroutineScope.launch {
+</a><a href="#h1-0-365" id="h1-0-365" class="d">-                                        context.config.writeConfig()
+</a><a href="#h1-0-366" id="h1-0-366" class="d">-                                    }
+</a><a href="#h1-0-367" id="h1-0-367" class="d">-                                    GeoPoint(coordinates.latitude, coordinates.longitude).also {
+</a><a href="#h1-0-368" id="h1-0-368" class="d">-                                        marker.value?.position = it
+</a><a href="#h1-0-369" id="h1-0-369" class="d">-                                        mapView.value?.controller?.apply {
+</a><a href="#h1-0-370" id="h1-0-370" class="d">-                                            animateTo(it)
+</a><a href="#h1-0-371" id="h1-0-371" class="d">-                                            setZoom(16.0)
+</a><a href="#h1-0-372" id="h1-0-372" class="d">-                                        }
+</a><a href="#h1-0-373" id="h1-0-373" class="d">-                                    }
+</a><a href="#h1-0-374" id="h1-0-374" class="d">-                                },
+</a><a href="#h1-0-375" id="h1-0-375" class="d">-                            fontSize = 16.sp
+</a><a href="#h1-0-376" id="h1-0-376" class="d">-                        )
+</a><a href="#h1-0-377" id="h1-0-377" class="d">-                        FilledIconButton(onClick = {
+</a><a href="#h1-0-378" id="h1-0-378" class="d">-                            showDeleteDialog = true
+</a><a href="#h1-0-379" id="h1-0-379" class="d">-                        }) {
+</a><a href="#h1-0-380" id="h1-0-380" class="d">-                            Icon(Icons.Default.DeleteOutline, contentDescription = &quot;Delete&quot;)
+</a><a href="#h1-0-381" id="h1-0-381" class="d">-                        }
+</a><a href="#h1-0-382" id="h1-0-382" class="d">-                    }
+</a><a href="#h1-0-383" id="h1-0-383" class="d">-                }
+</a><a href="#h1-0-384" id="h1-0-384" class="d">-            }
+</a><a href="#h1-0-385" id="h1-0-385" class="d">-        }
+</a><a href="#h1-0-386" id="h1-0-386" class="d">-    }
+</a><a href="#h1-0-387" id="h1-0-387" class="d">-}</a><a href="#h1-0-388" id="h1-0-388" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/location/AddCoordinatesDialog.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/location/AddCoordinatesDialog.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/location/AddCoordinatesDialog.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/location/AddCoordinatesDialog.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -0,0 +1,91 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="i">+package me.rhunk.snapenhance.ui.manager.pages.location
+</a><a href="#h2-0-1" id="h2-0-1" class="i">+
+</a><a href="#h2-0-2" id="h2-0-2" class="i">+import androidx.compose.foundation.layout.*
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+import androidx.compose.material3.Button
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import androidx.compose.material3.OutlinedTextField
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+import androidx.compose.material3.Text
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+import androidx.compose.runtime.*
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+import androidx.compose.ui.Modifier
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+import androidx.compose.ui.focus.FocusRequester
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+import androidx.compose.ui.focus.focusRequester
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+import androidx.compose.ui.text.TextRange
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+import androidx.compose.ui.text.font.FontWeight
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+import androidx.compose.ui.text.input.TextFieldValue
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+import androidx.compose.ui.unit.dp
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+import androidx.compose.ui.unit.sp
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+import kotlinx.coroutines.delay
+</a><a href="#h2-0-16" id="h2-0-16" class="i">+import me.rhunk.snapenhance.bridge.location.LocationCoordinates
+</a><a href="#h2-0-17" id="h2-0-17" class="i">+import me.rhunk.snapenhance.common.bridge.wrapper.LocaleWrapper
+</a><a href="#h2-0-18" id="h2-0-18" class="i">+import me.rhunk.snapenhance.ui.util.AlertDialogs
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+@Composable
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+fun AddCoordinatesDialog(
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+    alertDialogs: AlertDialogs,
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+    translation: LocaleWrapper,
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+    locationCoordinates: LocationCoordinates,
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+    confirm: (locationCoordinates: LocationCoordinates) -&gt; Unit
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+) {
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+    var savedName by remember {
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+        mutableStateOf(
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+            (locationCoordinates.name ?: &quot;&quot;).let {
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+                TextFieldValue(it, selection = TextRange(it.length))
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+            }
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+        )
+</a><a href="#h2-0-34" id="h2-0-34" class="i">+    }
+</a><a href="#h2-0-35" id="h2-0-35" class="i">+    var savedLatitude by remember { mutableStateOf(locationCoordinates.latitude.toFloat().toString()) }
+</a><a href="#h2-0-36" id="h2-0-36" class="i">+    var savedLongitude by remember { mutableStateOf(locationCoordinates.longitude.toFloat().toString()) }
+</a><a href="#h2-0-37" id="h2-0-37" class="i">+
+</a><a href="#h2-0-38" id="h2-0-38" class="i">+    alertDialogs.DefaultDialogCard {
+</a><a href="#h2-0-39" id="h2-0-39" class="i">+        val focusRequester = remember { FocusRequester() }
+</a><a href="#h2-0-40" id="h2-0-40" class="i">+        Column(
+</a><a href="#h2-0-41" id="h2-0-41" class="i">+            modifier = Modifier.padding(16.dp),
+</a><a href="#h2-0-42" id="h2-0-42" class="i">+            verticalArrangement = Arrangement.spacedBy(2.dp)
+</a><a href="#h2-0-43" id="h2-0-43" class="i">+        ) {
+</a><a href="#h2-0-44" id="h2-0-44" class="i">+            Text(translation[&quot;save_coordinates_dialog_title&quot;], fontSize = 20.sp, fontWeight = FontWeight.Bold)
+</a><a href="#h2-0-45" id="h2-0-45" class="i">+            OutlinedTextField(
+</a><a href="#h2-0-46" id="h2-0-46" class="i">+                modifier = Modifier
+</a><a href="#h2-0-47" id="h2-0-47" class="i">+                    .focusRequester(focusRequester),
+</a><a href="#h2-0-48" id="h2-0-48" class="i">+                value = savedName,
+</a><a href="#h2-0-49" id="h2-0-49" class="i">+                onValueChange = { savedName = it },
+</a><a href="#h2-0-50" id="h2-0-50" class="i">+                label = { Text(translation[&quot;saved_name_dialog_hint&quot;]) }
+</a><a href="#h2-0-51" id="h2-0-51" class="i">+            )
+</a><a href="#h2-0-52" id="h2-0-52" class="i">+
+</a><a href="#h2-0-53" id="h2-0-53" class="i">+            LaunchedEffect(Unit) {
+</a><a href="#h2-0-54" id="h2-0-54" class="i">+                delay(200)
+</a><a href="#h2-0-55" id="h2-0-55" class="i">+                focusRequester.requestFocus()
+</a><a href="#h2-0-56" id="h2-0-56" class="i">+            }
+</a><a href="#h2-0-57" id="h2-0-57" class="i">+
+</a><a href="#h2-0-58" id="h2-0-58" class="i">+            OutlinedTextField(
+</a><a href="#h2-0-59" id="h2-0-59" class="i">+                value = savedLatitude,
+</a><a href="#h2-0-60" id="h2-0-60" class="i">+                onValueChange = { savedLatitude = it },
+</a><a href="#h2-0-61" id="h2-0-61" class="i">+                label = { Text(translation[&quot;latitude_dialog_hint&quot;]) }
+</a><a href="#h2-0-62" id="h2-0-62" class="i">+            )
+</a><a href="#h2-0-63" id="h2-0-63" class="i">+            OutlinedTextField(
+</a><a href="#h2-0-64" id="h2-0-64" class="i">+                value = savedLongitude,
+</a><a href="#h2-0-65" id="h2-0-65" class="i">+                onValueChange = { savedLongitude = it },
+</a><a href="#h2-0-66" id="h2-0-66" class="i">+                label = { Text(translation[&quot;longitude_dialog_hint&quot;]) }
+</a><a href="#h2-0-67" id="h2-0-67" class="i">+            )
+</a><a href="#h2-0-68" id="h2-0-68" class="i">+
+</a><a href="#h2-0-69" id="h2-0-69" class="i">+            Row(
+</a><a href="#h2-0-70" id="h2-0-70" class="i">+                modifier = Modifier
+</a><a href="#h2-0-71" id="h2-0-71" class="i">+                    .fillMaxWidth()
+</a><a href="#h2-0-72" id="h2-0-72" class="i">+                    .padding(top = 16.dp),
+</a><a href="#h2-0-73" id="h2-0-73" class="i">+                horizontalArrangement = Arrangement.End
+</a><a href="#h2-0-74" id="h2-0-74" class="i">+            ) {
+</a><a href="#h2-0-75" id="h2-0-75" class="i">+                Button(
+</a><a href="#h2-0-76" id="h2-0-76" class="i">+                    onClick = {
+</a><a href="#h2-0-77" id="h2-0-77" class="i">+                        confirm(LocationCoordinates().apply {
+</a><a href="#h2-0-78" id="h2-0-78" class="i">+                            this.name = savedName.text
+</a><a href="#h2-0-79" id="h2-0-79" class="i">+                            this.latitude = savedLatitude.toDoubleOrNull() ?: 0.0
+</a><a href="#h2-0-80" id="h2-0-80" class="i">+                            this.longitude = savedLongitude.toDoubleOrNull() ?: 0.0
+</a><a href="#h2-0-81" id="h2-0-81" class="i">+                        })
+</a><a href="#h2-0-82" id="h2-0-82" class="i">+                    },
+</a><a href="#h2-0-83" id="h2-0-83" class="i">+                    enabled = savedName.text.isNotBlank() &amp;&amp; savedLatitude.isNotBlank() &amp;&amp; savedLongitude.isNotBlank()
+</a><a href="#h2-0-84" id="h2-0-84" class="i">+                ) {
+</a><a href="#h2-0-85" id="h2-0-85" class="i">+                    Text(translation[&quot;save_dialog_button&quot;])
+</a><a href="#h2-0-86" id="h2-0-86" class="i">+                }
+</a><a href="#h2-0-87" id="h2-0-87" class="i">+            }
+</a><a href="#h2-0-88" id="h2-0-88" class="i">+        }
+</a><a href="#h2-0-89" id="h2-0-89" class="i">+    }
+</a><a href="#h2-0-90" id="h2-0-90" class="i">+}</a><a href="#h2-0-91" id="h2-0-91" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/location/BetterLocationRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/location/BetterLocationRoot.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/location/BetterLocationRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/location/BetterLocationRoot.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -0,0 +1,445 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="i">+package me.rhunk.snapenhance.ui.manager.pages.location
+</a><a href="#h3-0-1" id="h3-0-1" class="i">+
+</a><a href="#h3-0-2" id="h3-0-2" class="i">+import android.os.Parcel
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+import androidx.compose.foundation.layout.*
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import androidx.compose.foundation.lazy.LazyColumn
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+import androidx.compose.foundation.lazy.items
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+import androidx.compose.material.icons.Icons
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+import androidx.compose.material.icons.filled.Add
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+import androidx.compose.material.icons.filled.DeleteOutline
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+import androidx.compose.material.icons.filled.Edit
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+import androidx.compose.material3.*
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+import androidx.compose.runtime.*
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+import androidx.compose.ui.Alignment
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+import androidx.compose.ui.Modifier
+</a><a href="#h3-0-14" id="h3-0-14" class="i">+import androidx.compose.ui.draw.clipToBounds
+</a><a href="#h3-0-15" id="h3-0-15" class="i">+import androidx.compose.ui.text.font.FontWeight
+</a><a href="#h3-0-16" id="h3-0-16" class="i">+import androidx.compose.ui.text.style.TextAlign
+</a><a href="#h3-0-17" id="h3-0-17" class="i">+import androidx.compose.ui.text.style.TextOverflow
+</a><a href="#h3-0-18" id="h3-0-18" class="i">+import androidx.compose.ui.unit.dp
+</a><a href="#h3-0-19" id="h3-0-19" class="i">+import androidx.compose.ui.unit.sp
+</a><a href="#h3-0-20" id="h3-0-20" class="i">+import androidx.navigation.NavBackStackEntry
+</a><a href="#h3-0-21" id="h3-0-21" class="i">+import kotlinx.coroutines.Dispatchers
+</a><a href="#h3-0-22" id="h3-0-22" class="i">+import kotlinx.coroutines.launch
+</a><a href="#h3-0-23" id="h3-0-23" class="i">+import kotlinx.coroutines.withContext
+</a><a href="#h3-0-24" id="h3-0-24" class="i">+import me.rhunk.snapenhance.bridge.location.FriendLocation
+</a><a href="#h3-0-25" id="h3-0-25" class="i">+import me.rhunk.snapenhance.bridge.location.LocationCoordinates
+</a><a href="#h3-0-26" id="h3-0-26" class="i">+import me.rhunk.snapenhance.common.ui.rememberAsyncMutableStateList
+</a><a href="#h3-0-27" id="h3-0-27" class="i">+import me.rhunk.snapenhance.common.ui.rememberAsyncUpdateDispatcher
+</a><a href="#h3-0-28" id="h3-0-28" class="i">+import me.rhunk.snapenhance.common.util.snap.BitmojiSelfie
+</a><a href="#h3-0-29" id="h3-0-29" class="i">+import me.rhunk.snapenhance.storage.addOrUpdateLocationCoordinate
+</a><a href="#h3-0-30" id="h3-0-30" class="i">+import me.rhunk.snapenhance.storage.getLocationCoordinates
+</a><a href="#h3-0-31" id="h3-0-31" class="i">+import me.rhunk.snapenhance.storage.removeLocationCoordinate
+</a><a href="#h3-0-32" id="h3-0-32" class="i">+import me.rhunk.snapenhance.ui.manager.Routes
+</a><a href="#h3-0-33" id="h3-0-33" class="i">+import me.rhunk.snapenhance.ui.util.AlertDialogs
+</a><a href="#h3-0-34" id="h3-0-34" class="i">+import me.rhunk.snapenhance.ui.util.DialogProperties
+</a><a href="#h3-0-35" id="h3-0-35" class="i">+import me.rhunk.snapenhance.ui.util.coil.BitmojiImage
+</a><a href="#h3-0-36" id="h3-0-36" class="i">+import org.osmdroid.util.GeoPoint
+</a><a href="#h3-0-37" id="h3-0-37" class="i">+import org.osmdroid.views.MapView
+</a><a href="#h3-0-38" id="h3-0-38" class="i">+import org.osmdroid.views.overlay.Marker
+</a><a href="#h3-0-39" id="h3-0-39" class="i">+
+</a><a href="#h3-0-40" id="h3-0-40" class="i">+class BetterLocationRoot : Routes.Route() {
+</a><a href="#h3-0-41" id="h3-0-41" class="i">+    private val alertDialogs by lazy { AlertDialogs(context.translation) }
+</a><a href="#h3-0-42" id="h3-0-42" class="i">+
+</a><a href="#h3-0-43" id="h3-0-43" class="i">+    @Composable
+</a><a href="#h3-0-44" id="h3-0-44" class="i">+    private fun FriendLocationItem(
+</a><a href="#h3-0-45" id="h3-0-45" class="i">+        friendLocation: FriendLocation,
+</a><a href="#h3-0-46" id="h3-0-46" class="i">+        dismiss: () -&gt; Unit
+</a><a href="#h3-0-47" id="h3-0-47" class="i">+    ) {
+</a><a href="#h3-0-48" id="h3-0-48" class="i">+        ElevatedCard(onClick = {
+</a><a href="#h3-0-49" id="h3-0-49" class="i">+            context.config.root.global.betterLocation.coordinates.setAny(friendLocation.latitude to friendLocation.longitude)
+</a><a href="#h3-0-50" id="h3-0-50" class="i">+            dismiss()
+</a><a href="#h3-0-51" id="h3-0-51" class="i">+        }, modifier = Modifier.padding(4.dp)) {
+</a><a href="#h3-0-52" id="h3-0-52" class="i">+            Row(
+</a><a href="#h3-0-53" id="h3-0-53" class="i">+                modifier = Modifier
+</a><a href="#h3-0-54" id="h3-0-54" class="i">+                    .padding(8.dp)
+</a><a href="#h3-0-55" id="h3-0-55" class="i">+                    .fillMaxWidth(),
+</a><a href="#h3-0-56" id="h3-0-56" class="i">+                verticalAlignment = Alignment.CenterVertically
+</a><a href="#h3-0-57" id="h3-0-57" class="i">+            ) {
+</a><a href="#h3-0-58" id="h3-0-58" class="i">+                BitmojiImage(
+</a><a href="#h3-0-59" id="h3-0-59" class="i">+                    context = context,
+</a><a href="#h3-0-60" id="h3-0-60" class="i">+                    url = BitmojiSelfie.getBitmojiSelfie(
+</a><a href="#h3-0-61" id="h3-0-61" class="i">+                        friendLocation.bitmojiSelfieId,
+</a><a href="#h3-0-62" id="h3-0-62" class="i">+                        friendLocation.bitmojiId,
+</a><a href="#h3-0-63" id="h3-0-63" class="i">+                        BitmojiSelfie.BitmojiSelfieType.NEW_THREE_D
+</a><a href="#h3-0-64" id="h3-0-64" class="i">+                    ),
+</a><a href="#h3-0-65" id="h3-0-65" class="i">+                    size = 48,
+</a><a href="#h3-0-66" id="h3-0-66" class="i">+                    modifier = Modifier.padding(6.dp)
+</a><a href="#h3-0-67" id="h3-0-67" class="i">+                )
+</a><a href="#h3-0-68" id="h3-0-68" class="i">+                Column(
+</a><a href="#h3-0-69" id="h3-0-69" class="i">+                    modifier = Modifier.weight(1f),
+</a><a href="#h3-0-70" id="h3-0-70" class="i">+                ) {
+</a><a href="#h3-0-71" id="h3-0-71" class="i">+                    Text(friendLocation.displayName?.let { &quot;$it (${friendLocation.username})&quot; }
+</a><a href="#h3-0-72" id="h3-0-72" class="i">+                        ?: friendLocation.username, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+</a><a href="#h3-0-73" id="h3-0-73" class="i">+                    Text(
+</a><a href="#h3-0-74" id="h3-0-74" class="i">+                        text = buildString {
+</a><a href="#h3-0-75" id="h3-0-75" class="i">+                            append(friendLocation.localityPieces.joinToString(&quot;, &quot;))
+</a><a href="#h3-0-76" id="h3-0-76" class="i">+                            append(&quot;\n&quot;)
+</a><a href="#h3-0-77" id="h3-0-77" class="i">+                            append(&quot;Lat: ${friendLocation.latitude.toFloat()}, Lng: ${friendLocation.longitude.toFloat()}&quot;)
+</a><a href="#h3-0-78" id="h3-0-78" class="i">+                        },
+</a><a href="#h3-0-79" id="h3-0-79" class="i">+                        fontSize = 10.sp,
+</a><a href="#h3-0-80" id="h3-0-80" class="i">+                        fontWeight = FontWeight.Light,
+</a><a href="#h3-0-81" id="h3-0-81" class="i">+                        lineHeight = 15.sp
+</a><a href="#h3-0-82" id="h3-0-82" class="i">+                    )
+</a><a href="#h3-0-83" id="h3-0-83" class="i">+                }
+</a><a href="#h3-0-84" id="h3-0-84" class="i">+            }
+</a><a href="#h3-0-85" id="h3-0-85" class="i">+        }
+</a><a href="#h3-0-86" id="h3-0-86" class="i">+    }
+</a><a href="#h3-0-87" id="h3-0-87" class="i">+
+</a><a href="#h3-0-88" id="h3-0-88" class="i">+    @Composable
+</a><a href="#h3-0-89" id="h3-0-89" class="i">+    private fun FriendLocationsDialogs(
+</a><a href="#h3-0-90" id="h3-0-90" class="i">+        friendsLocation: List&lt;FriendLocation&gt;,
+</a><a href="#h3-0-91" id="h3-0-91" class="i">+        dismiss: () -&gt; Unit
+</a><a href="#h3-0-92" id="h3-0-92" class="i">+    ) {
+</a><a href="#h3-0-93" id="h3-0-93" class="i">+        var search by remember { mutableStateOf(&quot;&quot;) }
+</a><a href="#h3-0-94" id="h3-0-94" class="i">+        val filteredFriendsLocation = rememberAsyncMutableStateList(defaultValue = friendsLocation, keys = arrayOf(search)) {
+</a><a href="#h3-0-95" id="h3-0-95" class="i">+            search.takeIf { it.isNotBlank() }?.let {
+</a><a href="#h3-0-96" id="h3-0-96" class="i">+                friendsLocation.filter {
+</a><a href="#h3-0-97" id="h3-0-97" class="i">+                    it.displayName?.contains(search, ignoreCase = true) == true || it.username.contains(search, ignoreCase = true)
+</a><a href="#h3-0-98" id="h3-0-98" class="i">+                }
+</a><a href="#h3-0-99" id="h3-0-99" class="i">+            }  ?: friendsLocation
+</a><a href="#h3-0-100" id="h3-0-100" class="i">+        }
+</a><a href="#h3-0-101" id="h3-0-101" class="i">+
+</a><a href="#h3-0-102" id="h3-0-102" class="i">+        ElevatedCard(
+</a><a href="#h3-0-103" id="h3-0-103" class="i">+            shape = MaterialTheme.shapes.large,
+</a><a href="#h3-0-104" id="h3-0-104" class="i">+            modifier = Modifier.padding(top = 32.dp, bottom = 32.dp)
+</a><a href="#h3-0-105" id="h3-0-105" class="i">+        ) {
+</a><a href="#h3-0-106" id="h3-0-106" class="i">+            Text(
+</a><a href="#h3-0-107" id="h3-0-107" class="i">+                translation[&quot;teleport_to_friend_title&quot;],
+</a><a href="#h3-0-108" id="h3-0-108" class="i">+                fontSize = 20.sp,
+</a><a href="#h3-0-109" id="h3-0-109" class="i">+                fontWeight = FontWeight.Bold,
+</a><a href="#h3-0-110" id="h3-0-110" class="i">+                textAlign = TextAlign.Center,
+</a><a href="#h3-0-111" id="h3-0-111" class="i">+                modifier = Modifier
+</a><a href="#h3-0-112" id="h3-0-112" class="i">+                    .fillMaxWidth()
+</a><a href="#h3-0-113" id="h3-0-113" class="i">+                    .padding(12.dp)
+</a><a href="#h3-0-114" id="h3-0-114" class="i">+            )
+</a><a href="#h3-0-115" id="h3-0-115" class="i">+            OutlinedTextField(
+</a><a href="#h3-0-116" id="h3-0-116" class="i">+                modifier = Modifier
+</a><a href="#h3-0-117" id="h3-0-117" class="i">+                    .fillMaxWidth()
+</a><a href="#h3-0-118" id="h3-0-118" class="i">+                    .padding(8.dp),
+</a><a href="#h3-0-119" id="h3-0-119" class="i">+                value = search,
+</a><a href="#h3-0-120" id="h3-0-120" class="i">+                onValueChange = { search = it },
+</a><a href="#h3-0-121" id="h3-0-121" class="i">+                label = { Text(translation[&quot;search_bar&quot;]) }
+</a><a href="#h3-0-122" id="h3-0-122" class="i">+            )
+</a><a href="#h3-0-123" id="h3-0-123" class="i">+            LazyColumn(
+</a><a href="#h3-0-124" id="h3-0-124" class="i">+                modifier = Modifier
+</a><a href="#h3-0-125" id="h3-0-125" class="i">+                    .fillMaxSize()
+</a><a href="#h3-0-126" id="h3-0-126" class="i">+            ) {
+</a><a href="#h3-0-127" id="h3-0-127" class="i">+                item {
+</a><a href="#h3-0-128" id="h3-0-128" class="i">+                    if (friendsLocation.isEmpty()) {
+</a><a href="#h3-0-129" id="h3-0-129" class="i">+                        Text(
+</a><a href="#h3-0-130" id="h3-0-130" class="i">+                            translation[&quot;no_friends_map&quot;],
+</a><a href="#h3-0-131" id="h3-0-131" class="i">+                            fontSize = 16.sp,
+</a><a href="#h3-0-132" id="h3-0-132" class="i">+                            modifier = Modifier.padding(16.dp),
+</a><a href="#h3-0-133" id="h3-0-133" class="i">+                            fontWeight = FontWeight.Light
+</a><a href="#h3-0-134" id="h3-0-134" class="i">+                        )
+</a><a href="#h3-0-135" id="h3-0-135" class="i">+                    } else if (filteredFriendsLocation.isEmpty()) {
+</a><a href="#h3-0-136" id="h3-0-136" class="i">+                        Text(
+</a><a href="#h3-0-137" id="h3-0-137" class="i">+                            translation[&quot;no_friends_found&quot;],
+</a><a href="#h3-0-138" id="h3-0-138" class="i">+                            fontSize = 16.sp,
+</a><a href="#h3-0-139" id="h3-0-139" class="i">+                            modifier = Modifier.padding(16.dp),
+</a><a href="#h3-0-140" id="h3-0-140" class="i">+                            fontWeight = FontWeight.Light
+</a><a href="#h3-0-141" id="h3-0-141" class="i">+                        )
+</a><a href="#h3-0-142" id="h3-0-142" class="i">+                    }
+</a><a href="#h3-0-143" id="h3-0-143" class="i">+                }
+</a><a href="#h3-0-144" id="h3-0-144" class="i">+                items(filteredFriendsLocation) { friendLocation -&gt;
+</a><a href="#h3-0-145" id="h3-0-145" class="i">+                    FriendLocationItem(friendLocation, dismiss)
+</a><a href="#h3-0-146" id="h3-0-146" class="i">+                }
+</a><a href="#h3-0-147" id="h3-0-147" class="i">+            }
+</a><a href="#h3-0-148" id="h3-0-148" class="i">+        }
+</a><a href="#h3-0-149" id="h3-0-149" class="i">+    }
+</a><a href="#h3-0-150" id="h3-0-150" class="i">+
+</a><a href="#h3-0-151" id="h3-0-151" class="i">+    override val content: @Composable (NavBackStackEntry) -&gt; Unit = {
+</a><a href="#h3-0-152" id="h3-0-152" class="i">+        val coordinatesProperty = remember {
+</a><a href="#h3-0-153" id="h3-0-153" class="i">+            context.config.root.global.betterLocation.getPropertyPair(&quot;coordinates&quot;)
+</a><a href="#h3-0-154" id="h3-0-154" class="i">+        }
+</a><a href="#h3-0-155" id="h3-0-155" class="i">+
+</a><a href="#h3-0-156" id="h3-0-156" class="i">+        val updateDispatcher = rememberAsyncUpdateDispatcher()
+</a><a href="#h3-0-157" id="h3-0-157" class="i">+        val savedCoordinates = rememberAsyncMutableStateList(
+</a><a href="#h3-0-158" id="h3-0-158" class="i">+            defaultValue = listOf(),
+</a><a href="#h3-0-159" id="h3-0-159" class="i">+            updateDispatcher = updateDispatcher
+</a><a href="#h3-0-160" id="h3-0-160" class="i">+        ) {
+</a><a href="#h3-0-161" id="h3-0-161" class="i">+            context.database.getLocationCoordinates()
+</a><a href="#h3-0-162" id="h3-0-162" class="i">+        }
+</a><a href="#h3-0-163" id="h3-0-163" class="i">+        var showMap by remember { mutableStateOf(false) }
+</a><a href="#h3-0-164" id="h3-0-164" class="i">+        var addSavedCoordinateDialog by remember { mutableStateOf(false) }
+</a><a href="#h3-0-165" id="h3-0-165" class="i">+        var showTeleportDialog by remember { mutableStateOf(false) }
+</a><a href="#h3-0-166" id="h3-0-166" class="i">+
+</a><a href="#h3-0-167" id="h3-0-167" class="i">+        val marker = remember { mutableStateOf&lt;Marker?&gt;(null) }
+</a><a href="#h3-0-168" id="h3-0-168" class="i">+        val mapView = remember { mutableStateOf&lt;MapView?&gt;(null) }
+</a><a href="#h3-0-169" id="h3-0-169" class="i">+        var spoofedCoordinates by remember(showTeleportDialog, showMap) { mutableStateOf(coordinatesProperty.value.get() as? Pair&lt;*, *&gt;) }
+</a><a href="#h3-0-170" id="h3-0-170" class="i">+
+</a><a href="#h3-0-171" id="h3-0-171" class="i">+        fun addSavedCoordinate(id: Int?, locationCoordinates: LocationCoordinates, onSuccess: suspend (id: Int) -&gt; Unit = {}) {
+</a><a href="#h3-0-172" id="h3-0-172" class="i">+            context.coroutineScope.launch {
+</a><a href="#h3-0-173" id="h3-0-173" class="i">+                onSuccess(context.database.addOrUpdateLocationCoordinate(id, locationCoordinates))
+</a><a href="#h3-0-174" id="h3-0-174" class="i">+            }
+</a><a href="#h3-0-175" id="h3-0-175" class="i">+        }
+</a><a href="#h3-0-176" id="h3-0-176" class="i">+
+</a><a href="#h3-0-177" id="h3-0-177" class="i">+        if (showTeleportDialog) {
+</a><a href="#h3-0-178" id="h3-0-178" class="i">+            me.rhunk.snapenhance.ui.util.Dialog(
+</a><a href="#h3-0-179" id="h3-0-179" class="i">+                properties = DialogProperties(usePlatformDefaultWidth = false),
+</a><a href="#h3-0-180" id="h3-0-180" class="i">+                onDismissRequest = { showTeleportDialog = false },
+</a><a href="#h3-0-181" id="h3-0-181" class="i">+                content = {
+</a><a href="#h3-0-182" id="h3-0-182" class="i">+                    FriendLocationsDialogs(remember { context.locationManager.friendsLocation }) {
+</a><a href="#h3-0-183" id="h3-0-183" class="i">+                        showTeleportDialog = false
+</a><a href="#h3-0-184" id="h3-0-184" class="i">+                        context.coroutineScope.launch {
+</a><a href="#h3-0-185" id="h3-0-185" class="i">+                            context.config.writeConfig()
+</a><a href="#h3-0-186" id="h3-0-186" class="i">+                        }
+</a><a href="#h3-0-187" id="h3-0-187" class="i">+                    }
+</a><a href="#h3-0-188" id="h3-0-188" class="i">+                }
+</a><a href="#h3-0-189" id="h3-0-189" class="i">+            )
+</a><a href="#h3-0-190" id="h3-0-190" class="i">+        }
+</a><a href="#h3-0-191" id="h3-0-191" class="i">+
+</a><a href="#h3-0-192" id="h3-0-192" class="i">+        Column(
+</a><a href="#h3-0-193" id="h3-0-193" class="i">+            modifier = Modifier
+</a><a href="#h3-0-194" id="h3-0-194" class="i">+                .fillMaxSize()
+</a><a href="#h3-0-195" id="h3-0-195" class="i">+        ) {
+</a><a href="#h3-0-196" id="h3-0-196" class="i">+            Text(
+</a><a href="#h3-0-197" id="h3-0-197" class="i">+                translation.format(
+</a><a href="#h3-0-198" id="h3-0-198" class="i">+                    &quot;spoofed_coordinates_title&quot;,
+</a><a href="#h3-0-199" id="h3-0-199" class="i">+                    &quot;latitude&quot; to ((spoofedCoordinates?.first as? Double)?.toFloat() ?: &quot;0.0&quot;).toString(),
+</a><a href="#h3-0-200" id="h3-0-200" class="i">+                    &quot;longitude&quot; to ((spoofedCoordinates?.second as? Double)?.toFloat() ?: &quot;0.0&quot;).toString()
+</a><a href="#h3-0-201" id="h3-0-201" class="i">+                ),
+</a><a href="#h3-0-202" id="h3-0-202" class="i">+                fontSize = 18.sp,
+</a><a href="#h3-0-203" id="h3-0-203" class="i">+                fontWeight = FontWeight.Bold,
+</a><a href="#h3-0-204" id="h3-0-204" class="i">+                textAlign = TextAlign.Center,
+</a><a href="#h3-0-205" id="h3-0-205" class="i">+                modifier = Modifier
+</a><a href="#h3-0-206" id="h3-0-206" class="i">+                    .fillMaxWidth()
+</a><a href="#h3-0-207" id="h3-0-207" class="i">+                    .padding(8.dp)
+</a><a href="#h3-0-208" id="h3-0-208" class="i">+            )
+</a><a href="#h3-0-209" id="h3-0-209" class="i">+
+</a><a href="#h3-0-210" id="h3-0-210" class="i">+            if (addSavedCoordinateDialog) {
+</a><a href="#h3-0-211" id="h3-0-211" class="i">+                me.rhunk.snapenhance.ui.util.Dialog(
+</a><a href="#h3-0-212" id="h3-0-212" class="i">+                    onDismissRequest = { addSavedCoordinateDialog = false },
+</a><a href="#h3-0-213" id="h3-0-213" class="i">+                    content = {
+</a><a href="#h3-0-214" id="h3-0-214" class="i">+                        AddCoordinatesDialog(
+</a><a href="#h3-0-215" id="h3-0-215" class="i">+                            alertDialogs,
+</a><a href="#h3-0-216" id="h3-0-216" class="i">+                            translation,
+</a><a href="#h3-0-217" id="h3-0-217" class="i">+                            LocationCoordinates().apply {
+</a><a href="#h3-0-218" id="h3-0-218" class="i">+                                this.latitude = marker.value?.position?.latitude ?: 0.0
+</a><a href="#h3-0-219" id="h3-0-219" class="i">+                                this.longitude = marker.value?.position?.longitude ?: 0.0
+</a><a href="#h3-0-220" id="h3-0-220" class="i">+                            },
+</a><a href="#h3-0-221" id="h3-0-221" class="i">+                        ) { coordinates -&gt;
+</a><a href="#h3-0-222" id="h3-0-222" class="i">+                            addSavedCoordinateDialog = false
+</a><a href="#h3-0-223" id="h3-0-223" class="i">+                            addSavedCoordinate(null, coordinates) {
+</a><a href="#h3-0-224" id="h3-0-224" class="i">+                                withContext(Dispatchers.Main) {
+</a><a href="#h3-0-225" id="h3-0-225" class="i">+                                    savedCoordinates.add(0, coordinates.apply { id = it })
+</a><a href="#h3-0-226" id="h3-0-226" class="i">+                                }
+</a><a href="#h3-0-227" id="h3-0-227" class="i">+                            }
+</a><a href="#h3-0-228" id="h3-0-228" class="i">+                        }
+</a><a href="#h3-0-229" id="h3-0-229" class="i">+                    }
+</a><a href="#h3-0-230" id="h3-0-230" class="i">+                )
+</a><a href="#h3-0-231" id="h3-0-231" class="i">+            }
+</a><a href="#h3-0-232" id="h3-0-232" class="i">+
+</a><a href="#h3-0-233" id="h3-0-233" class="i">+            if (showMap) {
+</a><a href="#h3-0-234" id="h3-0-234" class="i">+                me.rhunk.snapenhance.ui.util.Dialog(
+</a><a href="#h3-0-235" id="h3-0-235" class="i">+                    onDismissRequest = { showMap = false },
+</a><a href="#h3-0-236" id="h3-0-236" class="i">+                    content = {
+</a><a href="#h3-0-237" id="h3-0-237" class="i">+                        alertDialogs.ChooseLocationDialog(property = coordinatesProperty, marker, mapView, saveCoordinates = {
+</a><a href="#h3-0-238" id="h3-0-238" class="i">+                            addSavedCoordinateDialog = true
+</a><a href="#h3-0-239" id="h3-0-239" class="i">+                        }) {
+</a><a href="#h3-0-240" id="h3-0-240" class="i">+                            showMap = false
+</a><a href="#h3-0-241" id="h3-0-241" class="i">+                            context.config.writeConfig()
+</a><a href="#h3-0-242" id="h3-0-242" class="i">+                        }
+</a><a href="#h3-0-243" id="h3-0-243" class="i">+                        DisposableEffect(Unit) {
+</a><a href="#h3-0-244" id="h3-0-244" class="i">+                            onDispose {
+</a><a href="#h3-0-245" id="h3-0-245" class="i">+                                marker.value = null
+</a><a href="#h3-0-246" id="h3-0-246" class="i">+                            }
+</a><a href="#h3-0-247" id="h3-0-247" class="i">+                        }
+</a><a href="#h3-0-248" id="h3-0-248" class="i">+                    }
+</a><a href="#h3-0-249" id="h3-0-249" class="i">+                )
+</a><a href="#h3-0-250" id="h3-0-250" class="i">+            }
+</a><a href="#h3-0-251" id="h3-0-251" class="i">+
+</a><a href="#h3-0-252" id="h3-0-252" class="i">+            LazyColumn(
+</a><a href="#h3-0-253" id="h3-0-253" class="i">+                modifier = Modifier
+</a><a href="#h3-0-254" id="h3-0-254" class="i">+                    .fillMaxSize()
+</a><a href="#h3-0-255" id="h3-0-255" class="i">+                    .clipToBounds()
+</a><a href="#h3-0-256" id="h3-0-256" class="i">+            ) {
+</a><a href="#h3-0-257" id="h3-0-257" class="i">+                item {
+</a><a href="#h3-0-258" id="h3-0-258" class="i">+                    Row(
+</a><a href="#h3-0-259" id="h3-0-259" class="i">+                        modifier = Modifier
+</a><a href="#h3-0-260" id="h3-0-260" class="i">+                            .fillMaxWidth()
+</a><a href="#h3-0-261" id="h3-0-261" class="i">+                            .padding(8.dp),
+</a><a href="#h3-0-262" id="h3-0-262" class="i">+                        horizontalArrangement = Arrangement.SpaceEvenly,
+</a><a href="#h3-0-263" id="h3-0-263" class="i">+                        verticalAlignment = Alignment.CenterVertically
+</a><a href="#h3-0-264" id="h3-0-264" class="i">+                    ) {
+</a><a href="#h3-0-265" id="h3-0-265" class="i">+                        Button(onClick = { showMap = true }) {
+</a><a href="#h3-0-266" id="h3-0-266" class="i">+                            Text(translation[&quot;choose_location_button&quot;])
+</a><a href="#h3-0-267" id="h3-0-267" class="i">+                        }
+</a><a href="#h3-0-268" id="h3-0-268" class="i">+                        Button(onClick = { showTeleportDialog = true }) {
+</a><a href="#h3-0-269" id="h3-0-269" class="i">+                            Text(translation[&quot;teleport_to_friend_button&quot;])
+</a><a href="#h3-0-270" id="h3-0-270" class="i">+                        }
+</a><a href="#h3-0-271" id="h3-0-271" class="i">+                    }
+</a><a href="#h3-0-272" id="h3-0-272" class="i">+                }
+</a><a href="#h3-0-273" id="h3-0-273" class="i">+                item {
+</a><a href="#h3-0-274" id="h3-0-274" class="i">+                    Row(
+</a><a href="#h3-0-275" id="h3-0-275" class="i">+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp),
+</a><a href="#h3-0-276" id="h3-0-276" class="i">+                        verticalAlignment = Alignment.CenterVertically
+</a><a href="#h3-0-277" id="h3-0-277" class="i">+                    ) {
+</a><a href="#h3-0-278" id="h3-0-278" class="i">+                        Text(text = translation[&quot;spoof_location_toggle&quot;])
+</a><a href="#h3-0-279" id="h3-0-279" class="i">+                        Spacer(modifier = Modifier.weight(1f))
+</a><a href="#h3-0-280" id="h3-0-280" class="i">+                        var isSpoofing by remember { mutableStateOf(context.config.root.global.betterLocation.spoofLocation.get()) }
+</a><a href="#h3-0-281" id="h3-0-281" class="i">+                        Switch(
+</a><a href="#h3-0-282" id="h3-0-282" class="i">+                            checked = isSpoofing,
+</a><a href="#h3-0-283" id="h3-0-283" class="i">+                            onCheckedChange = {
+</a><a href="#h3-0-284" id="h3-0-284" class="i">+                                isSpoofing = it
+</a><a href="#h3-0-285" id="h3-0-285" class="i">+                                context.config.root.global.betterLocation.spoofLocation.set(it)
+</a><a href="#h3-0-286" id="h3-0-286" class="i">+                            }
+</a><a href="#h3-0-287" id="h3-0-287" class="i">+                        )
+</a><a href="#h3-0-288" id="h3-0-288" class="i">+                    }
+</a><a href="#h3-0-289" id="h3-0-289" class="i">+                }
+</a><a href="#h3-0-290" id="h3-0-290" class="i">+                item {
+</a><a href="#h3-0-291" id="h3-0-291" class="i">+                    Row(
+</a><a href="#h3-0-292" id="h3-0-292" class="i">+                        modifier = Modifier
+</a><a href="#h3-0-293" id="h3-0-293" class="i">+                            .fillMaxWidth()
+</a><a href="#h3-0-294" id="h3-0-294" class="i">+                            .padding(start = 12.dp, end = 12.dp),
+</a><a href="#h3-0-295" id="h3-0-295" class="i">+                        verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h3-0-296" id="h3-0-296" class="i">+                    ) {
+</a><a href="#h3-0-297" id="h3-0-297" class="i">+                        Text(
+</a><a href="#h3-0-298" id="h3-0-298" class="i">+                            translation[&quot;saved_coordinates_title&quot;],
+</a><a href="#h3-0-299" id="h3-0-299" class="i">+                            fontSize = 20.sp,
+</a><a href="#h3-0-300" id="h3-0-300" class="i">+                            fontWeight = FontWeight.Bold,
+</a><a href="#h3-0-301" id="h3-0-301" class="i">+                            modifier = Modifier.weight(1f),
+</a><a href="#h3-0-302" id="h3-0-302" class="i">+                            lineHeight = 20.sp
+</a><a href="#h3-0-303" id="h3-0-303" class="i">+                        )
+</a><a href="#h3-0-304" id="h3-0-304" class="i">+                        IconButton(
+</a><a href="#h3-0-305" id="h3-0-305" class="i">+                            onClick = {
+</a><a href="#h3-0-306" id="h3-0-306" class="i">+                                addSavedCoordinateDialog = true
+</a><a href="#h3-0-307" id="h3-0-307" class="i">+                            }
+</a><a href="#h3-0-308" id="h3-0-308" class="i">+                        ) {
+</a><a href="#h3-0-309" id="h3-0-309" class="i">+                            Icon(Icons.Default.Add, contentDescription = &quot;Add&quot;)
+</a><a href="#h3-0-310" id="h3-0-310" class="i">+                        }
+</a><a href="#h3-0-311" id="h3-0-311" class="i">+                    }
+</a><a href="#h3-0-312" id="h3-0-312" class="i">+                }
+</a><a href="#h3-0-313" id="h3-0-313" class="i">+                item {
+</a><a href="#h3-0-314" id="h3-0-314" class="i">+                    if (savedCoordinates.isEmpty()) {
+</a><a href="#h3-0-315" id="h3-0-315" class="i">+                        Text(
+</a><a href="#h3-0-316" id="h3-0-316" class="i">+                            translation[&quot;no_saved_coordinates_hint&quot;],
+</a><a href="#h3-0-317" id="h3-0-317" class="i">+                            fontSize = 16.sp,
+</a><a href="#h3-0-318" id="h3-0-318" class="i">+                            modifier = Modifier.padding(start = 20.dp),
+</a><a href="#h3-0-319" id="h3-0-319" class="i">+                            fontWeight = FontWeight.Light
+</a><a href="#h3-0-320" id="h3-0-320" class="i">+                        )
+</a><a href="#h3-0-321" id="h3-0-321" class="i">+                    }
+</a><a href="#h3-0-322" id="h3-0-322" class="i">+                }
+</a><a href="#h3-0-323" id="h3-0-323" class="i">+                items(savedCoordinates, key = { it.id }) { coordinates -&gt;
+</a><a href="#h3-0-324" id="h3-0-324" class="i">+                    var mutableCoordinates by remember { mutableStateOf(coordinates) }
+</a><a href="#h3-0-325" id="h3-0-325" class="i">+                    val isSelected = spoofedCoordinates == mutableCoordinates.latitude to mutableCoordinates.longitude
+</a><a href="#h3-0-326" id="h3-0-326" class="i">+                    var showDeleteDialog by remember { mutableStateOf(false) }
+</a><a href="#h3-0-327" id="h3-0-327" class="i">+                    var showEditDialog by remember { mutableStateOf(false) }
+</a><a href="#h3-0-328" id="h3-0-328" class="i">+
+</a><a href="#h3-0-329" id="h3-0-329" class="i">+                    fun setSpoofedCoordinates() {
+</a><a href="#h3-0-330" id="h3-0-330" class="i">+                        spoofedCoordinates = mutableCoordinates.latitude to mutableCoordinates.longitude
+</a><a href="#h3-0-331" id="h3-0-331" class="i">+                        coordinatesProperty.value.setAny(spoofedCoordinates)
+</a><a href="#h3-0-332" id="h3-0-332" class="i">+                        context.coroutineScope.launch {
+</a><a href="#h3-0-333" id="h3-0-333" class="i">+                            context.config.writeConfig()
+</a><a href="#h3-0-334" id="h3-0-334" class="i">+                        }
+</a><a href="#h3-0-335" id="h3-0-335" class="i">+                    }
+</a><a href="#h3-0-336" id="h3-0-336" class="i">+
+</a><a href="#h3-0-337" id="h3-0-337" class="i">+                    if (showDeleteDialog) {
+</a><a href="#h3-0-338" id="h3-0-338" class="i">+                        me.rhunk.snapenhance.ui.util.Dialog(
+</a><a href="#h3-0-339" id="h3-0-339" class="i">+                            onDismissRequest = { showDeleteDialog = false },
+</a><a href="#h3-0-340" id="h3-0-340" class="i">+                            content = {
+</a><a href="#h3-0-341" id="h3-0-341" class="i">+                                alertDialogs.ConfirmDialog(
+</a><a href="#h3-0-342" id="h3-0-342" class="i">+                                    title = translation[&quot;delete_dialog_title&quot;],
+</a><a href="#h3-0-343" id="h3-0-343" class="i">+                                    message = translation[&quot;delete_dialog_message&quot;],
+</a><a href="#h3-0-344" id="h3-0-344" class="i">+                                    onConfirm = {
+</a><a href="#h3-0-345" id="h3-0-345" class="i">+                                        showDeleteDialog = false
+</a><a href="#h3-0-346" id="h3-0-346" class="i">+                                        context.coroutineScope.launch {
+</a><a href="#h3-0-347" id="h3-0-347" class="i">+                                            context.database.removeLocationCoordinate(coordinates.id)
+</a><a href="#h3-0-348" id="h3-0-348" class="i">+                                            savedCoordinates.remove(coordinates)
+</a><a href="#h3-0-349" id="h3-0-349" class="i">+                                        }
+</a><a href="#h3-0-350" id="h3-0-350" class="i">+                                    },
+</a><a href="#h3-0-351" id="h3-0-351" class="i">+                                    onDismiss = { showDeleteDialog = false }
+</a><a href="#h3-0-352" id="h3-0-352" class="i">+                                )
+</a><a href="#h3-0-353" id="h3-0-353" class="i">+                            }
+</a><a href="#h3-0-354" id="h3-0-354" class="i">+                        )
+</a><a href="#h3-0-355" id="h3-0-355" class="i">+                    }
+</a><a href="#h3-0-356" id="h3-0-356" class="i">+
+</a><a href="#h3-0-357" id="h3-0-357" class="i">+                    if (showEditDialog) {
+</a><a href="#h3-0-358" id="h3-0-358" class="i">+                        me.rhunk.snapenhance.ui.util.Dialog(
+</a><a href="#h3-0-359" id="h3-0-359" class="i">+                            onDismissRequest = { showEditDialog = false },
+</a><a href="#h3-0-360" id="h3-0-360" class="i">+                            content = {
+</a><a href="#h3-0-361" id="h3-0-361" class="i">+                                AddCoordinatesDialog(
+</a><a href="#h3-0-362" id="h3-0-362" class="i">+                                    alertDialogs,
+</a><a href="#h3-0-363" id="h3-0-363" class="i">+                                    translation,
+</a><a href="#h3-0-364" id="h3-0-364" class="i">+                                    mutableCoordinates
+</a><a href="#h3-0-365" id="h3-0-365" class="i">+                                ) {
+</a><a href="#h3-0-366" id="h3-0-366" class="i">+                                    val itemId = coordinates.id
+</a><a href="#h3-0-367" id="h3-0-367" class="i">+                                    context.coroutineScope.launch {
+</a><a href="#h3-0-368" id="h3-0-368" class="i">+                                        addSavedCoordinate(itemId, it)
+</a><a href="#h3-0-369" id="h3-0-369" class="i">+                                    }
+</a><a href="#h3-0-370" id="h3-0-370" class="i">+                                    Parcel.obtain().apply {
+</a><a href="#h3-0-371" id="h3-0-371" class="i">+                                        it.writeToParcel(this, 0)
+</a><a href="#h3-0-372" id="h3-0-372" class="i">+                                        setDataPosition(0)
+</a><a href="#h3-0-373" id="h3-0-373" class="i">+                                        coordinates.readFromParcel(this)
+</a><a href="#h3-0-374" id="h3-0-374" class="i">+                                        coordinates.id = itemId
+</a><a href="#h3-0-375" id="h3-0-375" class="i">+                                        recycle()
+</a><a href="#h3-0-376" id="h3-0-376" class="i">+                                    }
+</a><a href="#h3-0-377" id="h3-0-377" class="i">+                                    mutableCoordinates = it
+</a><a href="#h3-0-378" id="h3-0-378" class="i">+                                    if (isSelected) setSpoofedCoordinates()
+</a><a href="#h3-0-379" id="h3-0-379" class="i">+                                    showEditDialog = false
+</a><a href="#h3-0-380" id="h3-0-380" class="i">+                                }
+</a><a href="#h3-0-381" id="h3-0-381" class="i">+                            }
+</a><a href="#h3-0-382" id="h3-0-382" class="i">+                        )
+</a><a href="#h3-0-383" id="h3-0-383" class="i">+                    }
+</a><a href="#h3-0-384" id="h3-0-384" class="i">+
+</a><a href="#h3-0-385" id="h3-0-385" class="i">+                    ElevatedCard(
+</a><a href="#h3-0-386" id="h3-0-386" class="i">+                        onClick = {
+</a><a href="#h3-0-387" id="h3-0-387" class="i">+                            mutableCoordinates = coordinates
+</a><a href="#h3-0-388" id="h3-0-388" class="i">+                            setSpoofedCoordinates()
+</a><a href="#h3-0-389" id="h3-0-389" class="i">+                            GeoPoint(coordinates.latitude, coordinates.longitude).also {
+</a><a href="#h3-0-390" id="h3-0-390" class="i">+                                marker.value?.position = it
+</a><a href="#h3-0-391" id="h3-0-391" class="i">+                                mapView.value?.controller?.apply {
+</a><a href="#h3-0-392" id="h3-0-392" class="i">+                                    animateTo(it)
+</a><a href="#h3-0-393" id="h3-0-393" class="i">+                                    setZoom(16.0)
+</a><a href="#h3-0-394" id="h3-0-394" class="i">+                                }
+</a><a href="#h3-0-395" id="h3-0-395" class="i">+                            }
+</a><a href="#h3-0-396" id="h3-0-396" class="i">+                        },
+</a><a href="#h3-0-397" id="h3-0-397" class="i">+                        modifier = Modifier
+</a><a href="#h3-0-398" id="h3-0-398" class="i">+                            .fillMaxWidth()
+</a><a href="#h3-0-399" id="h3-0-399" class="i">+                            .padding(5.dp),
+</a><a href="#h3-0-400" id="h3-0-400" class="i">+                    ) {
+</a><a href="#h3-0-401" id="h3-0-401" class="i">+                        Row(
+</a><a href="#h3-0-402" id="h3-0-402" class="i">+                            modifier = Modifier
+</a><a href="#h3-0-403" id="h3-0-403" class="i">+                                .fillMaxWidth()
+</a><a href="#h3-0-404" id="h3-0-404" class="i">+                                .padding(4.dp),
+</a><a href="#h3-0-405" id="h3-0-405" class="i">+                            verticalAlignment = Alignment.CenterVertically
+</a><a href="#h3-0-406" id="h3-0-406" class="i">+                        ) {
+</a><a href="#h3-0-407" id="h3-0-407" class="i">+                            Column(
+</a><a href="#h3-0-408" id="h3-0-408" class="i">+                                modifier = Modifier
+</a><a href="#h3-0-409" id="h3-0-409" class="i">+                                    .padding(2.dp)
+</a><a href="#h3-0-410" id="h3-0-410" class="i">+                                    .weight(1f)
+</a><a href="#h3-0-411" id="h3-0-411" class="i">+                            ) {
+</a><a href="#h3-0-412" id="h3-0-412" class="i">+                                Text(
+</a><a href="#h3-0-413" id="h3-0-413" class="i">+                                    text = remember(mutableCoordinates) { mutableCoordinates.name },
+</a><a href="#h3-0-414" id="h3-0-414" class="i">+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Light,
+</a><a href="#h3-0-415" id="h3-0-415" class="i">+                                    fontSize = 16.sp,
+</a><a href="#h3-0-416" id="h3-0-416" class="i">+                                    lineHeight = 20.sp,
+</a><a href="#h3-0-417" id="h3-0-417" class="i">+                                    overflow = TextOverflow.Ellipsis
+</a><a href="#h3-0-418" id="h3-0-418" class="i">+                                )
+</a><a href="#h3-0-419" id="h3-0-419" class="i">+                                Text(
+</a><a href="#h3-0-420" id="h3-0-420" class="i">+                                    text = remember(mutableCoordinates) { &quot;(${mutableCoordinates.latitude.toFloat()}, ${mutableCoordinates.longitude.toFloat()})&quot; },
+</a><a href="#h3-0-421" id="h3-0-421" class="i">+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Light,
+</a><a href="#h3-0-422" id="h3-0-422" class="i">+                                    fontSize = 12.sp,
+</a><a href="#h3-0-423" id="h3-0-423" class="i">+                                    lineHeight = 15.sp,
+</a><a href="#h3-0-424" id="h3-0-424" class="i">+                                    overflow = TextOverflow.Ellipsis
+</a><a href="#h3-0-425" id="h3-0-425" class="i">+                                )
+</a><a href="#h3-0-426" id="h3-0-426" class="i">+                            }
+</a><a href="#h3-0-427" id="h3-0-427" class="i">+                            FilledIconButton(onClick = {
+</a><a href="#h3-0-428" id="h3-0-428" class="i">+                                showEditDialog = true
+</a><a href="#h3-0-429" id="h3-0-429" class="i">+                            }) {
+</a><a href="#h3-0-430" id="h3-0-430" class="i">+                                Icon(Icons.Default.Edit, contentDescription = &quot;Delete&quot;)
+</a><a href="#h3-0-431" id="h3-0-431" class="i">+                            }
+</a><a href="#h3-0-432" id="h3-0-432" class="i">+                            Spacer(modifier = Modifier.width(4.dp))
+</a><a href="#h3-0-433" id="h3-0-433" class="i">+                            FilledIconButton(onClick = {
+</a><a href="#h3-0-434" id="h3-0-434" class="i">+                                showDeleteDialog = true
+</a><a href="#h3-0-435" id="h3-0-435" class="i">+                            }) {
+</a><a href="#h3-0-436" id="h3-0-436" class="i">+                                Icon(Icons.Default.DeleteOutline, contentDescription = &quot;Delete&quot;)
+</a><a href="#h3-0-437" id="h3-0-437" class="i">+                            }
+</a><a href="#h3-0-438" id="h3-0-438" class="i">+                        }
+</a><a href="#h3-0-439" id="h3-0-439" class="i">+                    }
+</a><a href="#h3-0-440" id="h3-0-440" class="i">+                }
+</a><a href="#h3-0-441" id="h3-0-441" class="i">+            }
+</a><a href="#h3-0-442" id="h3-0-442" class="i">+        }
+</a><a href="#h3-0-443" id="h3-0-443" class="i">+    }
+</a><a href="#h3-0-444" id="h3-0-444" class="i">+}</a><a href="#h3-0-445" id="h3-0-445" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h4" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -152,6 +152,8 @@
+</a>                 &quot;spoofed_coordinates_title&quot;: &quot;Spoofed Coordinates\nLat {latitude}, Lng {longitude}&quot;,
+                 &quot;save_coordinates_dialog_title&quot;: &quot;Save Coordinates&quot;,
+                 &quot;saved_name_dialog_hint&quot;: &quot;Saved Name&quot;,
+<a href="#h4-0-3" id="h4-0-3" class="i">+                &quot;latitude_dialog_hint&quot;: &quot;Latitude&quot;,
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+                &quot;longitude_dialog_hint&quot;: &quot;Longitude&quot;,
+</a>                 &quot;save_dialog_button&quot;: &quot;Save&quot;,
+                 &quot;choose_location_button&quot;: &quot;Choose Location&quot;,
+                 &quot;teleport_to_friend_button&quot;: &quot;Teleport to Friend&quot;,
+</pre>
+</div>
+</body>
+</html>

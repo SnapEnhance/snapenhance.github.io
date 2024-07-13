@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: anonymize logs - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/d147dc5ce0a92cc803ec7cc6ffbeb5091bc10144.html">d147dc5ce0a92cc803ec7cc6ffbeb5091bc10144</a>
+<b>parent</b> <a href="../commit/4b926f199c9af38227a5e2123774b8d5b020b766.html">4b926f199c9af38227a5e2123774b8d5b020b766</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 12 Nov 2023 23:28:30 +0100
+
+feat: anonymize logs
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/LogManager.kt</a></td><td> | </td><td class="num">14</td><td><span class="i">++++++++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Scripting.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+</table></pre><pre>3 files changed, 17 insertions(+), 2 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/LogManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/LogManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/LogManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/LogManager.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,6 +1,5 @@
+</a> package me.rhunk.snapenhance
+ 
+<a href="#h0-0-2" id="h0-0-2" class="d">-import android.content.SharedPreferences
+</a> import android.util.Log
+ import com.google.gson.GsonBuilder
+ import me.rhunk.snapenhance.common.logger.AbstractLogger
+<a href="#h0-1" id="h0-1" class="h">@@ -108,6 +107,8 @@ class LogManager(
+</a>         private val LOG_LIFETIME = 24.hours
+     }
+ 
+<a href="#h0-1-3" id="h0-1-3" class="i">+    private val anonymizeLogs by lazy { !remoteSideContext.config.root.scripting.disableLogAnonymization.get() }
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+
+</a>     var lineAddListener = { _: LogLine -&gt; }
+ 
+     private val logFolder = File(remoteSideContext.androidContext.cacheDir, &quot;logs&quot;)
+<a href="#h0-2" id="h0-2" class="h">@@ -201,7 +202,16 @@ class LogManager(
+</a> 
+     fun internalLog(tag: String, logLevel: LogLevel, message: Any?) {
+         runCatching {
+<a href="#h0-2-3" id="h0-2-3" class="d">-            val line = LogLine(logLevel, getCurrentDateTime(), tag, message.toString())
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+            val line = LogLine(
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+                logLevel = logLevel,
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+                dateTime = getCurrentDateTime(),
+</a><a href="#h0-2-7" id="h0-2-7" class="i">+                tag = tag,
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+                message = message.toString().let {
+</a><a href="#h0-2-9" id="h0-2-9" class="i">+                    if (anonymizeLogs)
+</a><a href="#h0-2-10" id="h0-2-10" class="i">+                        it.replace(Regex(&quot;[0-9a-f]{8}-[0-9a-f]{4}-{3}[0-9a-f]{12}&quot;, RegexOption.MULTILINE), &quot;xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx&quot;)
+</a><a href="#h0-2-11" id="h0-2-11" class="i">+                    else it
+</a><a href="#h0-2-12" id="h0-2-12" class="i">+                }
+</a><a href="#h0-2-13" id="h0-2-13" class="i">+            )
+</a>             logFile.appendText(&quot;|$line\n&quot;, Charsets.UTF_8)
+             lineAddListener(line)
+             Log.println(logLevel.priority, tag, message.toString())
+<b>diff --git a/<a id="h1" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -619,6 +619,10 @@
+</a>                     &quot;hot_reload&quot;: {
+                         &quot;name&quot;: &quot;Hot Reload&quot;,
+                         &quot;description&quot;: &quot;Automatically reloads scripts when they change&quot;
+<a href="#h1-0-3" id="h1-0-3" class="i">+                    },
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+                    &quot;disable_log_anonymization&quot;: {
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+                        &quot;name&quot;: &quot;Disable Log Anonymization&quot;,
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+                        &quot;description&quot;: &quot;Disables the anonymization of logs&quot;
+</a>                     }
+                 }
+             }
+<b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Scripting.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Scripting.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Scripting.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Scripting.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -7,4 +7,5 @@ class Scripting : ConfigContainer() {
+</a>     val developerMode = boolean(&quot;developer_mode&quot;, false) { requireRestart() }
+     val moduleFolder = string(&quot;module_folder&quot;, &quot;modules&quot;) { addFlags(ConfigFlag.FOLDER); requireRestart()  }
+     val hotReload = boolean(&quot;hot_reload&quot;, false)
+<a href="#h2-0-3" id="h2-0-3" class="i">+    val disableLogAnonymization = boolean(&quot;disable_log_anonymization&quot;, false) { requireRestart() }
+</a> } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: native hooks config - fix GalleryMediaSendOverride false positive - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/d7bdfa7cddb1922b099de2ba8357eb7ee87cd012.html">d7bdfa7cddb1922b099de2ba8357eb7ee87cd012</a>
+<b>parent</b> <a href="../commit/f597b408c57fb706e7e945001747d4af6748ab83.html">f597b408c57fb706e7e945001747d4af6748ab83</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Mon, 28 Aug 2023 13:30:13 +0200
+
+feat: native hooks config
+- fix GalleryMediaSendOverride false positive
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">54</td><td><span class="i">++++++++++++++++++++++++++++++++</span><span class="d">----------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt</a></td><td> | </td><td class="num">14</td><td><span class="i">+++++</span><span class="d">---------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a></td><td> | </td><td class="num">28</td><td><span class="i">++++++++++++++++</span><span class="d">------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/action/impl/OpenMap.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Experimental.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Global.kt</a></td><td> | </td><td class="num">1</td><td><span class="i"></span><span class="d">-</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/NativeHooks.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">+++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/RootConfig.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/data/MessageSender.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/DeviceSpooferHook.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt</a></td><td> | </td><td class="num">36</td><td><span class="i">+++++++++++++++++++++++++++</span><span class="d">---------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h11">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/LocationSpoofer.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h12">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a></td><td> | </td><td class="num">21</td><td><span class="i">+++++++++++++++++</span><span class="d">----</span></td></tr>
+</table></pre><pre>13 files changed, 123 insertions(+), 70 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a> b/<a href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -75,26 +75,12 @@
+</a> 
+     &quot;features&quot;: {
+         &quot;notices&quot;: {
+<a href="#h0-0-3" id="h0-0-3" class="d">-            &quot;unstable&quot;: &quot;This feature is unstable and may not work as expected&quot;,
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-            &quot;may_ban&quot;: &quot;This feature may get you banned\nUse at your own risk&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-            &quot;may_break_internal_behavior&quot;: &quot;This feature may break Snapchat internal behavior&quot;,
+</a><a href="#h0-0-6" id="h0-0-6" class="d">-            &quot;may_cause_crashes&quot;: &quot;This feature may cause crashes&quot;
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+            &quot;unstable&quot;: &quot;This is unstable and may not work as expected&quot;,
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+            &quot;may_ban&quot;: &quot;This may get you banned\nUse at your own risk&quot;,
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+            &quot;may_break_internal_behavior&quot;: &quot;This may break Snapchat internal behavior&quot;,
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+            &quot;may_cause_crashes&quot;: &quot;This may cause crashes&quot;
+</a>         },
+         &quot;properties&quot;: {
+<a href="#h0-0-13" id="h0-0-13" class="d">-            &quot;spoof&quot;: {
+</a><a href="#h0-0-14" id="h0-0-14" class="d">-                &quot;name&quot;: &quot;Spoof&quot;,
+</a><a href="#h0-0-15" id="h0-0-15" class="d">-                &quot;description&quot;: &quot;Spoof your information&quot;,
+</a><a href="#h0-0-16" id="h0-0-16" class="d">-                &quot;properties&quot;: {
+</a><a href="#h0-0-17" id="h0-0-17" class="d">-                    &quot;location&quot;: {
+</a><a href="#h0-0-18" id="h0-0-18" class="d">-                        &quot;name&quot;: &quot;Location&quot;,
+</a><a href="#h0-0-19" id="h0-0-19" class="d">-                        &quot;description&quot;: &quot;Spoof your location&quot;
+</a><a href="#h0-0-20" id="h0-0-20" class="d">-                    },
+</a><a href="#h0-0-21" id="h0-0-21" class="d">-                    &quot;device&quot;: {
+</a><a href="#h0-0-22" id="h0-0-22" class="d">-                        &quot;name&quot;: &quot;Device&quot;,
+</a><a href="#h0-0-23" id="h0-0-23" class="d">-                        &quot;description&quot;: &quot;Spoof your device&quot;
+</a><a href="#h0-0-24" id="h0-0-24" class="d">-                    }
+</a><a href="#h0-0-25" id="h0-0-25" class="d">-                }
+</a><a href="#h0-0-26" id="h0-0-26" class="d">-            },
+</a>             &quot;downloader&quot;: {
+                 &quot;name&quot;: &quot;Downloader&quot;,
+                 &quot;description&quot;: &quot;Download Snaps and Stories&quot;,
+<a href="#h0-1" id="h0-1" class="h">@@ -249,10 +235,6 @@
+</a>                         &quot;name&quot;: &quot;Disable Metrics&quot;,
+                         &quot;description&quot;: &quot;Disables some analytics data sent to Snapchat&quot;
+                     },
+<a href="#h0-1-3" id="h0-1-3" class="d">-                    &quot;disable_bitmoji&quot;: {
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-                        &quot;name&quot;: &quot;Disable Bitmoji&quot;,
+</a><a href="#h0-1-5" id="h0-1-5" class="d">-                        &quot;description&quot;: &quot;Disables friends profile bitmoji for the whole app&quot;
+</a><a href="#h0-1-6" id="h0-1-6" class="d">-                    },
+</a>                     &quot;block_ads&quot;: {
+                         &quot;name&quot;: &quot;Block Ads&quot;,
+                         &quot;description&quot;: &quot;Prevent ads from being displayed&quot;
+<a href="#h0-2" id="h0-2" class="h">@@ -331,6 +313,34 @@
+</a>                 &quot;name&quot;: &quot;Experimental&quot;,
+                 &quot;description&quot;: &quot;Experimental features&quot;,
+                 &quot;properties&quot;: {
+<a href="#h0-2-3" id="h0-2-3" class="i">+                    &quot;native_hooks&quot;: {
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+                        &quot;name&quot;: &quot;Native Hooks&quot;,
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+                        &quot;description&quot;: &quot;Unsafe features that hook into Snapchat&#39;s native code&quot;,
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+                        &quot;properties&quot;: {
+</a><a href="#h0-2-7" id="h0-2-7" class="i">+                            &quot;disable_bitmoji&quot;: {
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+                                &quot;name&quot;: &quot;Disable Bitmoji&quot;,
+</a><a href="#h0-2-9" id="h0-2-9" class="i">+                                &quot;description&quot;: &quot;Disables friends profile bitmoji&quot;
+</a><a href="#h0-2-10" id="h0-2-10" class="i">+                            },
+</a><a href="#h0-2-11" id="h0-2-11" class="i">+                            &quot;fix_gallery_media_override&quot;: {
+</a><a href="#h0-2-12" id="h0-2-12" class="i">+                                &quot;name&quot;: &quot;Fix Gallery Media Override&quot;,
+</a><a href="#h0-2-13" id="h0-2-13" class="i">+                                &quot;description&quot;: &quot;Fixes various issues with the Gallery Media Send Override feature (e.g. save snaps in chat)&quot;
+</a><a href="#h0-2-14" id="h0-2-14" class="i">+                            }
+</a><a href="#h0-2-15" id="h0-2-15" class="i">+                        }
+</a><a href="#h0-2-16" id="h0-2-16" class="i">+                    },
+</a><a href="#h0-2-17" id="h0-2-17" class="i">+                    &quot;spoof&quot;: {
+</a><a href="#h0-2-18" id="h0-2-18" class="i">+                        &quot;name&quot;: &quot;Spoof&quot;,
+</a><a href="#h0-2-19" id="h0-2-19" class="i">+                        &quot;description&quot;: &quot;Spoof your information&quot;,
+</a><a href="#h0-2-20" id="h0-2-20" class="i">+                        &quot;properties&quot;: {
+</a><a href="#h0-2-21" id="h0-2-21" class="i">+                            &quot;location&quot;: {
+</a><a href="#h0-2-22" id="h0-2-22" class="i">+                                &quot;name&quot;: &quot;Location&quot;,
+</a><a href="#h0-2-23" id="h0-2-23" class="i">+                                &quot;description&quot;: &quot;Spoof your location&quot;
+</a><a href="#h0-2-24" id="h0-2-24" class="i">+                            },
+</a><a href="#h0-2-25" id="h0-2-25" class="i">+                            &quot;device&quot;: {
+</a><a href="#h0-2-26" id="h0-2-26" class="i">+                                &quot;name&quot;: &quot;Device&quot;,
+</a><a href="#h0-2-27" id="h0-2-27" class="i">+                                &quot;description&quot;: &quot;Spoof your device&quot;
+</a><a href="#h0-2-28" id="h0-2-28" class="i">+                            }
+</a><a href="#h0-2-29" id="h0-2-29" class="i">+                        }
+</a><a href="#h0-2-30" id="h0-2-30" class="i">+                    },
+</a>                     &quot;app_passcode&quot;: {
+                         &quot;name&quot;: &quot;App Passcode&quot;,
+                         &quot;description&quot;: &quot;Sets a passcode to lock the app&quot;
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -124,16 +124,12 @@ class ModContext {
+</a> 
+     fun reloadConfig() {
+         modConfig.loadFromBridge(bridgeClient)
+<a href="#h1-0-3" id="h1-0-3" class="d">-        runCatching {
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-            native.loadConfig(
+</a><a href="#h1-0-5" id="h1-0-5" class="d">-                NativeConfig(
+</a><a href="#h1-0-6" id="h1-0-6" class="d">-                    disableBitmoji = config.global.disableBitmoji.get(),
+</a><a href="#h1-0-7" id="h1-0-7" class="d">-                    disableMetrics = config.global.disableMetrics.get()
+</a><a href="#h1-0-8" id="h1-0-8" class="d">-                )
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+        native.loadNativeConfig(
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+            NativeConfig(
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+                disableBitmoji = config.experimental.nativeHooks.disableBitmoji.get(),
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+                disableMetrics = config.global.disableMetrics.get()
+</a>             )
+<a href="#h1-0-14" id="h1-0-14" class="d">-        }.onFailure {
+</a><a href="#h1-0-15" id="h1-0-15" class="d">-            Logger.xposedLog(&quot;Failed to load native config&quot;, it)
+</a><a href="#h1-0-16" id="h1-0-16" class="d">-        }
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+        )
+</a>     }
+ 
+     fun getConfigLocale(): String {
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -99,6 +99,7 @@ class SnapEnhance {
+</a>         measureTime {
+             with(appContext) {
+                 reloadConfig()
+<a href="#h2-0-3" id="h2-0-3" class="i">+                initNative()
+</a>                 withContext(appContext.coroutineDispatcher) {
+                     translation.userLocale = getConfigLocale()
+                     translation.loadFromBridge(bridgeClient)
+<a href="#h2-1" id="h2-1" class="h">@@ -121,18 +122,6 @@ class SnapEnhance {
+</a>     private fun onActivityCreate() {
+         measureTime {
+             with(appContext) {
+<a href="#h2-1-3" id="h2-1-3" class="d">-                runCatching {
+</a><a href="#h2-1-4" id="h2-1-4" class="d">-                    native.initOnce(appContext.androidContext.classLoader)
+</a><a href="#h2-1-5" id="h2-1-5" class="d">-                    native.nativeUnaryCallCallback = { request -&gt;
+</a><a href="#h2-1-6" id="h2-1-6" class="d">-                        event.post(UnaryCallEvent(request.uri, request.buffer))?.also {
+</a><a href="#h2-1-7" id="h2-1-7" class="d">-                            request.buffer = it.buffer
+</a><a href="#h2-1-8" id="h2-1-8" class="d">-                            request.canceled = it.canceled
+</a><a href="#h2-1-9" id="h2-1-9" class="d">-                        }
+</a><a href="#h2-1-10" id="h2-1-10" class="d">-                    }
+</a><a href="#h2-1-11" id="h2-1-11" class="d">-                }.onFailure {
+</a><a href="#h2-1-12" id="h2-1-12" class="d">-                    Logger.xposedLog(&quot;Failed to init native&quot;, it)
+</a><a href="#h2-1-13" id="h2-1-13" class="d">-                }
+</a><a href="#h2-1-14" id="h2-1-14" class="d">-
+</a>                 features.onActivityCreate()
+                 actionManager.init()
+             }
+<a href="#h2-2" id="h2-2" class="h">@@ -141,6 +130,21 @@ class SnapEnhance {
+</a>         }
+     }
+ 
+<a href="#h2-2-3" id="h2-2-3" class="i">+    private fun initNative() {
+</a><a href="#h2-2-4" id="h2-2-4" class="i">+        // don&#39;t initialize native when not logged in
+</a><a href="#h2-2-5" id="h2-2-5" class="i">+        if (!appContext.database.hasArroyo()) return
+</a><a href="#h2-2-6" id="h2-2-6" class="i">+        appContext.native.apply {
+</a><a href="#h2-2-7" id="h2-2-7" class="i">+            if (appContext.config.experimental.nativeHooks.globalState != true) return@apply
+</a><a href="#h2-2-8" id="h2-2-8" class="i">+            initOnce(appContext.androidContext.classLoader)
+</a><a href="#h2-2-9" id="h2-2-9" class="i">+            nativeUnaryCallCallback = { request -&gt;
+</a><a href="#h2-2-10" id="h2-2-10" class="i">+                appContext.event.post(UnaryCallEvent(request.uri, request.buffer))?.also {
+</a><a href="#h2-2-11" id="h2-2-11" class="i">+                    request.buffer = it.buffer
+</a><a href="#h2-2-12" id="h2-2-12" class="i">+                    request.canceled = it.canceled
+</a><a href="#h2-2-13" id="h2-2-13" class="i">+                }
+</a><a href="#h2-2-14" id="h2-2-14" class="i">+            }
+</a><a href="#h2-2-15" id="h2-2-15" class="i">+        }
+</a><a href="#h2-2-16" id="h2-2-16" class="i">+    }
+</a><a href="#h2-2-17" id="h2-2-17" class="i">+
+</a>     private fun syncRemote() {
+         val database = appContext.database
+ 
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/action/impl/OpenMap.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/action/impl/OpenMap.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/action/impl/OpenMap.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/action/impl/OpenMap.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -11,8 +11,8 @@ class OpenMap: AbstractAction(&quot;action.open_map&quot;) {
+</a>             val mapActivityIntent = Intent()
+             mapActivityIntent.setClassName(BuildConfig.APPLICATION_ID, &quot;me.rhunk.snapenhance.ui.MapActivity&quot;)
+             mapActivityIntent.putExtra(&quot;location&quot;, Bundle().apply {
+<a href="#h3-0-3" id="h3-0-3" class="d">-                putDouble(&quot;latitude&quot;, context.config.spoof.location.latitude.get().toDouble())
+</a><a href="#h3-0-4" id="h3-0-4" class="d">-                putDouble(&quot;longitude&quot;, context.config.spoof.location.longitude.get().toDouble())
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+                putDouble(&quot;latitude&quot;, context.config.experimental.spoof.location.latitude.get().toDouble())
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+                putDouble(&quot;longitude&quot;, context.config.experimental.spoof.location.longitude.get().toDouble())
+</a>             })
+ 
+             context.mainActivity!!.startActivityForResult(mapActivityIntent, 0x1337)
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Experimental.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Experimental.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Experimental.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Experimental.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -3,6 +3,8 @@ package me.rhunk.snapenhance.core.config.impl
+</a> import me.rhunk.snapenhance.core.config.ConfigContainer
+ 
+ class Experimental : ConfigContainer() {
+<a href="#h4-0-3" id="h4-0-3" class="i">+    val nativeHooks = container(&quot;native_hooks&quot;, NativeHooks()) { icon = &quot;Memory&quot; }
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+    val spoof = container(&quot;spoof&quot;, Spoof()) { icon = &quot;Fingerprint&quot; }
+</a>     val appPasscode = string(&quot;app_passcode&quot;)
+     val appLockOnResume = boolean(&quot;app_lock_on_resume&quot;)
+     val infiniteStoryBoost = boolean(&quot;infinite_story_boost&quot;)
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Global.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Global.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Global.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Global.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -8,7 +8,6 @@ class Global : ConfigContainer() {
+</a>     val snapchatPlus = boolean(&quot;snapchat_plus&quot;) { addNotices(FeatureNotice.MAY_BAN) }
+     val autoUpdater = unique(&quot;auto_updater&quot;, &quot;EVERY_LAUNCH&quot;, &quot;DAILY&quot;, &quot;WEEKLY&quot;).apply { set(&quot;DAILY&quot;) }
+     val disableMetrics = boolean(&quot;disable_metrics&quot;)
+<a href="#h5-0-3" id="h5-0-3" class="d">-    val disableBitmoji = boolean(&quot;disable_bitmoji&quot;) { addNotices(FeatureNotice.UNSTABLE) }
+</a>     val blockAds = boolean(&quot;block_ads&quot;)
+     val disableVideoLengthRestrictions = boolean(&quot;disable_video_length_restrictions&quot;) { addNotices(FeatureNotice.MAY_BAN) }
+     val disableGooglePlayDialogs = boolean(&quot;disable_google_play_dialogs&quot;)
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/NativeHooks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/NativeHooks.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/NativeHooks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/NativeHooks.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -0,0 +1,8 @@
+</a><a href="#h6-0-0" id="h6-0-0" class="i">+package me.rhunk.snapenhance.core.config.impl
+</a><a href="#h6-0-1" id="h6-0-1" class="i">+
+</a><a href="#h6-0-2" id="h6-0-2" class="i">+import me.rhunk.snapenhance.core.config.ConfigContainer
+</a><a href="#h6-0-3" id="h6-0-3" class="i">+
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+class NativeHooks: ConfigContainer(hasGlobalState = true) {
+</a><a href="#h6-0-5" id="h6-0-5" class="i">+    val disableBitmoji = boolean(&quot;disable_bitmoji&quot;)
+</a><a href="#h6-0-6" id="h6-0-6" class="i">+    val fixGalleryMediaOverride = boolean(&quot;fix_gallery_media_override&quot;)
+</a><a href="#h6-0-7" id="h6-0-7" class="i">+}</a><a href="#h6-0-8" id="h6-0-8" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/RootConfig.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/RootConfig.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/RootConfig.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/RootConfig.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -1,6 +1,7 @@
+</a> package me.rhunk.snapenhance.core.config.impl
+ 
+ import me.rhunk.snapenhance.core.config.ConfigContainer
+<a href="#h7-0-3" id="h7-0-3" class="i">+import me.rhunk.snapenhance.core.config.FeatureNotice
+</a> 
+ class RootConfig : ConfigContainer() {
+     val downloader = container(&quot;downloader&quot;, DownloaderConfig()) { icon = &quot;Download&quot;}
+<a href="#h7-1" id="h7-1" class="h">@@ -10,6 +11,7 @@ class RootConfig : ConfigContainer() {
+</a>     val rules = container(&quot;rules&quot;, Rules()) { icon = &quot;Rule&quot; }
+     val camera = container(&quot;camera&quot;, Camera()) { icon = &quot;Camera&quot;}
+     val streaksReminder = container(&quot;streaks_reminder&quot;, StreaksReminderConfig()) { icon = &quot;Alarm&quot; }
+<a href="#h7-1-3" id="h7-1-3" class="d">-    val experimental = container(&quot;experimental&quot;, Experimental()) { icon = &quot;Science&quot; }
+</a><a href="#h7-1-4" id="h7-1-4" class="d">-    val spoof = container(&quot;spoof&quot;, Spoof()) { icon = &quot;Fingerprint&quot; }
+</a><a href="#h7-1-5" id="h7-1-5" class="i">+    val experimental = container(&quot;experimental&quot;, Experimental()) { icon = &quot;Science&quot;; addNotices(
+</a><a href="#h7-1-6" id="h7-1-6" class="i">+        FeatureNotice.UNSTABLE, FeatureNotice.MAY_CAUSE_CRASHES
+</a><a href="#h7-1-7" id="h7-1-7" class="i">+    ) }
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/data/MessageSender.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/data/MessageSender.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/data/MessageSender.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/data/MessageSender.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -12,7 +12,7 @@ class MessageSender(
+</a>     private val context: ModContext,
+ ) {
+     companion object {
+<a href="#h8-0-3" id="h8-0-3" class="d">-        val redSnapProto: (Boolean) -&gt; ByteArray = {hasAudio -&gt;
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+        val redSnapProto: () -&gt; ByteArray = {
+</a>             ProtoWriter().apply {
+                 from(11, 5) {
+                     from(1) {
+<a href="#h8-1" id="h8-1" class="h">@@ -24,7 +24,7 @@ class MessageSender(
+</a>                         addVarInt(6, 0)
+                     }
+                     from(2) {
+<a href="#h8-1-3" id="h8-1-3" class="d">-                        addVarInt(5, if (hasAudio) 1 else 0)
+</a><a href="#h8-1-4" id="h8-1-4" class="i">+                        addVarInt(5, 1) // audio by default
+</a>                         addBuffer(6, byteArrayOf())
+                     }
+                 }
+<b>diff --git a/<a id="h9" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/DeviceSpooferHook.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/DeviceSpooferHook.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/DeviceSpooferHook.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/DeviceSpooferHook.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -8,10 +8,10 @@ import me.rhunk.snapenhance.hook.Hooker
+</a> 
+ class DeviceSpooferHook: Feature(&quot;device_spoofer&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_ASYNC)  {
+ 	override fun asyncOnActivityCreate() {
+<a href="#h9-0-3" id="h9-0-3" class="d">-		if (context.config.spoof.globalState != true) return
+</a><a href="#h9-0-4" id="h9-0-4" class="i">+		if (context.config.experimental.spoof.globalState != true) return
+</a> 
+<a href="#h9-0-6" id="h9-0-6" class="d">-		val fingerprint by context.config.spoof.device.fingerprint
+</a><a href="#h9-0-7" id="h9-0-7" class="d">-		val androidId by context.config.spoof.device.androidId
+</a><a href="#h9-0-8" id="h9-0-8" class="i">+		val fingerprint by context.config.experimental.spoof.device.fingerprint
+</a><a href="#h9-0-9" id="h9-0-9" class="i">+		val androidId by context.config.experimental.spoof.device.androidId
+</a> 
+ 		if (fingerprint.isNotEmpty()) {
+ 			val fingerprintClass = android.os.Build::class.java
+<b>diff --git a/<a id="h10" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -1,5 +1,6 @@
+</a> package me.rhunk.snapenhance.features.impl.tweaks
+ 
+<a href="#h10-0-2" id="h10-0-2" class="i">+import me.rhunk.snapenhance.Constants
+</a> import me.rhunk.snapenhance.core.eventbus.events.impl.SendMessageWithContentEvent
+ import me.rhunk.snapenhance.core.eventbus.events.impl.UnaryCallEvent
+ import me.rhunk.snapenhance.data.ContentType
+<a href="#h10-1" id="h10-1" class="h">@@ -11,21 +12,36 @@ import me.rhunk.snapenhance.util.protobuf.ProtoEditor
+</a> import me.rhunk.snapenhance.util.protobuf.ProtoReader
+ 
+ class GalleryMediaSendOverride : Feature(&quot;Gallery Media Send Override&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+<a href="#h10-1-3" id="h10-1-3" class="i">+    private var isLastSnapSavable = false
+</a><a href="#h10-1-4" id="h10-1-4" class="i">+
+</a>     override fun init() {
+<a href="#h10-1-6" id="h10-1-6" class="d">-        val typeNames = listOf(
+</a><a href="#h10-1-7" id="h10-1-7" class="i">+        val fixGalleryMediaSendOverride = context.config.experimental.nativeHooks.let {
+</a><a href="#h10-1-8" id="h10-1-8" class="i">+            it.globalState == true &amp;&amp; it.fixGalleryMediaOverride.get()
+</a><a href="#h10-1-9" id="h10-1-9" class="i">+        }
+</a><a href="#h10-1-10" id="h10-1-10" class="i">+        val typeNames = mutableListOf(
+</a>             &quot;ORIGINAL&quot;,
+             &quot;SNAP&quot;,
+<a href="#h10-1-13" id="h10-1-13" class="d">-            &quot;LIVE_SNAP&quot;,
+</a>             &quot;NOTE&quot;
+<a href="#h10-1-15" id="h10-1-15" class="d">-        ).associateWith {
+</a><a href="#h10-1-16" id="h10-1-16" class="i">+        ).also {
+</a><a href="#h10-1-17" id="h10-1-17" class="i">+            if (fixGalleryMediaSendOverride) {
+</a><a href="#h10-1-18" id="h10-1-18" class="i">+                it.add(&quot;SAVABLE_SNAP&quot;)
+</a><a href="#h10-1-19" id="h10-1-19" class="i">+            }
+</a><a href="#h10-1-20" id="h10-1-20" class="i">+        }.associateWith {
+</a>            it
+         }
+ 
+<a href="#h10-1-24" id="h10-1-24" class="d">-        context.event.subscribe(UnaryCallEvent::class) { event -&gt;
+</a><a href="#h10-1-25" id="h10-1-25" class="i">+        context.event.subscribe(UnaryCallEvent::class, { fixGalleryMediaSendOverride }) { event -&gt;
+</a>             if (event.uri != &quot;/messagingcoreservice.MessagingCoreService/CreateContentMessage&quot;) return@subscribe
+<a href="#h10-1-27" id="h10-1-27" class="i">+            if (!isLastSnapSavable) return@subscribe
+</a><a href="#h10-1-28" id="h10-1-28" class="i">+            ProtoReader(event.buffer).also {
+</a><a href="#h10-1-29" id="h10-1-29" class="i">+                // only affect snaps
+</a><a href="#h10-1-30" id="h10-1-30" class="i">+                if (!it.containsPath(*Constants.ARROYO_MEDIA_CONTAINER_PROTO_PATH, 11)) return@subscribe
+</a><a href="#h10-1-31" id="h10-1-31" class="i">+            }
+</a><a href="#h10-1-32" id="h10-1-32" class="i">+            isLastSnapSavable = false
+</a><a href="#h10-1-33" id="h10-1-33" class="i">+
+</a>             event.buffer = ProtoEditor(event.buffer).apply {
+<a href="#h10-1-35" id="h10-1-35" class="d">-                //remove the mas view time
+</a><a href="#h10-1-36" id="h10-1-36" class="d">-                edit(4, 4, 11, 5, 2) {
+</a><a href="#h10-1-37" id="h10-1-37" class="i">+                //remove the max view time
+</a><a href="#h10-1-38" id="h10-1-38" class="i">+                edit(*Constants.ARROYO_MEDIA_CONTAINER_PROTO_PATH, 11, 5, 2) {
+</a>                     remove(8)
+                     addBuffer(6, byteArrayOf())
+                 }
+<a href="#h10-2" id="h10-2" class="h">@@ -43,7 +59,6 @@ class GalleryMediaSendOverride : Feature(&quot;Gallery Media Send Override&quot;, loadPara
+</a>         context.event.subscribe(SendMessageWithContentEvent::class, {
+             context.config.messaging.galleryMediaSendOverride.get()
+         }) { event -&gt;
+<a href="#h10-2-3" id="h10-2-3" class="d">-
+</a>             val localMessageContent = event.messageContent
+             if (localMessageContent.contentType != ContentType.EXTERNAL_MEDIA) return@subscribe
+ 
+<a href="#h10-3" id="h10-3" class="h">@@ -70,9 +85,12 @@ class GalleryMediaSendOverride : Feature(&quot;Gallery Media Send Override&quot;, loadPara
+</a>                         }
+ 
+                         when (overrideType) {
+<a href="#h10-3-3" id="h10-3-3" class="d">-                            &quot;SNAP&quot;, &quot;LIVE_SNAP&quot; -&gt; {
+</a><a href="#h10-3-4" id="h10-3-4" class="i">+                            &quot;SNAP&quot;, &quot;SAVABLE_SNAP&quot; -&gt; {
+</a>                                 localMessageContent.contentType = ContentType.SNAP
+<a href="#h10-3-6" id="h10-3-6" class="d">-                                localMessageContent.content = MessageSender.redSnapProto(overrideType == &quot;LIVE_SNAP&quot;)
+</a><a href="#h10-3-7" id="h10-3-7" class="i">+                                localMessageContent.content = MessageSender.redSnapProto()
+</a><a href="#h10-3-8" id="h10-3-8" class="i">+                                if (overrideType == &quot;SAVABLE_SNAP&quot;) {
+</a><a href="#h10-3-9" id="h10-3-9" class="i">+                                    isLastSnapSavable = true
+</a><a href="#h10-3-10" id="h10-3-10" class="i">+                                }
+</a>                             }
+ 
+                             &quot;NOTE&quot; -&gt; {
+<b>diff --git a/<a id="h11" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/LocationSpoofer.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/LocationSpoofer.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/LocationSpoofer.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/LocationSpoofer.kt</a></b>
+<a href="#h11-0" id="h11-0" class="h">@@ -14,7 +14,7 @@ class LocationSpoofer: Feature(&quot;LocationSpoof&quot;, loadParams = FeatureLoadParams.A
+</a>             val bundle = intent.getBundleExtra(&quot;location&quot;) ?: return@hook
+             param.setResult(null)
+ 
+<a href="#h11-0-3" id="h11-0-3" class="d">-            with(context.config.spoof.location) {
+</a><a href="#h11-0-4" id="h11-0-4" class="i">+            with(context.config.experimental.spoof.location) {
+</a>                 latitude.set(bundle.getFloat(&quot;latitude&quot;))
+                 longitude.set(bundle.getFloat(&quot;longitude&quot;))
+ 
+<a href="#h11-1" id="h11-1" class="h">@@ -22,10 +22,10 @@ class LocationSpoofer: Feature(&quot;LocationSpoof&quot;, loadParams = FeatureLoadParams.A
+</a>             }
+         }
+ 
+<a href="#h11-1-3" id="h11-1-3" class="d">-        if (context.config.spoof.location.globalState != true) return
+</a><a href="#h11-1-4" id="h11-1-4" class="i">+        if (context.config.experimental.spoof.location.globalState != true) return
+</a> 
+<a href="#h11-1-6" id="h11-1-6" class="d">-        val latitude by context.config.spoof.location.latitude
+</a><a href="#h11-1-7" id="h11-1-7" class="d">-        val longitude by context.config.spoof.location.longitude
+</a><a href="#h11-1-8" id="h11-1-8" class="i">+        val latitude by context.config.experimental.spoof.location.latitude
+</a><a href="#h11-1-9" id="h11-1-9" class="i">+        val longitude by context.config.experimental.spoof.location.longitude
+</a> 
+         val locationClass = android.location.Location::class.java
+         val locationManagerClass = android.location.LocationManager::class.java
+<b>diff --git a/<a id="h12" href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a> b/<a href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a></b>
+<a href="#h12-0" id="h12-0" class="h">@@ -4,10 +4,19 @@ import android.util.Log
+</a> 
+ class NativeLib {
+     var nativeUnaryCallCallback: (NativeRequestData) -&gt; Unit = {}
+<a href="#h12-0-3" id="h12-0-3" class="i">+    companion object {
+</a><a href="#h12-0-4" id="h12-0-4" class="i">+        private var initialized = false
+</a><a href="#h12-0-5" id="h12-0-5" class="i">+    }
+</a> 
+     fun initOnce(classloader: ClassLoader) {
+<a href="#h12-0-8" id="h12-0-8" class="d">-        System.loadLibrary(&quot;nativelib&quot;)
+</a><a href="#h12-0-9" id="h12-0-9" class="d">-        init(classloader)
+</a><a href="#h12-0-10" id="h12-0-10" class="i">+        if (initialized) throw IllegalStateException(&quot;NativeLib already initialized&quot;)
+</a><a href="#h12-0-11" id="h12-0-11" class="i">+        runCatching {
+</a><a href="#h12-0-12" id="h12-0-12" class="i">+            System.loadLibrary(BuildConfig.NATIVE_NAME)
+</a><a href="#h12-0-13" id="h12-0-13" class="i">+            init(classloader)
+</a><a href="#h12-0-14" id="h12-0-14" class="i">+            initialized = true
+</a><a href="#h12-0-15" id="h12-0-15" class="i">+        }.onFailure {
+</a><a href="#h12-0-16" id="h12-0-16" class="i">+            Log.e(&quot;SnapEnhance&quot;, &quot;NativeLib init failed&quot;, it)
+</a><a href="#h12-0-17" id="h12-0-17" class="i">+        }
+</a>     }
+ 
+     @Suppress(&quot;unused&quot;)
+<a href="#h12-1" id="h12-1" class="h">@@ -23,7 +32,11 @@ class NativeLib {
+</a>         return null
+     }
+ 
+<a href="#h12-1-3" id="h12-1-3" class="i">+    fun loadNativeConfig(config: NativeConfig) {
+</a><a href="#h12-1-4" id="h12-1-4" class="i">+        if (!initialized) return
+</a><a href="#h12-1-5" id="h12-1-5" class="i">+        loadConfig(config)
+</a><a href="#h12-1-6" id="h12-1-6" class="i">+    }
+</a> 
+<a href="#h12-1-8" id="h12-1-8" class="d">-    external fun init(classLoader: ClassLoader)
+</a><a href="#h12-1-9" id="h12-1-9" class="d">-    external fun loadConfig(config: NativeConfig)
+</a><a href="#h12-1-10" id="h12-1-10" class="i">+    private external fun init(classLoader: ClassLoader)
+</a><a href="#h12-1-11" id="h12-1-11" class="i">+    private external fun loadConfig(config: NativeConfig)
+</a> } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

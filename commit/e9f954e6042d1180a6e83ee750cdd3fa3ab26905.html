@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(downloader): handle duplicate - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/e9f954e6042d1180a6e83ee750cdd3fa3ab26905.html">e9f954e6042d1180a6e83ee750cdd3fa3ab26905</a>
+<b>parent</b> <a href="../commit/a7ab2ffced7b6026b3c7039d66f3cc2a5d341eb4.html">a7ab2ffced7b6026b3c7039d66f3cc2a5d341eb4</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Tue, 31 Oct 2023 15:34:00 +0100
+
+fix(downloader): handle duplicate
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">+++++</span><span class="d">--</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/HashCode.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">+</span><span class="d">-------</span></td></tr>
+</table></pre><pre>3 files changed, 14 insertions(+), 9 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -23,6 +23,7 @@ import me.rhunk.snapenhance.common.data.download.DownloadMetadata
+</a> import me.rhunk.snapenhance.common.data.download.DownloadRequest
+ import me.rhunk.snapenhance.common.data.download.InputMedia
+ import me.rhunk.snapenhance.common.data.download.SplitMediaAssetType
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.common.util.ktx.longHashCode
+</a> import me.rhunk.snapenhance.common.util.snap.MediaDownloaderHelper
+ import me.rhunk.snapenhance.common.util.snap.RemoteMediaResolver
+ import me.rhunk.snapenhance.task.PendingTask
+<a href="#h0-1" id="h0-1" class="h">@@ -328,11 +329,13 @@ class DownloadProcessor (
+</a>         remoteSideContext.coroutineScope.launch {
+             val downloadMetadata = gson.fromJson(intent.getStringExtra(ReceiversConfig.DOWNLOAD_METADATA_EXTRA)!!, DownloadMetadata::class.java)
+             val downloadRequest = gson.fromJson(intent.getStringExtra(ReceiversConfig.DOWNLOAD_REQUEST_EXTRA)!!, DownloadRequest::class.java)
+<a href="#h0-1-3" id="h0-1-3" class="i">+            val downloadId = (downloadMetadata.mediaIdentifier ?: UUID.randomUUID().toString()).longHashCode().absoluteValue.toString(16)
+</a> 
+<a href="#h0-1-5" id="h0-1-5" class="d">-            remoteSideContext.taskManager.getTaskByHash(downloadMetadata.mediaIdentifier)?.let { task -&gt;
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+            remoteSideContext.taskManager.getTaskByHash(downloadId)?.let { task -&gt;
+</a>                 remoteSideContext.log.debug(&quot;already queued or downloaded&quot;)
+ 
+                 if (task.status.isFinalStage()) {
+<a href="#h0-1-10" id="h0-1-10" class="i">+                    if (task.status != TaskStatus.SUCCESS) return@let
+</a>                     callbackOnFailure(translation[&quot;already_downloaded_toast&quot;], null)
+                 } else {
+                     callbackOnFailure(translation[&quot;already_queued_toast&quot;], null)
+<a href="#h0-2" id="h0-2" class="h">@@ -345,7 +348,7 @@ class DownloadProcessor (
+</a>                 Task(
+                     type = TaskType.DOWNLOAD,
+                     title = downloadMetadata.downloadSource + &quot; (&quot; + downloadMetadata.mediaAuthor + &quot;)&quot;,
+<a href="#h0-2-3" id="h0-2-3" class="d">-                    hash = (downloadMetadata.mediaIdentifier ?: UUID.randomUUID().toString()).hashCode().absoluteValue.toString(16)
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+                    hash = downloadId
+</a>                 )
+             ).apply {
+                 status = TaskStatus.RUNNING
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/HashCode.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/HashCode.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/HashCode.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/HashCode.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -0,0 +1,7 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="i">+package me.rhunk.snapenhance.common.util.ktx
+</a><a href="#h1-0-1" id="h1-0-1" class="i">+
+</a><a href="#h1-0-2" id="h1-0-2" class="i">+fun String.longHashCode(): Long {
+</a><a href="#h1-0-3" id="h1-0-3" class="i">+    var h = 1125899906842597L
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    for (element in this) h = 31 * h + element.code.toLong()
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+    return h
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+}</a><a href="#h1-0-7" id="h1-0-7" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -9,6 +9,7 @@ import com.google.gson.JsonObject
+</a> import com.google.gson.JsonParser
+ import me.rhunk.snapenhance.common.data.ContentType
+ import me.rhunk.snapenhance.common.data.MessageState
+<a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.common.util.ktx.longHashCode
+</a> import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+ import me.rhunk.snapenhance.core.event.events.impl.BuildMessageEvent
+<a href="#h2-1" id="h2-1" class="h">@@ -20,13 +21,6 @@ import me.rhunk.snapenhance.core.util.EvictingMap
+</a> import java.util.concurrent.Executors
+ import kotlin.system.measureTimeMillis
+ 
+<a href="#h2-1-3" id="h2-1-3" class="d">-private fun Any.longHashCode(): Long {
+</a><a href="#h2-1-4" id="h2-1-4" class="d">-    var h = 1125899906842597L
+</a><a href="#h2-1-5" id="h2-1-5" class="d">-    val value = this.toString()
+</a><a href="#h2-1-6" id="h2-1-6" class="d">-    for (element in value) h = 31 * h + element.code.toLong()
+</a><a href="#h2-1-7" id="h2-1-7" class="d">-    return h
+</a><a href="#h2-1-8" id="h2-1-8" class="d">-}
+</a><a href="#h2-1-9" id="h2-1-9" class="d">-
+</a> class MessageLogger : Feature(&quot;MessageLogger&quot;,
+     loadParams = FeatureLoadParams.INIT_SYNC or
+         FeatureLoadParams.ACTIVITY_CREATE_SYNC or
+</pre>
+</div>
+</body>
+</html>

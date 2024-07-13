@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix: friend mutation observer - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/292ca926d45ee3e7b76f27b29224fe2318289a86.html">292ca926d45ee3e7b76f27b29224fe2318289a86</a>
+<b>parent</b> <a href="../commit/95eb4e89f634707ca668740a60940d2898ade9ab.html">95eb4e89f634707ca668740a60940d2898ade9ab</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 19 Apr 2024 23:07:46 +0200
+
+fix: friend mutation observer
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/FriendMutationObserver.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+</table></pre><pre>3 files changed, 3 insertions(+), 3 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1115,7 +1115,7 @@
+</a>                 &quot;conversation_read&quot;: &quot;Mark conversation as read when sending a message&quot;,
+                 &quot;snap_reply&quot;: &quot;Mark snaps as read when replying to them&quot;
+             },
+<a href="#h0-0-3" id="h0-0-3" class="d">-            &quot;friend_mutation_observer&quot;: {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+            &quot;friend_mutation_notifier&quot;: {
+</a>                 &quot;remove_friend&quot;: &quot;Notify when someone removes you as a friend&quot;,
+                 &quot;birthday_changes&quot;: &quot;Notify when someone changes their birthday&quot;,
+                 &quot;bitmoji_selfie_changes&quot;: &quot;Notify when someone changes their Bitmoji selfie&quot;,
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -73,7 +73,7 @@ class MessagingTweaks : ConfigContainer() {
+</a>         nativeHooks()
+     }
+     val instantDelete = boolean(&quot;instant_delete&quot;) { requireRestart() }
+<a href="#h1-0-3" id="h1-0-3" class="d">-    val friendMutationObserver = multiple(&quot;friend_mutation_observer&quot;,
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    val friendMutationNotifier = multiple(&quot;friend_mutation_notifier&quot;,
+</a>         &quot;remove_friend&quot;,
+         &quot;birthday_changes&quot;,
+         &quot;bitmoji_selfie_changes&quot;,
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/FriendMutationObserver.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/FriendMutationObserver.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/FriendMutationObserver.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/FriendMutationObserver.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -73,7 +73,7 @@ class FriendMutationObserver: Feature(&quot;FriendMutationObserver&quot;, loadParams = Fea
+</a>     }
+ 
+     override fun init() {
+<a href="#h2-0-3" id="h2-0-3" class="d">-        val config by context.config.messaging.friendMutationObserver
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+        val config by context.config.messaging.friendMutationNotifier
+</a> 
+         context.event.subscribe(NetworkApiRequestEvent::class) { event -&gt;
+             if (!event.url.contains(&quot;ami/friends&quot;)) return@subscribe
+</pre>
+</div>
+</body>
+</html>

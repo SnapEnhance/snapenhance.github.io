@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(core): bypass message action restrictions - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/5d35550cc5bff7320f11253259e1378b22fa9f2b.html">5d35550cc5bff7320f11253259e1378b22fa9f2b</a>
+<b>parent</b> <a href="../commit/aa936cb5ae2ba3db672966b08aef4b86abeb5555.html">aa936cb5ae2ba3db672966b08aef4b86abeb5555</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 17 Mar 2024 13:14:03 +0100
+
+feat(core): bypass message action restrictions
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/BypassMessageActionRestrictions.kt</a></td><td> | </td><td class="num">18</td><td><span class="i">++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>4 files changed, 24 insertions(+), 0 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -466,6 +466,10 @@
+</a>                         &quot;name&quot;: &quot;Bypass Message Retention Policy&quot;,
+                         &quot;description&quot;: &quot;Prevents messages from being deleted after viewing them&quot;
+                     },
+<a href="#h0-0-3" id="h0-0-3" class="i">+                    &quot;bypass_message_action_restrictions&quot;: {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                        &quot;name&quot;: &quot;Bypass Message Action Restrictions&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+                        &quot;description&quot;: &quot;Allows you to react to a snap without having opened it or to save an unsaveable message&quot;
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                    },
+</a>                     &quot;remove_groups_locked_status&quot;: {
+                         &quot;name&quot;: &quot;Remove Groups Locked Status&quot;,
+                         &quot;description&quot;: &quot;Allows you to view group information after being kicked&quot;
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -80,5 +80,6 @@ class MessagingTweaks : ConfigContainer() {
+</a>     val galleryMediaSendOverride = boolean(&quot;gallery_media_send_override&quot;) { nativeHooks() }
+     val stripMediaMetadata = multiple(&quot;strip_media_metadata&quot;, &quot;hide_caption_text&quot;, &quot;hide_snap_filters&quot;, &quot;hide_extras&quot;, &quot;remove_audio_note_duration&quot;, &quot;remove_audio_note_transcript_capability&quot;) { requireRestart() }
+     val bypassMessageRetentionPolicy = boolean(&quot;bypass_message_retention_policy&quot;) { addNotices(FeatureNotice.UNSTABLE); requireRestart() }
+<a href="#h1-0-3" id="h1-0-3" class="i">+    val bypassMessageActionRestrictions = boolean(&quot;bypass_message_action_restrictions&quot;) { requireRestart() }
+</a>     val removeGroupsLockedStatus = boolean(&quot;remove_groups_locked_status&quot;) { requireRestart() }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -123,6 +123,7 @@ class FeatureManager(
+</a>             DisableMemoriesSnapFeed(),
+             AccountSwitcher(),
+             RemoveGroupsLockedStatus(),
+<a href="#h2-0-3" id="h2-0-3" class="i">+            BypassMessageActionRestrictions(),
+</a>         )
+ 
+         initializeFeatures()
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/BypassMessageActionRestrictions.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/BypassMessageActionRestrictions.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/BypassMessageActionRestrictions.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/BypassMessageActionRestrictions.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -0,0 +1,17 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="i">+package me.rhunk.snapenhance.core.features.impl.messaging
+</a><a href="#h3-0-1" id="h3-0-1" class="i">+
+</a><a href="#h3-0-2" id="h3-0-2" class="i">+import me.rhunk.snapenhance.core.event.events.impl.BuildMessageEvent
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+import me.rhunk.snapenhance.core.features.Feature
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import me.rhunk.snapenhance.core.features.FeatureLoadParams
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+class BypassMessageActionRestrictions : Feature(&quot;Bypass Message Action Restrictions&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+    override fun onActivityCreate() {
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+        if (!context.config.messaging.bypassMessageActionRestrictions.get()) return
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+        context.event.subscribe(BuildMessageEvent::class, priority = 102) { event -&gt;
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+            event.message.messageMetadata?.apply {
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+                isSaveable = true
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+                isReactable = true
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+            }
+</a><a href="#h3-0-14" id="h3-0-14" class="i">+        }
+</a><a href="#h3-0-15" id="h3-0-15" class="i">+    }
+</a><a href="#h3-0-16" id="h3-0-16" class="i">+}</a><a href="#h3-0-17" id="h3-0-17" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

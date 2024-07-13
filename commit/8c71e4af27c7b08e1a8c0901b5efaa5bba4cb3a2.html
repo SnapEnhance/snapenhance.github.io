@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>perf: bridge objects - bridge oneway methods - scope sync - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/8c71e4af27c7b08e1a8c0901b5efaa5bba4cb3a2.html">8c71e4af27c7b08e1a8c0901b5efaa5bba4cb3a2</a>
+<b>parent</b> <a href="../commit/0994b8f36dd43db0517cfa0d2ae4dc2bfb876701.html">0994b8f36dd43db0517cfa0d2ae4dc2bfb876701</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Tue, 16 Jan 2024 00:01:37 +0100
+
+perf: bridge objects
+- bridge oneway methods
+- scope sync
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/build.gradle.kts</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt</a></td><td> | </td><td class="num">11</td><td><span class="i">+++++</span><span class="d">------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a></td><td> | </td><td class="num">72</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++</span><span class="d">-------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/SocialSection.kt</a></td><td> | </td><td class="num">15</td><td><span class="i">+++++++++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">common/build.gradle.kts</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">common/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl</a></td><td> | </td><td class="num">20</td><td><span class="i">++++++++++</span><span class="d">----------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl</a></td><td> | </td><td class="num">6</td><td><span class="i">+++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">common/src/main/kotlin/me/rhunk/snapenhance/common/config/ModConfig.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">common/src/main/kotlin/me/rhunk/snapenhance/common/data/MessagingCoreObjects.kt</a></td><td> | </td><td class="num">23</td><td><span class="i">+++++++++++++</span><span class="d">----------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendInfo.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">+</span><span class="d">--</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h10">common/src/main/kotlin/me/rhunk/snapenhance/common/util/ParcelableExt.kt</a></td><td> | </td><td class="num">33</td><td><span class="i">+++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="D">D</td><td><a href="#h11">common/src/main/kotlin/me/rhunk/snapenhance/common/util/SerializableDataObject.kt</a></td><td> | </td><td class="num">23</td><td><span class="i"></span><span class="d">-----------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h12">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></td><td> | </td><td class="num">31</td><td><span class="i">++++++++++++++++++++++</span><span class="d">---------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h13">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">+++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h14">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/ActionManager.kt</a></td><td> | </td><td class="num">10</td><td><span class="i">+++++</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h15">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a></td><td> | </td><td class="num">163</td><td><span class="i">++++++++++++++++++++++++++++++++++++++</span><span class="d">-----------------------------------------</span></td></tr>
+</table></pre><pre>16 files changed, 233 insertions(+), 189 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/build.gradle.kts.html">app/build.gradle.kts</a> b/<a href="../file/app/build.gradle.kts.html">app/build.gradle.kts</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -8,6 +8,7 @@ import java.io.ByteArrayOutputStream
+</a> plugins {
+     alias(libs.plugins.androidApplication)
+     alias(libs.plugins.kotlinAndroid)
+<a href="#h0-0-3" id="h0-0-3" class="i">+    id(&quot;kotlin-parcelize&quot;)
+</a> }
+ 
+ android {
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -12,9 +12,8 @@ import me.rhunk.snapenhance.common.bridge.wrapper.LocaleWrapper
+</a> import me.rhunk.snapenhance.common.data.MessagingFriendInfo
+ import me.rhunk.snapenhance.common.data.MessagingGroupInfo
+ import me.rhunk.snapenhance.common.data.SocialScope
+<a href="#h1-0-3" id="h1-0-3" class="d">-import me.rhunk.snapenhance.common.database.impl.FriendInfo
+</a> import me.rhunk.snapenhance.common.logger.LogLevel
+<a href="#h1-0-5" id="h1-0-5" class="d">-import me.rhunk.snapenhance.common.util.SerializableDataObject
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+import me.rhunk.snapenhance.common.util.toParcelable
+</a> import me.rhunk.snapenhance.download.DownloadProcessor
+ import kotlin.system.measureTimeMillis
+ 
+<a href="#h1-1" id="h1-1" class="h">@@ -61,12 +60,12 @@ class BridgeService : Service() {
+</a> 
+             when (scope) {
+                 SocialScope.FRIEND -&gt; {
+<a href="#h1-1-3" id="h1-1-3" class="d">-                    SerializableDataObject.fromJson&lt;FriendInfo&gt;(syncedObject).let {
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+                    toParcelable&lt;MessagingFriendInfo&gt;(syncedObject)?.let {
+</a>                         modDatabase.syncFriend(it)
+                     }
+                 }
+                 SocialScope.GROUP -&gt; {
+<a href="#h1-1-9" id="h1-1-9" class="d">-                    SerializableDataObject.fromJson&lt;MessagingGroupInfo&gt;(syncedObject).let {
+</a><a href="#h1-1-10" id="h1-1-10" class="i">+                    toParcelable&lt;MessagingGroupInfo&gt;(syncedObject)?.let {
+</a>                         modDatabase.syncGroupInfo(it)
+                     }
+                 }
+<a href="#h1-2" id="h1-2" class="h">@@ -169,8 +168,8 @@ class BridgeService : Service() {
+</a>         ) {
+             remoteSideContext.log.verbose(&quot;Received ${groups.size} groups and ${friends.size} friends&quot;)
+             remoteSideContext.modDatabase.receiveMessagingDataCallback(
+<a href="#h1-2-3" id="h1-2-3" class="d">-                friends.map { SerializableDataObject.fromJson&lt;MessagingFriendInfo&gt;(it) },
+</a><a href="#h1-2-4" id="h1-2-4" class="d">-                groups.map { SerializableDataObject.fromJson&lt;MessagingGroupInfo&gt;(it) }
+</a><a href="#h1-2-5" id="h1-2-5" class="i">+                friends.mapNotNull { toParcelable&lt;MessagingFriendInfo&gt;(it) },
+</a><a href="#h1-2-6" id="h1-2-6" class="i">+                groups.mapNotNull { toParcelable&lt;MessagingGroupInfo&gt;(it) }
+</a>             )
+         }
+ 
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -6,7 +6,6 @@ import me.rhunk.snapenhance.common.data.FriendStreaks
+</a> import me.rhunk.snapenhance.common.data.MessagingFriendInfo
+ import me.rhunk.snapenhance.common.data.MessagingGroupInfo
+ import me.rhunk.snapenhance.common.data.MessagingRuleType
+<a href="#h2-0-3" id="h2-0-3" class="d">-import me.rhunk.snapenhance.common.database.impl.FriendInfo
+</a> import me.rhunk.snapenhance.common.scripting.type.ModuleInfo
+ import me.rhunk.snapenhance.common.util.SQLiteDatabaseHelper
+ import me.rhunk.snapenhance.common.util.ktx.getInteger
+<a href="#h2-1" id="h2-1" class="h">@@ -56,7 +55,7 @@ class ModDatabase(
+</a>                 &quot;targetUuid VARCHAR&quot;
+             ),
+             &quot;streaks&quot; to listOf(
+<a href="#h2-1-3" id="h2-1-3" class="d">-                &quot;userId VARCHAR PRIMARY KEY&quot;,
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+                &quot;id VARCHAR PRIMARY KEY&quot;,
+</a>                 &quot;notify BOOLEAN&quot;,
+                 &quot;expirationTimestamp BIGINT&quot;,
+                 &quot;length INTEGER&quot;
+<a href="#h2-2" id="h2-2" class="h">@@ -78,10 +77,10 @@ class ModDatabase(
+</a>             while (cursor.moveToNext()) {
+                 groups.add(
+                     MessagingGroupInfo(
+<a href="#h2-2-3" id="h2-2-3" class="d">-                    conversationId = cursor.getStringOrNull(&quot;conversationId&quot;)!!,
+</a><a href="#h2-2-4" id="h2-2-4" class="d">-                    name = cursor.getStringOrNull(&quot;name&quot;)!!,
+</a><a href="#h2-2-5" id="h2-2-5" class="d">-                    participantsCount = cursor.getInteger(&quot;participantsCount&quot;)
+</a><a href="#h2-2-6" id="h2-2-6" class="d">-                )
+</a><a href="#h2-2-7" id="h2-2-7" class="i">+                        conversationId = cursor.getStringOrNull(&quot;conversationId&quot;)!!,
+</a><a href="#h2-2-8" id="h2-2-8" class="i">+                        name = cursor.getStringOrNull(&quot;name&quot;)!!,
+</a><a href="#h2-2-9" id="h2-2-9" class="i">+                        participantsCount = cursor.getInteger(&quot;participantsCount&quot;)
+</a><a href="#h2-2-10" id="h2-2-10" class="i">+                    )
+</a>                 )
+             }
+             groups
+<a href="#h2-3" id="h2-3" class="h">@@ -89,18 +88,25 @@ class ModDatabase(
+</a>     }
+ 
+     fun getFriends(descOrder: Boolean = false): List&lt;MessagingFriendInfo&gt; {
+<a href="#h2-3-3" id="h2-3-3" class="d">-        return database.rawQuery(&quot;SELECT * FROM friends ORDER BY id ${if (descOrder) &quot;DESC&quot; else &quot;ASC&quot;}&quot;, null).use { cursor -&gt;
+</a><a href="#h2-3-4" id="h2-3-4" class="i">+        return database.rawQuery(&quot;SELECT * FROM friends LEFT OUTER JOIN streaks ON friends.userId = streaks.id ORDER BY id ${if (descOrder) &quot;DESC&quot; else &quot;ASC&quot;}&quot;, null).use { cursor -&gt;
+</a>             val friends = mutableListOf&lt;MessagingFriendInfo&gt;()
+             while (cursor.moveToNext()) {
+                 runCatching {
+                     friends.add(
+                         MessagingFriendInfo(
+<a href="#h2-3-10" id="h2-3-10" class="d">-                        userId = cursor.getStringOrNull(&quot;userId&quot;)!!,
+</a><a href="#h2-3-11" id="h2-3-11" class="d">-                        displayName = cursor.getStringOrNull(&quot;displayName&quot;),
+</a><a href="#h2-3-12" id="h2-3-12" class="d">-                        mutableUsername = cursor.getStringOrNull(&quot;mutableUsername&quot;)!!,
+</a><a href="#h2-3-13" id="h2-3-13" class="d">-                        bitmojiId = cursor.getStringOrNull(&quot;bitmojiId&quot;),
+</a><a href="#h2-3-14" id="h2-3-14" class="d">-                        selfieId = cursor.getStringOrNull(&quot;selfieId&quot;)
+</a><a href="#h2-3-15" id="h2-3-15" class="d">-                    )
+</a><a href="#h2-3-16" id="h2-3-16" class="i">+                            userId = cursor.getStringOrNull(&quot;userId&quot;)!!,
+</a><a href="#h2-3-17" id="h2-3-17" class="i">+                            displayName = cursor.getStringOrNull(&quot;displayName&quot;),
+</a><a href="#h2-3-18" id="h2-3-18" class="i">+                            mutableUsername = cursor.getStringOrNull(&quot;mutableUsername&quot;)!!,
+</a><a href="#h2-3-19" id="h2-3-19" class="i">+                            bitmojiId = cursor.getStringOrNull(&quot;bitmojiId&quot;),
+</a><a href="#h2-3-20" id="h2-3-20" class="i">+                            selfieId = cursor.getStringOrNull(&quot;selfieId&quot;),
+</a><a href="#h2-3-21" id="h2-3-21" class="i">+                            streaks = cursor.getLongOrNull(&quot;expirationTimestamp&quot;)?.let {
+</a><a href="#h2-3-22" id="h2-3-22" class="i">+                                FriendStreaks(
+</a><a href="#h2-3-23" id="h2-3-23" class="i">+                                    notify = cursor.getInteger(&quot;notify&quot;) == 1,
+</a><a href="#h2-3-24" id="h2-3-24" class="i">+                                    expirationTimestamp = it,
+</a><a href="#h2-3-25" id="h2-3-25" class="i">+                                    length = cursor.getInteger(&quot;length&quot;)
+</a><a href="#h2-3-26" id="h2-3-26" class="i">+                                )
+</a><a href="#h2-3-27" id="h2-3-27" class="i">+                            }
+</a><a href="#h2-3-28" id="h2-3-28" class="i">+                        )
+</a>                     )
+                 }.onFailure {
+                     context.log.error(&quot;Failed to parse friend&quot;, it)
+<a href="#h2-4" id="h2-4" class="h">@@ -125,7 +131,7 @@ class ModDatabase(
+</a>         }
+     }
+ 
+<a href="#h2-4-3" id="h2-4-3" class="d">-    fun syncFriend(friend: FriendInfo) {
+</a><a href="#h2-4-4" id="h2-4-4" class="i">+    fun syncFriend(friend: MessagingFriendInfo) {
+</a>         executeAsync {
+             try {
+                 database.execSQL(
+<a href="#h2-5" id="h2-5" class="h">@@ -133,24 +139,22 @@ class ModDatabase(
+</a>                     arrayOf(
+                         friend.userId,
+                         friend.displayName,
+<a href="#h2-5-3" id="h2-5-3" class="d">-                        friend.usernameForSorting!!,
+</a><a href="#h2-5-4" id="h2-5-4" class="d">-                        friend.bitmojiAvatarId,
+</a><a href="#h2-5-5" id="h2-5-5" class="d">-                        friend.bitmojiSelfieId
+</a><a href="#h2-5-6" id="h2-5-6" class="i">+                        friend.mutableUsername,
+</a><a href="#h2-5-7" id="h2-5-7" class="i">+                        friend.bitmojiId,
+</a><a href="#h2-5-8" id="h2-5-8" class="i">+                        friend.selfieId
+</a>                     )
+                 )
+                 //sync streaks
+<a href="#h2-5-12" id="h2-5-12" class="d">-                if (friend.streakLength &gt; 0) {
+</a><a href="#h2-5-13" id="h2-5-13" class="d">-                    val streaks = getFriendStreaks(friend.userId!!)
+</a><a href="#h2-5-14" id="h2-5-14" class="i">+                friend.streaks?.takeIf { it.length &gt; 0 }?.let {
+</a><a href="#h2-5-15" id="h2-5-15" class="i">+                    val streaks = getFriendStreaks(friend.userId)
+</a> 
+<a href="#h2-5-17" id="h2-5-17" class="d">-                    database.execSQL(&quot;INSERT OR REPLACE INTO streaks (userId, notify, expirationTimestamp, length) VALUES (?, ?, ?, ?)&quot;, arrayOf(
+</a><a href="#h2-5-18" id="h2-5-18" class="i">+                    database.execSQL(&quot;INSERT OR REPLACE INTO streaks (id, notify, expirationTimestamp, length) VALUES (?, ?, ?, ?)&quot;, arrayOf(
+</a>                         friend.userId,
+                         streaks?.notify ?: true,
+<a href="#h2-5-21" id="h2-5-21" class="d">-                        friend.streakExpirationTimestamp,
+</a><a href="#h2-5-22" id="h2-5-22" class="d">-                        friend.streakLength
+</a><a href="#h2-5-23" id="h2-5-23" class="i">+                        it.expirationTimestamp,
+</a><a href="#h2-5-24" id="h2-5-24" class="i">+                        it.length
+</a>                     ))
+<a href="#h2-5-26" id="h2-5-26" class="d">-                } else {
+</a><a href="#h2-5-27" id="h2-5-27" class="d">-                    database.execSQL(&quot;DELETE FROM streaks WHERE userId = ?&quot;, arrayOf(friend.userId))
+</a><a href="#h2-5-28" id="h2-5-28" class="d">-                }
+</a><a href="#h2-5-29" id="h2-5-29" class="i">+                } ?: database.execSQL(&quot;DELETE FROM streaks WHERE id = ?&quot;, arrayOf(friend.userId))
+</a>             } catch (e: Exception) {
+                 throw e
+             }
+<a href="#h2-6" id="h2-6" class="h">@@ -190,14 +194,21 @@ class ModDatabase(
+</a>     }
+ 
+     fun getFriendInfo(userId: String): MessagingFriendInfo? {
+<a href="#h2-6-3" id="h2-6-3" class="d">-        return database.rawQuery(&quot;SELECT * FROM friends WHERE userId = ?&quot;, arrayOf(userId)).use { cursor -&gt;
+</a><a href="#h2-6-4" id="h2-6-4" class="i">+        return database.rawQuery(&quot;SELECT * FROM friends LEFT OUTER JOIN streaks ON friends.userId = streaks.id WHERE userId = ?&quot;, arrayOf(userId)).use { cursor -&gt;
+</a>             if (!cursor.moveToFirst()) return@use null
+             MessagingFriendInfo(
+                 userId = cursor.getStringOrNull(&quot;userId&quot;)!!,
+                 displayName = cursor.getStringOrNull(&quot;displayName&quot;),
+                 mutableUsername = cursor.getStringOrNull(&quot;mutableUsername&quot;)!!,
+                 bitmojiId = cursor.getStringOrNull(&quot;bitmojiId&quot;),
+<a href="#h2-6-11" id="h2-6-11" class="d">-                selfieId = cursor.getStringOrNull(&quot;selfieId&quot;)
+</a><a href="#h2-6-12" id="h2-6-12" class="i">+                selfieId = cursor.getStringOrNull(&quot;selfieId&quot;),
+</a><a href="#h2-6-13" id="h2-6-13" class="i">+                streaks = cursor.getLongOrNull(&quot;expirationTimestamp&quot;)?.let {
+</a><a href="#h2-6-14" id="h2-6-14" class="i">+                    FriendStreaks(
+</a><a href="#h2-6-15" id="h2-6-15" class="i">+                        notify = cursor.getInteger(&quot;notify&quot;) == 1,
+</a><a href="#h2-6-16" id="h2-6-16" class="i">+                        expirationTimestamp = it,
+</a><a href="#h2-6-17" id="h2-6-17" class="i">+                        length = cursor.getInteger(&quot;length&quot;)
+</a><a href="#h2-6-18" id="h2-6-18" class="i">+                    )
+</a><a href="#h2-6-19" id="h2-6-19" class="i">+                }
+</a>             )
+         }
+     }
+<a href="#h2-7" id="h2-7" class="h">@@ -205,7 +216,7 @@ class ModDatabase(
+</a>     fun deleteFriend(userId: String) {
+         executeAsync {
+             database.execSQL(&quot;DELETE FROM friends WHERE userId = ?&quot;, arrayOf(userId))
+<a href="#h2-7-3" id="h2-7-3" class="d">-            database.execSQL(&quot;DELETE FROM streaks WHERE userId = ?&quot;, arrayOf(userId))
+</a><a href="#h2-7-4" id="h2-7-4" class="i">+            database.execSQL(&quot;DELETE FROM streaks WHERE id = ?&quot;, arrayOf(userId))
+</a>             database.execSQL(&quot;DELETE FROM rules WHERE targetUuid = ?&quot;, arrayOf(userId))
+         }
+     }
+<a href="#h2-8" id="h2-8" class="h">@@ -229,10 +240,9 @@ class ModDatabase(
+</a>     }
+ 
+     fun getFriendStreaks(userId: String): FriendStreaks? {
+<a href="#h2-8-3" id="h2-8-3" class="d">-        return database.rawQuery(&quot;SELECT * FROM streaks WHERE userId = ?&quot;, arrayOf(userId)).use { cursor -&gt;
+</a><a href="#h2-8-4" id="h2-8-4" class="i">+        return database.rawQuery(&quot;SELECT * FROM streaks WHERE id = ?&quot;, arrayOf(userId)).use { cursor -&gt;
+</a>             if (!cursor.moveToFirst()) return@use null
+             FriendStreaks(
+<a href="#h2-8-7" id="h2-8-7" class="d">-                userId = cursor.getStringOrNull(&quot;userId&quot;)!!,
+</a>                 notify = cursor.getInteger(&quot;notify&quot;) == 1,
+                 expirationTimestamp = cursor.getLongOrNull(&quot;expirationTimestamp&quot;) ?: 0L,
+                 length = cursor.getInteger(&quot;length&quot;)
+<a href="#h2-9" id="h2-9" class="h">@@ -242,7 +252,7 @@ class ModDatabase(
+</a> 
+     fun setFriendStreaksNotify(userId: String, notify: Boolean) {
+         executeAsync {
+<a href="#h2-9-3" id="h2-9-3" class="d">-            database.execSQL(&quot;UPDATE streaks SET notify = ? WHERE userId = ?&quot;, arrayOf(
+</a><a href="#h2-9-4" id="h2-9-4" class="i">+            database.execSQL(&quot;UPDATE streaks SET notify = ? WHERE id = ?&quot;, arrayOf(
+</a>                 if (notify) 1 else 0,
+                 userId
+             ))
+<b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/SocialSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/SocialSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/SocialSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/SocialSection.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -26,7 +26,9 @@ import androidx.compose.ui.window.Dialog
+</a> import androidx.navigation.NavGraphBuilder
+ import androidx.navigation.compose.composable
+ import androidx.navigation.navigation
+<a href="#h3-0-3" id="h3-0-3" class="i">+import kotlinx.coroutines.Dispatchers
+</a> import kotlinx.coroutines.launch
+<a href="#h3-0-5" id="h3-0-5" class="i">+import kotlinx.coroutines.withContext
+</a> import me.rhunk.snapenhance.R
+ import me.rhunk.snapenhance.common.data.MessagingFriendInfo
+ import me.rhunk.snapenhance.common.data.MessagingGroupInfo
+<a href="#h3-1" id="h3-1" class="h">@@ -214,8 +216,13 @@ class SocialSection : Section() {
+</a> 
+                             SocialScope.FRIEND -&gt; {
+                                 val friend = friendList[index]
+<a href="#h3-1-3" id="h3-1-3" class="d">-                                val streaks =
+</a><a href="#h3-1-4" id="h3-1-4" class="d">-                                    remember { context.modDatabase.getFriendStreaks(friend.userId) }
+</a><a href="#h3-1-5" id="h3-1-5" class="i">+                                var streaks by remember { mutableStateOf(friend.streaks) }
+</a><a href="#h3-1-6" id="h3-1-6" class="i">+
+</a><a href="#h3-1-7" id="h3-1-7" class="i">+                                LaunchedEffect(friend.userId) {
+</a><a href="#h3-1-8" id="h3-1-8" class="i">+                                    withContext(Dispatchers.IO) {
+</a><a href="#h3-1-9" id="h3-1-9" class="i">+                                        streaks = context.modDatabase.getFriendStreaks(friend.userId)
+</a><a href="#h3-1-10" id="h3-1-10" class="i">+                                    }
+</a><a href="#h3-1-11" id="h3-1-11" class="i">+                                }
+</a> 
+                                 BitmojiImage(
+                                     context = context,
+<a href="#h3-2" id="h3-2" class="h">@@ -244,7 +251,7 @@ class SocialSection : Section() {
+</a>                                     )
+                                 }
+                                 Row(verticalAlignment = Alignment.CenterVertically) {
+<a href="#h3-2-3" id="h3-2-3" class="d">-                                    if (streaks != null &amp;&amp; streaks.notify) {
+</a><a href="#h3-2-4" id="h3-2-4" class="i">+                                    streaks?.takeIf { it.notify }?.let { streaks -&gt;
+</a>                                         Icon(
+                                             imageVector = ImageVector.vectorResource(id = R.drawable.streak_icon),
+                                             contentDescription = null,
+<a href="#h3-3" id="h3-3" class="h">@@ -256,7 +263,7 @@ class SocialSection : Section() {
+</a>                                         Text(
+                                             text = context.translation.format(
+                                                 &quot;manager.sections.social.streaks_expiration_short&quot;,
+<a href="#h3-3-3" id="h3-3-3" class="d">-                                                &quot;hours&quot; to ((streaks.expirationTimestamp - System.currentTimeMillis()) / 3600000).toInt()
+</a><a href="#h3-3-4" id="h3-3-4" class="i">+                                                &quot;hours&quot; to (((streaks.expirationTimestamp - System.currentTimeMillis()) / 3600000).toInt().takeIf { it &gt; 0 } ?: 0)
+</a>                                                     .toString()
+                                             ),
+                                             maxLines = 1,
+<b>diff --git a/<a id="h4" href="../file/common/build.gradle.kts.html">common/build.gradle.kts</a> b/<a href="../file/common/build.gradle.kts.html">common/build.gradle.kts</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -1,6 +1,7 @@
+</a> plugins {
+     alias(libs.plugins.androidLibrary)
+     alias(libs.plugins.kotlinAndroid)
+<a href="#h4-0-3" id="h4-0-3" class="i">+    id(&quot;kotlin-parcelize&quot;)
+</a> }
+ 
+ android {
+<b>diff --git a/<a id="h5" href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl</a> b/<a href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -13,7 +13,7 @@ interface BridgeInterface {
+</a>     /**
+     * broadcast a log message
+     */
+<a href="#h5-0-3" id="h5-0-3" class="d">-    void broadcastLog(String tag, String level, String message);
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+    oneway void broadcastLog(String tag, String level, String message);
+</a> 
+     /**
+     * Execute a file operation
+<a href="#h5-1" id="h5-1" class="h">@@ -36,7 +36,7 @@ interface BridgeInterface {
+</a>     /**
+      * Enqueue a download
+      */
+<a href="#h5-1-3" id="h5-1-3" class="d">-    void enqueueDownload(in Intent intent, DownloadCallback callback);
+</a><a href="#h5-1-4" id="h5-1-4" class="i">+    oneway void enqueueDownload(in Intent intent, DownloadCallback callback);
+</a> 
+     /**
+     * Get rules for a given user or conversation
+<a href="#h5-2" id="h5-2" class="h">@@ -56,7 +56,7 @@ interface BridgeInterface {
+</a>     *
+     * @param type rule type (MessagingRuleType)
+     */
+<a href="#h5-2-3" id="h5-2-3" class="d">-    void setRule(String uuid, String type, boolean state);
+</a><a href="#h5-2-4" id="h5-2-4" class="i">+    oneway void setRule(String uuid, String type, boolean state);
+</a> 
+     /**
+     * Sync groups and friends
+<a href="#h5-3" id="h5-3" class="h">@@ -66,12 +66,12 @@ interface BridgeInterface {
+</a>     /**
+     * Trigger sync for an id
+     */
+<a href="#h5-3-3" id="h5-3-3" class="d">-    void triggerSync(String scope, String id);
+</a><a href="#h5-3-4" id="h5-3-4" class="i">+    oneway void triggerSync(String scope, String id);
+</a> 
+     /**
+     * Pass all groups and friends to be able to add them to the database
+<a href="#h5-3-8" id="h5-3-8" class="d">-    * @param groups list of groups (MessagingGroupInfo as json string)
+</a><a href="#h5-3-9" id="h5-3-9" class="d">-    * @param friends list of friends (MessagingFriendInfo as json string)
+</a><a href="#h5-3-10" id="h5-3-10" class="i">+    * @param groups list of groups (MessagingGroupInfo as parcelable)
+</a><a href="#h5-3-11" id="h5-3-11" class="i">+    * @param friends list of friends (MessagingFriendInfo as parcelable)
+</a>     */
+     oneway void passGroupsAndFriends(in List&lt;String&gt; groups, in List&lt;String&gt; friends);
+ 
+<a href="#h5-4" id="h5-4" class="h">@@ -81,11 +81,11 @@ interface BridgeInterface {
+</a> 
+     MessageLoggerInterface getMessageLogger();
+ 
+<a href="#h5-4-3" id="h5-4-3" class="d">-    void registerMessagingBridge(MessagingBridge bridge);
+</a><a href="#h5-4-4" id="h5-4-4" class="i">+    oneway void registerMessagingBridge(MessagingBridge bridge);
+</a> 
+<a href="#h5-4-6" id="h5-4-6" class="d">-    void openSettingsOverlay();
+</a><a href="#h5-4-7" id="h5-4-7" class="i">+    oneway void openSettingsOverlay();
+</a> 
+<a href="#h5-4-9" id="h5-4-9" class="d">-    void closeSettingsOverlay();
+</a><a href="#h5-4-10" id="h5-4-10" class="i">+    oneway void closeSettingsOverlay();
+</a> 
+<a href="#h5-4-12" id="h5-4-12" class="d">-    void registerConfigStateListener(in ConfigStateListener listener);
+</a><a href="#h5-4-13" id="h5-4-13" class="i">+    oneway void registerConfigStateListener(in ConfigStateListener listener);
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h6" href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl</a> b/<a href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -8,11 +8,11 @@ interface IScripting {
+</a> 
+     @nullable String getScriptContent(String path);
+ 
+<a href="#h6-0-3" id="h6-0-3" class="d">-    void registerIPCListener(String channel, String eventName, IPCListener listener);
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+    oneway void registerIPCListener(String channel, String eventName, IPCListener listener);
+</a> 
+<a href="#h6-0-6" id="h6-0-6" class="d">-    void sendIPCMessage(String channel, String eventName, in String[] args);
+</a><a href="#h6-0-7" id="h6-0-7" class="i">+    oneway void sendIPCMessage(String channel, String eventName, in String[] args);
+</a> 
+     @nullable String configTransaction(String module, String action, @nullable String key, @nullable String value, boolean save);
+ 
+<a href="#h6-0-11" id="h6-0-11" class="d">-    void registerAutoReloadListener(in AutoReloadListener listener);
+</a><a href="#h6-0-12" id="h6-0-12" class="i">+    oneway void registerAutoReloadListener(in AutoReloadListener listener);
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h7" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/ModConfig.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/ModConfig.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/ModConfig.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/ModConfig.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -33,7 +33,7 @@ class ModConfig(
+</a>     private fun load() {
+         root = createRootConfig()
+         wasPresent = file.isFileExists()
+<a href="#h7-0-3" id="h7-0-3" class="d">-        if (!file.isFileExists()) {
+</a><a href="#h7-0-4" id="h7-0-4" class="i">+        if (!wasPresent) {
+</a>             writeConfig()
+             return
+         }
+<b>diff --git a/<a id="h8" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/MessagingCoreObjects.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/MessagingCoreObjects.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/MessagingCoreObjects.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/MessagingCoreObjects.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -1,7 +1,8 @@
+</a> package me.rhunk.snapenhance.common.data
+ 
+<a href="#h8-0-2" id="h8-0-2" class="i">+import android.os.Parcelable
+</a><a href="#h8-0-3" id="h8-0-3" class="i">+import kotlinx.parcelize.Parcelize
+</a> import me.rhunk.snapenhance.common.config.FeatureNotice
+<a href="#h8-0-5" id="h8-0-5" class="d">-import me.rhunk.snapenhance.common.util.SerializableDataObject
+</a> import kotlin.time.Duration.Companion.hours
+ 
+ 
+<a href="#h8-1" id="h8-1" class="h">@@ -52,12 +53,12 @@ enum class MessagingRuleType(
+</a>     }
+ }
+ 
+<a href="#h8-1-3" id="h8-1-3" class="i">+@Parcelize
+</a> data class FriendStreaks(
+<a href="#h8-1-5" id="h8-1-5" class="d">-    val userId: String,
+</a><a href="#h8-1-6" id="h8-1-6" class="d">-    val notify: Boolean,
+</a><a href="#h8-1-7" id="h8-1-7" class="i">+    val notify: Boolean = true,
+</a>     val expirationTimestamp: Long,
+     val length: Int
+<a href="#h8-1-10" id="h8-1-10" class="d">-) : SerializableDataObject() {
+</a><a href="#h8-1-11" id="h8-1-11" class="i">+): Parcelable {
+</a>     fun hoursLeft() = (expirationTimestamp - System.currentTimeMillis()) / 1000 / 60 / 60
+ 
+     fun isAboutToExpire(expireHours: Int) = (expirationTimestamp - System.currentTimeMillis()).let {
+<a href="#h8-2" id="h8-2" class="h">@@ -65,20 +66,22 @@ data class FriendStreaks(
+</a>     }
+ }
+ 
+<a href="#h8-2-3" id="h8-2-3" class="i">+@Parcelize
+</a> data class MessagingGroupInfo(
+     val conversationId: String,
+     val name: String,
+     val participantsCount: Int
+<a href="#h8-2-8" id="h8-2-8" class="d">-) : SerializableDataObject()
+</a><a href="#h8-2-9" id="h8-2-9" class="i">+): Parcelable
+</a> 
+<a href="#h8-2-11" id="h8-2-11" class="i">+@Parcelize
+</a> data class MessagingFriendInfo(
+     val userId: String,
+     val displayName: String?,
+     val mutableUsername: String,
+     val bitmojiId: String?,
+<a href="#h8-2-17" id="h8-2-17" class="d">-    val selfieId: String?
+</a><a href="#h8-2-18" id="h8-2-18" class="d">-) : SerializableDataObject()
+</a><a href="#h8-2-19" id="h8-2-19" class="d">-
+</a><a href="#h8-2-20" id="h8-2-20" class="i">+    val selfieId: String?,
+</a><a href="#h8-2-21" id="h8-2-21" class="i">+    var streaks: FriendStreaks?,
+</a><a href="#h8-2-22" id="h8-2-22" class="i">+): Parcelable
+</a> 
+ class StoryData(
+     val url: String,
+<a href="#h8-3" id="h8-3" class="h">@@ -86,4 +89,4 @@ class StoryData(
+</a>     val createdAt: Long,
+     val key: ByteArray?,
+     val iv: ByteArray?
+<a href="#h8-3-3" id="h8-3-3" class="d">-) : SerializableDataObject()</a><a href="#h8-3-4" id="h8-3-4" class="d">-
+\ No newline at end of file
+</a><a href="#h8-3-5" id="h8-3-5" class="i">+)</a><a href="#h8-3-6" id="h8-3-6" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h9" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendInfo.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendInfo.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendInfo.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendInfo.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -3,7 +3,6 @@ package me.rhunk.snapenhance.common.database.impl
+</a> import android.annotation.SuppressLint
+ import android.database.Cursor
+ import me.rhunk.snapenhance.common.database.DatabaseObject
+<a href="#h9-0-3" id="h9-0-3" class="d">-import me.rhunk.snapenhance.common.util.SerializableDataObject
+</a> import me.rhunk.snapenhance.common.util.ktx.getInteger
+ import me.rhunk.snapenhance.common.util.ktx.getLong
+ import me.rhunk.snapenhance.common.util.ktx.getStringOrNull
+<a href="#h9-1" id="h9-1" class="h">@@ -33,7 +32,7 @@ data class FriendInfo(
+</a>     var usernameForSorting: String? = null,
+     var friendLinkType: Int = 0,
+     var postViewEmoji: String? = null,
+<a href="#h9-1-3" id="h9-1-3" class="d">-) : DatabaseObject, SerializableDataObject() {
+</a><a href="#h9-1-4" id="h9-1-4" class="i">+) : DatabaseObject {
+</a>     val mutableUsername get() = username?.split(&quot;|&quot;)?.last()
+     val firstCreatedUsername get() = username?.split(&quot;|&quot;)?.first()
+ 
+<b>diff --git a/<a id="h10" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/ParcelableExt.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/ParcelableExt.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/ParcelableExt.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/ParcelableExt.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -0,0 +1,33 @@
+</a><a href="#h10-0-0" id="h10-0-0" class="i">+package me.rhunk.snapenhance.common.util
+</a><a href="#h10-0-1" id="h10-0-1" class="i">+
+</a><a href="#h10-0-2" id="h10-0-2" class="i">+import android.os.Parcelable
+</a><a href="#h10-0-3" id="h10-0-3" class="i">+import kotlinx.parcelize.parcelableCreator
+</a><a href="#h10-0-4" id="h10-0-4" class="i">+import kotlin.io.encoding.Base64
+</a><a href="#h10-0-5" id="h10-0-5" class="i">+import kotlin.io.encoding.ExperimentalEncodingApi
+</a><a href="#h10-0-6" id="h10-0-6" class="i">+
+</a><a href="#h10-0-7" id="h10-0-7" class="i">+@OptIn(ExperimentalEncodingApi::class)
+</a><a href="#h10-0-8" id="h10-0-8" class="i">+fun Parcelable.toSerialized(): String? {
+</a><a href="#h10-0-9" id="h10-0-9" class="i">+    val parcel = android.os.Parcel.obtain()
+</a><a href="#h10-0-10" id="h10-0-10" class="i">+    return try {
+</a><a href="#h10-0-11" id="h10-0-11" class="i">+        writeToParcel(parcel, 0)
+</a><a href="#h10-0-12" id="h10-0-12" class="i">+        parcel.marshall()?.let {
+</a><a href="#h10-0-13" id="h10-0-13" class="i">+            Base64.encode(it)
+</a><a href="#h10-0-14" id="h10-0-14" class="i">+        }
+</a><a href="#h10-0-15" id="h10-0-15" class="i">+    } finally {
+</a><a href="#h10-0-16" id="h10-0-16" class="i">+        parcel.recycle()
+</a><a href="#h10-0-17" id="h10-0-17" class="i">+    }
+</a><a href="#h10-0-18" id="h10-0-18" class="i">+}
+</a><a href="#h10-0-19" id="h10-0-19" class="i">+
+</a><a href="#h10-0-20" id="h10-0-20" class="i">+@OptIn(ExperimentalEncodingApi::class)
+</a><a href="#h10-0-21" id="h10-0-21" class="i">+inline fun &lt;reified T : Parcelable&gt; toParcelable(serialized: String): T? {
+</a><a href="#h10-0-22" id="h10-0-22" class="i">+    val parcel = android.os.Parcel.obtain()
+</a><a href="#h10-0-23" id="h10-0-23" class="i">+    return try {
+</a><a href="#h10-0-24" id="h10-0-24" class="i">+        Base64.decode(serialized).let {
+</a><a href="#h10-0-25" id="h10-0-25" class="i">+            parcel.unmarshall(it, 0, it.size)
+</a><a href="#h10-0-26" id="h10-0-26" class="i">+        }
+</a><a href="#h10-0-27" id="h10-0-27" class="i">+        parcel.setDataPosition(0)
+</a><a href="#h10-0-28" id="h10-0-28" class="i">+        parcelableCreator&lt;T&gt;().createFromParcel(parcel)
+</a><a href="#h10-0-29" id="h10-0-29" class="i">+    } finally {
+</a><a href="#h10-0-30" id="h10-0-30" class="i">+        parcel.recycle()
+</a><a href="#h10-0-31" id="h10-0-31" class="i">+    }
+</a><a href="#h10-0-32" id="h10-0-32" class="i">+}
+</a><b>diff --git a/<a id="h11" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/SerializableDataObject.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/SerializableDataObject.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/SerializableDataObject.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/SerializableDataObject.kt</a></b>
+<a href="#h11-0" id="h11-0" class="h">@@ -1,22 +0,0 @@
+</a><a href="#h11-0-0" id="h11-0-0" class="d">-package me.rhunk.snapenhance.common.util
+</a><a href="#h11-0-1" id="h11-0-1" class="d">-
+</a><a href="#h11-0-2" id="h11-0-2" class="d">-import com.google.gson.Gson
+</a><a href="#h11-0-3" id="h11-0-3" class="d">-import com.google.gson.GsonBuilder
+</a><a href="#h11-0-4" id="h11-0-4" class="d">-
+</a><a href="#h11-0-5" id="h11-0-5" class="d">-open class SerializableDataObject {
+</a><a href="#h11-0-6" id="h11-0-6" class="d">-    companion object {
+</a><a href="#h11-0-7" id="h11-0-7" class="d">-        val gson: Gson = GsonBuilder().create()
+</a><a href="#h11-0-8" id="h11-0-8" class="d">-
+</a><a href="#h11-0-9" id="h11-0-9" class="d">-        inline fun &lt;reified T : SerializableDataObject&gt; fromJson(json: String): T {
+</a><a href="#h11-0-10" id="h11-0-10" class="d">-            return gson.fromJson(json, T::class.java)
+</a><a href="#h11-0-11" id="h11-0-11" class="d">-        }
+</a><a href="#h11-0-12" id="h11-0-12" class="d">-
+</a><a href="#h11-0-13" id="h11-0-13" class="d">-        inline fun &lt;reified T : SerializableDataObject&gt; fromJson(json: String, type: Class&lt;T&gt;): T {
+</a><a href="#h11-0-14" id="h11-0-14" class="d">-            return gson.fromJson(json, type)
+</a><a href="#h11-0-15" id="h11-0-15" class="d">-        }
+</a><a href="#h11-0-16" id="h11-0-16" class="d">-    }
+</a><a href="#h11-0-17" id="h11-0-17" class="d">-
+</a><a href="#h11-0-18" id="h11-0-18" class="d">-    fun toJson(): String {
+</a><a href="#h11-0-19" id="h11-0-19" class="d">-        return gson.toJson(this)
+</a><a href="#h11-0-20" id="h11-0-20" class="d">-    }
+</a><a href="#h11-0-21" id="h11-0-21" class="d">-}</a><a href="#h11-0-22" id="h11-0-22" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h12" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></b>
+<a href="#h12-0" id="h12-0" class="h">@@ -13,8 +13,10 @@ import me.rhunk.snapenhance.bridge.SyncCallback
+</a> import me.rhunk.snapenhance.common.Constants
+ import me.rhunk.snapenhance.common.ReceiversConfig
+ import me.rhunk.snapenhance.common.action.EnumAction
+<a href="#h12-0-3" id="h12-0-3" class="i">+import me.rhunk.snapenhance.common.data.FriendStreaks
+</a> import me.rhunk.snapenhance.common.data.MessagingFriendInfo
+ import me.rhunk.snapenhance.common.data.MessagingGroupInfo
+<a href="#h12-0-6" id="h12-0-6" class="i">+import me.rhunk.snapenhance.common.util.toSerialized
+</a> import me.rhunk.snapenhance.core.bridge.BridgeClient
+ import me.rhunk.snapenhance.core.bridge.loadFromBridge
+ import me.rhunk.snapenhance.core.data.SnapClassCache
+<a href="#h12-1" id="h12-1" class="h">@@ -151,7 +153,6 @@ class SnapEnhance {
+</a>             features.init()
+             scriptRuntime.connect(bridgeClient.getScriptingInterface())
+             scriptRuntime.eachModule { callFunction(&quot;module.onSnapApplicationLoad&quot;, androidContext) }
+<a href="#h12-1-3" id="h12-1-3" class="d">-            syncRemote()
+</a>         }
+     }
+ 
+<a href="#h12-2" id="h12-2" class="h">@@ -195,7 +196,7 @@ class SnapEnhance {
+</a>             }
+         }
+ 
+<a href="#h12-2-3" id="h12-2-3" class="d">-        appContext.apply {
+</a><a href="#h12-2-4" id="h12-2-4" class="i">+        appContext.executeAsync {
+</a>             bridgeClient.registerConfigStateListener(object: ConfigStateListener.Stub() {
+                 override fun onConfigChanged() {
+                     log.verbose(&quot;onConfigChanged&quot;)
+<a href="#h12-3" id="h12-3" class="h">@@ -227,7 +228,21 @@ class SnapEnhance {
+</a>         appContext.executeAsync {
+             bridgeClient.sync(object : SyncCallback.Stub() {
+                 override fun syncFriend(uuid: String): String? {
+<a href="#h12-3-3" id="h12-3-3" class="d">-                    return database.getFriendInfo(uuid)?.toJson()
+</a><a href="#h12-3-4" id="h12-3-4" class="i">+                    return database.getFriendInfo(uuid)?.let {
+</a><a href="#h12-3-5" id="h12-3-5" class="i">+                        MessagingFriendInfo(
+</a><a href="#h12-3-6" id="h12-3-6" class="i">+                            userId = it.userId!!,
+</a><a href="#h12-3-7" id="h12-3-7" class="i">+                            displayName = it.displayName,
+</a><a href="#h12-3-8" id="h12-3-8" class="i">+                            mutableUsername = it.mutableUsername!!,
+</a><a href="#h12-3-9" id="h12-3-9" class="i">+                            bitmojiId = it.bitmojiAvatarId,
+</a><a href="#h12-3-10" id="h12-3-10" class="i">+                            selfieId = it.bitmojiSelfieId,
+</a><a href="#h12-3-11" id="h12-3-11" class="i">+                            streaks = if (it.streakLength &gt; 0) {
+</a><a href="#h12-3-12" id="h12-3-12" class="i">+                                FriendStreaks(
+</a><a href="#h12-3-13" id="h12-3-13" class="i">+                                    expirationTimestamp = it.streakExpirationTimestamp,
+</a><a href="#h12-3-14" id="h12-3-14" class="i">+                                    length = it.streakLength
+</a><a href="#h12-3-15" id="h12-3-15" class="i">+                                )
+</a><a href="#h12-3-16" id="h12-3-16" class="i">+                            } else null
+</a><a href="#h12-3-17" id="h12-3-17" class="i">+                        ).toSerialized()
+</a><a href="#h12-3-18" id="h12-3-18" class="i">+                    }
+</a>                 }
+ 
+                 override fun syncGroup(uuid: String): String? {
+<a href="#h12-4" id="h12-4" class="h">@@ -236,7 +251,7 @@ class SnapEnhance {
+</a>                             it.key!!,
+                             it.feedDisplayName!!,
+                             it.participantsSize
+<a href="#h12-4-3" id="h12-4-3" class="d">-                        ).toJson()
+</a><a href="#h12-4-4" id="h12-4-4" class="i">+                        ).toSerialized()
+</a>                     }
+                 }
+             })
+<a href="#h12-5" id="h12-5" class="h">@@ -260,14 +275,12 @@ class SnapEnhance {
+</a>                         it.friendDisplayName,
+                         it.friendDisplayUsername!!.split(&quot;|&quot;)[1],
+                         it.bitmojiAvatarId,
+<a href="#h12-5-3" id="h12-5-3" class="d">-                        it.bitmojiSelfieId
+</a><a href="#h12-5-4" id="h12-5-4" class="i">+                        it.bitmojiSelfieId,
+</a><a href="#h12-5-5" id="h12-5-5" class="i">+                        streaks = null
+</a>                     )
+                 }
+ 
+<a href="#h12-5-9" id="h12-5-9" class="d">-                bridgeClient.passGroupsAndFriends(
+</a><a href="#h12-5-10" id="h12-5-10" class="d">-                    groups.map { it.toJson() },
+</a><a href="#h12-5-11" id="h12-5-11" class="d">-                    friends.map { it.toJson() }
+</a><a href="#h12-5-12" id="h12-5-12" class="d">-                )
+</a><a href="#h12-5-13" id="h12-5-13" class="i">+                bridgeClient.passGroupsAndFriends(groups, friends)
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h13" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></b>
+<a href="#h13-0" id="h13-0" class="h">@@ -23,8 +23,11 @@ import me.rhunk.snapenhance.common.bridge.FileLoaderWrapper
+</a> import me.rhunk.snapenhance.common.bridge.types.BridgeFileType
+ import me.rhunk.snapenhance.common.bridge.types.FileActionType
+ import me.rhunk.snapenhance.common.bridge.types.LocalePair
+<a href="#h13-0-3" id="h13-0-3" class="i">+import me.rhunk.snapenhance.common.data.MessagingFriendInfo
+</a><a href="#h13-0-4" id="h13-0-4" class="i">+import me.rhunk.snapenhance.common.data.MessagingGroupInfo
+</a> import me.rhunk.snapenhance.common.data.MessagingRuleType
+ import me.rhunk.snapenhance.common.data.SocialScope
+<a href="#h13-0-7" id="h13-0-7" class="i">+import me.rhunk.snapenhance.common.util.toSerialized
+</a> import me.rhunk.snapenhance.core.ModContext
+ import java.util.concurrent.CompletableFuture
+ import java.util.concurrent.Executors
+<a href="#h13-1" id="h13-1" class="h">@@ -136,7 +139,10 @@ class BridgeClient(
+</a> 
+     fun triggerSync(scope: SocialScope, id: String) = service.triggerSync(scope.key, id)
+ 
+<a href="#h13-1-3" id="h13-1-3" class="d">-    fun passGroupsAndFriends(groups: List&lt;String&gt;, friends: List&lt;String&gt;) = service.passGroupsAndFriends(groups, friends)
+</a><a href="#h13-1-4" id="h13-1-4" class="i">+    fun passGroupsAndFriends(groups: List&lt;MessagingGroupInfo&gt;, friends: List&lt;MessagingFriendInfo&gt;) = service.passGroupsAndFriends(
+</a><a href="#h13-1-5" id="h13-1-5" class="i">+        groups.mapNotNull { it.toSerialized() },
+</a><a href="#h13-1-6" id="h13-1-6" class="i">+        friends.mapNotNull { it.toSerialized() }
+</a><a href="#h13-1-7" id="h13-1-7" class="i">+    )
+</a> 
+     fun getRules(targetUuid: String): List&lt;MessagingRuleType&gt; {
+         return service.getRules(targetUuid).mapNotNull { MessagingRuleType.getByName(it) }
+<b>diff --git a/<a id="h14" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/ActionManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/ActionManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/ActionManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/ActionManager.kt</a></b>
+<a href="#h14-0" id="h14-0" class="h">@@ -15,12 +15,12 @@ class ActionManager(
+</a> 
+     private val actions by lazy {
+         mapOf(
+<a href="#h14-0-3" id="h14-0-3" class="d">-            EnumAction.CLEAN_CACHE to CleanCache::class,
+</a><a href="#h14-0-4" id="h14-0-4" class="d">-            EnumAction.EXPORT_CHAT_MESSAGES to ExportChatMessages::class,
+</a><a href="#h14-0-5" id="h14-0-5" class="d">-            EnumAction.BULK_MESSAGING_ACTION to BulkMessagingAction::class,
+</a><a href="#h14-0-6" id="h14-0-6" class="d">-            EnumAction.EXPORT_MEMORIES to ExportMemories::class,
+</a><a href="#h14-0-7" id="h14-0-7" class="i">+            EnumAction.CLEAN_CACHE to CleanCache(),
+</a><a href="#h14-0-8" id="h14-0-8" class="i">+            EnumAction.EXPORT_CHAT_MESSAGES to ExportChatMessages(),
+</a><a href="#h14-0-9" id="h14-0-9" class="i">+            EnumAction.BULK_MESSAGING_ACTION to BulkMessagingAction(),
+</a><a href="#h14-0-10" id="h14-0-10" class="i">+            EnumAction.EXPORT_MEMORIES to ExportMemories(),
+</a>         ).map {
+<a href="#h14-0-12" id="h14-0-12" class="d">-            it.key to it.value.java.getConstructor().newInstance().apply {
+</a><a href="#h14-0-13" id="h14-0-13" class="i">+            it.key to it.value.apply {
+</a>                 this.context = modContext
+             }
+         }.toMap().toMutableMap()
+<b>diff --git a/<a id="h15" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a></b>
+<a href="#h15-0" id="h15-0" class="h">@@ -8,17 +8,15 @@ import me.rhunk.snapenhance.core.features.Feature
+</a> import me.rhunk.snapenhance.core.features.FeatureLoadParams
+ import me.rhunk.snapenhance.core.features.MessagingRuleFeature
+ import me.rhunk.snapenhance.core.features.impl.ConfigurationOverride
+<a href="#h15-0-3" id="h15-0-3" class="i">+import me.rhunk.snapenhance.core.features.impl.MixerStories
+</a> import me.rhunk.snapenhance.core.features.impl.OperaViewerParamsOverride
+ import me.rhunk.snapenhance.core.features.impl.ScopeSync
+<a href="#h15-0-6" id="h15-0-6" class="d">-import me.rhunk.snapenhance.core.features.impl.MixerStories
+</a> import me.rhunk.snapenhance.core.features.impl.downloader.MediaDownloader
+ import me.rhunk.snapenhance.core.features.impl.downloader.ProfilePictureDownloader
+ import me.rhunk.snapenhance.core.features.impl.experiments.*
+ import me.rhunk.snapenhance.core.features.impl.global.*
+ import me.rhunk.snapenhance.core.features.impl.messaging.*
+<a href="#h15-0-12" id="h15-0-12" class="d">-import me.rhunk.snapenhance.core.features.impl.spying.HalfSwipeNotifier
+</a><a href="#h15-0-13" id="h15-0-13" class="d">-import me.rhunk.snapenhance.core.features.impl.spying.MessageLogger
+</a><a href="#h15-0-14" id="h15-0-14" class="d">-import me.rhunk.snapenhance.core.features.impl.spying.StealthMode
+</a><a href="#h15-0-15" id="h15-0-15" class="i">+import me.rhunk.snapenhance.core.features.impl.spying.*
+</a> import me.rhunk.snapenhance.core.features.impl.tweaks.BypassScreenshotDetection
+ import me.rhunk.snapenhance.core.features.impl.tweaks.CameraTweaks
+ import me.rhunk.snapenhance.core.features.impl.tweaks.PreventMessageListAutoScroll
+<a href="#h15-1" id="h15-1" class="h">@@ -33,23 +31,19 @@ import kotlin.system.measureTimeMillis
+</a> class FeatureManager(
+     private val context: ModContext
+ ) : Manager {
+<a href="#h15-1-3" id="h15-1-3" class="d">-    private val features = mutableListOf&lt;Feature&gt;()
+</a><a href="#h15-1-4" id="h15-1-4" class="i">+    private val features = mutableMapOf&lt;KClass&lt;out Feature&gt;, Feature&gt;()
+</a> 
+<a href="#h15-1-6" id="h15-1-6" class="d">-    private fun register(vararg featureClasses: KClass&lt;out Feature&gt;) {
+</a><a href="#h15-1-7" id="h15-1-7" class="i">+    private fun register(vararg featureList: Feature) {
+</a>         runBlocking {
+<a href="#h15-1-9" id="h15-1-9" class="d">-            featureClasses.forEach { clazz -&gt;
+</a><a href="#h15-1-10" id="h15-1-10" class="i">+            featureList.forEach { feature -&gt;
+</a>                 launch(Dispatchers.IO) {
+                     runCatching {
+<a href="#h15-1-13" id="h15-1-13" class="d">-                        clazz.java.constructors.first().newInstance()
+</a><a href="#h15-1-14" id="h15-1-14" class="d">-                            .let { it as Feature }
+</a><a href="#h15-1-15" id="h15-1-15" class="d">-                            .also {
+</a><a href="#h15-1-16" id="h15-1-16" class="d">-                                it.context = context
+</a><a href="#h15-1-17" id="h15-1-17" class="d">-                                synchronized(features) {
+</a><a href="#h15-1-18" id="h15-1-18" class="d">-                                    features.add(it)
+</a><a href="#h15-1-19" id="h15-1-19" class="d">-                                }
+</a><a href="#h15-1-20" id="h15-1-20" class="d">-                            }
+</a><a href="#h15-1-21" id="h15-1-21" class="i">+                        feature.context = context
+</a><a href="#h15-1-22" id="h15-1-22" class="i">+                        synchronized(features) {
+</a><a href="#h15-1-23" id="h15-1-23" class="i">+                            features[feature::class] = feature
+</a><a href="#h15-1-24" id="h15-1-24" class="i">+                        }
+</a>                     }.onFailure {
+<a href="#h15-1-26" id="h15-1-26" class="d">-                        CoreLogger.xposedLog(&quot;Failed to register feature ${clazz.simpleName}&quot;, it)
+</a><a href="#h15-1-27" id="h15-1-27" class="i">+                        CoreLogger.xposedLog(&quot;Failed to register feature ${feature.featureKey}&quot;, it)
+</a>                     }
+                 }
+             }
+<a href="#h15-2" id="h15-2" class="h">@@ -58,91 +52,92 @@ class FeatureManager(
+</a> 
+     @Suppress(&quot;UNCHECKED_CAST&quot;)
+     fun &lt;T : Feature&gt; get(featureClass: KClass&lt;T&gt;): T? {
+<a href="#h15-2-3" id="h15-2-3" class="d">-        return features.find { it::class == featureClass } as? T
+</a><a href="#h15-2-4" id="h15-2-4" class="i">+        return features[featureClass] as? T
+</a>     }
+ 
+<a href="#h15-2-7" id="h15-2-7" class="d">-    fun getRuleFeatures() = features.filterIsInstance&lt;MessagingRuleFeature&gt;().sortedBy { it.ruleType.ordinal }
+</a><a href="#h15-2-8" id="h15-2-8" class="i">+    fun getRuleFeatures() = features.values.filterIsInstance&lt;MessagingRuleFeature&gt;().sortedBy { it.ruleType.ordinal }
+</a> 
+     override fun init() {
+         register(
+<a href="#h15-2-12" id="h15-2-12" class="d">-            EndToEndEncryption::class,
+</a><a href="#h15-2-13" id="h15-2-13" class="d">-            ScopeSync::class,
+</a><a href="#h15-2-14" id="h15-2-14" class="d">-            PreventMessageListAutoScroll::class,
+</a><a href="#h15-2-15" id="h15-2-15" class="d">-            Messaging::class,
+</a><a href="#h15-2-16" id="h15-2-16" class="d">-            MediaDownloader::class,
+</a><a href="#h15-2-17" id="h15-2-17" class="d">-            StealthMode::class,
+</a><a href="#h15-2-18" id="h15-2-18" class="d">-            MenuViewInjector::class,
+</a><a href="#h15-2-19" id="h15-2-19" class="d">-            PreventReadReceipts::class,
+</a><a href="#h15-2-20" id="h15-2-20" class="d">-            MessageLogger::class,
+</a><a href="#h15-2-21" id="h15-2-21" class="d">-            ConvertMessageLocally::class,
+</a><a href="#h15-2-22" id="h15-2-22" class="d">-            SnapchatPlus::class,
+</a><a href="#h15-2-23" id="h15-2-23" class="d">-            DisableMetrics::class,
+</a><a href="#h15-2-24" id="h15-2-24" class="d">-            PreventMessageSending::class,
+</a><a href="#h15-2-25" id="h15-2-25" class="d">-            Notifications::class,
+</a><a href="#h15-2-26" id="h15-2-26" class="d">-            AutoSave::class,
+</a><a href="#h15-2-27" id="h15-2-27" class="d">-            UITweaks::class,
+</a><a href="#h15-2-28" id="h15-2-28" class="d">-            ConfigurationOverride::class,
+</a><a href="#h15-2-29" id="h15-2-29" class="d">-            UnsaveableMessages::class,
+</a><a href="#h15-2-30" id="h15-2-30" class="d">-            SendOverride::class,
+</a><a href="#h15-2-31" id="h15-2-31" class="d">-            UnlimitedSnapViewTime::class,
+</a><a href="#h15-2-32" id="h15-2-32" class="d">-            BypassVideoLengthRestriction::class,
+</a><a href="#h15-2-33" id="h15-2-33" class="d">-            MediaQualityLevelOverride::class,
+</a><a href="#h15-2-34" id="h15-2-34" class="d">-            MeoPasscodeBypass::class,
+</a><a href="#h15-2-35" id="h15-2-35" class="d">-            AppPasscode::class,
+</a><a href="#h15-2-36" id="h15-2-36" class="d">-            LocationSpoofer::class,
+</a><a href="#h15-2-37" id="h15-2-37" class="d">-            CameraTweaks::class,
+</a><a href="#h15-2-38" id="h15-2-38" class="d">-            InfiniteStoryBoost::class,
+</a><a href="#h15-2-39" id="h15-2-39" class="d">-            AmoledDarkMode::class,
+</a><a href="#h15-2-40" id="h15-2-40" class="d">-            PinConversations::class,
+</a><a href="#h15-2-41" id="h15-2-41" class="d">-            UnlimitedMultiSnap::class,
+</a><a href="#h15-2-42" id="h15-2-42" class="d">-            DeviceSpooferHook::class,
+</a><a href="#h15-2-43" id="h15-2-43" class="d">-            ClientBootstrapOverride::class,
+</a><a href="#h15-2-44" id="h15-2-44" class="d">-            GooglePlayServicesDialogs::class,
+</a><a href="#h15-2-45" id="h15-2-45" class="d">-            NoFriendScoreDelay::class,
+</a><a href="#h15-2-46" id="h15-2-46" class="d">-            ProfilePictureDownloader::class,
+</a><a href="#h15-2-47" id="h15-2-47" class="d">-            AddFriendSourceSpoof::class,
+</a><a href="#h15-2-48" id="h15-2-48" class="d">-            DisableReplayInFF::class,
+</a><a href="#h15-2-49" id="h15-2-49" class="d">-            OldBitmojiSelfie::class,
+</a><a href="#h15-2-50" id="h15-2-50" class="d">-            FriendFeedMessagePreview::class,
+</a><a href="#h15-2-51" id="h15-2-51" class="d">-            HideStreakRestore::class,
+</a><a href="#h15-2-52" id="h15-2-52" class="d">-            HideFriendFeedEntry::class,
+</a><a href="#h15-2-53" id="h15-2-53" class="d">-            HideQuickAddFriendFeed::class,
+</a><a href="#h15-2-54" id="h15-2-54" class="d">-            CallStartConfirmation::class,
+</a><a href="#h15-2-55" id="h15-2-55" class="d">-            SnapPreview::class,
+</a><a href="#h15-2-56" id="h15-2-56" class="d">-            InstantDelete::class,
+</a><a href="#h15-2-57" id="h15-2-57" class="d">-            BypassScreenshotDetection::class,
+</a><a href="#h15-2-58" id="h15-2-58" class="d">-            HalfSwipeNotifier::class,
+</a><a href="#h15-2-59" id="h15-2-59" class="d">-            DisableConfirmationDialogs::class,
+</a><a href="#h15-2-60" id="h15-2-60" class="d">-            MixerStories::class,
+</a><a href="#h15-2-61" id="h15-2-61" class="d">-            DisableComposerModules::class,
+</a><a href="#h15-2-62" id="h15-2-62" class="d">-            FideliusIndicator::class,
+</a><a href="#h15-2-63" id="h15-2-63" class="d">-            EditTextOverride::class,
+</a><a href="#h15-2-64" id="h15-2-64" class="d">-            PreventForcedLogout::class,
+</a><a href="#h15-2-65" id="h15-2-65" class="d">-            SuspendLocationUpdates::class,
+</a><a href="#h15-2-66" id="h15-2-66" class="d">-            ConversationToolbox::class,
+</a><a href="#h15-2-67" id="h15-2-67" class="d">-            SpotlightCommentsUsername::class,
+</a><a href="#h15-2-68" id="h15-2-68" class="d">-            OperaViewerParamsOverride::class,
+</a><a href="#h15-2-69" id="h15-2-69" class="i">+            EndToEndEncryption(),
+</a><a href="#h15-2-70" id="h15-2-70" class="i">+            ScopeSync(),
+</a><a href="#h15-2-71" id="h15-2-71" class="i">+            PreventMessageListAutoScroll(),
+</a><a href="#h15-2-72" id="h15-2-72" class="i">+            Messaging(),
+</a><a href="#h15-2-73" id="h15-2-73" class="i">+            MediaDownloader(),
+</a><a href="#h15-2-74" id="h15-2-74" class="i">+            StealthMode(),
+</a><a href="#h15-2-75" id="h15-2-75" class="i">+            MenuViewInjector(),
+</a><a href="#h15-2-76" id="h15-2-76" class="i">+            PreventReadReceipts(),
+</a><a href="#h15-2-77" id="h15-2-77" class="i">+            MessageLogger(),
+</a><a href="#h15-2-78" id="h15-2-78" class="i">+            ConvertMessageLocally(),
+</a><a href="#h15-2-79" id="h15-2-79" class="i">+            SnapchatPlus(),
+</a><a href="#h15-2-80" id="h15-2-80" class="i">+            DisableMetrics(),
+</a><a href="#h15-2-81" id="h15-2-81" class="i">+            PreventMessageSending(),
+</a><a href="#h15-2-82" id="h15-2-82" class="i">+            Notifications(),
+</a><a href="#h15-2-83" id="h15-2-83" class="i">+            AutoSave(),
+</a><a href="#h15-2-84" id="h15-2-84" class="i">+            UITweaks(),
+</a><a href="#h15-2-85" id="h15-2-85" class="i">+            ConfigurationOverride(),
+</a><a href="#h15-2-86" id="h15-2-86" class="i">+            UnsaveableMessages(),
+</a><a href="#h15-2-87" id="h15-2-87" class="i">+            SendOverride(),
+</a><a href="#h15-2-88" id="h15-2-88" class="i">+            UnlimitedSnapViewTime(),
+</a><a href="#h15-2-89" id="h15-2-89" class="i">+            BypassVideoLengthRestriction(),
+</a><a href="#h15-2-90" id="h15-2-90" class="i">+            MediaQualityLevelOverride(),
+</a><a href="#h15-2-91" id="h15-2-91" class="i">+            MeoPasscodeBypass(),
+</a><a href="#h15-2-92" id="h15-2-92" class="i">+            AppPasscode(),
+</a><a href="#h15-2-93" id="h15-2-93" class="i">+            LocationSpoofer(),
+</a><a href="#h15-2-94" id="h15-2-94" class="i">+            CameraTweaks(),
+</a><a href="#h15-2-95" id="h15-2-95" class="i">+            InfiniteStoryBoost(),
+</a><a href="#h15-2-96" id="h15-2-96" class="i">+            AmoledDarkMode(),
+</a><a href="#h15-2-97" id="h15-2-97" class="i">+            PinConversations(),
+</a><a href="#h15-2-98" id="h15-2-98" class="i">+            UnlimitedMultiSnap(),
+</a><a href="#h15-2-99" id="h15-2-99" class="i">+            DeviceSpooferHook(),
+</a><a href="#h15-2-100" id="h15-2-100" class="i">+            ClientBootstrapOverride(),
+</a><a href="#h15-2-101" id="h15-2-101" class="i">+            GooglePlayServicesDialogs(),
+</a><a href="#h15-2-102" id="h15-2-102" class="i">+            NoFriendScoreDelay(),
+</a><a href="#h15-2-103" id="h15-2-103" class="i">+            ProfilePictureDownloader(),
+</a><a href="#h15-2-104" id="h15-2-104" class="i">+            AddFriendSourceSpoof(),
+</a><a href="#h15-2-105" id="h15-2-105" class="i">+            DisableReplayInFF(),
+</a><a href="#h15-2-106" id="h15-2-106" class="i">+            OldBitmojiSelfie(),
+</a><a href="#h15-2-107" id="h15-2-107" class="i">+            FriendFeedMessagePreview(),
+</a><a href="#h15-2-108" id="h15-2-108" class="i">+            HideStreakRestore(),
+</a><a href="#h15-2-109" id="h15-2-109" class="i">+            HideFriendFeedEntry(),
+</a><a href="#h15-2-110" id="h15-2-110" class="i">+            HideQuickAddFriendFeed(),
+</a><a href="#h15-2-111" id="h15-2-111" class="i">+            CallStartConfirmation(),
+</a><a href="#h15-2-112" id="h15-2-112" class="i">+            SnapPreview(),
+</a><a href="#h15-2-113" id="h15-2-113" class="i">+            InstantDelete(),
+</a><a href="#h15-2-114" id="h15-2-114" class="i">+            BypassScreenshotDetection(),
+</a><a href="#h15-2-115" id="h15-2-115" class="i">+            HalfSwipeNotifier(),
+</a><a href="#h15-2-116" id="h15-2-116" class="i">+            DisableConfirmationDialogs(),
+</a><a href="#h15-2-117" id="h15-2-117" class="i">+            MixerStories(),
+</a><a href="#h15-2-118" id="h15-2-118" class="i">+            DisableComposerModules(),
+</a><a href="#h15-2-119" id="h15-2-119" class="i">+            FideliusIndicator(),
+</a><a href="#h15-2-120" id="h15-2-120" class="i">+            EditTextOverride(),
+</a><a href="#h15-2-121" id="h15-2-121" class="i">+            PreventForcedLogout(),
+</a><a href="#h15-2-122" id="h15-2-122" class="i">+            SuspendLocationUpdates(),
+</a><a href="#h15-2-123" id="h15-2-123" class="i">+            ConversationToolbox(),
+</a><a href="#h15-2-124" id="h15-2-124" class="i">+            SpotlightCommentsUsername(),
+</a><a href="#h15-2-125" id="h15-2-125" class="i">+            OperaViewerParamsOverride(),
+</a>         )
+ 
+         initializeFeatures()
+     }
+ 
+<a href="#h15-2-131" id="h15-2-131" class="i">+    private inline fun tryInit(feature: Feature, crossinline block: () -&gt; Unit) {
+</a><a href="#h15-2-132" id="h15-2-132" class="i">+        runCatching {
+</a><a href="#h15-2-133" id="h15-2-133" class="i">+            block()
+</a><a href="#h15-2-134" id="h15-2-134" class="i">+        }.onFailure {
+</a><a href="#h15-2-135" id="h15-2-135" class="i">+            context.log.error(&quot;Failed to init feature ${feature.featureKey}&quot;, it)
+</a><a href="#h15-2-136" id="h15-2-136" class="i">+            context.longToast(&quot;Failed to init feature ${feature.featureKey}! Check logcat for more details.&quot;)
+</a><a href="#h15-2-137" id="h15-2-137" class="i">+        }
+</a><a href="#h15-2-138" id="h15-2-138" class="i">+    }
+</a><a href="#h15-2-139" id="h15-2-139" class="i">+
+</a>     private fun initFeatures(
+         syncParam: Int,
+         asyncParam: Int,
+         syncAction: (Feature) -&gt; Unit,
+         asyncAction: (Feature) -&gt; Unit
+     ) {
+<a href="#h15-2-146" id="h15-2-146" class="d">-        fun tryInit(feature: Feature, block: () -&gt; Unit) {
+</a><a href="#h15-2-147" id="h15-2-147" class="d">-            runCatching {
+</a><a href="#h15-2-148" id="h15-2-148" class="d">-                block()
+</a><a href="#h15-2-149" id="h15-2-149" class="d">-            }.onFailure {
+</a><a href="#h15-2-150" id="h15-2-150" class="d">-                context.log.error(&quot;Failed to init feature ${feature.featureKey}&quot;, it)
+</a><a href="#h15-2-151" id="h15-2-151" class="d">-                context.longToast(&quot;Failed to init feature ${feature.featureKey}! Check logcat for more details.&quot;)
+</a><a href="#h15-2-152" id="h15-2-152" class="d">-            }
+</a><a href="#h15-2-153" id="h15-2-153" class="d">-        }
+</a> 
+<a href="#h15-2-155" id="h15-2-155" class="d">-        features.toList().forEach { feature -&gt;
+</a><a href="#h15-2-156" id="h15-2-156" class="i">+        features.values.toList().forEach { feature -&gt;
+</a>             if (feature.loadParams and syncParam != 0) {
+                 tryInit(feature) {
+                     syncAction(feature)
+</pre>
+</div>
+</body>
+</html>

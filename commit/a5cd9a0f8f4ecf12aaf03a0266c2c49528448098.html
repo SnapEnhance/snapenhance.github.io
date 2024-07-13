@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(app/setup): auto skip - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/a5cd9a0f8f4ecf12aaf03a0266c2c49528448098.html">a5cd9a0f8f4ecf12aaf03a0266c2c49528448098</a>
+<b>parent</b> <a href="../commit/ba8b50ef406fa4dcc14aefedac2c604cd4dac507.html">ba8b50ef406fa4dcc14aefedac2c604cd4dac507</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed,  1 May 2024 12:28:36 +0200
+
+fix(app/setup): auto skip
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/SetupScreen.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/MappingsScreen.kt</a></td><td> | </td><td class="num">56</td><td><span class="i">++++++++++++++++++++</span><span class="d">------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/PermissionsScreen.kt</a></td><td> | </td><td class="num">35</td><td><span class="i">++++++++++++++++++++++++++</span><span class="d">---------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SaveFolderScreen.kt</a></td><td> | </td><td class="num">18</td><td><span class="i">++++</span><span class="d">--------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">6</td><td><span class="i">++</span><span class="d">----</span></td></tr>
+</table></pre><pre>6 files changed, 54 insertions(+), 65 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -198,7 +198,7 @@ class RemoteSideContext(
+</a>             }
+         }
+ 
+<a href="#h0-0-3" id="h0-0-3" class="d">-        if (!sharedPreferences.getBoolean(&quot;debug_disable_mapper&quot;, false) &amp;&amp; (mappings.isMappingsOutdated() || !mappings.isMappingsLoaded)) {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        if (!sharedPreferences.getBoolean(&quot;debug_disable_mapper&quot;, false) &amp;&amp; mappings.getSnapchatPackageInfo() != null &amp;&amp; mappings.isMappingsOutdated()) {
+</a>             requirements = requirements or Requirements.MAPPINGS
+         }
+ 
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/SetupScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/SetupScreen.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/SetupScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/SetupScreen.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -11,7 +11,7 @@ import me.rhunk.snapenhance.RemoteSideContext
+</a> 
+ abstract class SetupScreen {
+     lateinit var context: RemoteSideContext
+<a href="#h1-0-3" id="h1-0-3" class="d">-    lateinit var allowNext: (Boolean) -&gt; Unit
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    lateinit var allowNext: (canGoNext: Boolean) -&gt; Unit
+</a>     lateinit var goNext: () -&gt; Unit
+     lateinit var route: String
+ 
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/MappingsScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/MappingsScreen.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/MappingsScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/MappingsScreen.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -2,10 +2,8 @@ package me.rhunk.snapenhance.ui.setup.screens.impl
+</a> 
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.layout.size
+<a href="#h2-0-3" id="h2-0-3" class="d">-import androidx.compose.material3.Button
+</a> import androidx.compose.material3.CircularProgressIndicator
+ import androidx.compose.material3.MaterialTheme
+<a href="#h2-0-6" id="h2-0-6" class="d">-import androidx.compose.material3.Text
+</a> import androidx.compose.runtime.*
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.unit.dp
+<a href="#h2-1" id="h2-1" class="h">@@ -28,52 +26,38 @@ class MappingsScreen : SetupScreen() {
+</a>             }) {
+                 remember { AlertDialogs(context.translation) }.InfoDialog(title = infoText!!) {
+                     infoText = null
+<a href="#h2-1-3" id="h2-1-3" class="i">+                    goNext()
+</a>                 }
+             }
+         }
+ 
+<a href="#h2-1-8" id="h2-1-8" class="d">-        fun tryToGenerateMappings() {
+</a><a href="#h2-1-9" id="h2-1-9" class="d">-            //check for snapchat installation
+</a><a href="#h2-1-10" id="h2-1-10" class="d">-            val installationSummary = context.installationSummary
+</a><a href="#h2-1-11" id="h2-1-11" class="d">-            if (installationSummary.snapchatInfo == null) {
+</a><a href="#h2-1-12" id="h2-1-12" class="d">-                throw Exception(context.translation[&quot;setup.mappings.generate_failure_no_snapchat&quot;])
+</a><a href="#h2-1-13" id="h2-1-13" class="d">-            }
+</a><a href="#h2-1-14" id="h2-1-14" class="d">-            with(context.mappings) {
+</a><a href="#h2-1-15" id="h2-1-15" class="d">-                refresh()
+</a><a href="#h2-1-16" id="h2-1-16" class="d">-            }
+</a><a href="#h2-1-17" id="h2-1-17" class="d">-        }
+</a><a href="#h2-1-18" id="h2-1-18" class="d">-
+</a><a href="#h2-1-19" id="h2-1-19" class="d">-        var hasMappings by remember { mutableStateOf(false) }
+</a><a href="#h2-1-20" id="h2-1-20" class="d">-
+</a><a href="#h2-1-21" id="h2-1-21" class="d">-        DialogText(text = context.translation[&quot;setup.mappings.dialog&quot;])
+</a><a href="#h2-1-22" id="h2-1-22" class="d">-        if (hasMappings) return
+</a><a href="#h2-1-23" id="h2-1-23" class="d">-        Button(onClick = {
+</a><a href="#h2-1-24" id="h2-1-24" class="d">-            if (isGenerating) return@Button
+</a><a href="#h2-1-25" id="h2-1-25" class="d">-            isGenerating = true
+</a><a href="#h2-1-26" id="h2-1-26" class="i">+        LaunchedEffect(Unit) {
+</a>             coroutineScope.launch(Dispatchers.IO) {
+<a href="#h2-1-28" id="h2-1-28" class="i">+                if (isGenerating) return@launch
+</a><a href="#h2-1-29" id="h2-1-29" class="i">+                isGenerating = true
+</a>                 runCatching {
+<a href="#h2-1-31" id="h2-1-31" class="d">-                    tryToGenerateMappings()
+</a><a href="#h2-1-32" id="h2-1-32" class="d">-                    allowNext(true)
+</a><a href="#h2-1-33" id="h2-1-33" class="d">-                    infoText = context.translation[&quot;setup.mappings.generate_success&quot;]
+</a><a href="#h2-1-34" id="h2-1-34" class="d">-                    hasMappings = true
+</a><a href="#h2-1-35" id="h2-1-35" class="i">+                    if (context.installationSummary.snapchatInfo == null) {
+</a><a href="#h2-1-36" id="h2-1-36" class="i">+                        throw Exception(context.translation[&quot;setup.mappings.generate_failure_no_snapchat&quot;])
+</a><a href="#h2-1-37" id="h2-1-37" class="i">+                    }
+</a><a href="#h2-1-38" id="h2-1-38" class="i">+                    context.mappings.refresh()
+</a><a href="#h2-1-39" id="h2-1-39" class="i">+                    goNext()
+</a>                 }.onFailure {
+                     isGenerating = false
+                     infoText = context.translation[&quot;setup.mappings.generate_failure&quot;] + &quot;\n\n&quot; + it.message
+                     context.log.error(&quot;Failed to generate mappings&quot;, it)
+                 }
+             }
+<a href="#h2-1-46" id="h2-1-46" class="d">-        }) {
+</a><a href="#h2-1-47" id="h2-1-47" class="d">-            if (isGenerating) {
+</a><a href="#h2-1-48" id="h2-1-48" class="d">-                CircularProgressIndicator(
+</a><a href="#h2-1-49" id="h2-1-49" class="d">-                    modifier = Modifier
+</a><a href="#h2-1-50" id="h2-1-50" class="d">-                        .padding()
+</a><a href="#h2-1-51" id="h2-1-51" class="d">-                        .size(30.dp),
+</a><a href="#h2-1-52" id="h2-1-52" class="d">-                    strokeWidth = 3.dp,
+</a><a href="#h2-1-53" id="h2-1-53" class="d">-                    color = MaterialTheme.colorScheme.onPrimary
+</a><a href="#h2-1-54" id="h2-1-54" class="d">-                )
+</a><a href="#h2-1-55" id="h2-1-55" class="d">-            } else {
+</a><a href="#h2-1-56" id="h2-1-56" class="d">-                Text(text = context.translation[&quot;setup.mappings.generate_button&quot;])
+</a><a href="#h2-1-57" id="h2-1-57" class="d">-            }
+</a><a href="#h2-1-58" id="h2-1-58" class="i">+        }
+</a><a href="#h2-1-59" id="h2-1-59" class="i">+
+</a><a href="#h2-1-60" id="h2-1-60" class="i">+        if (isGenerating) {
+</a><a href="#h2-1-61" id="h2-1-61" class="i">+            DialogText(text = context.translation[&quot;setup.mappings.dialog&quot;])
+</a><a href="#h2-1-62" id="h2-1-62" class="i">+            CircularProgressIndicator(
+</a><a href="#h2-1-63" id="h2-1-63" class="i">+                modifier = Modifier
+</a><a href="#h2-1-64" id="h2-1-64" class="i">+                    .padding()
+</a><a href="#h2-1-65" id="h2-1-65" class="i">+                    .size(50.dp),
+</a><a href="#h2-1-66" id="h2-1-66" class="i">+                strokeWidth = 3.dp,
+</a><a href="#h2-1-67" id="h2-1-67" class="i">+                color = MaterialTheme.colorScheme.onPrimary
+</a><a href="#h2-1-68" id="h2-1-68" class="i">+            )
+</a>         }
+     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/PermissionsScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/PermissionsScreen.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/PermissionsScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/PermissionsScreen.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -17,17 +17,16 @@ import androidx.compose.material3.Button
+</a> import androidx.compose.material3.Icon
+ import androidx.compose.material3.OutlinedCard
+ import androidx.compose.material3.Text
+<a href="#h3-0-3" id="h3-0-3" class="d">-import androidx.compose.runtime.Composable
+</a><a href="#h3-0-4" id="h3-0-4" class="d">-import androidx.compose.runtime.LaunchedEffect
+</a><a href="#h3-0-5" id="h3-0-5" class="d">-import androidx.compose.runtime.mutableStateMapOf
+</a><a href="#h3-0-6" id="h3-0-6" class="d">-import androidx.compose.runtime.remember
+</a><a href="#h3-0-7" id="h3-0-7" class="d">-import androidx.compose.runtime.rememberCoroutineScope
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+import androidx.compose.runtime.*
+</a> import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.unit.dp
+<a href="#h3-0-12" id="h3-0-12" class="i">+import androidx.lifecycle.Lifecycle
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+import kotlinx.coroutines.delay
+</a> import kotlinx.coroutines.launch
+ import me.rhunk.snapenhance.ui.setup.screens.SetupScreen
+ import me.rhunk.snapenhance.ui.util.ActivityLauncherHelper
+<a href="#h3-0-17" id="h3-0-17" class="i">+import me.rhunk.snapenhance.ui.util.OnLifecycleEvent
+</a> 
+ data class PermissionData(
+     val translationKey: String,
+<a href="#h3-1" id="h3-1" class="h">@@ -125,12 +124,26 @@ class PermissionsScreen : SetupScreen() {
+</a>             )
+         }
+ 
+<a href="#h3-1-3" id="h3-1-3" class="d">-        allowNext(permissions.all { perm -&gt; grantedPermissions[perm.translationKey] == true })
+</a><a href="#h3-1-4" id="h3-1-4" class="d">-
+</a><a href="#h3-1-5" id="h3-1-5" class="d">-        LaunchedEffect(Unit) {
+</a><a href="#h3-1-6" id="h3-1-6" class="i">+        fun updateState() {
+</a>             permissions.forEach { perm -&gt;
+                 grantedPermissions[perm.translationKey] = perm.isPermissionGranted()
+             }
+<a href="#h3-1-10" id="h3-1-10" class="i">+            if (permissions.all { perm -&gt; grantedPermissions[perm.translationKey] == true }) {
+</a><a href="#h3-1-11" id="h3-1-11" class="i">+                goNext()
+</a><a href="#h3-1-12" id="h3-1-12" class="i">+            }
+</a><a href="#h3-1-13" id="h3-1-13" class="i">+        }
+</a><a href="#h3-1-14" id="h3-1-14" class="i">+
+</a><a href="#h3-1-15" id="h3-1-15" class="i">+        OnLifecycleEvent { _, event -&gt;
+</a><a href="#h3-1-16" id="h3-1-16" class="i">+            if (event != Lifecycle.Event.ON_RESUME) return@OnLifecycleEvent
+</a><a href="#h3-1-17" id="h3-1-17" class="i">+            updateState()
+</a><a href="#h3-1-18" id="h3-1-18" class="i">+            coroutineScope.launch {
+</a><a href="#h3-1-19" id="h3-1-19" class="i">+                delay(1000)
+</a><a href="#h3-1-20" id="h3-1-20" class="i">+                updateState()
+</a><a href="#h3-1-21" id="h3-1-21" class="i">+            }
+</a><a href="#h3-1-22" id="h3-1-22" class="i">+        }
+</a><a href="#h3-1-23" id="h3-1-23" class="i">+
+</a><a href="#h3-1-24" id="h3-1-24" class="i">+        LaunchedEffect(Unit) {
+</a><a href="#h3-1-25" id="h3-1-25" class="i">+            updateState()
+</a>         }
+ 
+         DialogText(text = context.translation[&quot;setup.permissions.dialog&quot;])
+<a href="#h3-2" id="h3-2" class="h">@@ -156,7 +169,11 @@ class PermissionsScreen : SetupScreen() {
+</a>                             GrantedIcon()
+                         } else {
+                             RequestButton {
+<a href="#h3-2-3" id="h3-2-3" class="d">-                                perm.requestPermission(perm)
+</a><a href="#h3-2-4" id="h3-2-4" class="i">+                                if (perm.isPermissionGranted()) {
+</a><a href="#h3-2-5" id="h3-2-5" class="i">+                                    grantedPermissions[perm.translationKey] = true
+</a><a href="#h3-2-6" id="h3-2-6" class="i">+                                } else {
+</a><a href="#h3-2-7" id="h3-2-7" class="i">+                                    perm.requestPermission(perm)
+</a><a href="#h3-2-8" id="h3-2-8" class="i">+                                }
+</a>                             }
+                         }
+                     }
+<b>diff --git a/<a id="h4" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SaveFolderScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SaveFolderScreen.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SaveFolderScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SaveFolderScreen.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -9,26 +9,13 @@ import androidx.compose.ui.Modifier
+</a> import androidx.compose.ui.unit.dp
+ import me.rhunk.snapenhance.ui.setup.screens.SetupScreen
+ import me.rhunk.snapenhance.ui.util.ActivityLauncherHelper
+<a href="#h4-0-3" id="h4-0-3" class="d">-import me.rhunk.snapenhance.ui.util.ObservableMutableState
+</a> import me.rhunk.snapenhance.ui.util.chooseFolder
+ 
+ class SaveFolderScreen : SetupScreen() {
+<a href="#h4-0-7" id="h4-0-7" class="d">-    private lateinit var saveFolder: ObservableMutableState&lt;String&gt;
+</a><a href="#h4-0-8" id="h4-0-8" class="d">-
+</a>     private lateinit var activityLauncherHelper: ActivityLauncherHelper
+ 
+     override fun init() {
+         activityLauncherHelper = ActivityLauncherHelper(context.activity!!)
+<a href="#h4-0-13" id="h4-0-13" class="d">-        saveFolder = ObservableMutableState(
+</a><a href="#h4-0-14" id="h4-0-14" class="d">-                defaultValue = &quot;&quot;,
+</a><a href="#h4-0-15" id="h4-0-15" class="d">-                onChange = { _, newValue -&gt;
+</a><a href="#h4-0-16" id="h4-0-16" class="d">-                    if (newValue.isNotBlank()) {
+</a><a href="#h4-0-17" id="h4-0-17" class="d">-                        context.config.root.downloader.saveFolder.set(newValue)
+</a><a href="#h4-0-18" id="h4-0-18" class="d">-                        context.config.writeConfig()
+</a><a href="#h4-0-19" id="h4-0-19" class="d">-                        allowNext(true)
+</a><a href="#h4-0-20" id="h4-0-20" class="d">-                    }
+</a><a href="#h4-0-21" id="h4-0-21" class="d">-                }
+</a><a href="#h4-0-22" id="h4-0-22" class="d">-            )
+</a>     }
+ 
+     @Composable
+<a href="#h4-1" id="h4-1" class="h">@@ -37,7 +24,10 @@ class SaveFolderScreen : SetupScreen() {
+</a>         Spacer(modifier = Modifier.height(16.dp))
+         Button(onClick = {
+             activityLauncherHelper.chooseFolder {
+<a href="#h4-1-3" id="h4-1-3" class="d">-                saveFolder.value = it
+</a><a href="#h4-1-4" id="h4-1-4" class="i">+                if (it.isBlank()) return@chooseFolder
+</a><a href="#h4-1-5" id="h4-1-5" class="i">+                context.config.root.downloader.saveFolder.set(it)
+</a><a href="#h4-1-6" id="h4-1-6" class="i">+                context.config.writeConfig()
+</a><a href="#h4-1-7" id="h4-1-7" class="i">+                goNext()
+</a>             }
+         }) {
+             Text(text = context.translation[&quot;setup.dialogs.select_save_folder_button&quot;])
+<b>diff --git a/<a id="h5" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -6,11 +6,9 @@
+</a>             &quot;select_save_folder_button&quot;: &quot;Select Folder&quot;
+         },
+         &quot;mappings&quot;: {
+<a href="#h5-0-3" id="h5-0-3" class="d">-            &quot;dialog&quot;: &quot;To dynamically support a wide range of Snapchat Versions, mappings are necessary for SnapEnhance to function properly, this should not take more than 5 seconds.&quot;,
+</a><a href="#h5-0-4" id="h5-0-4" class="d">-            &quot;generate_button&quot;: &quot;Generate&quot;,
+</a><a href="#h5-0-5" id="h5-0-5" class="i">+            &quot;dialog&quot;: &quot;Generating Mappings, this may take a while ...&quot;,
+</a>             &quot;generate_failure_no_snapchat&quot;: &quot;SnapEnhance was unable to detect Snapchat, please try reinstalling Snapchat.&quot;,
+<a href="#h5-0-7" id="h5-0-7" class="d">-            &quot;generate_failure&quot;: &quot;An error occurred while trying to generate mappings, please try again.&quot;,
+</a><a href="#h5-0-8" id="h5-0-8" class="d">-            &quot;generate_success&quot;: &quot;Mappings generated successfully.&quot;
+</a><a href="#h5-0-9" id="h5-0-9" class="i">+            &quot;generate_failure&quot;: &quot;An error occurred while trying to generate mappings, please try again.&quot;
+</a>         },
+         &quot;permissions&quot;: {
+             &quot;dialog&quot;: &quot;To continue you need to fit the following requirements:&quot;,
+</pre>
+</div>
+</body>
+</html>

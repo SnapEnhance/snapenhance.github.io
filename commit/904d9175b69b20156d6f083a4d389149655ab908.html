@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(download_manager): download multiple attachment - experimental message decoder - fix async calls for downloads database - add debug view for ProtoReader - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/904d9175b69b20156d6f083a4d389149655ab908.html">904d9175b69b20156d6f083a4d389149655ab908</a>
+<b>parent</b> <a href="../commit/5767f9333132cf9b91007546a8ff88334bf481aa.html">5767f9333132cf9b91007546a8ff88334bf481aa</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu, 14 Sep 2023 23:55:06 +0200
+
+feat(download_manager): download multiple attachment
+- experimental message decoder
+- fix async calls for downloads database
+- add debug view for ProtoReader
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">+</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadTaskManager.kt</a></td><td> | </td><td class="num">76</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++</span><span class="d">---------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">12</td><td><span class="i">++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/download/DownloadManagerClient.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadRequest.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/MediaEncryptionKeyPair.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoEditor.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoReader.kt</a></td><td> | </td><td class="num">84</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoWriter.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/WireType.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">core/src/main/kotlin/me/rhunk/snapenhance/core/util/snap/EncryptionHelper.kt</a></td><td> | </td><td class="num">28</td><td><span class="i">++++++++++++++++++++++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h11">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">247</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-----------------------------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h12">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/AttachmentInfo.kt</a></td><td> | </td><td class="num">16</td><td><span class="i">++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h13">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/AttachmentType.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h14">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/MessageDecoder.kt</a></td><td> | </td><td class="num">145</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>15 files changed, 483 insertions(+), 161 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -8,8 +8,6 @@ import android.net.Uri
+</a> import android.widget.Toast
+ import androidx.documentfile.provider.DocumentFile
+ import com.google.gson.GsonBuilder
+<a href="#h0-0-3" id="h0-0-3" class="d">-import kotlinx.coroutines.CoroutineScope
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-import kotlinx.coroutines.Dispatchers
+</a> import kotlinx.coroutines.Job
+ import kotlinx.coroutines.job
+ import kotlinx.coroutines.joinAll
+<a href="#h0-1" id="h0-1" class="h">@@ -254,7 +252,7 @@ class DownloadProcessor (
+</a>             val media = downloadedMedias[inputMedia]!!
+ 
+             if (!downloadRequest.isDashPlaylist) {
+<a href="#h0-1-3" id="h0-1-3" class="d">-                if (inputMedia.messageContentType == &quot;NOTE&quot;) {
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+                if (inputMedia.attachmentType == &quot;NOTE&quot;) {
+</a>                     remoteSideContext.config.root.downloader.forceVoiceNoteFormat.getNullable()?.let { format -&gt;
+                         val outputFile = File.createTempFile(&quot;voice_note&quot;, &quot;.$format&quot;)
+                         ffmpegProcessor.execute(FFMpegProcessor.Request(
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadTaskManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadTaskManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadTaskManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadTaskManager.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -9,11 +9,13 @@ import me.rhunk.snapenhance.core.download.data.MediaDownloadSource
+</a> import me.rhunk.snapenhance.core.util.SQLiteDatabaseHelper
+ import me.rhunk.snapenhance.core.util.ktx.getIntOrNull
+ import me.rhunk.snapenhance.core.util.ktx.getStringOrNull
+<a href="#h1-0-3" id="h1-0-3" class="i">+import java.util.concurrent.Executors
+</a> 
+ class DownloadTaskManager {
+     private lateinit var taskDatabase: SQLiteDatabase
+     private val pendingTasks = mutableMapOf&lt;Int, DownloadObject&gt;()
+     private val cachedTasks = mutableMapOf&lt;Int, DownloadObject&gt;()
+<a href="#h1-0-9" id="h1-0-9" class="i">+    private val executor = Executors.newSingleThreadExecutor()
+</a> 
+     @SuppressLint(&quot;Range&quot;)
+     fun init(context: Context) {
+<a href="#h1-1" id="h1-1" class="h">@@ -34,39 +36,43 @@ class DownloadTaskManager {
+</a>         }
+     }
+ 
+<a href="#h1-1-3" id="h1-1-3" class="d">-    fun addTask(task: DownloadObject): Int {
+</a><a href="#h1-1-4" id="h1-1-4" class="d">-        taskDatabase.execSQL(&quot;INSERT INTO tasks (hash, outputPath, outputFile, downloadSource, mediaAuthor, iconUrl, downloadStage) VALUES (?, ?, ?, ?, ?, ?, ?)&quot;,
+</a><a href="#h1-1-5" id="h1-1-5" class="d">-            arrayOf(
+</a><a href="#h1-1-6" id="h1-1-6" class="d">-                task.metadata.mediaIdentifier,
+</a><a href="#h1-1-7" id="h1-1-7" class="d">-                task.metadata.outputPath,
+</a><a href="#h1-1-8" id="h1-1-8" class="d">-                task.outputFile,
+</a><a href="#h1-1-9" id="h1-1-9" class="d">-                task.metadata.downloadSource,
+</a><a href="#h1-1-10" id="h1-1-10" class="d">-                task.metadata.mediaAuthor,
+</a><a href="#h1-1-11" id="h1-1-11" class="d">-                task.metadata.iconUrl,
+</a><a href="#h1-1-12" id="h1-1-12" class="d">-                task.downloadStage.name
+</a><a href="#h1-1-13" id="h1-1-13" class="i">+    fun addTask(task: DownloadObject) {
+</a><a href="#h1-1-14" id="h1-1-14" class="i">+        executor.execute {
+</a><a href="#h1-1-15" id="h1-1-15" class="i">+            taskDatabase.execSQL(&quot;INSERT INTO tasks (hash, outputPath, outputFile, downloadSource, mediaAuthor, iconUrl, downloadStage) VALUES (?, ?, ?, ?, ?, ?, ?)&quot;,
+</a><a href="#h1-1-16" id="h1-1-16" class="i">+                arrayOf(
+</a><a href="#h1-1-17" id="h1-1-17" class="i">+                    task.metadata.mediaIdentifier,
+</a><a href="#h1-1-18" id="h1-1-18" class="i">+                    task.metadata.outputPath,
+</a><a href="#h1-1-19" id="h1-1-19" class="i">+                    task.outputFile,
+</a><a href="#h1-1-20" id="h1-1-20" class="i">+                    task.metadata.downloadSource,
+</a><a href="#h1-1-21" id="h1-1-21" class="i">+                    task.metadata.mediaAuthor,
+</a><a href="#h1-1-22" id="h1-1-22" class="i">+                    task.metadata.iconUrl,
+</a><a href="#h1-1-23" id="h1-1-23" class="i">+                    task.downloadStage.name
+</a><a href="#h1-1-24" id="h1-1-24" class="i">+                )
+</a>             )
+<a href="#h1-1-26" id="h1-1-26" class="d">-        )
+</a><a href="#h1-1-27" id="h1-1-27" class="d">-        task.downloadId = taskDatabase.rawQuery(&quot;SELECT last_insert_rowid()&quot;, null).use {
+</a><a href="#h1-1-28" id="h1-1-28" class="d">-            it.moveToFirst()
+</a><a href="#h1-1-29" id="h1-1-29" class="d">-            it.getInt(0)
+</a><a href="#h1-1-30" id="h1-1-30" class="i">+            task.downloadId = taskDatabase.rawQuery(&quot;SELECT last_insert_rowid()&quot;, null).use {
+</a><a href="#h1-1-31" id="h1-1-31" class="i">+                it.moveToFirst()
+</a><a href="#h1-1-32" id="h1-1-32" class="i">+                it.getInt(0)
+</a><a href="#h1-1-33" id="h1-1-33" class="i">+            }
+</a><a href="#h1-1-34" id="h1-1-34" class="i">+            pendingTasks[task.downloadId] = task
+</a>         }
+<a href="#h1-1-36" id="h1-1-36" class="d">-        pendingTasks[task.downloadId] = task
+</a><a href="#h1-1-37" id="h1-1-37" class="d">-        return task.downloadId
+</a>     }
+ 
+     fun updateTask(task: DownloadObject) {
+<a href="#h1-1-41" id="h1-1-41" class="d">-        taskDatabase.execSQL(&quot;UPDATE tasks SET hash = ?, outputPath = ?, outputFile = ?, downloadSource = ?, mediaAuthor = ?, iconUrl = ?, downloadStage = ? WHERE id = ?&quot;,
+</a><a href="#h1-1-42" id="h1-1-42" class="d">-            arrayOf(
+</a><a href="#h1-1-43" id="h1-1-43" class="d">-                task.metadata.mediaIdentifier,
+</a><a href="#h1-1-44" id="h1-1-44" class="d">-                task.metadata.outputPath,
+</a><a href="#h1-1-45" id="h1-1-45" class="d">-                task.outputFile,
+</a><a href="#h1-1-46" id="h1-1-46" class="d">-                task.metadata.downloadSource,
+</a><a href="#h1-1-47" id="h1-1-47" class="d">-                task.metadata.mediaAuthor,
+</a><a href="#h1-1-48" id="h1-1-48" class="d">-                task.metadata.iconUrl,
+</a><a href="#h1-1-49" id="h1-1-49" class="d">-                task.downloadStage.name,
+</a><a href="#h1-1-50" id="h1-1-50" class="d">-                task.downloadId
+</a><a href="#h1-1-51" id="h1-1-51" class="i">+        executor.execute {
+</a><a href="#h1-1-52" id="h1-1-52" class="i">+            taskDatabase.execSQL(
+</a><a href="#h1-1-53" id="h1-1-53" class="i">+                &quot;UPDATE tasks SET hash = ?, outputPath = ?, outputFile = ?, downloadSource = ?, mediaAuthor = ?, iconUrl = ?, downloadStage = ? WHERE id = ?&quot;,
+</a><a href="#h1-1-54" id="h1-1-54" class="i">+                arrayOf(
+</a><a href="#h1-1-55" id="h1-1-55" class="i">+                    task.metadata.mediaIdentifier,
+</a><a href="#h1-1-56" id="h1-1-56" class="i">+                    task.metadata.outputPath,
+</a><a href="#h1-1-57" id="h1-1-57" class="i">+                    task.outputFile,
+</a><a href="#h1-1-58" id="h1-1-58" class="i">+                    task.metadata.downloadSource,
+</a><a href="#h1-1-59" id="h1-1-59" class="i">+                    task.metadata.mediaAuthor,
+</a><a href="#h1-1-60" id="h1-1-60" class="i">+                    task.metadata.iconUrl,
+</a><a href="#h1-1-61" id="h1-1-61" class="i">+                    task.downloadStage.name,
+</a><a href="#h1-1-62" id="h1-1-62" class="i">+                    task.downloadId
+</a><a href="#h1-1-63" id="h1-1-63" class="i">+                )
+</a>             )
+<a href="#h1-1-65" id="h1-1-65" class="d">-        )
+</a><a href="#h1-1-66" id="h1-1-66" class="i">+        }
+</a>         //if the task is no longer active, move it to the cached tasks
+         if (task.isJobActive()) {
+             pendingTasks[task.downloadId] = task
+<a href="#h1-2" id="h1-2" class="h">@@ -103,9 +109,11 @@ class DownloadTaskManager {
+</a>     }
+ 
+     private fun removeTask(id: Int) {
+<a href="#h1-2-3" id="h1-2-3" class="d">-        taskDatabase.execSQL(&quot;DELETE FROM tasks WHERE id = ?&quot;, arrayOf(id))
+</a><a href="#h1-2-4" id="h1-2-4" class="d">-        cachedTasks.remove(id)
+</a><a href="#h1-2-5" id="h1-2-5" class="d">-        pendingTasks.remove(id)
+</a><a href="#h1-2-6" id="h1-2-6" class="i">+        executor.execute {
+</a><a href="#h1-2-7" id="h1-2-7" class="i">+            taskDatabase.execSQL(&quot;DELETE FROM tasks WHERE id = ?&quot;, arrayOf(id))
+</a><a href="#h1-2-8" id="h1-2-8" class="i">+            cachedTasks.remove(id)
+</a><a href="#h1-2-9" id="h1-2-9" class="i">+            pendingTasks.remove(id)
+</a><a href="#h1-2-10" id="h1-2-10" class="i">+        }
+</a>     }
+ 
+     fun removeTask(task: DownloadObject) {
+<a href="#h1-3" id="h1-3" class="h">@@ -174,8 +182,10 @@ class DownloadTaskManager {
+</a>     }
+ 
+     fun removeAllTasks() {
+<a href="#h1-3-3" id="h1-3-3" class="d">-        taskDatabase.execSQL(&quot;DELETE FROM tasks&quot;)
+</a><a href="#h1-3-4" id="h1-3-4" class="d">-        cachedTasks.clear()
+</a><a href="#h1-3-5" id="h1-3-5" class="d">-        pendingTasks.clear()
+</a><a href="#h1-3-6" id="h1-3-6" class="i">+        executor.execute {
+</a><a href="#h1-3-7" id="h1-3-7" class="i">+            taskDatabase.execSQL(&quot;DELETE FROM tasks&quot;)
+</a><a href="#h1-3-8" id="h1-3-8" class="i">+            cachedTasks.clear()
+</a><a href="#h1-3-9" id="h1-3-9" class="i">+            pendingTasks.clear()
+</a><a href="#h1-3-10" id="h1-3-10" class="i">+        }
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h2" href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a> b/<a href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -97,6 +97,9 @@
+</a>             },
+             &quot;hide_chat_feed&quot;: {
+                 &quot;name&quot;: &quot;Hide from Chat feed&quot;
+<a href="#h2-0-3" id="h2-0-3" class="i">+            },
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+            &quot;pin_conversation&quot;: {
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+                &quot;name&quot;: &quot;Pin Conversation&quot;
+</a>             }
+         }
+     },
+<a href="#h2-1" id="h2-1" class="h">@@ -696,9 +699,18 @@
+</a>     },
+ 
+     &quot;download_processor&quot;: {
+<a href="#h2-1-3" id="h2-1-3" class="i">+        &quot;attachment_type&quot;: {
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+            &quot;snap&quot;: &quot;Snap&quot;,
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+            &quot;sticker&quot;: &quot;Sticker&quot;,
+</a><a href="#h2-1-6" id="h2-1-6" class="i">+            &quot;external_media&quot;: &quot;External Media&quot;,
+</a><a href="#h2-1-7" id="h2-1-7" class="i">+            &quot;note&quot;: &quot;Note&quot;,
+</a><a href="#h2-1-8" id="h2-1-8" class="i">+            &quot;original_story&quot;: &quot;Original Story&quot;
+</a><a href="#h2-1-9" id="h2-1-9" class="i">+        },
+</a><a href="#h2-1-10" id="h2-1-10" class="i">+        &quot;select_attachments_title&quot;: &quot;Select attachments to download&quot;,
+</a>         &quot;download_started_toast&quot;: &quot;Download started&quot;,
+         &quot;unsupported_content_type_toast&quot;: &quot;Unsupported content type!&quot;,
+         &quot;failed_no_longer_available_toast&quot;: &quot;Media no longer available&quot;,
+<a href="#h2-1-14" id="h2-1-14" class="i">+        &quot;no_attachments_toast&quot;: &quot;No attachments found!&quot;,
+</a>         &quot;already_queued_toast&quot;: &quot;Media already in queue!&quot;,
+         &quot;already_downloaded_toast&quot;: &quot;Media already downloaded!&quot;,
+         &quot;saved_toast&quot;: &quot;Saved to {path}&quot;,
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/DownloadManagerClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/DownloadManagerClient.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/DownloadManagerClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/DownloadManagerClient.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -10,7 +10,7 @@ import me.rhunk.snapenhance.core.download.data.DownloadMetadata
+</a> import me.rhunk.snapenhance.core.download.data.DownloadRequest
+ import me.rhunk.snapenhance.core.download.data.InputMedia
+ import me.rhunk.snapenhance.core.download.data.MediaEncryptionKeyPair
+<a href="#h3-0-3" id="h3-0-3" class="d">-import me.rhunk.snapenhance.data.ContentType
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import me.rhunk.snapenhance.features.impl.downloader.decoder.AttachmentType
+</a> 
+ class DownloadManagerClient (
+     private val context: ModContext,
+<a href="#h3-1" id="h3-1" class="h">@@ -50,7 +50,7 @@ class DownloadManagerClient (
+</a>         mediaData: String,
+         mediaType: DownloadMediaType,
+         encryption: MediaEncryptionKeyPair? = null,
+<a href="#h3-1-3" id="h3-1-3" class="d">-        messageContentType: ContentType? = null
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+        attachmentType: AttachmentType? = null
+</a>     ) {
+         enqueueDownloadRequest(
+             DownloadRequest(
+<a href="#h3-2" id="h3-2" class="h">@@ -59,7 +59,7 @@ class DownloadManagerClient (
+</a>                         content = mediaData,
+                         type = mediaType,
+                         encryption = encryption,
+<a href="#h3-2-3" id="h3-2-3" class="d">-                        messageContentType = messageContentType?.name
+</a><a href="#h3-2-4" id="h3-2-4" class="i">+                        attachmentType = attachmentType?.name
+</a>                     )
+                 )
+             )
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadRequest.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadRequest.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadRequest.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadRequest.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -6,7 +6,7 @@ data class InputMedia(
+</a>     val content: String,
+     val type: DownloadMediaType,
+     val encryption: MediaEncryptionKeyPair? = null,
+<a href="#h4-0-3" id="h4-0-3" class="d">-    val messageContentType: String? = null,
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+    val attachmentType: String? = null,
+</a>     val isOverlay: Boolean = false,
+ )
+ 
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/MediaEncryptionKeyPair.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/MediaEncryptionKeyPair.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/MediaEncryptionKeyPair.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/MediaEncryptionKeyPair.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -6,7 +6,7 @@ import me.rhunk.snapenhance.data.wrapper.impl.media.EncryptionWrapper
+</a> import kotlin.io.encoding.Base64
+ import kotlin.io.encoding.ExperimentalEncodingApi
+ 
+<a href="#h5-0-3" id="h5-0-3" class="d">-// key and iv are base64 encoded
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+// key and iv are base64 encoded into url safe strings
+</a> data class MediaEncryptionKeyPair(
+     val key: String,
+     val iv: String
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoEditor.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoEditor.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoEditor.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoEditor.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -14,7 +14,7 @@ class EditorContext(
+</a>     }
+     fun addVarInt(id: Int, value: Int) = addVarInt(id, value.toLong())
+     fun addVarInt(id: Int, value: Long) = addWire(Wire(id, WireType.VARINT, value))
+<a href="#h6-0-3" id="h6-0-3" class="d">-    fun addBuffer(id: Int, value: ByteArray) = addWire(Wire(id, WireType.LENGTH_DELIMITED, value))
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+    fun addBuffer(id: Int, value: ByteArray) = addWire(Wire(id, WireType.CHUNK, value))
+</a>     fun add(id: Int, content: ProtoWriter.() -&gt; Unit) = addBuffer(id, ProtoWriter().apply(content).toByteArray())
+     fun addString(id: Int, value: String) = addBuffer(id, value.toByteArray())
+     fun addFixed64(id: Int, value: Long) = addWire(Wire(id, WireType.FIXED64, value))
+<a href="#h6-1" id="h6-1" class="h">@@ -48,7 +48,7 @@ class ProtoEditor(
+</a>                     wires.getOrPut(wireId) { mutableListOf() }.add(value)
+                     return@forEach
+                 }
+<a href="#h6-1-3" id="h6-1-3" class="d">-                wires[wireId]!!.add(Wire(wireId, WireType.LENGTH_DELIMITED, writeAtPath(path, currentIndex + 1, childReader, wireToWriteCallback)))
+</a><a href="#h6-1-4" id="h6-1-4" class="i">+                wires[wireId]!!.add(Wire(wireId, WireType.CHUNK, writeAtPath(path, currentIndex + 1, childReader, wireToWriteCallback)))
+</a>                 return@forEach
+             }
+             wires[wireId]!!.add(value)
+<b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoReader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoReader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoReader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoReader.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -1,5 +1,7 @@
+</a> package me.rhunk.snapenhance.core.util.protobuf
+ 
+<a href="#h7-0-2" id="h7-0-2" class="i">+import java.util.UUID
+</a><a href="#h7-0-3" id="h7-0-3" class="i">+
+</a> data class Wire(val id: Int, val type: WireType, val value: Any)
+ 
+ class ProtoReader(private val buffer: ByteArray) {
+<a href="#h7-1" id="h7-1" class="h">@@ -43,7 +45,7 @@ class ProtoReader(private val buffer: ByteArray) {
+</a>                         }
+                         bytes
+                     }
+<a href="#h7-1-3" id="h7-1-3" class="d">-                    WireType.LENGTH_DELIMITED -&gt; {
+</a><a href="#h7-1-4" id="h7-1-4" class="i">+                    WireType.CHUNK -&gt; {
+</a>                         val length = readVarInt().toInt()
+                         val bytes = ByteArray(length)
+                         for (i in 0 until length) {
+<a href="#h7-2" id="h7-2" class="h">@@ -135,7 +137,7 @@ class ProtoReader(private val buffer: ByteArray) {
+</a>     fun eachBuffer(reader: (Int, ByteArray) -&gt; Unit) {
+         values.forEach { (id, wires) -&gt;
+             wires.forEach { wire -&gt;
+<a href="#h7-2-3" id="h7-2-3" class="d">-                if (wire.type == WireType.LENGTH_DELIMITED) {
+</a><a href="#h7-2-4" id="h7-2-4" class="i">+                if (wire.type == WireType.CHUNK) {
+</a>                     reader(id, wire.value as ByteArray)
+                 }
+             }
+<a href="#h7-3" id="h7-3" class="h">@@ -172,4 +174,82 @@ class ProtoReader(private val buffer: ByteArray) {
+</a>         }
+         return value
+     }
+<a href="#h7-3-3" id="h7-3-3" class="i">+
+</a><a href="#h7-3-4" id="h7-3-4" class="i">+    private fun prettyPrint(tabSize: Int): String {
+</a><a href="#h7-3-5" id="h7-3-5" class="i">+        val tabLine = &quot;    &quot;.repeat(tabSize)
+</a><a href="#h7-3-6" id="h7-3-6" class="i">+        val stringBuilder = StringBuilder()
+</a><a href="#h7-3-7" id="h7-3-7" class="i">+        values.forEach { (id, wires) -&gt;
+</a><a href="#h7-3-8" id="h7-3-8" class="i">+            wires.forEach { wire -&gt;
+</a><a href="#h7-3-9" id="h7-3-9" class="i">+                stringBuilder.append(tabLine)
+</a><a href="#h7-3-10" id="h7-3-10" class="i">+                stringBuilder.append(&quot;$id &lt;${wire.type.name.lowercase()}&gt; = &quot;)
+</a><a href="#h7-3-11" id="h7-3-11" class="i">+                when (wire.type) {
+</a><a href="#h7-3-12" id="h7-3-12" class="i">+                    WireType.VARINT -&gt; stringBuilder.append(&quot;${wire.value}\n&quot;)
+</a><a href="#h7-3-13" id="h7-3-13" class="i">+                    WireType.FIXED64, WireType.FIXED32 -&gt; {
+</a><a href="#h7-3-14" id="h7-3-14" class="i">+                        //print as double, int, floating point
+</a><a href="#h7-3-15" id="h7-3-15" class="i">+                        val doubleValue = run {
+</a><a href="#h7-3-16" id="h7-3-16" class="i">+                            val bytes = wire.value as ByteArray
+</a><a href="#h7-3-17" id="h7-3-17" class="i">+                            var value = 0L
+</a><a href="#h7-3-18" id="h7-3-18" class="i">+                            for (i in bytes.indices) {
+</a><a href="#h7-3-19" id="h7-3-19" class="i">+                                value = value or ((bytes[i].toLong() and 0xFF) shl (i * 8))
+</a><a href="#h7-3-20" id="h7-3-20" class="i">+                            }
+</a><a href="#h7-3-21" id="h7-3-21" class="i">+                            value
+</a><a href="#h7-3-22" id="h7-3-22" class="i">+                        }.let {
+</a><a href="#h7-3-23" id="h7-3-23" class="i">+                            if (wire.type == WireType.FIXED32) {
+</a><a href="#h7-3-24" id="h7-3-24" class="i">+                                it.toInt()
+</a><a href="#h7-3-25" id="h7-3-25" class="i">+                            } else {
+</a><a href="#h7-3-26" id="h7-3-26" class="i">+                                it
+</a><a href="#h7-3-27" id="h7-3-27" class="i">+                            }
+</a><a href="#h7-3-28" id="h7-3-28" class="i">+                        }
+</a><a href="#h7-3-29" id="h7-3-29" class="i">+
+</a><a href="#h7-3-30" id="h7-3-30" class="i">+                        stringBuilder.append(&quot;$doubleValue/${doubleValue.toDouble().toBits().toString(16)}\n&quot;)
+</a><a href="#h7-3-31" id="h7-3-31" class="i">+                    }
+</a><a href="#h7-3-32" id="h7-3-32" class="i">+                    WireType.CHUNK -&gt; {
+</a><a href="#h7-3-33" id="h7-3-33" class="i">+                        fun printArray() {
+</a><a href="#h7-3-34" id="h7-3-34" class="i">+                            stringBuilder.append(&quot;\n&quot;)
+</a><a href="#h7-3-35" id="h7-3-35" class="i">+                            stringBuilder.append(&quot;$tabLine    &quot;)
+</a><a href="#h7-3-36" id="h7-3-36" class="i">+                            stringBuilder.append((wire.value as ByteArray).joinToString(&quot; &quot;) { byte -&gt; &quot;%02x&quot;.format(byte) })
+</a><a href="#h7-3-37" id="h7-3-37" class="i">+                            stringBuilder.append(&quot;\n&quot;)
+</a><a href="#h7-3-38" id="h7-3-38" class="i">+                        }
+</a><a href="#h7-3-39" id="h7-3-39" class="i">+                        runCatching {
+</a><a href="#h7-3-40" id="h7-3-40" class="i">+                            val array = (wire.value as ByteArray)
+</a><a href="#h7-3-41" id="h7-3-41" class="i">+                            if (array.isEmpty()) {
+</a><a href="#h7-3-42" id="h7-3-42" class="i">+                                stringBuilder.append(&quot;empty\n&quot;)
+</a><a href="#h7-3-43" id="h7-3-43" class="i">+                                return@runCatching
+</a><a href="#h7-3-44" id="h7-3-44" class="i">+                            }
+</a><a href="#h7-3-45" id="h7-3-45" class="i">+                            //auto detect ascii strings
+</a><a href="#h7-3-46" id="h7-3-46" class="i">+                            if (array.all { it in 0x20..0x7E }) {
+</a><a href="#h7-3-47" id="h7-3-47" class="i">+                                stringBuilder.append(&quot;string: ${array.toString(Charsets.UTF_8)}\n&quot;)
+</a><a href="#h7-3-48" id="h7-3-48" class="i">+                                return@runCatching
+</a><a href="#h7-3-49" id="h7-3-49" class="i">+                            }
+</a><a href="#h7-3-50" id="h7-3-50" class="i">+
+</a><a href="#h7-3-51" id="h7-3-51" class="i">+                            // auto detect uuids
+</a><a href="#h7-3-52" id="h7-3-52" class="i">+                            if (array.size == 16) {
+</a><a href="#h7-3-53" id="h7-3-53" class="i">+                                val longs = LongArray(2)
+</a><a href="#h7-3-54" id="h7-3-54" class="i">+                                for (i in 0..7) {
+</a><a href="#h7-3-55" id="h7-3-55" class="i">+                                    longs[0] = longs[0] or ((array[i].toLong() and 0xFF) shl (i * 8))
+</a><a href="#h7-3-56" id="h7-3-56" class="i">+                                }
+</a><a href="#h7-3-57" id="h7-3-57" class="i">+                                for (i in 8..15) {
+</a><a href="#h7-3-58" id="h7-3-58" class="i">+                                    longs[1] = longs[1] or ((array[i].toLong() and 0xFF) shl ((i - 8) * 8))
+</a><a href="#h7-3-59" id="h7-3-59" class="i">+                                }
+</a><a href="#h7-3-60" id="h7-3-60" class="i">+                                stringBuilder.append(&quot;uuid: ${UUID(longs[0], longs[1])}\n&quot;)
+</a><a href="#h7-3-61" id="h7-3-61" class="i">+                                return@runCatching
+</a><a href="#h7-3-62" id="h7-3-62" class="i">+                            }
+</a><a href="#h7-3-63" id="h7-3-63" class="i">+
+</a><a href="#h7-3-64" id="h7-3-64" class="i">+                            ProtoReader(array).prettyPrint(tabSize + 1).takeIf { it.isNotEmpty() }?.let {
+</a><a href="#h7-3-65" id="h7-3-65" class="i">+                                stringBuilder.append(&quot;message:\n&quot;)
+</a><a href="#h7-3-66" id="h7-3-66" class="i">+                                stringBuilder.append(it)
+</a><a href="#h7-3-67" id="h7-3-67" class="i">+                            } ?: printArray()
+</a><a href="#h7-3-68" id="h7-3-68" class="i">+                        }.onFailure {
+</a><a href="#h7-3-69" id="h7-3-69" class="i">+                            printArray()
+</a><a href="#h7-3-70" id="h7-3-70" class="i">+                        }
+</a><a href="#h7-3-71" id="h7-3-71" class="i">+                    }
+</a><a href="#h7-3-72" id="h7-3-72" class="i">+                    else -&gt; stringBuilder.append(&quot;unknown\n&quot;)
+</a><a href="#h7-3-73" id="h7-3-73" class="i">+                }
+</a><a href="#h7-3-74" id="h7-3-74" class="i">+            }
+</a><a href="#h7-3-75" id="h7-3-75" class="i">+        }
+</a><a href="#h7-3-76" id="h7-3-76" class="i">+
+</a><a href="#h7-3-77" id="h7-3-77" class="i">+        return stringBuilder.toString()
+</a><a href="#h7-3-78" id="h7-3-78" class="i">+    }
+</a><a href="#h7-3-79" id="h7-3-79" class="i">+
+</a><a href="#h7-3-80" id="h7-3-80" class="i">+    override fun toString() = prettyPrint(0)
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoWriter.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoWriter.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoWriter.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoWriter.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -24,7 +24,7 @@ class ProtoWriter {
+</a>     }
+ 
+     fun addBuffer(id: Int, value: ByteArray) {
+<a href="#h8-0-3" id="h8-0-3" class="d">-        writeVarInt(id shl 3 or WireType.LENGTH_DELIMITED.value)
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+        writeVarInt(id shl 3 or WireType.CHUNK.value)
+</a>         writeVarInt(value.size)
+         stream.write(value)
+     }
+<a href="#h8-1" id="h8-1" class="h">@@ -98,7 +98,7 @@ class ProtoWriter {
+</a>                     is ByteArray -&gt; stream.write(wire.value)
+                 }
+             }
+<a href="#h8-1-3" id="h8-1-3" class="d">-            WireType.LENGTH_DELIMITED -&gt; {
+</a><a href="#h8-1-4" id="h8-1-4" class="i">+            WireType.CHUNK -&gt; {
+</a>                 val value = wire.value as ByteArray
+                 writeVarInt(value.size)
+                 stream.write(value)
+<b>diff --git a/<a id="h9" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/WireType.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/WireType.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/WireType.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/WireType.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -3,7 +3,7 @@ package me.rhunk.snapenhance.core.util.protobuf;
+</a> enum class WireType(val value: Int) {
+     VARINT(0),
+     FIXED64(1),
+<a href="#h9-0-3" id="h9-0-3" class="d">-    LENGTH_DELIMITED(2),
+</a><a href="#h9-0-4" id="h9-0-4" class="i">+    CHUNK(2),
+</a>     START_GROUP(3),
+     END_GROUP(4),
+     FIXED32(5);
+<b>diff --git a/<a id="h10" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/snap/EncryptionHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/snap/EncryptionHelper.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/snap/EncryptionHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/snap/EncryptionHelper.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -1,15 +1,18 @@
+</a> package me.rhunk.snapenhance.core.util.snap
+ 
+ import me.rhunk.snapenhance.Constants
+<a href="#h10-0-3" id="h10-0-3" class="i">+import me.rhunk.snapenhance.core.download.data.MediaEncryptionKeyPair
+</a> import me.rhunk.snapenhance.core.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.data.ContentType
+ import java.io.InputStream
+<a href="#h10-0-7" id="h10-0-7" class="d">-import java.util.Base64
+</a> import javax.crypto.Cipher
+ import javax.crypto.CipherInputStream
+ import javax.crypto.spec.IvParameterSpec
+ import javax.crypto.spec.SecretKeySpec
+<a href="#h10-0-12" id="h10-0-12" class="i">+import kotlin.io.encoding.Base64
+</a><a href="#h10-0-13" id="h10-0-13" class="i">+import kotlin.io.encoding.ExperimentalEncodingApi
+</a> 
+<a href="#h10-0-15" id="h10-0-15" class="i">+@OptIn(ExperimentalEncodingApi::class)
+</a> object EncryptionHelper {
+     fun getEncryptionKeys(contentType: ContentType, messageProto: ProtoReader, isArroyo: Boolean): Pair&lt;ByteArray, ByteArray&gt;? {
+         val mediaEncryptionInfo = MediaDownloaderHelper.getMessageMediaEncryptionInfo(
+<a href="#h10-1" id="h10-1" class="h">@@ -28,9 +31,8 @@ object EncryptionHelper {
+</a>         var iv: ByteArray = encryptionProto.getByteArray(2)!!
+ 
+         if (encryptionProtoIndex == Constants.ENCRYPTION_PROTO_INDEX_V2) {
+<a href="#h10-1-3" id="h10-1-3" class="d">-            val decoder = Base64.getMimeDecoder()
+</a><a href="#h10-1-4" id="h10-1-4" class="d">-            key = decoder.decode(key)
+</a><a href="#h10-1-5" id="h10-1-5" class="d">-            iv = decoder.decode(iv)
+</a><a href="#h10-1-6" id="h10-1-6" class="i">+            key = Base64.UrlSafe.decode(key)
+</a><a href="#h10-1-7" id="h10-1-7" class="i">+            iv = Base64.UrlSafe.decode(iv)
+</a>         }
+ 
+         return Pair(key, iv)
+<a href="#h10-2" id="h10-2" class="h">@@ -50,4 +52,22 @@ object EncryptionHelper {
+</a>             return CipherInputStream(inputStream, cipher)
+         }
+     }
+<a href="#h10-2-3" id="h10-2-3" class="i">+
+</a><a href="#h10-2-4" id="h10-2-4" class="i">+    fun decryptInputStream(
+</a><a href="#h10-2-5" id="h10-2-5" class="i">+        inputStream: InputStream,
+</a><a href="#h10-2-6" id="h10-2-6" class="i">+        mediaEncryptionKeyPair: MediaEncryptionKeyPair?
+</a><a href="#h10-2-7" id="h10-2-7" class="i">+    ): InputStream {
+</a><a href="#h10-2-8" id="h10-2-8" class="i">+        if (mediaEncryptionKeyPair == null) {
+</a><a href="#h10-2-9" id="h10-2-9" class="i">+            return inputStream
+</a><a href="#h10-2-10" id="h10-2-10" class="i">+        }
+</a><a href="#h10-2-11" id="h10-2-11" class="i">+
+</a><a href="#h10-2-12" id="h10-2-12" class="i">+        Cipher.getInstance(&quot;AES/CBC/PKCS5Padding&quot;).apply {
+</a><a href="#h10-2-13" id="h10-2-13" class="i">+            init(Cipher.DECRYPT_MODE,
+</a><a href="#h10-2-14" id="h10-2-14" class="i">+                SecretKeySpec(Base64.UrlSafe.decode(mediaEncryptionKeyPair.key), &quot;AES&quot;),
+</a><a href="#h10-2-15" id="h10-2-15" class="i">+                IvParameterSpec(Base64.UrlSafe.decode(mediaEncryptionKeyPair.iv))
+</a><a href="#h10-2-16" id="h10-2-16" class="i">+            )
+</a><a href="#h10-2-17" id="h10-2-17" class="i">+        }.let { cipher -&gt;
+</a><a href="#h10-2-18" id="h10-2-18" class="i">+            return CipherInputStream(inputStream, cipher)
+</a><a href="#h10-2-19" id="h10-2-19" class="i">+        }
+</a><a href="#h10-2-20" id="h10-2-20" class="i">+    }
+</a> }
+<b>diff --git a/<a id="h11" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h11-0" id="h11-0" class="h">@@ -6,7 +6,6 @@ import android.graphics.BitmapFactory
+</a> import android.net.Uri
+ import android.view.Gravity
+ import android.view.ViewGroup.MarginLayoutParams
+<a href="#h11-0-3" id="h11-0-3" class="d">-import android.view.Window
+</a> import android.widget.ImageView
+ import android.widget.LinearLayout
+ import android.widget.ProgressBar
+<a href="#h11-1" id="h11-1" class="h">@@ -15,6 +14,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
+</a> import kotlinx.coroutines.async
+ import kotlinx.coroutines.runBlocking
+ import me.rhunk.snapenhance.bridge.DownloadCallback
+<a href="#h11-1-3" id="h11-1-3" class="i">+import me.rhunk.snapenhance.core.database.objects.ConversationMessage
+</a> import me.rhunk.snapenhance.core.database.objects.FriendInfo
+ import me.rhunk.snapenhance.core.download.DownloadManagerClient
+ import me.rhunk.snapenhance.core.download.data.DownloadMediaType
+<a href="#h11-2" id="h11-2" class="h">@@ -31,7 +31,6 @@ import me.rhunk.snapenhance.core.util.snap.BitmojiSelfie
+</a> import me.rhunk.snapenhance.core.util.snap.EncryptionHelper
+ import me.rhunk.snapenhance.core.util.snap.MediaDownloaderHelper
+ import me.rhunk.snapenhance.core.util.snap.PreviewUtils
+<a href="#h11-2-3" id="h11-2-3" class="d">-import me.rhunk.snapenhance.data.ContentType
+</a> import me.rhunk.snapenhance.data.FileType
+ import me.rhunk.snapenhance.data.wrapper.impl.media.MediaInfo
+ import me.rhunk.snapenhance.data.wrapper.impl.media.dash.LongformVideoPlaylistItem
+<a href="#h11-3" id="h11-3" class="h">@@ -41,6 +40,8 @@ import me.rhunk.snapenhance.data.wrapper.impl.media.opera.ParamMap
+</a> import me.rhunk.snapenhance.features.FeatureLoadParams
+ import me.rhunk.snapenhance.features.MessagingRuleFeature
+ import me.rhunk.snapenhance.features.impl.Messaging
+<a href="#h11-3-3" id="h11-3-3" class="i">+import me.rhunk.snapenhance.features.impl.downloader.decoder.DecodedAttachment
+</a><a href="#h11-3-4" id="h11-3-4" class="i">+import me.rhunk.snapenhance.features.impl.downloader.decoder.MessageDecoder
+</a> import me.rhunk.snapenhance.features.impl.spying.MessageLogger
+ import me.rhunk.snapenhance.hook.HookAdapter
+ import me.rhunk.snapenhance.hook.HookStage
+<a href="#h11-4" id="h11-4" class="h">@@ -69,6 +70,10 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>     private var lastSeenMediaInfoMap: MutableMap&lt;SplitMediaAssetType, MediaInfo&gt;? = null
+     private var lastSeenMapParams: ParamMap? = null
+ 
+<a href="#h11-4-3" id="h11-4-3" class="i">+    private val translations by lazy {
+</a><a href="#h11-4-4" id="h11-4-4" class="i">+        context.translation.getCategory(&quot;download_processor&quot;)
+</a><a href="#h11-4-5" id="h11-4-5" class="i">+    }
+</a><a href="#h11-4-6" id="h11-4-6" class="i">+
+</a>     private fun provideDownloadManagerClient(
+         mediaIdentifier: String,
+         mediaAuthor: String,
+<a href="#h11-5" id="h11-5" class="h">@@ -81,7 +86,7 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a> 
+         val downloadLogging by context.config.downloader.logging
+         if (downloadLogging.contains(&quot;started&quot;)) {
+<a href="#h11-5-3" id="h11-5-3" class="d">-            context.shortToast(context.translation[&quot;download_processor.download_started_toast&quot;])
+</a><a href="#h11-5-4" id="h11-5-4" class="i">+            context.shortToast(translations[&quot;download_started_toast&quot;])
+</a>         }
+ 
+         val outputPath = createNewFilePath(generatedHash, downloadSource, mediaAuthor)
+<a href="#h11-6" id="h11-6" class="h">@@ -101,7 +106,7 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>                 override fun onSuccess(outputFile: String) {
+                     if (!downloadLogging.contains(&quot;success&quot;)) return
+                     context.log.verbose(&quot;onSuccess: outputFile=$outputFile&quot;)
+<a href="#h11-6-3" id="h11-6-3" class="d">-                    context.shortToast(context.translation.format(&quot;download_processor.saved_toast&quot;, &quot;path&quot; to outputFile.split(&quot;/&quot;).takeLast(2).joinToString(&quot;/&quot;)))
+</a><a href="#h11-6-4" id="h11-6-4" class="i">+                    context.shortToast(translations.format(&quot;saved_toast&quot;, &quot;path&quot; to outputFile.split(&quot;/&quot;).takeLast(2).joinToString(&quot;/&quot;)))
+</a>                 }
+ 
+                 override fun onProgress(message: String) {
+<a href="#h11-7" id="h11-7" class="h">@@ -483,6 +488,34 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>         }
+     }
+ 
+<a href="#h11-7-3" id="h11-7-3" class="i">+    private fun downloadMessageAttachments(
+</a><a href="#h11-7-4" id="h11-7-4" class="i">+        friendInfo: FriendInfo,
+</a><a href="#h11-7-5" id="h11-7-5" class="i">+        message: ConversationMessage,
+</a><a href="#h11-7-6" id="h11-7-6" class="i">+        authorName: String,
+</a><a href="#h11-7-7" id="h11-7-7" class="i">+        attachments: List&lt;DecodedAttachment&gt;
+</a><a href="#h11-7-8" id="h11-7-8" class="i">+    ) {
+</a><a href="#h11-7-9" id="h11-7-9" class="i">+        //TODO: stickers
+</a><a href="#h11-7-10" id="h11-7-10" class="i">+        attachments.forEach { attachment -&gt;
+</a><a href="#h11-7-11" id="h11-7-11" class="i">+            runCatching {
+</a><a href="#h11-7-12" id="h11-7-12" class="i">+                provideDownloadManagerClient(
+</a><a href="#h11-7-13" id="h11-7-13" class="i">+                    mediaIdentifier = &quot;${message.clientConversationId}${message.senderId}${message.serverMessageId}${attachment.attachmentInfo?.encryption?.iv}&quot;,
+</a><a href="#h11-7-14" id="h11-7-14" class="i">+                    downloadSource = MediaDownloadSource.CHAT_MEDIA,
+</a><a href="#h11-7-15" id="h11-7-15" class="i">+                    mediaAuthor = authorName,
+</a><a href="#h11-7-16" id="h11-7-16" class="i">+                    friendInfo = friendInfo
+</a><a href="#h11-7-17" id="h11-7-17" class="i">+                ).downloadSingleMedia(
+</a><a href="#h11-7-18" id="h11-7-18" class="i">+                    mediaData = attachment.mediaKey!!,
+</a><a href="#h11-7-19" id="h11-7-19" class="i">+                    mediaType = DownloadMediaType.PROTO_MEDIA,
+</a><a href="#h11-7-20" id="h11-7-20" class="i">+                    encryption = attachment.attachmentInfo?.encryption,
+</a><a href="#h11-7-21" id="h11-7-21" class="i">+                    attachmentType = attachment.type
+</a><a href="#h11-7-22" id="h11-7-22" class="i">+                )
+</a><a href="#h11-7-23" id="h11-7-23" class="i">+            }.onFailure {
+</a><a href="#h11-7-24" id="h11-7-24" class="i">+                context.longToast(translations[&quot;failed_generic_toast&quot;])
+</a><a href="#h11-7-25" id="h11-7-25" class="i">+                context.log.error(&quot;Failed to download&quot;, it)
+</a><a href="#h11-7-26" id="h11-7-26" class="i">+            }
+</a><a href="#h11-7-27" id="h11-7-27" class="i">+        }
+</a><a href="#h11-7-28" id="h11-7-28" class="i">+    }
+</a><a href="#h11-7-29" id="h11-7-29" class="i">+
+</a><a href="#h11-7-30" id="h11-7-30" class="i">+
+</a>     @SuppressLint(&quot;SetTextI18n&quot;)
+     @OptIn(ExperimentalCoroutinesApi::class)
+     fun downloadMessageId(messageId: Long, isPreview: Boolean = false) {
+<a href="#h11-8" id="h11-8" class="h">@@ -494,15 +527,10 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>         val authorName = friendInfo.usernameForSorting!!
+ 
+         var messageContent = message.messageContent!!
+<a href="#h11-8-3" id="h11-8-3" class="d">-        var isArroyoMessage = true
+</a><a href="#h11-8-4" id="h11-8-4" class="d">-        var deletedMediaReference: ByteArray? = null
+</a><a href="#h11-8-5" id="h11-8-5" class="d">-
+</a><a href="#h11-8-6" id="h11-8-6" class="d">-        //check if the messageId
+</a><a href="#h11-8-7" id="h11-8-7" class="d">-        var contentType: ContentType = ContentType.fromId(message.contentType)
+</a><a href="#h11-8-8" id="h11-8-8" class="i">+        var customMediaReferences = mutableListOf&lt;String&gt;()
+</a> 
+         if (messageLogger.isMessageRemoved(message.clientConversationId!!, message.serverMessageId.toLong())) {
+             val messageObject = messageLogger.getMessageObject(message.clientConversationId!!, message.serverMessageId.toLong()) ?: throw Exception(&quot;Message not found in database&quot;)
+<a href="#h11-8-12" id="h11-8-12" class="d">-            isArroyoMessage = false
+</a>             val messageContentObject = messageObject.getAsJsonObject(&quot;mMessageContent&quot;)
+ 
+             messageContent = messageContentObject
+<a href="#h11-9" id="h11-9" class="h">@@ -510,137 +538,138 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>                 .map { it.asByte }
+                 .toByteArray()
+ 
+<a href="#h11-9-3" id="h11-9-3" class="d">-            contentType = ContentType.valueOf(messageContentObject
+</a><a href="#h11-9-4" id="h11-9-4" class="d">-                .getAsJsonPrimitive(&quot;mContentType&quot;).asString
+</a><a href="#h11-9-5" id="h11-9-5" class="d">-            )
+</a><a href="#h11-9-6" id="h11-9-6" class="d">-
+</a><a href="#h11-9-7" id="h11-9-7" class="d">-            deletedMediaReference = messageContentObject.getAsJsonArray(&quot;mRemoteMediaReferences&quot;)
+</a><a href="#h11-9-8" id="h11-9-8" class="i">+            customMediaReferences = messageContentObject
+</a><a href="#h11-9-9" id="h11-9-9" class="i">+                .getAsJsonArray(&quot;mRemoteMediaReferences&quot;)
+</a>                 .map { it.asJsonObject.getAsJsonArray(&quot;mMediaReferences&quot;) }
+<a href="#h11-9-11" id="h11-9-11" class="d">-                .flatten().let {  reference -&gt;
+</a><a href="#h11-9-12" id="h11-9-12" class="d">-                    if (reference.isEmpty()) return@let null
+</a><a href="#h11-9-13" id="h11-9-13" class="d">-                    reference[0].asJsonObject.getAsJsonArray(&quot;mContentObject&quot;).map { it.asByte }.toByteArray()
+</a><a href="#h11-9-14" id="h11-9-14" class="i">+                .flatten().map { reference -&gt;
+</a><a href="#h11-9-15" id="h11-9-15" class="i">+                    Base64.UrlSafe.encode(
+</a><a href="#h11-9-16" id="h11-9-16" class="i">+                        reference.asJsonObject.getAsJsonArray(&quot;mContentObject&quot;).map { it.asByte }.toByteArray()
+</a><a href="#h11-9-17" id="h11-9-17" class="i">+                    )
+</a>                 }
+<a href="#h11-9-19" id="h11-9-19" class="d">-        }
+</a><a href="#h11-9-20" id="h11-9-20" class="d">-
+</a><a href="#h11-9-21" id="h11-9-21" class="d">-        val translations = context.translation.getCategory(&quot;download_processor&quot;)
+</a><a href="#h11-9-22" id="h11-9-22" class="d">-
+</a><a href="#h11-9-23" id="h11-9-23" class="d">-        if (contentType != ContentType.NOTE &amp;&amp;
+</a><a href="#h11-9-24" id="h11-9-24" class="d">-            contentType != ContentType.SNAP &amp;&amp;
+</a><a href="#h11-9-25" id="h11-9-25" class="d">-            contentType != ContentType.EXTERNAL_MEDIA) {
+</a><a href="#h11-9-26" id="h11-9-26" class="d">-            context.shortToast(translations[&quot;unsupported_content_type_toast&quot;])
+</a><a href="#h11-9-27" id="h11-9-27" class="d">-            return
+</a><a href="#h11-9-28" id="h11-9-28" class="i">+                .toMutableList()
+</a>         }
+ 
+         val messageReader = ProtoReader(messageContent)
+<a href="#h11-9-32" id="h11-9-32" class="d">-        val urlProto: ByteArray? = if (isArroyoMessage) {
+</a><a href="#h11-9-33" id="h11-9-33" class="d">-            var finalProto: ByteArray? = null
+</a><a href="#h11-9-34" id="h11-9-34" class="d">-            messageReader.eachBuffer(4, 5) {
+</a><a href="#h11-9-35" id="h11-9-35" class="d">-                finalProto = getByteArray(1, 3)
+</a><a href="#h11-9-36" id="h11-9-36" class="d">-            }
+</a><a href="#h11-9-37" id="h11-9-37" class="d">-            finalProto
+</a><a href="#h11-9-38" id="h11-9-38" class="d">-        } else deletedMediaReference
+</a><a href="#h11-9-39" id="h11-9-39" class="i">+        val decodedAttachments = MessageDecoder.decode(
+</a><a href="#h11-9-40" id="h11-9-40" class="i">+            protoReader = messageReader,
+</a><a href="#h11-9-41" id="h11-9-41" class="i">+            customMediaReferences = customMediaReferences.takeIf { it.isNotEmpty() }
+</a><a href="#h11-9-42" id="h11-9-42" class="i">+        )
+</a> 
+<a href="#h11-9-44" id="h11-9-44" class="d">-        if (urlProto == null) {
+</a><a href="#h11-9-45" id="h11-9-45" class="d">-            context.shortToast(translations[&quot;unsupported_content_type_toast&quot;])
+</a><a href="#h11-9-46" id="h11-9-46" class="i">+        if (decodedAttachments.isEmpty()) {
+</a><a href="#h11-9-47" id="h11-9-47" class="i">+            context.shortToast(translations[&quot;no_attachments_toast&quot;])
+</a>             return
+         }
+ 
+<a href="#h11-9-51" id="h11-9-51" class="d">-        runCatching {
+</a><a href="#h11-9-52" id="h11-9-52" class="d">-            if (!isPreview) {
+</a><a href="#h11-9-53" id="h11-9-53" class="d">-                val encryptionKeys = EncryptionHelper.getEncryptionKeys(contentType, messageReader, isArroyo = isArroyoMessage)
+</a><a href="#h11-9-54" id="h11-9-54" class="d">-                provideDownloadManagerClient(
+</a><a href="#h11-9-55" id="h11-9-55" class="d">-                    mediaIdentifier = &quot;${message.clientConversationId}${message.senderId}${message.serverMessageId}&quot;,
+</a><a href="#h11-9-56" id="h11-9-56" class="d">-                    downloadSource = MediaDownloadSource.CHAT_MEDIA,
+</a><a href="#h11-9-57" id="h11-9-57" class="d">-                    mediaAuthor = authorName,
+</a><a href="#h11-9-58" id="h11-9-58" class="d">-                    friendInfo = friendInfo
+</a><a href="#h11-9-59" id="h11-9-59" class="d">-                ).downloadSingleMedia(
+</a><a href="#h11-9-60" id="h11-9-60" class="d">-                    mediaData = Base64.UrlSafe.encode(urlProto),
+</a><a href="#h11-9-61" id="h11-9-61" class="d">-                    mediaType = DownloadMediaType.PROTO_MEDIA,
+</a><a href="#h11-9-62" id="h11-9-62" class="d">-                    encryption = encryptionKeys?.toKeyPair(),
+</a><a href="#h11-9-63" id="h11-9-63" class="d">-                    messageContentType = contentType
+</a><a href="#h11-9-64" id="h11-9-64" class="i">+        if (!isPreview) {
+</a><a href="#h11-9-65" id="h11-9-65" class="i">+            if (decodedAttachments.size == 1) {
+</a><a href="#h11-9-66" id="h11-9-66" class="i">+                downloadMessageAttachments(friendInfo, message, authorName,
+</a><a href="#h11-9-67" id="h11-9-67" class="i">+                    listOf(decodedAttachments.first())
+</a>                 )
+                 return
+             }
+ 
+<a href="#h11-9-72" id="h11-9-72" class="d">-            if (EncryptionHelper.getEncryptionKeys(contentType, messageReader, isArroyo = isArroyoMessage) == null) {
+</a><a href="#h11-9-73" id="h11-9-73" class="d">-                context.shortToast(translations[&quot;failed_no_longer_available_toast&quot;])
+</a><a href="#h11-9-74" id="h11-9-74" class="d">-                return
+</a><a href="#h11-9-75" id="h11-9-75" class="i">+            runOnUiThread {
+</a><a href="#h11-9-76" id="h11-9-76" class="i">+                ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity).apply {
+</a><a href="#h11-9-77" id="h11-9-77" class="i">+                    val selectedAttachments = mutableListOf&lt;Int&gt;().apply {
+</a><a href="#h11-9-78" id="h11-9-78" class="i">+                        addAll(decodedAttachments.indices)
+</a><a href="#h11-9-79" id="h11-9-79" class="i">+                    }
+</a><a href="#h11-9-80" id="h11-9-80" class="i">+                    setMultiChoiceItems(
+</a><a href="#h11-9-81" id="h11-9-81" class="i">+                        decodedAttachments.mapIndexed { index, decodedAttachment -&gt;
+</a><a href="#h11-9-82" id="h11-9-82" class="i">+                            &quot;${index + 1}: ${translations[&quot;attachment_type.${decodedAttachment.type.key}&quot;]} ${decodedAttachment.attachmentInfo?.resolution?.let { &quot;(${it.first}x${it.second})&quot; } ?: &quot;&quot;}&quot;
+</a><a href="#h11-9-83" id="h11-9-83" class="i">+                        }.toTypedArray(),
+</a><a href="#h11-9-84" id="h11-9-84" class="i">+                        decodedAttachments.map { true }.toBooleanArray()
+</a><a href="#h11-9-85" id="h11-9-85" class="i">+                    ) { _, which, isChecked -&gt;
+</a><a href="#h11-9-86" id="h11-9-86" class="i">+                        if (isChecked) {
+</a><a href="#h11-9-87" id="h11-9-87" class="i">+                            selectedAttachments.add(which)
+</a><a href="#h11-9-88" id="h11-9-88" class="i">+                        } else if (selectedAttachments.contains(which)) {
+</a><a href="#h11-9-89" id="h11-9-89" class="i">+                            selectedAttachments.remove(which)
+</a><a href="#h11-9-90" id="h11-9-90" class="i">+                        }
+</a><a href="#h11-9-91" id="h11-9-91" class="i">+                    }
+</a><a href="#h11-9-92" id="h11-9-92" class="i">+                    setTitle(translations[&quot;select_attachments_title&quot;])
+</a><a href="#h11-9-93" id="h11-9-93" class="i">+                    setNegativeButton(this@MediaDownloader.context.translation[&quot;button.cancel&quot;]) { dialog, _ -&gt; dialog.dismiss() }
+</a><a href="#h11-9-94" id="h11-9-94" class="i">+                    setPositiveButton(this@MediaDownloader.context.translation[&quot;button.download&quot;]) { _, _ -&gt;
+</a><a href="#h11-9-95" id="h11-9-95" class="i">+                        downloadMessageAttachments(friendInfo, message, authorName, selectedAttachments.map { decodedAttachments[it] })
+</a><a href="#h11-9-96" id="h11-9-96" class="i">+                    }
+</a><a href="#h11-9-97" id="h11-9-97" class="i">+                }.show()
+</a>             }
+ 
+<a href="#h11-9-100" id="h11-9-100" class="d">-            runBlocking {
+</a><a href="#h11-9-101" id="h11-9-101" class="d">-                val previewCoroutine = async {
+</a><a href="#h11-9-102" id="h11-9-102" class="d">-                    val downloadedMediaList = MediaDownloaderHelper.downloadMediaFromReference(urlProto) {
+</a><a href="#h11-9-103" id="h11-9-103" class="d">-                        EncryptionHelper.decryptInputStream(it, contentType, messageReader, isArroyo = isArroyoMessage)
+</a><a href="#h11-9-104" id="h11-9-104" class="d">-                    }
+</a><a href="#h11-9-105" id="h11-9-105" class="i">+            return
+</a><a href="#h11-9-106" id="h11-9-106" class="i">+        }
+</a> 
+<a href="#h11-9-108" id="h11-9-108" class="d">-                    val originalMedia = downloadedMediaList[SplitMediaAssetType.ORIGINAL] ?: return@async null
+</a><a href="#h11-9-109" id="h11-9-109" class="d">-                    val overlay = downloadedMediaList[SplitMediaAssetType.OVERLAY]
+</a><a href="#h11-9-110" id="h11-9-110" class="i">+        runBlocking {
+</a><a href="#h11-9-111" id="h11-9-111" class="i">+            val firstAttachment = decodedAttachments.first()
+</a> 
+<a href="#h11-9-113" id="h11-9-113" class="d">-                    var bitmap: Bitmap? = PreviewUtils.createPreview(originalMedia, isVideo = FileType.fromByteArray(originalMedia).isVideo)
+</a><a href="#h11-9-114" id="h11-9-114" class="i">+            val previewCoroutine = async {
+</a><a href="#h11-9-115" id="h11-9-115" class="i">+                val downloadedMediaList = MediaDownloaderHelper.downloadMediaFromReference(Base64.decode(firstAttachment.mediaKey!!)) {
+</a><a href="#h11-9-116" id="h11-9-116" class="i">+                    EncryptionHelper.decryptInputStream(
+</a><a href="#h11-9-117" id="h11-9-117" class="i">+                        it,
+</a><a href="#h11-9-118" id="h11-9-118" class="i">+                        decodedAttachments.first().attachmentInfo?.encryption
+</a><a href="#h11-9-119" id="h11-9-119" class="i">+                    )
+</a><a href="#h11-9-120" id="h11-9-120" class="i">+                }
+</a> 
+<a href="#h11-9-122" id="h11-9-122" class="d">-                    if (bitmap == null) {
+</a><a href="#h11-9-123" id="h11-9-123" class="d">-                        context.shortToast(translations[&quot;failed_to_create_preview_toast&quot;])
+</a><a href="#h11-9-124" id="h11-9-124" class="d">-                        return@async null
+</a><a href="#h11-9-125" id="h11-9-125" class="d">-                    }
+</a><a href="#h11-9-126" id="h11-9-126" class="i">+                val originalMedia = downloadedMediaList[SplitMediaAssetType.ORIGINAL] ?: return@async null
+</a><a href="#h11-9-127" id="h11-9-127" class="i">+                val overlay = downloadedMediaList[SplitMediaAssetType.OVERLAY]
+</a> 
+<a href="#h11-9-129" id="h11-9-129" class="d">-                    overlay?.also {
+</a><a href="#h11-9-130" id="h11-9-130" class="d">-                        bitmap = PreviewUtils.mergeBitmapOverlay(bitmap!!, BitmapFactory.decodeByteArray(it, 0, it.size))
+</a><a href="#h11-9-131" id="h11-9-131" class="d">-                    }
+</a><a href="#h11-9-132" id="h11-9-132" class="i">+                var bitmap: Bitmap? = PreviewUtils.createPreview(originalMedia, isVideo = FileType.fromByteArray(originalMedia).isVideo)
+</a> 
+<a href="#h11-9-134" id="h11-9-134" class="d">-                    bitmap
+</a><a href="#h11-9-135" id="h11-9-135" class="i">+                if (bitmap == null) {
+</a><a href="#h11-9-136" id="h11-9-136" class="i">+                    context.shortToast(translations[&quot;failed_to_create_preview_toast&quot;])
+</a><a href="#h11-9-137" id="h11-9-137" class="i">+                    return@async null
+</a>                 }
+ 
+<a href="#h11-9-140" id="h11-9-140" class="d">-                with(ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity)) {
+</a><a href="#h11-9-141" id="h11-9-141" class="d">-                    val viewGroup = LinearLayout(context).apply {
+</a><a href="#h11-9-142" id="h11-9-142" class="d">-                        layoutParams = MarginLayoutParams(MarginLayoutParams.MATCH_PARENT, MarginLayoutParams.MATCH_PARENT)
+</a><a href="#h11-9-143" id="h11-9-143" class="d">-                        gravity = Gravity.CENTER_HORIZONTAL or Gravity.CENTER_VERTICAL
+</a><a href="#h11-9-144" id="h11-9-144" class="d">-                        addView(ProgressBar(context).apply {
+</a><a href="#h11-9-145" id="h11-9-145" class="d">-                            isIndeterminate = true
+</a><a href="#h11-9-146" id="h11-9-146" class="d">-                        })
+</a><a href="#h11-9-147" id="h11-9-147" class="d">-                    }
+</a><a href="#h11-9-148" id="h11-9-148" class="i">+                overlay?.also {
+</a><a href="#h11-9-149" id="h11-9-149" class="i">+                    bitmap = PreviewUtils.mergeBitmapOverlay(bitmap!!, BitmapFactory.decodeByteArray(it, 0, it.size))
+</a><a href="#h11-9-150" id="h11-9-150" class="i">+                }
+</a> 
+<a href="#h11-9-152" id="h11-9-152" class="d">-                    setOnDismissListener {
+</a><a href="#h11-9-153" id="h11-9-153" class="d">-                        previewCoroutine.cancel()
+</a><a href="#h11-9-154" id="h11-9-154" class="d">-                    }
+</a><a href="#h11-9-155" id="h11-9-155" class="i">+                bitmap
+</a><a href="#h11-9-156" id="h11-9-156" class="i">+            }
+</a> 
+<a href="#h11-9-158" id="h11-9-158" class="d">-                    previewCoroutine.invokeOnCompletion { cause -&gt;
+</a><a href="#h11-9-159" id="h11-9-159" class="d">-                        runOnUiThread {
+</a><a href="#h11-9-160" id="h11-9-160" class="d">-                            viewGroup.removeAllViews()
+</a><a href="#h11-9-161" id="h11-9-161" class="d">-                            if (cause != null) {
+</a><a href="#h11-9-162" id="h11-9-162" class="d">-                                viewGroup.addView(TextView(context).apply {
+</a><a href="#h11-9-163" id="h11-9-163" class="d">-                                    text = translations[&quot;failed_to_create_preview_toast&quot;] + &quot;\n&quot; + cause.message
+</a><a href="#h11-9-164" id="h11-9-164" class="d">-                                    setPadding(30, 30, 30, 30)
+</a><a href="#h11-9-165" id="h11-9-165" class="d">-                                })
+</a><a href="#h11-9-166" id="h11-9-166" class="d">-                                return@runOnUiThread
+</a><a href="#h11-9-167" id="h11-9-167" class="d">-                            }
+</a><a href="#h11-9-168" id="h11-9-168" class="i">+            with(ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity)) {
+</a><a href="#h11-9-169" id="h11-9-169" class="i">+                val viewGroup = LinearLayout(context).apply {
+</a><a href="#h11-9-170" id="h11-9-170" class="i">+                    layoutParams = MarginLayoutParams(MarginLayoutParams.MATCH_PARENT, MarginLayoutParams.MATCH_PARENT)
+</a><a href="#h11-9-171" id="h11-9-171" class="i">+                    gravity = Gravity.CENTER_HORIZONTAL or Gravity.CENTER_VERTICAL
+</a><a href="#h11-9-172" id="h11-9-172" class="i">+                    addView(ProgressBar(context).apply {
+</a><a href="#h11-9-173" id="h11-9-173" class="i">+                        isIndeterminate = true
+</a><a href="#h11-9-174" id="h11-9-174" class="i">+                    })
+</a><a href="#h11-9-175" id="h11-9-175" class="i">+                }
+</a><a href="#h11-9-176" id="h11-9-176" class="i">+
+</a><a href="#h11-9-177" id="h11-9-177" class="i">+                setOnDismissListener {
+</a><a href="#h11-9-178" id="h11-9-178" class="i">+                    previewCoroutine.cancel()
+</a><a href="#h11-9-179" id="h11-9-179" class="i">+                }
+</a> 
+<a href="#h11-9-181" id="h11-9-181" class="d">-                            viewGroup.addView(ImageView(context).apply {
+</a><a href="#h11-9-182" id="h11-9-182" class="d">-                                setImageBitmap(previewCoroutine.getCompleted())
+</a><a href="#h11-9-183" id="h11-9-183" class="d">-                                layoutParams = LinearLayout.LayoutParams(
+</a><a href="#h11-9-184" id="h11-9-184" class="d">-                                    LinearLayout.LayoutParams.MATCH_PARENT,
+</a><a href="#h11-9-185" id="h11-9-185" class="d">-                                    LinearLayout.LayoutParams.MATCH_PARENT
+</a><a href="#h11-9-186" id="h11-9-186" class="d">-                                )
+</a><a href="#h11-9-187" id="h11-9-187" class="d">-                                adjustViewBounds = true
+</a><a href="#h11-9-188" id="h11-9-188" class="i">+                previewCoroutine.invokeOnCompletion { cause -&gt;
+</a><a href="#h11-9-189" id="h11-9-189" class="i">+                    runOnUiThread {
+</a><a href="#h11-9-190" id="h11-9-190" class="i">+                        viewGroup.removeAllViews()
+</a><a href="#h11-9-191" id="h11-9-191" class="i">+                        if (cause != null) {
+</a><a href="#h11-9-192" id="h11-9-192" class="i">+                            viewGroup.addView(TextView(context).apply {
+</a><a href="#h11-9-193" id="h11-9-193" class="i">+                                text = translations[&quot;failed_to_create_preview_toast&quot;] + &quot;\n&quot; + cause.message
+</a><a href="#h11-9-194" id="h11-9-194" class="i">+                                setPadding(30, 30, 30, 30)
+</a>                             })
+<a href="#h11-9-196" id="h11-9-196" class="i">+                            return@runOnUiThread
+</a>                         }
+<a href="#h11-9-198" id="h11-9-198" class="d">-                    }
+</a> 
+<a href="#h11-9-200" id="h11-9-200" class="d">-                    runOnUiThread {
+</a><a href="#h11-9-201" id="h11-9-201" class="d">-                        show().apply {
+</a><a href="#h11-9-202" id="h11-9-202" class="d">-                            setContentView(viewGroup)
+</a><a href="#h11-9-203" id="h11-9-203" class="d">-                            requestWindowFeature(Window.FEATURE_NO_TITLE)
+</a><a href="#h11-9-204" id="h11-9-204" class="d">-                            window?.setLayout(
+</a><a href="#h11-9-205" id="h11-9-205" class="d">-                                context.resources.displayMetrics.widthPixels,
+</a><a href="#h11-9-206" id="h11-9-206" class="d">-                                context.resources.displayMetrics.heightPixels
+</a><a href="#h11-9-207" id="h11-9-207" class="i">+                        viewGroup.addView(ImageView(context).apply {
+</a><a href="#h11-9-208" id="h11-9-208" class="i">+                            setImageBitmap(previewCoroutine.getCompleted())
+</a><a href="#h11-9-209" id="h11-9-209" class="i">+                            layoutParams = LinearLayout.LayoutParams(
+</a><a href="#h11-9-210" id="h11-9-210" class="i">+                                LinearLayout.LayoutParams.MATCH_PARENT,
+</a><a href="#h11-9-211" id="h11-9-211" class="i">+                                LinearLayout.LayoutParams.MATCH_PARENT
+</a>                             )
+<a href="#h11-9-213" id="h11-9-213" class="d">-                        }
+</a><a href="#h11-9-214" id="h11-9-214" class="d">-                        previewCoroutine.start()
+</a><a href="#h11-9-215" id="h11-9-215" class="i">+                            adjustViewBounds = true
+</a><a href="#h11-9-216" id="h11-9-216" class="i">+                        })
+</a><a href="#h11-9-217" id="h11-9-217" class="i">+                    }
+</a><a href="#h11-9-218" id="h11-9-218" class="i">+                }
+</a><a href="#h11-9-219" id="h11-9-219" class="i">+
+</a><a href="#h11-9-220" id="h11-9-220" class="i">+                runOnUiThread {
+</a><a href="#h11-9-221" id="h11-9-221" class="i">+                    show().apply {
+</a><a href="#h11-9-222" id="h11-9-222" class="i">+                        setContentView(viewGroup)
+</a><a href="#h11-9-223" id="h11-9-223" class="i">+                        window?.setLayout(
+</a><a href="#h11-9-224" id="h11-9-224" class="i">+                            context.resources.displayMetrics.widthPixels,
+</a><a href="#h11-9-225" id="h11-9-225" class="i">+                            context.resources.displayMetrics.heightPixels
+</a><a href="#h11-9-226" id="h11-9-226" class="i">+                        )
+</a>                     }
+<a href="#h11-9-228" id="h11-9-228" class="i">+                    previewCoroutine.start()
+</a>                 }
+             }
+<a href="#h11-9-231" id="h11-9-231" class="d">-        }.onFailure {
+</a><a href="#h11-9-232" id="h11-9-232" class="d">-            context.longToast(translations[&quot;failed_generic_toast&quot;])
+</a><a href="#h11-9-233" id="h11-9-233" class="d">-            context.log.error(&quot;Failed to download message&quot;, it)
+</a>         }
+     }
+ 
+<b>diff --git a/<a id="h12" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/AttachmentInfo.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/AttachmentInfo.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/AttachmentInfo.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/AttachmentInfo.kt</a></b>
+<a href="#h12-0" id="h12-0" class="h">@@ -0,0 +1,15 @@
+</a><a href="#h12-0-0" id="h12-0-0" class="i">+package me.rhunk.snapenhance.features.impl.downloader.decoder
+</a><a href="#h12-0-1" id="h12-0-1" class="i">+
+</a><a href="#h12-0-2" id="h12-0-2" class="i">+import me.rhunk.snapenhance.core.download.data.MediaEncryptionKeyPair
+</a><a href="#h12-0-3" id="h12-0-3" class="i">+
+</a><a href="#h12-0-4" id="h12-0-4" class="i">+data class BitmojiSticker(
+</a><a href="#h12-0-5" id="h12-0-5" class="i">+    val reference: String,
+</a><a href="#h12-0-6" id="h12-0-6" class="i">+) : AttachmentInfo()
+</a><a href="#h12-0-7" id="h12-0-7" class="i">+
+</a><a href="#h12-0-8" id="h12-0-8" class="i">+open class AttachmentInfo(
+</a><a href="#h12-0-9" id="h12-0-9" class="i">+    val encryption: MediaEncryptionKeyPair? = null,
+</a><a href="#h12-0-10" id="h12-0-10" class="i">+    val resolution: Pair&lt;Int, Int&gt;? = null,
+</a><a href="#h12-0-11" id="h12-0-11" class="i">+    val duration: Long? = null
+</a><a href="#h12-0-12" id="h12-0-12" class="i">+) {
+</a><a href="#h12-0-13" id="h12-0-13" class="i">+    override fun toString() = &quot;AttachmentInfo(encryption=$encryption, resolution=$resolution, duration=$duration)&quot;
+</a><a href="#h12-0-14" id="h12-0-14" class="i">+}</a><a href="#h12-0-15" id="h12-0-15" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h13" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/AttachmentType.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/AttachmentType.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/AttachmentType.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/AttachmentType.kt</a></b>
+<a href="#h13-0" id="h13-0" class="h">@@ -0,0 +1,11 @@
+</a><a href="#h13-0-0" id="h13-0-0" class="i">+package me.rhunk.snapenhance.features.impl.downloader.decoder
+</a><a href="#h13-0-1" id="h13-0-1" class="i">+
+</a><a href="#h13-0-2" id="h13-0-2" class="i">+enum class AttachmentType(
+</a><a href="#h13-0-3" id="h13-0-3" class="i">+    val key: String,
+</a><a href="#h13-0-4" id="h13-0-4" class="i">+) {
+</a><a href="#h13-0-5" id="h13-0-5" class="i">+    SNAP(&quot;snap&quot;),
+</a><a href="#h13-0-6" id="h13-0-6" class="i">+    STICKER(&quot;sticker&quot;),
+</a><a href="#h13-0-7" id="h13-0-7" class="i">+    EXTERNAL_MEDIA(&quot;external_media&quot;),
+</a><a href="#h13-0-8" id="h13-0-8" class="i">+    NOTE(&quot;note&quot;),
+</a><a href="#h13-0-9" id="h13-0-9" class="i">+    ORIGINAL_STORY(&quot;original_story&quot;),
+</a><a href="#h13-0-10" id="h13-0-10" class="i">+}</a><a href="#h13-0-11" id="h13-0-11" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h14" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/MessageDecoder.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/MessageDecoder.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/MessageDecoder.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/MessageDecoder.kt</a></b>
+<a href="#h14-0" id="h14-0" class="h">@@ -0,0 +1,144 @@
+</a><a href="#h14-0-0" id="h14-0-0" class="i">+package me.rhunk.snapenhance.features.impl.downloader.decoder
+</a><a href="#h14-0-1" id="h14-0-1" class="i">+
+</a><a href="#h14-0-2" id="h14-0-2" class="i">+import me.rhunk.snapenhance.core.download.data.toKeyPair
+</a><a href="#h14-0-3" id="h14-0-3" class="i">+import me.rhunk.snapenhance.core.util.protobuf.ProtoReader
+</a><a href="#h14-0-4" id="h14-0-4" class="i">+import kotlin.io.encoding.Base64
+</a><a href="#h14-0-5" id="h14-0-5" class="i">+import kotlin.io.encoding.ExperimentalEncodingApi
+</a><a href="#h14-0-6" id="h14-0-6" class="i">+
+</a><a href="#h14-0-7" id="h14-0-7" class="i">+data class DecodedAttachment(
+</a><a href="#h14-0-8" id="h14-0-8" class="i">+    val mediaKey: String?,
+</a><a href="#h14-0-9" id="h14-0-9" class="i">+    val type: AttachmentType,
+</a><a href="#h14-0-10" id="h14-0-10" class="i">+    val attachmentInfo: AttachmentInfo?
+</a><a href="#h14-0-11" id="h14-0-11" class="i">+)
+</a><a href="#h14-0-12" id="h14-0-12" class="i">+
+</a><a href="#h14-0-13" id="h14-0-13" class="i">+@OptIn(ExperimentalEncodingApi::class)
+</a><a href="#h14-0-14" id="h14-0-14" class="i">+object MessageDecoder {
+</a><a href="#h14-0-15" id="h14-0-15" class="i">+    private fun decodeAttachment(protoReader: ProtoReader): AttachmentInfo? {
+</a><a href="#h14-0-16" id="h14-0-16" class="i">+        val mediaInfo =  protoReader.followPath(1, 1) ?: return null
+</a><a href="#h14-0-17" id="h14-0-17" class="i">+
+</a><a href="#h14-0-18" id="h14-0-18" class="i">+        return AttachmentInfo(
+</a><a href="#h14-0-19" id="h14-0-19" class="i">+            encryption = run {
+</a><a href="#h14-0-20" id="h14-0-20" class="i">+                val encryptionProtoIndex = if (mediaInfo.contains(19)) 19 else 4
+</a><a href="#h14-0-21" id="h14-0-21" class="i">+                val encryptionProto = mediaInfo.followPath(encryptionProtoIndex) ?: return@run null
+</a><a href="#h14-0-22" id="h14-0-22" class="i">+
+</a><a href="#h14-0-23" id="h14-0-23" class="i">+                var key = encryptionProto.getByteArray(1) ?: return@run null
+</a><a href="#h14-0-24" id="h14-0-24" class="i">+                var iv = encryptionProto.getByteArray(2) ?: return@run null
+</a><a href="#h14-0-25" id="h14-0-25" class="i">+
+</a><a href="#h14-0-26" id="h14-0-26" class="i">+                if (encryptionProtoIndex == 4) {
+</a><a href="#h14-0-27" id="h14-0-27" class="i">+                    key = Base64.decode(encryptionProto.getString(1)?.replace(&quot;\n&quot;,&quot;&quot;) ?: return@run null)
+</a><a href="#h14-0-28" id="h14-0-28" class="i">+                    iv = Base64.decode(encryptionProto.getString(2)?.replace(&quot;\n&quot;,&quot;&quot;) ?: return@run null)
+</a><a href="#h14-0-29" id="h14-0-29" class="i">+                }
+</a><a href="#h14-0-30" id="h14-0-30" class="i">+
+</a><a href="#h14-0-31" id="h14-0-31" class="i">+                Pair(key, iv).toKeyPair()
+</a><a href="#h14-0-32" id="h14-0-32" class="i">+            },
+</a><a href="#h14-0-33" id="h14-0-33" class="i">+            resolution = mediaInfo.followPath(5)?.let {
+</a><a href="#h14-0-34" id="h14-0-34" class="i">+                (it.getVarInt(1)?.toInt() ?: 0) to (it.getVarInt(2)?.toInt() ?: 0)
+</a><a href="#h14-0-35" id="h14-0-35" class="i">+            },
+</a><a href="#h14-0-36" id="h14-0-36" class="i">+            duration = mediaInfo.getVarInt(15)   // external medias
+</a><a href="#h14-0-37" id="h14-0-37" class="i">+                ?: mediaInfo.getVarInt(13) // audio notes
+</a><a href="#h14-0-38" id="h14-0-38" class="i">+        )
+</a><a href="#h14-0-39" id="h14-0-39" class="i">+    }
+</a><a href="#h14-0-40" id="h14-0-40" class="i">+
+</a><a href="#h14-0-41" id="h14-0-41" class="i">+    fun decode(
+</a><a href="#h14-0-42" id="h14-0-42" class="i">+        protoReader: ProtoReader,
+</a><a href="#h14-0-43" id="h14-0-43" class="i">+        customMediaReferences: List&lt;String&gt;? = null // when customReferences is null it means that the message is from arroyo database
+</a><a href="#h14-0-44" id="h14-0-44" class="i">+    ): List&lt;DecodedAttachment&gt; {
+</a><a href="#h14-0-45" id="h14-0-45" class="i">+        val decodedAttachment = mutableListOf&lt;DecodedAttachment&gt;()
+</a><a href="#h14-0-46" id="h14-0-46" class="i">+        val mediaReferences = mutableListOf&lt;String&gt;()
+</a><a href="#h14-0-47" id="h14-0-47" class="i">+        customMediaReferences?.let { mediaReferences.addAll(it) }
+</a><a href="#h14-0-48" id="h14-0-48" class="i">+        var mediaKeyIndex = 0
+</a><a href="#h14-0-49" id="h14-0-49" class="i">+
+</a><a href="#h14-0-50" id="h14-0-50" class="i">+        fun decodeMedia(type: AttachmentType, protoReader: ProtoReader) {
+</a><a href="#h14-0-51" id="h14-0-51" class="i">+            decodedAttachment.add(
+</a><a href="#h14-0-52" id="h14-0-52" class="i">+                DecodedAttachment(
+</a><a href="#h14-0-53" id="h14-0-53" class="i">+                    mediaKey = mediaReferences.getOrNull(mediaKeyIndex++),
+</a><a href="#h14-0-54" id="h14-0-54" class="i">+                    type = type,
+</a><a href="#h14-0-55" id="h14-0-55" class="i">+                    attachmentInfo = decodeAttachment(protoReader) ?: return
+</a><a href="#h14-0-56" id="h14-0-56" class="i">+                )
+</a><a href="#h14-0-57" id="h14-0-57" class="i">+            )
+</a><a href="#h14-0-58" id="h14-0-58" class="i">+        }
+</a><a href="#h14-0-59" id="h14-0-59" class="i">+
+</a><a href="#h14-0-60" id="h14-0-60" class="i">+        // for snaps, external media, and original story replies
+</a><a href="#h14-0-61" id="h14-0-61" class="i">+        fun decodeDirectMedia(type: AttachmentType, protoReader: ProtoReader) {
+</a><a href="#h14-0-62" id="h14-0-62" class="i">+            protoReader.followPath(5) { decodeMedia(type,this) }
+</a><a href="#h14-0-63" id="h14-0-63" class="i">+        }
+</a><a href="#h14-0-64" id="h14-0-64" class="i">+
+</a><a href="#h14-0-65" id="h14-0-65" class="i">+        fun decodeSticker(protoReader: ProtoReader) {
+</a><a href="#h14-0-66" id="h14-0-66" class="i">+            protoReader.followPath(1) {
+</a><a href="#h14-0-67" id="h14-0-67" class="i">+                decodedAttachment.add(
+</a><a href="#h14-0-68" id="h14-0-68" class="i">+                    DecodedAttachment(
+</a><a href="#h14-0-69" id="h14-0-69" class="i">+                        mediaKey = null,
+</a><a href="#h14-0-70" id="h14-0-70" class="i">+                        type = AttachmentType.STICKER,
+</a><a href="#h14-0-71" id="h14-0-71" class="i">+                        attachmentInfo = BitmojiSticker(
+</a><a href="#h14-0-72" id="h14-0-72" class="i">+                            reference = getString(2) ?: return@followPath
+</a><a href="#h14-0-73" id="h14-0-73" class="i">+                        )
+</a><a href="#h14-0-74" id="h14-0-74" class="i">+                    )
+</a><a href="#h14-0-75" id="h14-0-75" class="i">+                )
+</a><a href="#h14-0-76" id="h14-0-76" class="i">+            }
+</a><a href="#h14-0-77" id="h14-0-77" class="i">+        }
+</a><a href="#h14-0-78" id="h14-0-78" class="i">+
+</a><a href="#h14-0-79" id="h14-0-79" class="i">+        // media keys
+</a><a href="#h14-0-80" id="h14-0-80" class="i">+        protoReader.eachBuffer(4, 5) {
+</a><a href="#h14-0-81" id="h14-0-81" class="i">+            getByteArray(1, 3)?.also { mediaKey -&gt;
+</a><a href="#h14-0-82" id="h14-0-82" class="i">+                mediaReferences.add(Base64.UrlSafe.encode(mediaKey))
+</a><a href="#h14-0-83" id="h14-0-83" class="i">+            }
+</a><a href="#h14-0-84" id="h14-0-84" class="i">+        }
+</a><a href="#h14-0-85" id="h14-0-85" class="i">+
+</a><a href="#h14-0-86" id="h14-0-86" class="i">+        val mediaReader = customMediaReferences?.let { protoReader } ?: protoReader.followPath(4, 4) ?: return emptyList()
+</a><a href="#h14-0-87" id="h14-0-87" class="i">+
+</a><a href="#h14-0-88" id="h14-0-88" class="i">+        mediaReader.apply {
+</a><a href="#h14-0-89" id="h14-0-89" class="i">+            // external media
+</a><a href="#h14-0-90" id="h14-0-90" class="i">+            eachBuffer(3, 3) {
+</a><a href="#h14-0-91" id="h14-0-91" class="i">+                decodeDirectMedia(AttachmentType.EXTERNAL_MEDIA, this)
+</a><a href="#h14-0-92" id="h14-0-92" class="i">+            }
+</a><a href="#h14-0-93" id="h14-0-93" class="i">+
+</a><a href="#h14-0-94" id="h14-0-94" class="i">+            // stickers
+</a><a href="#h14-0-95" id="h14-0-95" class="i">+            followPath(4) { decodeSticker(this) }
+</a><a href="#h14-0-96" id="h14-0-96" class="i">+
+</a><a href="#h14-0-97" id="h14-0-97" class="i">+            // shares
+</a><a href="#h14-0-98" id="h14-0-98" class="i">+            followPath(5, 24, 2) {
+</a><a href="#h14-0-99" id="h14-0-99" class="i">+                decodeDirectMedia(AttachmentType.EXTERNAL_MEDIA, this)
+</a><a href="#h14-0-100" id="h14-0-100" class="i">+            }
+</a><a href="#h14-0-101" id="h14-0-101" class="i">+
+</a><a href="#h14-0-102" id="h14-0-102" class="i">+            // audio notes
+</a><a href="#h14-0-103" id="h14-0-103" class="i">+            followPath(6) note@{
+</a><a href="#h14-0-104" id="h14-0-104" class="i">+                val audioNote = decodeAttachment(this) ?: return@note
+</a><a href="#h14-0-105" id="h14-0-105" class="i">+
+</a><a href="#h14-0-106" id="h14-0-106" class="i">+                decodedAttachment.add(
+</a><a href="#h14-0-107" id="h14-0-107" class="i">+                    DecodedAttachment(
+</a><a href="#h14-0-108" id="h14-0-108" class="i">+                        mediaKey = mediaReferences.getOrNull(mediaKeyIndex++),
+</a><a href="#h14-0-109" id="h14-0-109" class="i">+                        type = AttachmentType.NOTE,
+</a><a href="#h14-0-110" id="h14-0-110" class="i">+                        attachmentInfo = audioNote
+</a><a href="#h14-0-111" id="h14-0-111" class="i">+                    )
+</a><a href="#h14-0-112" id="h14-0-112" class="i">+                )
+</a><a href="#h14-0-113" id="h14-0-113" class="i">+            }
+</a><a href="#h14-0-114" id="h14-0-114" class="i">+
+</a><a href="#h14-0-115" id="h14-0-115" class="i">+            // story replies
+</a><a href="#h14-0-116" id="h14-0-116" class="i">+            followPath(7) {
+</a><a href="#h14-0-117" id="h14-0-117" class="i">+                // original story reply
+</a><a href="#h14-0-118" id="h14-0-118" class="i">+                followPath(3) {
+</a><a href="#h14-0-119" id="h14-0-119" class="i">+                    decodeDirectMedia(AttachmentType.ORIGINAL_STORY, this)
+</a><a href="#h14-0-120" id="h14-0-120" class="i">+                }
+</a><a href="#h14-0-121" id="h14-0-121" class="i">+
+</a><a href="#h14-0-122" id="h14-0-122" class="i">+                // external medias
+</a><a href="#h14-0-123" id="h14-0-123" class="i">+                followPath(12) {
+</a><a href="#h14-0-124" id="h14-0-124" class="i">+                    eachBuffer(3) { decodeDirectMedia(AttachmentType.EXTERNAL_MEDIA, this) }
+</a><a href="#h14-0-125" id="h14-0-125" class="i">+                }
+</a><a href="#h14-0-126" id="h14-0-126" class="i">+
+</a><a href="#h14-0-127" id="h14-0-127" class="i">+                // attached sticker
+</a><a href="#h14-0-128" id="h14-0-128" class="i">+                followPath(13) { decodeSticker(this) }
+</a><a href="#h14-0-129" id="h14-0-129" class="i">+
+</a><a href="#h14-0-130" id="h14-0-130" class="i">+                // attached audio note
+</a><a href="#h14-0-131" id="h14-0-131" class="i">+                followPath(15) { decodeMedia(AttachmentType.NOTE, this) }
+</a><a href="#h14-0-132" id="h14-0-132" class="i">+            }
+</a><a href="#h14-0-133" id="h14-0-133" class="i">+
+</a><a href="#h14-0-134" id="h14-0-134" class="i">+            // snaps
+</a><a href="#h14-0-135" id="h14-0-135" class="i">+            followPath(11) {
+</a><a href="#h14-0-136" id="h14-0-136" class="i">+                decodeDirectMedia(AttachmentType.SNAP, this)
+</a><a href="#h14-0-137" id="h14-0-137" class="i">+            }
+</a><a href="#h14-0-138" id="h14-0-138" class="i">+        }
+</a><a href="#h14-0-139" id="h14-0-139" class="i">+
+</a><a href="#h14-0-140" id="h14-0-140" class="i">+
+</a><a href="#h14-0-141" id="h14-0-141" class="i">+        return decodedAttachment
+</a><a href="#h14-0-142" id="h14-0-142" class="i">+    }
+</a><a href="#h14-0-143" id="h14-0-143" class="i">+}</a><a href="#h14-0-144" id="h14-0-144" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

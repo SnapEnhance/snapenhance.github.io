@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(scripting): remove reload listener for now - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/8bdd7a16b4b940e2af0deeb54a5d7f394163888c.html">8bdd7a16b4b940e2af0deeb54a5d7f394163888c</a>
+<b>parent</b> <a href="../commit/f0c34e27bb914a08c0b5e29482b1d9c625d9a464.html">f0c34e27bb914a08c0b5e29482b1d9c625d9a464</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu, 21 Sep 2023 19:26:40 +0200
+
+fix(scripting): remove reload listener for now
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></td><td> | </td><td class="num">6</td><td><span class="i"></span><span class="d">------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a></td><td> | </td><td class="num">5</td><td><span class="i">++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl</a></td><td> | </td><td class="num">3</td><td><span class="i"></span><span class="d">---</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h3">core/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/ReloadListener.aidl</a></td><td> | </td><td class="num">5</td><td><span class="i"></span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a></td><td> | </td><td class="num">4</td><td><span class="i"></span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/scripting/core/CoreScriptRuntime.kt</a></td><td> | </td><td class="num">7</td><td><span class="i"></span><span class="d">-------</span></td></tr>
+</table></pre><pre>6 files changed, 4 insertions(+), 26 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -5,7 +5,6 @@ import androidx.documentfile.provider.DocumentFile
+</a> import me.rhunk.snapenhance.RemoteSideContext
+ import me.rhunk.snapenhance.bridge.scripting.IPCListener
+ import me.rhunk.snapenhance.bridge.scripting.IScripting
+<a href="#h0-0-3" id="h0-0-3" class="d">-import me.rhunk.snapenhance.bridge.scripting.ReloadListener
+</a> import me.rhunk.snapenhance.scripting.type.ModuleInfo
+ import java.io.InputStream
+ 
+<a href="#h0-1" id="h0-1" class="h">@@ -14,7 +13,6 @@ class RemoteScriptManager(
+</a> ) : IScripting.Stub() {
+     val runtime = ScriptRuntime(context.log, context.androidContext.classLoader)
+ 
+<a href="#h0-1-3" id="h0-1-3" class="d">-    private val reloadListeners = mutableListOf&lt;ReloadListener&gt;()
+</a>     private val cachedModuleInfo = mutableMapOf&lt;String, ModuleInfo&gt;()
+     private val ipcListeners = IPCListeners()
+ 
+<a href="#h0-2" id="h0-2" class="h">@@ -80,10 +78,6 @@ class RemoteScriptManager(
+</a>         return getScriptInputStream(moduleName) { it?.bufferedReader()?.readText() }
+     }
+ 
+<a href="#h0-2-3" id="h0-2-3" class="d">-    override fun registerReloadListener(listener: ReloadListener) {
+</a><a href="#h0-2-4" id="h0-2-4" class="d">-        reloadListeners.add(listener)
+</a><a href="#h0-2-5" id="h0-2-5" class="d">-    }
+</a><a href="#h0-2-6" id="h0-2-6" class="d">-
+</a>     override fun registerIPCListener(channel: String, eventName: String, listener: IPCListener) {
+         ipcListeners.getOrPut(channel) { mutableMapOf() }.getOrPut(eventName) { mutableSetOf() }.add(listener)
+     }
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -2,6 +2,7 @@ package me.rhunk.snapenhance.ui.manager.sections.scripting
+</a> 
+ import androidx.compose.foundation.layout.Column
+ import androidx.compose.foundation.layout.Row
+<a href="#h1-0-3" id="h1-0-3" class="i">+import androidx.compose.foundation.layout.fillMaxSize
+</a> import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.lazy.LazyColumn
+<a href="#h1-1" id="h1-1" class="h">@@ -73,7 +74,9 @@ class ScriptsSection : Section() {
+</a>             context.modDatabase.getScripts()
+         }
+ 
+<a href="#h1-1-3" id="h1-1-3" class="d">-        LazyColumn {
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+        LazyColumn(
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+            modifier = Modifier.fillMaxSize()
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+        ) {
+</a>             item {
+                 if (scriptModules.isEmpty()) {
+                     Text(
+<b>diff --git a/<a id="h2" href="../file/core/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl.html">core/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl</a> b/<a href="../file/core/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl.html">core/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,6 +1,5 @@
+</a> package me.rhunk.snapenhance.bridge.scripting;
+ 
+<a href="#h2-0-2" id="h2-0-2" class="d">-import me.rhunk.snapenhance.bridge.scripting.ReloadListener;
+</a> import me.rhunk.snapenhance.bridge.scripting.IPCListener;
+ 
+ interface IScripting {
+<a href="#h2-1" id="h2-1" class="h">@@ -8,8 +7,6 @@ interface IScripting {
+</a> 
+     @nullable String getScriptContent(String path);
+ 
+<a href="#h2-1-3" id="h2-1-3" class="d">-    void registerReloadListener(ReloadListener listener);
+</a><a href="#h2-1-4" id="h2-1-4" class="d">-
+</a>     void registerIPCListener(String channel, String eventName, IPCListener listener);
+ 
+     void sendIPCMessage(String channel, String eventName, in String[] args);
+<b>diff --git a/<a id="h3" href="../file/core/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/ReloadListener.aidl.html">core/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/ReloadListener.aidl</a> b/<a href="../file/core/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/ReloadListener.aidl.html">core/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/ReloadListener.aidl</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -1,5 +0,0 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="d">-package me.rhunk.snapenhance.bridge.scripting;
+</a><a href="#h3-0-1" id="h3-0-1" class="d">-
+</a><a href="#h3-0-2" id="h3-0-2" class="d">-oneway interface ReloadListener {
+</a><a href="#h3-0-3" id="h3-0-3" class="d">-    void reloadScript(String path, String content);
+</a><a href="#h3-0-4" id="h3-0-4" class="d">-}
+</a><b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -7,8 +7,6 @@ import android.content.pm.PackageManager
+</a> import kotlinx.coroutines.runBlocking
+ import kotlinx.coroutines.withContext
+ import me.rhunk.snapenhance.bridge.SyncCallback
+<a href="#h4-0-3" id="h4-0-3" class="d">-import me.rhunk.snapenhance.bridge.scripting.IPCListener
+</a><a href="#h4-0-4" id="h4-0-4" class="d">-import me.rhunk.snapenhance.bridge.scripting.ReloadListener
+</a> import me.rhunk.snapenhance.core.BuildConfig
+ import me.rhunk.snapenhance.core.Logger
+ import me.rhunk.snapenhance.core.bridge.BridgeClient
+<a href="#h4-1" id="h4-1" class="h">@@ -21,8 +19,6 @@ import me.rhunk.snapenhance.data.SnapClassCache
+</a> import me.rhunk.snapenhance.hook.HookStage
+ import me.rhunk.snapenhance.hook.Hooker
+ import me.rhunk.snapenhance.hook.hook
+<a href="#h4-1-3" id="h4-1-3" class="d">-import me.rhunk.snapenhance.scripting.IPCInterface
+</a><a href="#h4-1-4" id="h4-1-4" class="d">-import me.rhunk.snapenhance.scripting.Listener
+</a> import kotlin.time.ExperimentalTime
+ import kotlin.time.measureTime
+ 
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/scripting/core/CoreScriptRuntime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/scripting/core/CoreScriptRuntime.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/scripting/core/CoreScriptRuntime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/scripting/core/CoreScriptRuntime.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -2,7 +2,6 @@ package me.rhunk.snapenhance.scripting.core
+</a> 
+ import me.rhunk.snapenhance.bridge.scripting.IPCListener
+ import me.rhunk.snapenhance.bridge.scripting.IScripting
+<a href="#h5-0-3" id="h5-0-3" class="d">-import me.rhunk.snapenhance.bridge.scripting.ReloadListener
+</a> import me.rhunk.snapenhance.core.logger.AbstractLogger
+ import me.rhunk.snapenhance.scripting.IPCInterface
+ import me.rhunk.snapenhance.scripting.Listener
+<a href="#h5-1" id="h5-1" class="h">@@ -17,12 +16,6 @@ class CoreScriptRuntime(
+</a> 
+     fun connect(scriptingInterface: IScripting) {
+         scriptingInterface.apply {
+<a href="#h5-1-3" id="h5-1-3" class="d">-            registerReloadListener(object: ReloadListener.Stub() {
+</a><a href="#h5-1-4" id="h5-1-4" class="d">-                override fun reloadScript(path: String, content: String) {
+</a><a href="#h5-1-5" id="h5-1-5" class="d">-                    reload(path, content)
+</a><a href="#h5-1-6" id="h5-1-6" class="d">-                }
+</a><a href="#h5-1-7" id="h5-1-7" class="d">-            })
+</a><a href="#h5-1-8" id="h5-1-8" class="d">-
+</a>             buildModuleObject = { module -&gt;
+                 putConst(&quot;ipc&quot;, this, object: IPCInterface() {
+                     override fun onBroadcast(channel: String, eventName: String, listener: Listener) {
+</pre>
+</div>
+</body>
+</html>

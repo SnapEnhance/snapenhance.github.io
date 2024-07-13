@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>refactor: init optimization - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/c06678d72a12c7f5bac3e8080e805da07f49f8fd.html">c06678d72a12c7f5bac3e8080e805da07f49f8fd</a>
+<b>parent</b> <a href="../commit/5fd6aec2566b11ebc0581b1e036beafb11409027.html">5fd6aec2566b11ebc0581b1e036beafb11409027</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun,  1 Oct 2023 12:29:02 +0200
+
+refactor: init optimization
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></td><td> | </td><td class="num">5</td><td><span class="i">+++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt</a></td><td> | </td><td class="num">13</td><td><span class="i">+++++++</span><span class="d">------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a></td><td> | </td><td class="num">53</td><td><span class="i">++++++++++++++++++++++++++++</span><span class="d">-------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/action/impl/ExportChatMessages.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">+++</span><span class="d">------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ScopeSync.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">++++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt</a></td><td> | </td><td class="num">10</td><td><span class="i">++++</span><span class="d">------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></td><td> | </td><td class="num">94</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">------------------------</span></td></tr>
+</table></pre><pre>7 files changed, 115 insertions(+), 76 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -26,12 +26,12 @@ import me.rhunk.snapenhance.e2ee.E2EEImplementation
+</a> import me.rhunk.snapenhance.messaging.ModDatabase
+ import me.rhunk.snapenhance.messaging.StreaksReminder
+ import me.rhunk.snapenhance.scripting.RemoteScriptManager
+<a href="#h0-0-3" id="h0-0-3" class="d">-import me.rhunk.snapenhance.ui.overlay.SettingsOverlay
+</a> import me.rhunk.snapenhance.ui.manager.MainActivity
+ import me.rhunk.snapenhance.ui.manager.data.InstallationSummary
+ import me.rhunk.snapenhance.ui.manager.data.ModInfo
+ import me.rhunk.snapenhance.ui.manager.data.PlatformInfo
+ import me.rhunk.snapenhance.ui.manager.data.SnapchatAppInfo
+<a href="#h0-0-9" id="h0-0-9" class="i">+import me.rhunk.snapenhance.ui.overlay.SettingsOverlay
+</a> import me.rhunk.snapenhance.ui.setup.Requirements
+ import me.rhunk.snapenhance.ui.setup.SetupActivity
+ import java.io.ByteArrayInputStream
+<a href="#h0-1" id="h0-1" class="h">@@ -43,6 +43,8 @@ import java.security.cert.X509Certificate
+</a> class RemoteSideContext(
+     val androidContext: Context
+ ) {
+<a href="#h0-1-3" id="h0-1-3" class="i">+    val coroutineScope = CoroutineScope(Dispatchers.IO)
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+
+</a>     private var _activity: WeakReference&lt;ComponentActivity&gt;? = null
+     lateinit var bridgeService: BridgeService
+ 
+<a href="#h0-2" id="h0-2" class="h">@@ -78,7 +80,6 @@ class RemoteSideContext(
+</a>             }
+             .components { add(VideoFrameDecoder.Factory()) }.build()
+     }
+<a href="#h0-2-3" id="h0-2-3" class="d">-    val coroutineScope = CoroutineScope(Dispatchers.IO)
+</a> 
+     fun reload() {
+         log.verbose(&quot;Loading RemoteSideContext&quot;)
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -11,6 +11,9 @@ import android.os.Process
+</a> import android.widget.Toast
+ import com.google.gson.Gson
+ import com.google.gson.GsonBuilder
+<a href="#h1-0-3" id="h1-0-3" class="i">+import kotlinx.coroutines.CoroutineScope
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import kotlinx.coroutines.Dispatchers
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+import kotlinx.coroutines.launch
+</a> import me.rhunk.snapenhance.core.Logger
+ import me.rhunk.snapenhance.core.bridge.BridgeClient
+ import me.rhunk.snapenhance.core.bridge.wrapper.LocaleWrapper
+<a href="#h1-1" id="h1-1" class="h">@@ -27,13 +30,11 @@ import me.rhunk.snapenhance.manager.impl.FeatureManager
+</a> import me.rhunk.snapenhance.nativelib.NativeConfig
+ import me.rhunk.snapenhance.nativelib.NativeLib
+ import me.rhunk.snapenhance.scripting.core.CoreScriptRuntime
+<a href="#h1-1-3" id="h1-1-3" class="d">-import java.util.concurrent.ExecutorService
+</a><a href="#h1-1-4" id="h1-1-4" class="d">-import java.util.concurrent.Executors
+</a> import kotlin.reflect.KClass
+ import kotlin.system.exitProcess
+ 
+ class ModContext {
+<a href="#h1-1-9" id="h1-1-9" class="d">-    private val executorService: ExecutorService = Executors.newCachedThreadPool()
+</a><a href="#h1-1-10" id="h1-1-10" class="i">+    val coroutineScope = CoroutineScope(Dispatchers.IO)
+</a> 
+     lateinit var androidContext: Context
+     lateinit var bridgeClient: BridgeClient
+<a href="#h1-2" id="h1-2" class="h">@@ -73,13 +74,13 @@ class ModContext {
+</a>         }
+     }
+ 
+<a href="#h1-2-3" id="h1-2-3" class="d">-    fun executeAsync(runnable: ModContext.() -&gt; Unit) {
+</a><a href="#h1-2-4" id="h1-2-4" class="d">-        executorService.submit {
+</a><a href="#h1-2-5" id="h1-2-5" class="i">+    fun executeAsync(runnable: suspend ModContext.() -&gt; Unit) {
+</a><a href="#h1-2-6" id="h1-2-6" class="i">+        coroutineScope.launch {
+</a>             runCatching {
+                 runnable()
+             }.onFailure {
+                 longToast(&quot;Async task failed &quot; + it.message)
+<a href="#h1-2-11" id="h1-2-11" class="d">-                Logger.xposedLog(&quot;Async task failed&quot;, it)
+</a><a href="#h1-2-12" id="h1-2-12" class="i">+                log.error(&quot;Async task failed&quot;, it)
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -3,6 +3,10 @@ package me.rhunk.snapenhance
+</a> import android.app.Activity
+ import android.app.Application
+ import android.content.Context
+<a href="#h2-0-3" id="h2-0-3" class="i">+import kotlinx.coroutines.CoroutineScope
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import kotlinx.coroutines.Dispatchers
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+import kotlinx.coroutines.launch
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+import kotlinx.coroutines.runBlocking
+</a> import me.rhunk.snapenhance.bridge.SyncCallback
+ import me.rhunk.snapenhance.core.Logger
+ import me.rhunk.snapenhance.core.bridge.BridgeClient
+<a href="#h2-1" id="h2-1" class="h">@@ -13,8 +17,7 @@ import me.rhunk.snapenhance.core.messaging.MessagingGroupInfo
+</a> import me.rhunk.snapenhance.data.SnapClassCache
+ import me.rhunk.snapenhance.hook.HookStage
+ import me.rhunk.snapenhance.hook.hook
+<a href="#h2-1-3" id="h2-1-3" class="d">-import kotlin.time.ExperimentalTime
+</a><a href="#h2-1-4" id="h2-1-4" class="d">-import kotlin.time.measureTime
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+import kotlin.system.measureTimeMillis
+</a> 
+ 
+ class SnapEnhance {
+<a href="#h2-2" id="h2-2" class="h">@@ -55,7 +58,13 @@ class SnapEnhance {
+</a>                             return@connect
+                         }
+                         runCatching {
+<a href="#h2-2-3" id="h2-2-3" class="d">-                            init()
+</a><a href="#h2-2-4" id="h2-2-4" class="i">+                            measureTimeMillis {
+</a><a href="#h2-2-5" id="h2-2-5" class="i">+                                runBlocking {
+</a><a href="#h2-2-6" id="h2-2-6" class="i">+                                    init(this)
+</a><a href="#h2-2-7" id="h2-2-7" class="i">+                                }
+</a><a href="#h2-2-8" id="h2-2-8" class="i">+                            }.also {
+</a><a href="#h2-2-9" id="h2-2-9" class="i">+                                appContext.log.verbose(&quot;init took ${it}ms&quot;)
+</a><a href="#h2-2-10" id="h2-2-10" class="i">+                            }
+</a>                         }.onSuccess {
+                             isBridgeInitialized = true
+                         }.onFailure {
+<a href="#h2-3" id="h2-3" class="h">@@ -92,34 +101,28 @@ class SnapEnhance {
+</a>         }
+     }
+ 
+<a href="#h2-3-3" id="h2-3-3" class="d">-    @OptIn(ExperimentalTime::class)
+</a><a href="#h2-3-4" id="h2-3-4" class="d">-    private fun init() {
+</a><a href="#h2-3-5" id="h2-3-5" class="d">-        measureTime {
+</a><a href="#h2-3-6" id="h2-3-6" class="d">-            with(appContext) {
+</a><a href="#h2-3-7" id="h2-3-7" class="d">-                reloadConfig()
+</a><a href="#h2-3-8" id="h2-3-8" class="i">+    private fun init(scope: CoroutineScope) {
+</a><a href="#h2-3-9" id="h2-3-9" class="i">+        with(appContext) {
+</a><a href="#h2-3-10" id="h2-3-10" class="i">+            reloadConfig()
+</a><a href="#h2-3-11" id="h2-3-11" class="i">+            scope.launch(Dispatchers.IO) {
+</a>                 initNative()
+<a href="#h2-3-13" id="h2-3-13" class="d">-                executeAsync {
+</a><a href="#h2-3-14" id="h2-3-14" class="d">-                    translation.userLocale = getConfigLocale()
+</a><a href="#h2-3-15" id="h2-3-15" class="d">-                    translation.loadFromBridge(bridgeClient)
+</a><a href="#h2-3-16" id="h2-3-16" class="d">-                }
+</a><a href="#h2-3-17" id="h2-3-17" class="d">-
+</a><a href="#h2-3-18" id="h2-3-18" class="d">-                mappings.loadFromBridge(bridgeClient)
+</a><a href="#h2-3-19" id="h2-3-19" class="d">-                mappings.init(androidContext)
+</a><a href="#h2-3-20" id="h2-3-20" class="d">-                eventDispatcher.init()
+</a><a href="#h2-3-21" id="h2-3-21" class="d">-                //if mappings aren&#39;t loaded, we can&#39;t initialize features
+</a><a href="#h2-3-22" id="h2-3-22" class="d">-                if (!mappings.isMappingsLoaded()) return
+</a><a href="#h2-3-23" id="h2-3-23" class="d">-                features.init()
+</a><a href="#h2-3-24" id="h2-3-24" class="d">-                syncRemote()
+</a><a href="#h2-3-25" id="h2-3-25" class="d">-                scriptRuntime.connect(bridgeClient.getScriptingInterface())
+</a><a href="#h2-3-26" id="h2-3-26" class="i">+                translation.userLocale = getConfigLocale()
+</a><a href="#h2-3-27" id="h2-3-27" class="i">+                translation.loadFromBridge(bridgeClient)
+</a>             }
+<a href="#h2-3-29" id="h2-3-29" class="d">-        }.also { time -&gt;
+</a><a href="#h2-3-30" id="h2-3-30" class="d">-            appContext.log.verbose(&quot;init took $time&quot;)
+</a><a href="#h2-3-31" id="h2-3-31" class="i">+
+</a><a href="#h2-3-32" id="h2-3-32" class="i">+            mappings.loadFromBridge(bridgeClient)
+</a><a href="#h2-3-33" id="h2-3-33" class="i">+            mappings.init(androidContext)
+</a><a href="#h2-3-34" id="h2-3-34" class="i">+            eventDispatcher.init()
+</a><a href="#h2-3-35" id="h2-3-35" class="i">+            //if mappings aren&#39;t loaded, we can&#39;t initialize features
+</a><a href="#h2-3-36" id="h2-3-36" class="i">+            if (!mappings.isMappingsLoaded()) return
+</a><a href="#h2-3-37" id="h2-3-37" class="i">+            features.init()
+</a><a href="#h2-3-38" id="h2-3-38" class="i">+            scriptRuntime.connect(bridgeClient.getScriptingInterface())
+</a><a href="#h2-3-39" id="h2-3-39" class="i">+            syncRemote()
+</a>         }
+     }
+ 
+<a href="#h2-3-43" id="h2-3-43" class="d">-    @OptIn(ExperimentalTime::class)
+</a>     private fun onActivityCreate() {
+<a href="#h2-3-45" id="h2-3-45" class="d">-        measureTime {
+</a><a href="#h2-3-46" id="h2-3-46" class="i">+        measureTimeMillis {
+</a>             with(appContext) {
+                 features.onActivityCreate()
+                 actionManager.init()
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/action/impl/ExportChatMessages.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/action/impl/ExportChatMessages.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/action/impl/ExportChatMessages.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/action/impl/ExportChatMessages.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -5,7 +5,6 @@ import android.content.DialogInterface
+</a> import android.os.Environment
+ import android.text.InputType
+ import android.widget.EditText
+<a href="#h3-0-3" id="h3-0-3" class="d">-import kotlinx.coroutines.CoroutineScope
+</a> import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.Job
+ import kotlinx.coroutines.joinAll
+<a href="#h3-1" id="h3-1" class="h">@@ -44,8 +43,6 @@ class ExportChatMessages : AbstractAction() {
+</a>         context.feature(Messaging::class).conversationManager
+     }
+ 
+<a href="#h3-1-3" id="h3-1-3" class="d">-    private val coroutineScope = CoroutineScope(Dispatchers.Default)
+</a><a href="#h3-1-4" id="h3-1-4" class="d">-
+</a>     private val dialogLogs = mutableListOf&lt;String&gt;()
+     private var currentActionDialog: AlertDialog? = null
+ 
+<a href="#h3-2" id="h3-2" class="h">@@ -83,7 +80,7 @@ class ExportChatMessages : AbstractAction() {
+</a>     }
+ 
+     private suspend fun askAmountOfMessages() = suspendCancellableCoroutine { cont -&gt;
+<a href="#h3-2-3" id="h3-2-3" class="d">-        coroutineScope.launch(Dispatchers.Main) {
+</a><a href="#h3-2-4" id="h3-2-4" class="i">+        context.coroutineScope.launch(Dispatchers.Main) {
+</a>             val input = EditText(context.mainActivity)
+             input.inputType = InputType.TYPE_CLASS_NUMBER
+             input.setSingleLine()
+<a href="#h3-3" id="h3-3" class="h">@@ -132,7 +129,7 @@ class ExportChatMessages : AbstractAction() {
+</a>     }
+ 
+     override fun run() {
+<a href="#h3-3-3" id="h3-3-3" class="d">-        coroutineScope.launch(Dispatchers.Main) {
+</a><a href="#h3-3-4" id="h3-3-4" class="i">+        context.coroutineScope.launch(Dispatchers.Main) {
+</a>             exportType = askExportType() ?: return@launch
+             mediaToDownload = if (exportType == ExportFormat.HTML) askMediaToDownload() else null
+             amountOfMessages = askAmountOfMessages()
+<a href="#h3-4" id="h3-4" class="h">@@ -289,7 +286,7 @@ class ExportChatMessages : AbstractAction() {
+</a>         
+         logDialog(conversationSize)
+ 
+<a href="#h3-4-3" id="h3-4-3" class="d">-        coroutineScope.launch {
+</a><a href="#h3-4-4" id="h3-4-4" class="i">+        context.coroutineScope.launch {
+</a>             conversations.forEach { conversation -&gt;
+                 launch {
+                     runCatching {
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ScopeSync.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ScopeSync.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ScopeSync.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ScopeSync.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -1,6 +1,8 @@
+</a> package me.rhunk.snapenhance.features.impl
+ 
+<a href="#h4-0-2" id="h4-0-2" class="d">-import kotlinx.coroutines.*
+</a><a href="#h4-0-3" id="h4-0-3" class="i">+import kotlinx.coroutines.Job
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+import kotlinx.coroutines.delay
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+import kotlinx.coroutines.launch
+</a> import me.rhunk.snapenhance.core.event.events.impl.SendMessageWithContentEvent
+ import me.rhunk.snapenhance.core.messaging.SocialScope
+ import me.rhunk.snapenhance.data.ContentType
+<a href="#h4-1" id="h4-1" class="h">@@ -13,7 +15,6 @@ class ScopeSync : Feature(&quot;Scope Sync&quot;, loadParams = FeatureLoadParams.INIT_SYNC
+</a>     }
+ 
+     private val updateJobs = mutableMapOf&lt;String, Job&gt;()
+<a href="#h4-1-3" id="h4-1-3" class="d">-    private val coroutineScope = CoroutineScope(Dispatchers.Main)
+</a> 
+     private fun sync(conversationId: String) {
+         context.database.getDMOtherParticipant(conversationId)?.also { participant -&gt;
+<a href="#h4-2" id="h4-2" class="h">@@ -31,7 +32,7 @@ class ScopeSync : Feature(&quot;Scope Sync&quot;, loadParams = FeatureLoadParams.INIT_SYNC
+</a>                 event.destinations.conversations.map { it.toString() }.forEach { conversationId -&gt;
+                     updateJobs[conversationId]?.also { it.cancel() }
+ 
+<a href="#h4-2-3" id="h4-2-3" class="d">-                    updateJobs[conversationId] = (coroutineScope.launch {
+</a><a href="#h4-2-4" id="h4-2-4" class="i">+                    updateJobs[conversationId] = (context.coroutineScope.launch {
+</a>                         delay(DELAY_BEFORE_SYNC)
+                         sync(conversationId)
+                     })
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -18,8 +18,7 @@ import me.rhunk.snapenhance.features.FeatureLoadParams
+</a> import me.rhunk.snapenhance.ui.addForegroundDrawable
+ import me.rhunk.snapenhance.ui.removeForegroundDrawable
+ import java.util.concurrent.Executors
+<a href="#h5-0-3" id="h5-0-3" class="d">-import kotlin.time.ExperimentalTime
+</a><a href="#h5-0-4" id="h5-0-4" class="d">-import kotlin.time.measureTime
+</a><a href="#h5-0-5" id="h5-0-5" class="i">+import kotlin.system.measureTimeMillis
+</a> 
+ private fun Any.longHashCode(): Long {
+     var h = 1125899906842597L
+<a href="#h5-1" id="h5-1" class="h">@@ -91,17 +90,16 @@ class MessageLogger : Feature(&quot;MessageLogger&quot;,
+</a>         return computeMessageIdentifier(conversationId, serverMessageId)
+     }
+ 
+<a href="#h5-1-3" id="h5-1-3" class="d">-    @OptIn(ExperimentalTime::class)
+</a>     override fun asyncOnActivityCreate() {
+         if (!isEnabled || !context.database.hasArroyo()) {
+             return
+         }
+ 
+<a href="#h5-1-9" id="h5-1-9" class="d">-        measureTime {
+</a><a href="#h5-1-10" id="h5-1-10" class="i">+        measureTimeMillis {
+</a>             val conversationIds = context.database.getFeedEntries(PREFETCH_FEED_COUNT).map { it.key!! }
+<a href="#h5-1-12" id="h5-1-12" class="d">-            if (conversationIds.isEmpty()) return@measureTime
+</a><a href="#h5-1-13" id="h5-1-13" class="i">+            if (conversationIds.isEmpty()) return@measureTimeMillis
+</a>             fetchedMessages.addAll(messageLoggerInterface.getLoggedIds(conversationIds.toTypedArray(), PREFETCH_MESSAGE_COUNT).toList())
+<a href="#h5-1-15" id="h5-1-15" class="d">-        }.also { context.log.verbose(&quot;Loaded ${fetchedMessages.size} cached messages in $it&quot;) }
+</a><a href="#h5-1-16" id="h5-1-16" class="i">+        }.also { context.log.verbose(&quot;Loaded ${fetchedMessages.size} cached messages in ${it}ms&quot;) }
+</a>     }
+ 
+     override fun init() {
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -1,5 +1,7 @@
+</a> package me.rhunk.snapenhance.manager.impl
+ 
+<a href="#h6-0-2" id="h6-0-2" class="i">+import kotlinx.coroutines.launch
+</a><a href="#h6-0-3" id="h6-0-3" class="i">+import kotlinx.coroutines.runBlocking
+</a> import me.rhunk.snapenhance.ModContext
+ import me.rhunk.snapenhance.core.Logger
+ import me.rhunk.snapenhance.features.Feature
+<a href="#h6-1" id="h6-1" class="h">@@ -24,22 +26,31 @@ import me.rhunk.snapenhance.features.impl.ui.PinConversations
+</a> import me.rhunk.snapenhance.features.impl.ui.UITweaks
+ import me.rhunk.snapenhance.manager.Manager
+ import me.rhunk.snapenhance.ui.menu.impl.MenuViewInjector
+<a href="#h6-1-3" id="h6-1-3" class="d">-import java.util.concurrent.Executors
+</a> import kotlin.reflect.KClass
+<a href="#h6-1-5" id="h6-1-5" class="i">+import kotlin.system.measureTimeMillis
+</a> 
+<a href="#h6-1-7" id="h6-1-7" class="d">-class FeatureManager(private val context: ModContext) : Manager {
+</a><a href="#h6-1-8" id="h6-1-8" class="d">-    private val asyncLoadExecutorService = Executors.newFixedThreadPool(5)
+</a><a href="#h6-1-9" id="h6-1-9" class="i">+class FeatureManager(
+</a><a href="#h6-1-10" id="h6-1-10" class="i">+    private val context: ModContext
+</a><a href="#h6-1-11" id="h6-1-11" class="i">+) : Manager {
+</a>     private val features = mutableListOf&lt;Feature&gt;()
+ 
+     private fun register(vararg featureClasses: KClass&lt;out Feature&gt;) {
+<a href="#h6-1-15" id="h6-1-15" class="d">-        featureClasses.forEach { clazz -&gt;
+</a><a href="#h6-1-16" id="h6-1-16" class="d">-            runCatching {
+</a><a href="#h6-1-17" id="h6-1-17" class="d">-                clazz.constructors.first().call().also { feature -&gt;
+</a><a href="#h6-1-18" id="h6-1-18" class="d">-                    feature.context = context
+</a><a href="#h6-1-19" id="h6-1-19" class="d">-                    features.add(feature)
+</a><a href="#h6-1-20" id="h6-1-20" class="i">+        runBlocking {
+</a><a href="#h6-1-21" id="h6-1-21" class="i">+            featureClasses.forEach { clazz -&gt;
+</a><a href="#h6-1-22" id="h6-1-22" class="i">+                context.coroutineScope.launch {
+</a><a href="#h6-1-23" id="h6-1-23" class="i">+                    runCatching {
+</a><a href="#h6-1-24" id="h6-1-24" class="i">+                        clazz.java.constructors.first().newInstance()
+</a><a href="#h6-1-25" id="h6-1-25" class="i">+                            .let { it as Feature }
+</a><a href="#h6-1-26" id="h6-1-26" class="i">+                            .also {
+</a><a href="#h6-1-27" id="h6-1-27" class="i">+                                it.context = context
+</a><a href="#h6-1-28" id="h6-1-28" class="i">+                                synchronized(features) {
+</a><a href="#h6-1-29" id="h6-1-29" class="i">+                                    features.add(it)
+</a><a href="#h6-1-30" id="h6-1-30" class="i">+                                }
+</a><a href="#h6-1-31" id="h6-1-31" class="i">+                            }
+</a><a href="#h6-1-32" id="h6-1-32" class="i">+                    }.onFailure {
+</a><a href="#h6-1-33" id="h6-1-33" class="i">+                        Logger.xposedLog(&quot;Failed to register feature ${clazz.simpleName}&quot;, it)
+</a><a href="#h6-1-34" id="h6-1-34" class="i">+                    }
+</a>                 }
+<a href="#h6-1-36" id="h6-1-36" class="d">-            }.onFailure {
+</a><a href="#h6-1-37" id="h6-1-37" class="d">-                Logger.xposedLog(&quot;Failed to register feature ${clazz.simpleName}&quot;, it)
+</a>             }
+         }
+     }
+<a href="#h6-2" id="h6-2" class="h">@@ -95,34 +106,61 @@ class FeatureManager(private val context: ModContext) : Manager {
+</a>         initializeFeatures()
+     }
+ 
+<a href="#h6-2-3" id="h6-2-3" class="d">-    private fun featureInitializer(isAsync: Boolean, param: Int, action: (Feature) -&gt; Unit) {
+</a><a href="#h6-2-4" id="h6-2-4" class="d">-        features.filter { it.loadParams and param != 0 }.forEach { feature -&gt;
+</a><a href="#h6-2-5" id="h6-2-5" class="d">-            val callback = {
+</a><a href="#h6-2-6" id="h6-2-6" class="d">-                runCatching {
+</a><a href="#h6-2-7" id="h6-2-7" class="d">-                    action(feature)
+</a><a href="#h6-2-8" id="h6-2-8" class="d">-                }.onFailure {
+</a><a href="#h6-2-9" id="h6-2-9" class="d">-                    context.log.error(&quot;Failed to init feature ${feature.featureKey}&quot;, it)
+</a><a href="#h6-2-10" id="h6-2-10" class="d">-                    context.longToast(&quot;Failed to load feature ${feature.featureKey}! Check logcat for more details.&quot;)
+</a><a href="#h6-2-11" id="h6-2-11" class="d">-                }
+</a><a href="#h6-2-12" id="h6-2-12" class="i">+    private fun initFeatures(
+</a><a href="#h6-2-13" id="h6-2-13" class="i">+        syncParam: Int,
+</a><a href="#h6-2-14" id="h6-2-14" class="i">+        asyncParam: Int,
+</a><a href="#h6-2-15" id="h6-2-15" class="i">+        syncAction: (Feature) -&gt; Unit,
+</a><a href="#h6-2-16" id="h6-2-16" class="i">+        asyncAction: (Feature) -&gt; Unit
+</a><a href="#h6-2-17" id="h6-2-17" class="i">+    ) {
+</a><a href="#h6-2-18" id="h6-2-18" class="i">+        fun tryInit(feature: Feature, block: () -&gt; Unit) {
+</a><a href="#h6-2-19" id="h6-2-19" class="i">+            runCatching {
+</a><a href="#h6-2-20" id="h6-2-20" class="i">+                block()
+</a><a href="#h6-2-21" id="h6-2-21" class="i">+            }.onFailure {
+</a><a href="#h6-2-22" id="h6-2-22" class="i">+                context.log.error(&quot;Failed to init feature ${feature.featureKey}&quot;, it)
+</a><a href="#h6-2-23" id="h6-2-23" class="i">+                context.longToast(&quot;Failed to init feature ${feature.featureKey}! Check logcat for more details.&quot;)
+</a>             }
+<a href="#h6-2-25" id="h6-2-25" class="d">-            if (!isAsync) {
+</a><a href="#h6-2-26" id="h6-2-26" class="d">-                callback()
+</a><a href="#h6-2-27" id="h6-2-27" class="d">-                return@forEach
+</a><a href="#h6-2-28" id="h6-2-28" class="i">+        }
+</a><a href="#h6-2-29" id="h6-2-29" class="i">+
+</a><a href="#h6-2-30" id="h6-2-30" class="i">+        features.toList().forEach { feature -&gt;
+</a><a href="#h6-2-31" id="h6-2-31" class="i">+            if (feature.loadParams and syncParam != 0) {
+</a><a href="#h6-2-32" id="h6-2-32" class="i">+                tryInit(feature) {
+</a><a href="#h6-2-33" id="h6-2-33" class="i">+                    syncAction(feature)
+</a><a href="#h6-2-34" id="h6-2-34" class="i">+                }
+</a>             }
+<a href="#h6-2-36" id="h6-2-36" class="d">-            asyncLoadExecutorService.submit {
+</a><a href="#h6-2-37" id="h6-2-37" class="d">-                callback()
+</a><a href="#h6-2-38" id="h6-2-38" class="i">+            if (feature.loadParams and asyncParam != 0) {
+</a><a href="#h6-2-39" id="h6-2-39" class="i">+                context.coroutineScope.launch {
+</a><a href="#h6-2-40" id="h6-2-40" class="i">+                    tryInit(feature) {
+</a><a href="#h6-2-41" id="h6-2-41" class="i">+                        asyncAction(feature)
+</a><a href="#h6-2-42" id="h6-2-42" class="i">+                    }
+</a><a href="#h6-2-43" id="h6-2-43" class="i">+                }
+</a>             }
+         }
+     }
+ 
+     private fun initializeFeatures() {
+         //TODO: async called when all features are initiated ?
+<a href="#h6-2-50" id="h6-2-50" class="d">-        featureInitializer(false, FeatureLoadParams.INIT_SYNC) { it.init() }
+</a><a href="#h6-2-51" id="h6-2-51" class="d">-        featureInitializer(true, FeatureLoadParams.INIT_ASYNC) { it.asyncInit() }
+</a><a href="#h6-2-52" id="h6-2-52" class="i">+        measureTimeMillis {
+</a><a href="#h6-2-53" id="h6-2-53" class="i">+            initFeatures(
+</a><a href="#h6-2-54" id="h6-2-54" class="i">+                FeatureLoadParams.INIT_SYNC,
+</a><a href="#h6-2-55" id="h6-2-55" class="i">+                FeatureLoadParams.INIT_ASYNC,
+</a><a href="#h6-2-56" id="h6-2-56" class="i">+                Feature::init,
+</a><a href="#h6-2-57" id="h6-2-57" class="i">+                Feature::asyncInit
+</a><a href="#h6-2-58" id="h6-2-58" class="i">+            )
+</a><a href="#h6-2-59" id="h6-2-59" class="i">+        }.also {
+</a><a href="#h6-2-60" id="h6-2-60" class="i">+            context.log.verbose(&quot;feature manager init took $it ms&quot;)
+</a><a href="#h6-2-61" id="h6-2-61" class="i">+        }
+</a>     }
+ 
+     override fun onActivityCreate() {
+<a href="#h6-2-65" id="h6-2-65" class="d">-        featureInitializer(false, FeatureLoadParams.ACTIVITY_CREATE_SYNC) { it.onActivityCreate() }
+</a><a href="#h6-2-66" id="h6-2-66" class="d">-        featureInitializer(true, FeatureLoadParams.ACTIVITY_CREATE_ASYNC) { it.asyncOnActivityCreate() }
+</a><a href="#h6-2-67" id="h6-2-67" class="i">+        measureTimeMillis {
+</a><a href="#h6-2-68" id="h6-2-68" class="i">+            initFeatures(
+</a><a href="#h6-2-69" id="h6-2-69" class="i">+                FeatureLoadParams.ACTIVITY_CREATE_SYNC,
+</a><a href="#h6-2-70" id="h6-2-70" class="i">+                FeatureLoadParams.ACTIVITY_CREATE_ASYNC,
+</a><a href="#h6-2-71" id="h6-2-71" class="i">+                Feature::onActivityCreate,
+</a><a href="#h6-2-72" id="h6-2-72" class="i">+                Feature::asyncOnActivityCreate
+</a><a href="#h6-2-73" id="h6-2-73" class="i">+            )
+</a><a href="#h6-2-74" id="h6-2-74" class="i">+        }.also {
+</a><a href="#h6-2-75" id="h6-2-75" class="i">+            context.log.verbose(&quot;feature manager onActivityCreate took $it ms&quot;)
+</a><a href="#h6-2-76" id="h6-2-76" class="i">+        }
+</a>     }
+ } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

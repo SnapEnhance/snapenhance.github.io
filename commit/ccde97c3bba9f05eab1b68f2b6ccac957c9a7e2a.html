@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(core/scripting): events - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/ccde97c3bba9f05eab1b68f2b6ccac957c9a7e2a.html">ccde97c3bba9f05eab1b68f2b6ccac957c9a7e2a</a>
+<b>parent</b> <a href="../commit/381b346c7a0a3d7b560e9bfa8452d5e0779258a7.html">381b346c7a0a3d7b560e9bfa8452d5e0779258a7</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun,  4 Feb 2024 16:53:59 +0100
+
+feat(core/scripting): events
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">+++</span><span class="d">-</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/impl/CoreEvents.kt</a></td><td> | </td><td class="num">76</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>2 files changed, 79 insertions(+), 1 deletion(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -6,6 +6,7 @@ import me.rhunk.snapenhance.common.logger.AbstractLogger
+</a> import me.rhunk.snapenhance.common.scripting.ScriptRuntime
+ import me.rhunk.snapenhance.common.scripting.bindings.BindingSide
+ import me.rhunk.snapenhance.core.ModContext
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.core.scripting.impl.CoreEvents
+</a> import me.rhunk.snapenhance.core.scripting.impl.CoreIPC
+ import me.rhunk.snapenhance.core.scripting.impl.CoreMessaging
+ import me.rhunk.snapenhance.core.scripting.impl.CoreScriptConfig
+<a href="#h0-1" id="h0-1" class="h">@@ -24,7 +25,8 @@ class CoreScriptRuntime(
+</a>                     CoreScriptConfig(),
+                     CoreIPC(),
+                     CoreScriptHooker(),
+<a href="#h0-1-3" id="h0-1-3" class="d">-                    CoreMessaging(modContext)
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+                    CoreMessaging(modContext),
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+                    CoreEvents(modContext),
+</a>                 )
+             }
+ 
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/impl/CoreEvents.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/impl/CoreEvents.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/impl/CoreEvents.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/impl/CoreEvents.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -0,0 +1,75 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="i">+package me.rhunk.snapenhance.core.scripting.impl
+</a><a href="#h1-0-1" id="h1-0-1" class="i">+
+</a><a href="#h1-0-2" id="h1-0-2" class="i">+import me.rhunk.snapenhance.common.scripting.bindings.AbstractBinding
+</a><a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.common.scripting.bindings.BindingSide
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import me.rhunk.snapenhance.common.scripting.ktx.scriptableObject
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+import me.rhunk.snapenhance.core.ModContext
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+import me.rhunk.snapenhance.core.event.Event
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+import me.rhunk.snapenhance.core.event.events.impl.*
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+import org.mozilla.javascript.ScriptableObject
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+class CoreEvents(
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+    private val modContext: ModContext
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+) : AbstractBinding(&quot;events&quot;, BindingSide.CORE) {
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+    private fun ScriptableObject.cancelableEvent(event: Event): ScriptableObject {
+</a><a href="#h1-0-14" id="h1-0-14" class="i">+        defineProperty(&quot;canceled&quot;, { event.canceled }, { value -&gt; event.canceled = value as Boolean },0)
+</a><a href="#h1-0-15" id="h1-0-15" class="i">+        return this
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+    }
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+
+</a><a href="#h1-0-18" id="h1-0-18" class="i">+    fun onConversationUpdated(callback: (event: ScriptableObject) -&gt; Unit) {
+</a><a href="#h1-0-19" id="h1-0-19" class="i">+        modContext.event.subscribe(ConversationUpdateEvent::class) { event -&gt;
+</a><a href="#h1-0-20" id="h1-0-20" class="i">+            callback(scriptableObject(&quot;ConversationUpdateEvent&quot;) {
+</a><a href="#h1-0-21" id="h1-0-21" class="i">+                putConst(&quot;conversationId&quot;, this, event.conversationId)
+</a><a href="#h1-0-22" id="h1-0-22" class="i">+                putConst(&quot;conversation&quot;,this, event.conversation)
+</a><a href="#h1-0-23" id="h1-0-23" class="i">+                putConst(&quot;messages&quot;, this, event.messages)
+</a><a href="#h1-0-24" id="h1-0-24" class="i">+            }.cancelableEvent(event))
+</a><a href="#h1-0-25" id="h1-0-25" class="i">+        }
+</a><a href="#h1-0-26" id="h1-0-26" class="i">+    }
+</a><a href="#h1-0-27" id="h1-0-27" class="i">+
+</a><a href="#h1-0-28" id="h1-0-28" class="i">+    fun onMessageBuild(callback: (event: ScriptableObject) -&gt; Unit) {
+</a><a href="#h1-0-29" id="h1-0-29" class="i">+        modContext.event.subscribe(BuildMessageEvent::class) { event -&gt;
+</a><a href="#h1-0-30" id="h1-0-30" class="i">+            callback(scriptableObject(&quot;BuildMessageEvent&quot;) {
+</a><a href="#h1-0-31" id="h1-0-31" class="i">+                putConst(&quot;message&quot;, this, event.message)
+</a><a href="#h1-0-32" id="h1-0-32" class="i">+            }.cancelableEvent(event))
+</a><a href="#h1-0-33" id="h1-0-33" class="i">+        }
+</a><a href="#h1-0-34" id="h1-0-34" class="i">+    }
+</a><a href="#h1-0-35" id="h1-0-35" class="i">+
+</a><a href="#h1-0-36" id="h1-0-36" class="i">+    fun onViewBind(callback: (event: ScriptableObject) -&gt; Unit) {
+</a><a href="#h1-0-37" id="h1-0-37" class="i">+        modContext.event.subscribe(BindViewEvent::class) {
+</a><a href="#h1-0-38" id="h1-0-38" class="i">+            callback(scriptableObject(&quot;BindViewEvent&quot;) {
+</a><a href="#h1-0-39" id="h1-0-39" class="i">+                putConst(&quot;view&quot;, this, it.view)
+</a><a href="#h1-0-40" id="h1-0-40" class="i">+                putConst(&quot;model&quot;, this, it.prevModel)
+</a><a href="#h1-0-41" id="h1-0-41" class="i">+            }.cancelableEvent(it))
+</a><a href="#h1-0-42" id="h1-0-42" class="i">+        }
+</a><a href="#h1-0-43" id="h1-0-43" class="i">+    }
+</a><a href="#h1-0-44" id="h1-0-44" class="i">+
+</a><a href="#h1-0-45" id="h1-0-45" class="i">+    fun onSnapInteraction(callback: (event: ScriptableObject) -&gt; Unit) {
+</a><a href="#h1-0-46" id="h1-0-46" class="i">+        modContext.event.subscribe(OnSnapInteractionEvent::class) { event -&gt;
+</a><a href="#h1-0-47" id="h1-0-47" class="i">+            callback(scriptableObject(&quot;OnSnapInteractionEvent&quot;) {
+</a><a href="#h1-0-48" id="h1-0-48" class="i">+                putConst(&quot;interactionType&quot;, this, event.interactionType)
+</a><a href="#h1-0-49" id="h1-0-49" class="i">+                putConst(&quot;conversationId&quot;, this, event.conversationId.toString())
+</a><a href="#h1-0-50" id="h1-0-50" class="i">+                putConst(&quot;messageId&quot;, this, event.messageId)
+</a><a href="#h1-0-51" id="h1-0-51" class="i">+            }.cancelableEvent(event))
+</a><a href="#h1-0-52" id="h1-0-52" class="i">+        }
+</a><a href="#h1-0-53" id="h1-0-53" class="i">+    }
+</a><a href="#h1-0-54" id="h1-0-54" class="i">+
+</a><a href="#h1-0-55" id="h1-0-55" class="i">+    fun onPreMessageSend(callback: (event: ScriptableObject) -&gt; Unit) {
+</a><a href="#h1-0-56" id="h1-0-56" class="i">+        modContext.event.subscribe(SendMessageWithContentEvent::class) { event -&gt;
+</a><a href="#h1-0-57" id="h1-0-57" class="i">+            callback(scriptableObject(&quot;SendMessageWithContentEvent&quot;) {
+</a><a href="#h1-0-58" id="h1-0-58" class="i">+                putConst(&quot;destinations&quot;, this, event.destinations)
+</a><a href="#h1-0-59" id="h1-0-59" class="i">+                putConst(&quot;messageContent&quot;, this, event.messageContent)
+</a><a href="#h1-0-60" id="h1-0-60" class="i">+            }.cancelableEvent(event))
+</a><a href="#h1-0-61" id="h1-0-61" class="i">+        }
+</a><a href="#h1-0-62" id="h1-0-62" class="i">+    }
+</a><a href="#h1-0-63" id="h1-0-63" class="i">+
+</a><a href="#h1-0-64" id="h1-0-64" class="i">+    fun onAddView(callback: (event: ScriptableObject) -&gt; Unit) {
+</a><a href="#h1-0-65" id="h1-0-65" class="i">+        modContext.event.subscribe(AddViewEvent::class) { event -&gt;
+</a><a href="#h1-0-66" id="h1-0-66" class="i">+            callback(scriptableObject(&quot;AddViewEvent&quot;) {
+</a><a href="#h1-0-67" id="h1-0-67" class="i">+                putConst(&quot;parent&quot;, this, event.parent)
+</a><a href="#h1-0-68" id="h1-0-68" class="i">+                defineProperty(&quot;view&quot;, { event.view }, { value -&gt; event.view = value as android.view.View },0)
+</a><a href="#h1-0-69" id="h1-0-69" class="i">+            }.cancelableEvent(event))
+</a><a href="#h1-0-70" id="h1-0-70" class="i">+        }
+</a><a href="#h1-0-71" id="h1-0-71" class="i">+    }
+</a><a href="#h1-0-72" id="h1-0-72" class="i">+
+</a><a href="#h1-0-73" id="h1-0-73" class="i">+    override fun getObject() = this
+</a><a href="#h1-0-74" id="h1-0-74" class="i">+}</a><a href="#h1-0-75" id="h1-0-75" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

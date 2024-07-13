@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>refactor: lazy bridge references - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/b4879c9a7f3e90d562bdfdc1cb4232f155fcbfa2.html">b4879c9a7f3e90d562bdfdc1cb4232f155fcbfa2</a>
+<b>parent</b> <a href="../commit/91b690b01d4046fa3533a8ab297655f3805bc994.html">91b690b01d4046fa3533a8ab297655f3805bc994</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat,  1 Jun 2024 23:29:13 +0200
+
+refactor: lazy bridge references
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">++++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt</a></td><td> | </td><td class="num">18</td><td><span class="i">++++++++++</span><span class="d">--------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/InternalFileWrapper.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LocaleWrapper.kt</a></td><td> | </td><td class="num">16</td><td><span class="i">++++++++</span><span class="d">--------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MappingsWrapper.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">common/src/main/kotlin/me/rhunk/snapenhance/common/config/ModConfig.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h6">common/src/main/kotlin/me/rhunk/snapenhance/common/util/LazyBridge.kt</a></td><td> | </td><td class="num">49</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></td><td> | </td><td class="num">10</td><td><span class="i">+++++++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></td><td> | </td><td class="num">39</td><td><span class="i">++++++++++++++++++</span><span class="d">---------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">core/src/main/kotlin/me/rhunk/snapenhance/core/features/BridgeFileFeature.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/CustomEmojiFont.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h11">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h12">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/FriendTracker.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h13">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+</table></pre><pre>14 files changed, 115 insertions(+), 53 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -28,6 +28,7 @@ import me.rhunk.snapenhance.common.bridge.wrapper.LoggerWrapper
+</a> import me.rhunk.snapenhance.common.bridge.wrapper.MappingsWrapper
+ import me.rhunk.snapenhance.common.config.ModConfig
+ import me.rhunk.snapenhance.common.logger.fatalCrash
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.common.util.constantLazyBridge
+</a> import me.rhunk.snapenhance.common.util.getPurgeTime
+ import me.rhunk.snapenhance.e2ee.E2EEImplementation
+ import me.rhunk.snapenhance.scripting.RemoteScriptManager
+<a href="#h0-1" id="h0-1" class="h">@@ -61,9 +62,9 @@ class RemoteSideContext(
+</a> 
+     val sharedPreferences: SharedPreferences get() = androidContext.getSharedPreferences(&quot;prefs&quot;, 0)
+     val fileHandleManager = RemoteFileHandleManager(this)
+<a href="#h0-1-3" id="h0-1-3" class="d">-    val config = ModConfig(androidContext, fileHandleManager)
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-    val translation = LocaleWrapper(fileHandleManager)
+</a><a href="#h0-1-5" id="h0-1-5" class="d">-    val mappings = MappingsWrapper(fileHandleManager)
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+    val config = ModConfig(androidContext, constantLazyBridge { fileHandleManager })
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+    val translation = LocaleWrapper(constantLazyBridge { fileHandleManager })
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+    val mappings = MappingsWrapper(constantLazyBridge { fileHandleManager })
+</a>     val taskManager = TaskManager(this)
+     val database = AppDatabase(this)
+     val streaksReminder = StreaksReminder(this)
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -5,6 +5,8 @@ import android.os.ParcelFileDescriptor
+</a> import android.os.ParcelFileDescriptor.AutoCloseInputStream
+ import android.os.ParcelFileDescriptor.AutoCloseOutputStream
+ import me.rhunk.snapenhance.bridge.storage.FileHandle
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.common.util.LazyBridgeValue
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import me.rhunk.snapenhance.common.util.lazyBridge
+</a> import java.io.File
+ 
+ 
+<a href="#h1-1" id="h1-1" class="h">@@ -43,10 +45,10 @@ enum class InternalFileHandleType(
+</a>     }
+ }
+ 
+<a href="#h1-1-3" id="h1-1-3" class="d">-fun FileHandle.toWrapper() = FileHandleWrapper(lazy { this })
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+fun FileHandle.toWrapper() = FileHandleWrapper(lazyBridge { this })
+</a> 
+ open class FileHandleWrapper(
+<a href="#h1-1-7" id="h1-1-7" class="d">-    private val fileHandle: Lazy&lt;FileHandle&gt;
+</a><a href="#h1-1-8" id="h1-1-8" class="i">+    private val fileHandle: LazyBridgeValue&lt;FileHandle&gt;
+</a> ) {
+     fun exists() = fileHandle.value.exists()
+     fun create() = fileHandle.value.create()
+<a href="#h1-2" id="h1-2" class="h">@@ -54,8 +56,8 @@ open class FileHandleWrapper(
+</a> 
+     fun writeBytes(data: ByteArray) = fileHandle.value.open(
+         ParcelFileDescriptor.MODE_WRITE_ONLY or
+<a href="#h1-2-3" id="h1-2-3" class="d">-                ParcelFileDescriptor.MODE_CREATE or
+</a><a href="#h1-2-4" id="h1-2-4" class="d">-                ParcelFileDescriptor.MODE_TRUNCATE
+</a><a href="#h1-2-5" id="h1-2-5" class="i">+        ParcelFileDescriptor.MODE_CREATE or
+</a><a href="#h1-2-6" id="h1-2-6" class="i">+        ParcelFileDescriptor.MODE_TRUNCATE
+</a>     ).use { pfd -&gt;
+         AutoCloseOutputStream(pfd).use {
+             it.write(data)
+<a href="#h1-3" id="h1-3" class="h">@@ -64,7 +66,7 @@ open class FileHandleWrapper(
+</a> 
+     open fun readBytes(): ByteArray = fileHandle.value.open(
+         ParcelFileDescriptor.MODE_READ_ONLY or
+<a href="#h1-3-3" id="h1-3-3" class="d">-                ParcelFileDescriptor.MODE_CREATE
+</a><a href="#h1-3-4" id="h1-3-4" class="i">+        ParcelFileDescriptor.MODE_CREATE
+</a>     ).use { pfd -&gt;
+         AutoCloseInputStream(pfd).use {
+             it.readBytes()
+<a href="#h1-4" id="h1-4" class="h">@@ -73,7 +75,7 @@ open class FileHandleWrapper(
+</a> 
+     fun inputStream(block: (AutoCloseInputStream) -&gt; Unit) = fileHandle.value.open(
+         ParcelFileDescriptor.MODE_READ_ONLY or
+<a href="#h1-4-3" id="h1-4-3" class="d">-                ParcelFileDescriptor.MODE_CREATE
+</a><a href="#h1-4-4" id="h1-4-4" class="i">+        ParcelFileDescriptor.MODE_CREATE
+</a>     ).use { pfd -&gt;
+         AutoCloseInputStream(pfd).use {
+             block(it)
+<a href="#h1-5" id="h1-5" class="h">@@ -82,8 +84,8 @@ open class FileHandleWrapper(
+</a> 
+     fun outputStream(block: (AutoCloseOutputStream) -&gt; Unit) = fileHandle.value.open(
+         ParcelFileDescriptor.MODE_WRITE_ONLY or
+<a href="#h1-5-3" id="h1-5-3" class="d">-                ParcelFileDescriptor.MODE_CREATE or
+</a><a href="#h1-5-4" id="h1-5-4" class="d">-                ParcelFileDescriptor.MODE_TRUNCATE
+</a><a href="#h1-5-5" id="h1-5-5" class="i">+        ParcelFileDescriptor.MODE_CREATE or
+</a><a href="#h1-5-6" id="h1-5-6" class="i">+        ParcelFileDescriptor.MODE_TRUNCATE
+</a>     ).use { pfd -&gt;
+         AutoCloseOutputStream(pfd).use {
+             block(it)
+<b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/InternalFileWrapper.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/InternalFileWrapper.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/InternalFileWrapper.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/InternalFileWrapper.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,12 +1,14 @@
+</a> package me.rhunk.snapenhance.common.bridge
+ 
+ import me.rhunk.snapenhance.bridge.storage.FileHandleManager
+<a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.common.util.LazyBridgeValue
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import me.rhunk.snapenhance.common.util.lazyBridge
+</a> 
+ open class InternalFileWrapper(
+<a href="#h2-0-7" id="h2-0-7" class="d">-    fileHandleManager: FileHandleManager,
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+    fileHandleManager: LazyBridgeValue&lt;FileHandleManager&gt;,
+</a>     private val fileType: InternalFileHandleType,
+     val defaultValue: String? = null
+<a href="#h2-0-11" id="h2-0-11" class="d">-): FileHandleWrapper(lazy { fileHandleManager.getFileHandle(FileHandleScope.INTERNAL.key, fileType.key)!! }) {
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+): FileHandleWrapper(lazyBridge { fileHandleManager.value.getFileHandle(FileHandleScope.INTERNAL.key, fileType.key)!! }) {
+</a>     override fun readBytes(): ByteArray {
+         if (!exists()) {
+             defaultValue?.toByteArray(Charsets.UTF_8)?.let {
+<b>diff --git a/<a id="h3" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LocaleWrapper.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LocaleWrapper.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LocaleWrapper.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LocaleWrapper.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -8,11 +8,12 @@ import com.google.gson.JsonParser
+</a> import me.rhunk.snapenhance.bridge.storage.FileHandleManager
+ import me.rhunk.snapenhance.common.bridge.FileHandleScope
+ import me.rhunk.snapenhance.common.logger.AbstractLogger
+<a href="#h3-0-3" id="h3-0-3" class="i">+import me.rhunk.snapenhance.common.util.LazyBridgeValue
+</a> import java.util.Locale
+ 
+ 
+ class LocaleWrapper(
+<a href="#h3-0-8" id="h3-0-8" class="d">-    private val fileHandleManager: FileHandleManager
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+    private val fileHandleManager: LazyBridgeValue&lt;FileHandleManager&gt;
+</a> ) {
+     companion object {
+         const val DEFAULT_LOCALE = &quot;en_US&quot;
+<a href="#h3-1" id="h3-1" class="h">@@ -62,15 +63,14 @@ class LocaleWrapper(
+</a>     }
+ 
+     fun load() {
+<a href="#h3-1-3" id="h3-1-3" class="d">-        load(
+</a><a href="#h3-1-4" id="h3-1-4" class="d">-            DEFAULT_LOCALE,
+</a><a href="#h3-1-5" id="h3-1-5" class="d">-            fileHandleManager.getFileHandle(FileHandleScope.LOCALE.key, &quot;$DEFAULT_LOCALE.json&quot;)?.open(ParcelFileDescriptor.MODE_READ_ONLY) ?: run {
+</a><a href="#h3-1-6" id="h3-1-6" class="d">-                throw IllegalStateException(&quot;Failed to load default locale&quot;)
+</a><a href="#h3-1-7" id="h3-1-7" class="d">-            }
+</a><a href="#h3-1-8" id="h3-1-8" class="d">-        )
+</a><a href="#h3-1-9" id="h3-1-9" class="i">+        fileHandleManager.value.getFileHandle(FileHandleScope.LOCALE.key, &quot;$DEFAULT_LOCALE.json&quot;)?.open(ParcelFileDescriptor.MODE_READ_ONLY)?.use {
+</a><a href="#h3-1-10" id="h3-1-10" class="i">+            load(DEFAULT_LOCALE, it)
+</a><a href="#h3-1-11" id="h3-1-11" class="i">+        } ?: run {
+</a><a href="#h3-1-12" id="h3-1-12" class="i">+            throw IllegalStateException(&quot;Failed to load default locale&quot;)
+</a><a href="#h3-1-13" id="h3-1-13" class="i">+        }
+</a> 
+         if (userLocale != DEFAULT_LOCALE) {
+<a href="#h3-1-16" id="h3-1-16" class="d">-            fileHandleManager.getFileHandle(FileHandleScope.LOCALE.key, &quot;$userLocale.json&quot;)?.open(ParcelFileDescriptor.MODE_READ_ONLY)?.let {
+</a><a href="#h3-1-17" id="h3-1-17" class="i">+            fileHandleManager.value.getFileHandle(FileHandleScope.LOCALE.key, &quot;$userLocale.json&quot;)?.open(ParcelFileDescriptor.MODE_READ_ONLY)?.use {
+</a>                 load(userLocale, it)
+             }
+         }
+<b>diff --git a/<a id="h4" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MappingsWrapper.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MappingsWrapper.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MappingsWrapper.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MappingsWrapper.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -9,12 +9,13 @@ import me.rhunk.snapenhance.common.Constants
+</a> import me.rhunk.snapenhance.common.bridge.InternalFileHandleType
+ import me.rhunk.snapenhance.common.bridge.InternalFileWrapper
+ import me.rhunk.snapenhance.common.logger.AbstractLogger
+<a href="#h4-0-3" id="h4-0-3" class="i">+import me.rhunk.snapenhance.common.util.LazyBridgeValue
+</a> import me.rhunk.snapenhance.mapper.AbstractClassMapper
+ import me.rhunk.snapenhance.mapper.ClassMapper
+ import kotlin.reflect.KClass
+ 
+ class MappingsWrapper(
+<a href="#h4-0-9" id="h4-0-9" class="d">-    fileHandleManager: FileHandleManager
+</a><a href="#h4-0-10" id="h4-0-10" class="i">+    fileHandleManager: LazyBridgeValue&lt;FileHandleManager&gt;
+</a> ): InternalFileWrapper(fileHandleManager, InternalFileHandleType.MAPPINGS, defaultValue = &quot;{}&quot;) {
+     private lateinit var context: Context
+     private var mappingUniqueHash: Long = 0
+<b>diff --git a/<a id="h5" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/ModConfig.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/ModConfig.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/ModConfig.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/ModConfig.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -11,11 +11,12 @@ import me.rhunk.snapenhance.common.bridge.InternalFileWrapper
+</a> import me.rhunk.snapenhance.common.bridge.wrapper.LocaleWrapper
+ import me.rhunk.snapenhance.common.config.impl.RootConfig
+ import me.rhunk.snapenhance.common.logger.AbstractLogger
+<a href="#h5-0-3" id="h5-0-3" class="i">+import me.rhunk.snapenhance.common.util.LazyBridgeValue
+</a> import kotlin.properties.Delegates
+ 
+ class ModConfig(
+     private val context: Context,
+<a href="#h5-0-8" id="h5-0-8" class="d">-    fileHandleManager: FileHandleManager
+</a><a href="#h5-0-9" id="h5-0-9" class="i">+    fileHandleManager: LazyBridgeValue&lt;FileHandleManager&gt;
+</a> ) {
+     private val fileWrapper = InternalFileWrapper(fileHandleManager, InternalFileHandleType.CONFIG, &quot;{}&quot;)
+     var locale: String = LocaleWrapper.DEFAULT_LOCALE
+<b>diff --git a/<a id="h6" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/LazyBridge.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/LazyBridge.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/LazyBridge.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/LazyBridge.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -0,0 +1,49 @@
+</a><a href="#h6-0-0" id="h6-0-0" class="i">+package me.rhunk.snapenhance.common.util
+</a><a href="#h6-0-1" id="h6-0-1" class="i">+
+</a><a href="#h6-0-2" id="h6-0-2" class="i">+import android.os.IInterface
+</a><a href="#h6-0-3" id="h6-0-3" class="i">+
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+
+</a><a href="#h6-0-5" id="h6-0-5" class="i">+open class LazyBridgeValue&lt;T: IInterface&gt;(
+</a><a href="#h6-0-6" id="h6-0-6" class="i">+    private val block: () -&gt; T,
+</a><a href="#h6-0-7" id="h6-0-7" class="i">+    private val isConstant: Boolean = false
+</a><a href="#h6-0-8" id="h6-0-8" class="i">+): Lazy&lt;T&gt; {
+</a><a href="#h6-0-9" id="h6-0-9" class="i">+    private val lock = Any()
+</a><a href="#h6-0-10" id="h6-0-10" class="i">+    private var _value: T? = null
+</a><a href="#h6-0-11" id="h6-0-11" class="i">+
+</a><a href="#h6-0-12" id="h6-0-12" class="i">+    override val value: T get() = run {
+</a><a href="#h6-0-13" id="h6-0-13" class="i">+        synchronized(lock) {
+</a><a href="#h6-0-14" id="h6-0-14" class="i">+            if (_value == null || (!isConstant &amp;&amp; !_value!!.asBinder().pingBinder())) {
+</a><a href="#h6-0-15" id="h6-0-15" class="i">+                _value = block()
+</a><a href="#h6-0-16" id="h6-0-16" class="i">+            }
+</a><a href="#h6-0-17" id="h6-0-17" class="i">+        }
+</a><a href="#h6-0-18" id="h6-0-18" class="i">+        return _value!!
+</a><a href="#h6-0-19" id="h6-0-19" class="i">+    }
+</a><a href="#h6-0-20" id="h6-0-20" class="i">+
+</a><a href="#h6-0-21" id="h6-0-21" class="i">+    override fun isInitialized(): Boolean {
+</a><a href="#h6-0-22" id="h6-0-22" class="i">+        return _value != null &amp;&amp; (isConstant || _value!!.asBinder().pingBinder())
+</a><a href="#h6-0-23" id="h6-0-23" class="i">+    }
+</a><a href="#h6-0-24" id="h6-0-24" class="i">+
+</a><a href="#h6-0-25" id="h6-0-25" class="i">+    operator fun getValue(thisRef: Any?, property: Any?): T {
+</a><a href="#h6-0-26" id="h6-0-26" class="i">+        return value
+</a><a href="#h6-0-27" id="h6-0-27" class="i">+    }
+</a><a href="#h6-0-28" id="h6-0-28" class="i">+}
+</a><a href="#h6-0-29" id="h6-0-29" class="i">+
+</a><a href="#h6-0-30" id="h6-0-30" class="i">+
+</a><a href="#h6-0-31" id="h6-0-31" class="i">+fun &lt;T : IInterface, R&gt; mappedLazyBridge(lazyBridgeValue: LazyBridgeValue&lt;T&gt;, map: (T) -&gt; R): Lazy&lt;R&gt; {
+</a><a href="#h6-0-32" id="h6-0-32" class="i">+    return object : Lazy&lt;R&gt; {
+</a><a href="#h6-0-33" id="h6-0-33" class="i">+        private var _value: T? = null
+</a><a href="#h6-0-34" id="h6-0-34" class="i">+        private var _mappedValue: R? = null
+</a><a href="#h6-0-35" id="h6-0-35" class="i">+
+</a><a href="#h6-0-36" id="h6-0-36" class="i">+        override val value: R get() = run {
+</a><a href="#h6-0-37" id="h6-0-37" class="i">+            if (_value != lazyBridgeValue.value) {
+</a><a href="#h6-0-38" id="h6-0-38" class="i">+                _value = lazyBridgeValue.value
+</a><a href="#h6-0-39" id="h6-0-39" class="i">+                _mappedValue = map(_value!!)
+</a><a href="#h6-0-40" id="h6-0-40" class="i">+            }
+</a><a href="#h6-0-41" id="h6-0-41" class="i">+            return _mappedValue!!
+</a><a href="#h6-0-42" id="h6-0-42" class="i">+        }
+</a><a href="#h6-0-43" id="h6-0-43" class="i">+        override fun isInitialized(): Boolean = lazyBridgeValue.isInitialized()
+</a><a href="#h6-0-44" id="h6-0-44" class="i">+    }
+</a><a href="#h6-0-45" id="h6-0-45" class="i">+}
+</a><a href="#h6-0-46" id="h6-0-46" class="i">+
+</a><a href="#h6-0-47" id="h6-0-47" class="i">+fun &lt;T: IInterface&gt; lazyBridge(block: () -&gt; T) = LazyBridgeValue(block)
+</a><a href="#h6-0-48" id="h6-0-48" class="i">+fun &lt;T: IInterface&gt; constantLazyBridge(value: () -&gt; T) = LazyBridgeValue(value, isConstant = true)
+</a><b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -17,6 +17,7 @@ import me.rhunk.snapenhance.common.Constants
+</a> import me.rhunk.snapenhance.common.bridge.wrapper.LocaleWrapper
+ import me.rhunk.snapenhance.common.bridge.wrapper.MappingsWrapper
+ import me.rhunk.snapenhance.common.config.ModConfig
+<a href="#h7-0-3" id="h7-0-3" class="i">+import me.rhunk.snapenhance.common.util.lazyBridge
+</a> import me.rhunk.snapenhance.core.action.ActionManager
+ import me.rhunk.snapenhance.core.bridge.BridgeClient
+ import me.rhunk.snapenhance.core.database.DatabaseAccess
+<a href="#h7-1" id="h7-1" class="h">@@ -48,15 +49,18 @@ class ModContext(
+</a>     val resources: Resources get() = androidContext.resources
+     val gson: Gson = GsonBuilder().create()
+ 
+<a href="#h7-1-3" id="h7-1-3" class="d">-    private val _config by lazy { ModConfig(androidContext, bridgeClient.getFileHandlerManager()) }
+</a><a href="#h7-1-4" id="h7-1-4" class="i">+    private val lazyFileHandlerManager = lazyBridge { bridgeClient.getFileHandlerManager() }
+</a><a href="#h7-1-5" id="h7-1-5" class="i">+    val fileHandlerManager by lazyFileHandlerManager
+</a><a href="#h7-1-6" id="h7-1-6" class="i">+
+</a><a href="#h7-1-7" id="h7-1-7" class="i">+    private val _config by lazy { ModConfig(androidContext, lazyFileHandlerManager) }
+</a>     val config get() = _config.root
+     val log by lazy { CoreLogger(this.bridgeClient) }
+<a href="#h7-1-10" id="h7-1-10" class="d">-    val translation by lazy { LocaleWrapper(bridgeClient.getFileHandlerManager()) }
+</a><a href="#h7-1-11" id="h7-1-11" class="i">+    val translation by lazy { LocaleWrapper(lazyFileHandlerManager) }
+</a>     val httpServer = HttpServer()
+     val messageSender = MessageSender(this)
+ 
+     val features = FeatureManager(this)
+<a href="#h7-1-16" id="h7-1-16" class="d">-    val mappings by lazy { MappingsWrapper(bridgeClient.getFileHandlerManager()) }
+</a><a href="#h7-1-17" id="h7-1-17" class="i">+    val mappings by lazy { MappingsWrapper(lazyFileHandlerManager) }
+</a>     val actionManager = ActionManager(this)
+     val database = DatabaseAccess(this)
+     val event = EventBus(this)
+<b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -5,23 +5,15 @@ import android.content.ComponentName
+</a> import android.content.Context
+ import android.content.Intent
+ import android.content.ServiceConnection
+<a href="#h8-0-3" id="h8-0-3" class="d">-import android.os.Build
+</a><a href="#h8-0-4" id="h8-0-4" class="d">-import android.os.DeadObjectException
+</a><a href="#h8-0-5" id="h8-0-5" class="d">-import android.os.Handler
+</a><a href="#h8-0-6" id="h8-0-6" class="d">-import android.os.HandlerThread
+</a><a href="#h8-0-7" id="h8-0-7" class="d">-import android.os.IBinder
+</a><a href="#h8-0-8" id="h8-0-8" class="d">-import android.os.ParcelFileDescriptor
+</a><a href="#h8-0-9" id="h8-0-9" class="d">-import android.os.Process
+</a><a href="#h8-0-10" id="h8-0-10" class="i">+import android.os.*
+</a> import android.util.Log
+ import de.robv.android.xposed.XposedHelpers
+ import kotlinx.coroutines.runBlocking
+ import kotlinx.coroutines.suspendCancellableCoroutine
+<a href="#h8-0-15" id="h8-0-15" class="i">+import kotlinx.coroutines.sync.Semaphore
+</a><a href="#h8-0-16" id="h8-0-16" class="i">+import kotlinx.coroutines.sync.withPermit
+</a> import kotlinx.coroutines.withTimeoutOrNull
+<a href="#h8-0-18" id="h8-0-18" class="d">-import me.rhunk.snapenhance.bridge.AccountStorage
+</a><a href="#h8-0-19" id="h8-0-19" class="d">-import me.rhunk.snapenhance.bridge.BridgeInterface
+</a><a href="#h8-0-20" id="h8-0-20" class="d">-import me.rhunk.snapenhance.bridge.ConfigStateListener
+</a><a href="#h8-0-21" id="h8-0-21" class="d">-import me.rhunk.snapenhance.bridge.DownloadCallback
+</a><a href="#h8-0-22" id="h8-0-22" class="d">-import me.rhunk.snapenhance.bridge.SyncCallback
+</a><a href="#h8-0-23" id="h8-0-23" class="i">+import me.rhunk.snapenhance.bridge.*
+</a> import me.rhunk.snapenhance.bridge.e2ee.E2eeInterface
+ import me.rhunk.snapenhance.bridge.logger.LoggerInterface
+ import me.rhunk.snapenhance.bridge.logger.TrackerInterface
+<a href="#h8-1" id="h8-1" class="h">@@ -58,7 +50,7 @@ class BridgeClient(
+</a>             return true
+         }
+ 
+<a href="#h8-1-3" id="h8-1-3" class="d">-        return withTimeoutOrNull(5000L) {
+</a><a href="#h8-1-4" id="h8-1-4" class="i">+        return withTimeoutOrNull(10000L) {
+</a>             suspendCancellableCoroutine { cancellableContinuation -&gt;
+                 continuation = cancellableContinuation
+                 with(context.androidContext) {
+<a href="#h8-2" id="h8-2" class="h">@@ -133,16 +125,21 @@ class BridgeClient(
+</a>         continuation = null
+     }
+ 
+<a href="#h8-2-3" id="h8-2-3" class="i">+    private val reconnectSemaphore = Semaphore(permits = 1)
+</a><a href="#h8-2-4" id="h8-2-4" class="i">+
+</a>     private fun tryReconnect() {
+         runBlocking {
+<a href="#h8-2-7" id="h8-2-7" class="d">-            Log.d(&quot;BridgeClient&quot;, &quot;service is dead, restarting&quot;)
+</a><a href="#h8-2-8" id="h8-2-8" class="d">-            val canLoad = connect {
+</a><a href="#h8-2-9" id="h8-2-9" class="d">-                Log.e(&quot;BridgeClient&quot;, &quot;connection failed&quot;, it)
+</a><a href="#h8-2-10" id="h8-2-10" class="d">-                context.softRestartApp()
+</a><a href="#h8-2-11" id="h8-2-11" class="d">-            }
+</a><a href="#h8-2-12" id="h8-2-12" class="d">-            if (canLoad != true) {
+</a><a href="#h8-2-13" id="h8-2-13" class="d">-                Log.e(&quot;BridgeClient&quot;, &quot;failed to reconnect to service&quot;, Throwable())
+</a><a href="#h8-2-14" id="h8-2-14" class="d">-                context.softRestartApp()
+</a><a href="#h8-2-15" id="h8-2-15" class="i">+            reconnectSemaphore.withPermit {
+</a><a href="#h8-2-16" id="h8-2-16" class="i">+                if (service.asBinder().pingBinder()) return@runBlocking
+</a><a href="#h8-2-17" id="h8-2-17" class="i">+                Log.d(&quot;BridgeClient&quot;, &quot;service is dead, restarting&quot;)
+</a><a href="#h8-2-18" id="h8-2-18" class="i">+                val canLoad = connect {
+</a><a href="#h8-2-19" id="h8-2-19" class="i">+                    Log.e(&quot;BridgeClient&quot;, &quot;connection failed&quot;, it)
+</a><a href="#h8-2-20" id="h8-2-20" class="i">+                    context.softRestartApp()
+</a><a href="#h8-2-21" id="h8-2-21" class="i">+                }
+</a><a href="#h8-2-22" id="h8-2-22" class="i">+                if (canLoad != true) {
+</a><a href="#h8-2-23" id="h8-2-23" class="i">+                    Log.e(&quot;BridgeClient&quot;, &quot;failed to reconnect to service, result=$canLoad&quot;)
+</a><a href="#h8-2-24" id="h8-2-24" class="i">+                    context.softRestartApp()
+</a><a href="#h8-2-25" id="h8-2-25" class="i">+                }
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h9" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/BridgeFileFeature.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/BridgeFileFeature.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/BridgeFileFeature.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/BridgeFileFeature.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -3,15 +3,17 @@ package me.rhunk.snapenhance.core.features
+</a> import me.rhunk.snapenhance.common.bridge.FileHandleScope
+ import me.rhunk.snapenhance.common.bridge.InternalFileHandleType
+ import me.rhunk.snapenhance.common.bridge.toWrapper
+<a href="#h9-0-3" id="h9-0-3" class="i">+import me.rhunk.snapenhance.common.util.LazyBridgeValue
+</a><a href="#h9-0-4" id="h9-0-4" class="i">+import me.rhunk.snapenhance.common.util.mappedLazyBridge
+</a> import java.io.BufferedReader
+ import java.io.InputStreamReader
+ import java.nio.charset.StandardCharsets
+ 
+ abstract class BridgeFileFeature(name: String, private val bridgeFileType: InternalFileHandleType, loadParams: Int) : Feature(name, loadParams) {
+     private val fileLines = mutableListOf&lt;String&gt;()
+<a href="#h9-0-11" id="h9-0-11" class="d">-    private val fileWrapper by lazy { context.bridgeClient.getFileHandlerManager().getFileHandle(FileHandleScope.INTERNAL.key, bridgeFileType.key)!!.toWrapper() }
+</a><a href="#h9-0-12" id="h9-0-12" class="i">+    private val fileWrapper by mappedLazyBridge(LazyBridgeValue({ context.fileHandlerManager.getFileHandle(FileHandleScope.INTERNAL.key, bridgeFileType.key)!! }), map = { it.toWrapper() })
+</a> 
+<a href="#h9-0-14" id="h9-0-14" class="d">-    protected fun readFile() {
+</a><a href="#h9-0-15" id="h9-0-15" class="i">+    private fun readFile() {
+</a>         val temporaryLines = mutableListOf&lt;String&gt;()
+         fileWrapper.inputStream { stream -&gt;
+             with(BufferedReader(InputStreamReader(stream, StandardCharsets.UTF_8))) {
+<b>diff --git a/<a id="h10" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/CustomEmojiFont.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/CustomEmojiFont.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/CustomEmojiFont.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/CustomEmojiFont.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -13,7 +13,7 @@ fun getCustomEmojiFontPath(
+</a>     val customFileName = context.config.experimental.nativeHooks.customEmojiFont.getNullable()?.takeIf { it.isNotBlank() } ?: return null
+     if (cacheFontPath == null) {
+         cacheFontPath = runCatching {
+<a href="#h10-0-3" id="h10-0-3" class="d">-             context.bridgeClient.getFileHandlerManager().getFileHandleLocalPath(
+</a><a href="#h10-0-4" id="h10-0-4" class="i">+             context.fileHandlerManager.getFileHandleLocalPath(
+</a>                 context,
+                 FileHandleScope.USER_IMPORT,
+                 customFileName,
+<b>diff --git a/<a id="h11" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt</a></b>
+<a href="#h11-0" id="h11-0" class="h">@@ -25,6 +25,7 @@ import me.rhunk.snapenhance.common.data.MessagingRuleType
+</a> import me.rhunk.snapenhance.common.data.RuleState
+ import me.rhunk.snapenhance.common.database.impl.ConversationMessage
+ import me.rhunk.snapenhance.common.ui.createComposeView
+<a href="#h11-0-3" id="h11-0-3" class="i">+import me.rhunk.snapenhance.common.util.lazyBridge
+</a> import me.rhunk.snapenhance.common.util.protobuf.ProtoEditor
+ import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.common.util.protobuf.ProtoWriter
+<a href="#h11-1" id="h11-1" class="h">@@ -58,7 +59,7 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>     loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC or FeatureLoadParams.INIT_SYNC or FeatureLoadParams.INIT_ASYNC
+ ) {
+     val isEnabled get() = context.config.experimental.e2eEncryption.globalState == true
+<a href="#h11-1-3" id="h11-1-3" class="d">-    private val e2eeInterface by lazy { context.bridgeClient.getE2eeInterface() }
+</a><a href="#h11-1-4" id="h11-1-4" class="i">+    private val e2eeInterface by lazyBridge { context.bridgeClient.getE2eeInterface() }
+</a> 
+     private val translation by lazy { context.translation.getCategory(&quot;end_to_end_encryption&quot;) }
+ 
+<b>diff --git a/<a id="h12" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/FriendTracker.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/FriendTracker.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/FriendTracker.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/FriendTracker.kt</a></b>
+<a href="#h12-0" id="h12-0" class="h">@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
+</a> import androidx.compose.material.icons.filled.Info
+ import me.rhunk.snapenhance.common.Constants
+ import me.rhunk.snapenhance.common.data.*
+<a href="#h12-0-3" id="h12-0-3" class="i">+import me.rhunk.snapenhance.common.util.lazyBridge
+</a> import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.common.util.toParcelable
+ import me.rhunk.snapenhance.core.features.Feature
+<a href="#h12-1" id="h12-1" class="h">@@ -24,7 +25,7 @@ import java.nio.ByteBuffer
+</a> 
+ class FriendTracker : Feature(&quot;Friend Tracker&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+     private val conversationPresenceState = mutableMapOf&lt;String, MutableMap&lt;String, FriendPresenceState?&gt;&gt;() // conversationId -&gt; (userId -&gt; state)
+<a href="#h12-1-3" id="h12-1-3" class="d">-    private val tracker by lazy { context.bridgeClient.getTracker() }
+</a><a href="#h12-1-4" id="h12-1-4" class="i">+    private val tracker by lazyBridge { context.bridgeClient.getTracker() }
+</a>     private val notificationManager by lazy { context.androidContext.getSystemService(NotificationManager::class.java).apply {
+         createNotificationChannel(NotificationChannel(
+             &quot;friend_tracker&quot;,
+<b>diff --git a/<a id="h13" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt</a></b>
+<a href="#h13-0" id="h13-0" class="h">@@ -11,6 +11,7 @@ import me.rhunk.snapenhance.common.data.ContentType
+</a> import me.rhunk.snapenhance.common.data.MessageState
+ import me.rhunk.snapenhance.common.data.QuotedMessageContentStatus
+ import me.rhunk.snapenhance.common.util.ktx.longHashCode
+<a href="#h13-0-3" id="h13-0-3" class="i">+import me.rhunk.snapenhance.common.util.lazyBridge
+</a> import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+ import me.rhunk.snapenhance.core.event.events.impl.BuildMessageEvent
+<a href="#h13-1" id="h13-1" class="h">@@ -33,7 +34,7 @@ class MessageLogger : Feature(&quot;MessageLogger&quot;,
+</a>         const val DELETED_MESSAGE_COLOR = 0x6Eb71c1c
+     }
+ 
+<a href="#h13-1-3" id="h13-1-3" class="d">-    private val loggerInterface by lazy { context.bridgeClient.getMessageLogger() }
+</a><a href="#h13-1-4" id="h13-1-4" class="i">+    private val loggerInterface by lazyBridge { context.bridgeClient.getMessageLogger() }
+</a> 
+     val isEnabled get() = context.config.messaging.messageLogger.globalState == true
+ 
+</pre>
+</div>
+</body>
+</html>

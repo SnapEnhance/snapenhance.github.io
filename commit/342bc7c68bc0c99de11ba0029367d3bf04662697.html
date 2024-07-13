@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(experimental): in-app overlay - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/342bc7c68bc0c99de11ba0029367d3bf04662697.html">342bc7c68bc0c99de11ba0029367d3bf04662697</a>
+<b>parent</b> <a href="../commit/30e96f1e7120ba03769b48235f3d62552e390bf3.html">30e96f1e7120ba03769b48235f3d62552e390bf3</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun,  3 Mar 2024 19:40:53 +0100
+
+feat(experimental): in-app overlay
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">29</td><td><span class="i">+++++++++++++++++++++++++</span><span class="d">----</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/InAppOverlay.kt</a></td><td> | </td><td class="num">202</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>4 files changed, 230 insertions(+), 5 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,7 +1,6 @@
+</a> package me.rhunk.snapenhance.core
+ 
+ import android.app.Activity
+<a href="#h0-0-3" id="h0-0-3" class="d">-import android.content.ClipData
+</a> import android.content.Context
+ import android.content.Intent
+ import android.content.res.Resources
+<a href="#h0-1" id="h0-1" class="h">@@ -30,6 +29,7 @@ import me.rhunk.snapenhance.core.manager.impl.FeatureManager
+</a> import me.rhunk.snapenhance.core.messaging.CoreMessagingBridge
+ import me.rhunk.snapenhance.core.messaging.MessageSender
+ import me.rhunk.snapenhance.core.scripting.CoreScriptRuntime
+<a href="#h0-1-3" id="h0-1-3" class="i">+import me.rhunk.snapenhance.core.ui.InAppOverlay
+</a> import me.rhunk.snapenhance.core.util.media.HttpServer
+ import me.rhunk.snapenhance.nativelib.NativeConfig
+ import me.rhunk.snapenhance.nativelib.NativeLib
+<a href="#h0-2" id="h0-2" class="h">@@ -64,6 +64,7 @@ class ModContext(
+</a>     val native = NativeLib()
+     val scriptRuntime by lazy { CoreScriptRuntime(this, log) }
+     val messagingBridge = CoreMessagingBridge(this)
+<a href="#h0-2-3" id="h0-2-3" class="i">+    val inAppOverlay = InAppOverlay()
+</a> 
+     val isDeveloper by lazy { config.scripting.developerMode.get() }
+ 
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -165,6 +165,7 @@ class SnapEnhance {
+</a>         measureTimeMillis {
+             with(appContext) {
+                 features.onActivityCreate()
+<a href="#h1-0-3" id="h1-0-3" class="i">+                inAppOverlay.onActivityCreate(mainActivity!!)
+</a>                 scriptRuntime.eachModule { callFunction(&quot;module.onSnapMainActivityCreate&quot;, mainActivity!!) }
+             }
+         }.also { time -&gt;
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -10,6 +10,11 @@ import android.widget.ImageView
+</a> import android.widget.LinearLayout
+ import android.widget.ProgressBar
+ import android.widget.TextView
+<a href="#h2-0-3" id="h2-0-3" class="i">+import androidx.compose.material.icons.Icons
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import androidx.compose.material.icons.outlined.CheckCircle
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+import androidx.compose.material.icons.outlined.Error
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+import androidx.compose.material.icons.outlined.Info
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+import androidx.compose.material.icons.outlined.Warning
+</a> import kotlinx.coroutines.ExperimentalCoroutinesApi
+ import kotlinx.coroutines.async
+ import kotlinx.coroutines.runBlocking
+<a href="#h2-1" id="h2-1" class="h">@@ -112,23 +117,39 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>                 override fun onSuccess(outputFile: String) {
+                     if (!downloadLogging.contains(&quot;success&quot;)) return
+                     context.log.verbose(&quot;onSuccess: outputFile=$outputFile&quot;)
+<a href="#h2-1-3" id="h2-1-3" class="d">-                    context.shortToast(translations.format(&quot;saved_toast&quot;, &quot;path&quot; to outputFile.split(&quot;/&quot;).takeLast(2).joinToString(&quot;/&quot;)))
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+                    context.inAppOverlay.showStatusToast(
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+                        icon = Icons.Outlined.CheckCircle,
+</a><a href="#h2-1-6" id="h2-1-6" class="i">+                        text = translations.format(&quot;saved_toast&quot;, &quot;path&quot; to outputFile.split(&quot;/&quot;).takeLast(2).joinToString(&quot;/&quot;)),
+</a><a href="#h2-1-7" id="h2-1-7" class="i">+                    )
+</a>                 }
+ 
+                 override fun onProgress(message: String) {
+                     if (!downloadLogging.contains(&quot;progress&quot;)) return
+                     context.log.verbose(&quot;onProgress: message=$message&quot;)
+<a href="#h2-1-13" id="h2-1-13" class="d">-                    context.shortToast(message)
+</a><a href="#h2-1-14" id="h2-1-14" class="i">+                    context.inAppOverlay.showStatusToast(
+</a><a href="#h2-1-15" id="h2-1-15" class="i">+                        icon = Icons.Outlined.Info,
+</a><a href="#h2-1-16" id="h2-1-16" class="i">+                        text = message,
+</a><a href="#h2-1-17" id="h2-1-17" class="i">+                    )
+</a><a href="#h2-1-18" id="h2-1-18" class="i">+                    // context.shortToast(message)
+</a>                 }
+ 
+                 override fun onFailure(message: String, throwable: String?) {
+                     if (!downloadLogging.contains(&quot;failure&quot;)) return
+                     context.log.verbose(&quot;onFailure: message=$message, throwable=$throwable&quot;)
+                     throwable?.let {
+<a href="#h2-1-25" id="h2-1-25" class="d">-                        context.longToast((message + it.takeIf { it.isNotEmpty() }.orEmpty()))
+</a><a href="#h2-1-26" id="h2-1-26" class="i">+                        context.inAppOverlay.showStatusToast(
+</a><a href="#h2-1-27" id="h2-1-27" class="i">+                            icon = Icons.Outlined.Error,
+</a><a href="#h2-1-28" id="h2-1-28" class="i">+                            text = message + it.takeIf { it.isNotEmpty() }.orEmpty(),
+</a><a href="#h2-1-29" id="h2-1-29" class="i">+                        )
+</a><a href="#h2-1-30" id="h2-1-30" class="i">+                        // context.longToast((message + it.takeIf { it.isNotEmpty() }.orEmpty()))
+</a>                         return
+                     }
+<a href="#h2-1-33" id="h2-1-33" class="d">-                    context.shortToast(message)
+</a><a href="#h2-1-34" id="h2-1-34" class="i">+
+</a><a href="#h2-1-35" id="h2-1-35" class="i">+                    context.inAppOverlay.showStatusToast(
+</a><a href="#h2-1-36" id="h2-1-36" class="i">+                        icon = Icons.Outlined.Warning,
+</a><a href="#h2-1-37" id="h2-1-37" class="i">+                        text = message,
+</a><a href="#h2-1-38" id="h2-1-38" class="i">+                    )
+</a><a href="#h2-1-39" id="h2-1-39" class="i">+                    // context.shortToast(message)
+</a>                 }
+             }
+         )
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/InAppOverlay.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/InAppOverlay.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/InAppOverlay.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/InAppOverlay.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -0,0 +1,201 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="i">+package me.rhunk.snapenhance.core.ui
+</a><a href="#h3-0-1" id="h3-0-1" class="i">+
+</a><a href="#h3-0-2" id="h3-0-2" class="i">+import android.app.Activity
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+import android.widget.FrameLayout
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import androidx.compose.animation.core.Animatable
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+import androidx.compose.animation.core.LinearEasing
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+import androidx.compose.animation.core.animateFloatAsState
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+import androidx.compose.animation.core.tween
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+import androidx.compose.foundation.ExperimentalFoundationApi
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+import androidx.compose.foundation.gestures.AnchoredDraggableState
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+import androidx.compose.foundation.gestures.DraggableAnchors
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+import androidx.compose.foundation.gestures.Orientation
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+import androidx.compose.foundation.gestures.anchoredDraggable
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+import androidx.compose.foundation.layout.*
+</a><a href="#h3-0-14" id="h3-0-14" class="i">+import androidx.compose.foundation.shape.RoundedCornerShape
+</a><a href="#h3-0-15" id="h3-0-15" class="i">+import androidx.compose.material.icons.Icons
+</a><a href="#h3-0-16" id="h3-0-16" class="i">+import androidx.compose.material.icons.outlined.Warning
+</a><a href="#h3-0-17" id="h3-0-17" class="i">+import androidx.compose.material3.Card
+</a><a href="#h3-0-18" id="h3-0-18" class="i">+import androidx.compose.material3.Icon
+</a><a href="#h3-0-19" id="h3-0-19" class="i">+import androidx.compose.material3.LinearProgressIndicator
+</a><a href="#h3-0-20" id="h3-0-20" class="i">+import androidx.compose.material3.Text
+</a><a href="#h3-0-21" id="h3-0-21" class="i">+import androidx.compose.runtime.*
+</a><a href="#h3-0-22" id="h3-0-22" class="i">+import androidx.compose.ui.Alignment
+</a><a href="#h3-0-23" id="h3-0-23" class="i">+import androidx.compose.ui.Modifier
+</a><a href="#h3-0-24" id="h3-0-24" class="i">+import androidx.compose.ui.draw.clip
+</a><a href="#h3-0-25" id="h3-0-25" class="i">+import androidx.compose.ui.draw.shadow
+</a><a href="#h3-0-26" id="h3-0-26" class="i">+import androidx.compose.ui.graphics.graphicsLayer
+</a><a href="#h3-0-27" id="h3-0-27" class="i">+import androidx.compose.ui.graphics.vector.ImageVector
+</a><a href="#h3-0-28" id="h3-0-28" class="i">+import androidx.compose.ui.platform.LocalContext
+</a><a href="#h3-0-29" id="h3-0-29" class="i">+import androidx.compose.ui.text.style.TextOverflow
+</a><a href="#h3-0-30" id="h3-0-30" class="i">+import androidx.compose.ui.unit.IntOffset
+</a><a href="#h3-0-31" id="h3-0-31" class="i">+import androidx.compose.ui.unit.dp
+</a><a href="#h3-0-32" id="h3-0-32" class="i">+import kotlinx.coroutines.delay
+</a><a href="#h3-0-33" id="h3-0-33" class="i">+import me.rhunk.snapenhance.common.ui.AppMaterialTheme
+</a><a href="#h3-0-34" id="h3-0-34" class="i">+import me.rhunk.snapenhance.common.ui.createComposeView
+</a><a href="#h3-0-35" id="h3-0-35" class="i">+import me.rhunk.snapenhance.core.util.ktx.isDarkTheme
+</a><a href="#h3-0-36" id="h3-0-36" class="i">+import kotlin.math.roundToInt
+</a><a href="#h3-0-37" id="h3-0-37" class="i">+
+</a><a href="#h3-0-38" id="h3-0-38" class="i">+class InAppOverlay {
+</a><a href="#h3-0-39" id="h3-0-39" class="i">+    inner class Toast(
+</a><a href="#h3-0-40" id="h3-0-40" class="i">+        val composable: @Composable Toast.() -&gt; Unit,
+</a><a href="#h3-0-41" id="h3-0-41" class="i">+        val durationMs: Int
+</a><a href="#h3-0-42" id="h3-0-42" class="i">+    ) {
+</a><a href="#h3-0-43" id="h3-0-43" class="i">+        var shown by mutableStateOf(false)
+</a><a href="#h3-0-44" id="h3-0-44" class="i">+        var visible by mutableStateOf(false)
+</a><a href="#h3-0-45" id="h3-0-45" class="i">+    }
+</a><a href="#h3-0-46" id="h3-0-46" class="i">+
+</a><a href="#h3-0-47" id="h3-0-47" class="i">+    private val toasts = mutableStateListOf&lt;Toast&gt;()
+</a><a href="#h3-0-48" id="h3-0-48" class="i">+
+</a><a href="#h3-0-49" id="h3-0-49" class="i">+    @OptIn(ExperimentalFoundationApi::class)
+</a><a href="#h3-0-50" id="h3-0-50" class="i">+    @Composable
+</a><a href="#h3-0-51" id="h3-0-51" class="i">+    private fun OverlayContent() {
+</a><a href="#h3-0-52" id="h3-0-52" class="i">+        Box(
+</a><a href="#h3-0-53" id="h3-0-53" class="i">+            modifier = Modifier
+</a><a href="#h3-0-54" id="h3-0-54" class="i">+                .fillMaxSize()
+</a><a href="#h3-0-55" id="h3-0-55" class="i">+                .statusBarsPadding()
+</a><a href="#h3-0-56" id="h3-0-56" class="i">+                .navigationBarsPadding(),
+</a><a href="#h3-0-57" id="h3-0-57" class="i">+        ) {
+</a><a href="#h3-0-58" id="h3-0-58" class="i">+            toasts.forEach { toast -&gt;
+</a><a href="#h3-0-59" id="h3-0-59" class="i">+                val animation by animateFloatAsState(
+</a><a href="#h3-0-60" id="h3-0-60" class="i">+                    targetValue = if (toast.visible) 1f else 0f,
+</a><a href="#h3-0-61" id="h3-0-61" class="i">+                    animationSpec = if (toast.visible) tween(durationMillis = 150) else tween(durationMillis = 300),
+</a><a href="#h3-0-62" id="h3-0-62" class="i">+                    label = &quot;toast&quot;
+</a><a href="#h3-0-63" id="h3-0-63" class="i">+                )
+</a><a href="#h3-0-64" id="h3-0-64" class="i">+
+</a><a href="#h3-0-65" id="h3-0-65" class="i">+                LaunchedEffect(toast) {
+</a><a href="#h3-0-66" id="h3-0-66" class="i">+                    toast.visible = true
+</a><a href="#h3-0-67" id="h3-0-67" class="i">+                    delay(toast.durationMs.toLong())
+</a><a href="#h3-0-68" id="h3-0-68" class="i">+                    toast.visible = false
+</a><a href="#h3-0-69" id="h3-0-69" class="i">+                    delay(1000)
+</a><a href="#h3-0-70" id="h3-0-70" class="i">+                    toast.shown = true
+</a><a href="#h3-0-71" id="h3-0-71" class="i">+                    synchronized(toasts) {
+</a><a href="#h3-0-72" id="h3-0-72" class="i">+                        if (toasts.isNotEmpty() &amp;&amp; toasts.all { it.shown }) toasts.clear()
+</a><a href="#h3-0-73" id="h3-0-73" class="i">+                    }
+</a><a href="#h3-0-74" id="h3-0-74" class="i">+                }
+</a><a href="#h3-0-75" id="h3-0-75" class="i">+
+</a><a href="#h3-0-76" id="h3-0-76" class="i">+                val deviceWidth = LocalContext.current.resources.displayMetrics.widthPixels
+</a><a href="#h3-0-77" id="h3-0-77" class="i">+                val draggableState = remember {
+</a><a href="#h3-0-78" id="h3-0-78" class="i">+                    AnchoredDraggableState(
+</a><a href="#h3-0-79" id="h3-0-79" class="i">+                        initialValue = 0,
+</a><a href="#h3-0-80" id="h3-0-80" class="i">+                        positionalThreshold = { distance: Float -&gt; distance * 0.5f },
+</a><a href="#h3-0-81" id="h3-0-81" class="i">+                        velocityThreshold = { deviceWidth / 2f },
+</a><a href="#h3-0-82" id="h3-0-82" class="i">+                        animationSpec = tween(),
+</a><a href="#h3-0-83" id="h3-0-83" class="i">+                        confirmValueChange = {
+</a><a href="#h3-0-84" id="h3-0-84" class="i">+                            toast.visible = false
+</a><a href="#h3-0-85" id="h3-0-85" class="i">+                            true
+</a><a href="#h3-0-86" id="h3-0-86" class="i">+                        }
+</a><a href="#h3-0-87" id="h3-0-87" class="i">+                    ).apply {
+</a><a href="#h3-0-88" id="h3-0-88" class="i">+                        updateAnchors(
+</a><a href="#h3-0-89" id="h3-0-89" class="i">+                            DraggableAnchors {
+</a><a href="#h3-0-90" id="h3-0-90" class="i">+                                -1 at -deviceWidth.toFloat()
+</a><a href="#h3-0-91" id="h3-0-91" class="i">+                                0 at 0f
+</a><a href="#h3-0-92" id="h3-0-92" class="i">+                                1 at deviceWidth.toFloat()
+</a><a href="#h3-0-93" id="h3-0-93" class="i">+                            }
+</a><a href="#h3-0-94" id="h3-0-94" class="i">+                        )
+</a><a href="#h3-0-95" id="h3-0-95" class="i">+                    }
+</a><a href="#h3-0-96" id="h3-0-96" class="i">+                }
+</a><a href="#h3-0-97" id="h3-0-97" class="i">+
+</a><a href="#h3-0-98" id="h3-0-98" class="i">+                Box(
+</a><a href="#h3-0-99" id="h3-0-99" class="i">+                    modifier = Modifier
+</a><a href="#h3-0-100" id="h3-0-100" class="i">+                        .fillMaxWidth()
+</a><a href="#h3-0-101" id="h3-0-101" class="i">+                        .anchoredDraggable(draggableState, Orientation.Horizontal)
+</a><a href="#h3-0-102" id="h3-0-102" class="i">+                        .offset { IntOffset(draggableState.offset.roundToInt(), 0) }
+</a><a href="#h3-0-103" id="h3-0-103" class="i">+                        .graphicsLayer {
+</a><a href="#h3-0-104" id="h3-0-104" class="i">+                            alpha = animation
+</a><a href="#h3-0-105" id="h3-0-105" class="i">+                            translationY = -100.dp.toPx() * (1 - animation)
+</a><a href="#h3-0-106" id="h3-0-106" class="i">+                        }
+</a><a href="#h3-0-107" id="h3-0-107" class="i">+                ) {
+</a><a href="#h3-0-108" id="h3-0-108" class="i">+                    if (animation &gt; 0.01f) {
+</a><a href="#h3-0-109" id="h3-0-109" class="i">+                        toast.composable(toast)
+</a><a href="#h3-0-110" id="h3-0-110" class="i">+                    }
+</a><a href="#h3-0-111" id="h3-0-111" class="i">+                }
+</a><a href="#h3-0-112" id="h3-0-112" class="i">+            }
+</a><a href="#h3-0-113" id="h3-0-113" class="i">+        }
+</a><a href="#h3-0-114" id="h3-0-114" class="i">+    }
+</a><a href="#h3-0-115" id="h3-0-115" class="i">+
+</a><a href="#h3-0-116" id="h3-0-116" class="i">+    fun onActivityCreate(activity: Activity) {
+</a><a href="#h3-0-117" id="h3-0-117" class="i">+        val root = activity.findViewById&lt;FrameLayout&gt;(android.R.id.content)
+</a><a href="#h3-0-118" id="h3-0-118" class="i">+        root.post {
+</a><a href="#h3-0-119" id="h3-0-119" class="i">+            root.addView(createComposeView(activity) {
+</a><a href="#h3-0-120" id="h3-0-120" class="i">+                AppMaterialTheme(isDarkTheme = remember { activity.isDarkTheme() }) {
+</a><a href="#h3-0-121" id="h3-0-121" class="i">+                    OverlayContent()
+</a><a href="#h3-0-122" id="h3-0-122" class="i">+                }
+</a><a href="#h3-0-123" id="h3-0-123" class="i">+            }.apply {
+</a><a href="#h3-0-124" id="h3-0-124" class="i">+                layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+</a><a href="#h3-0-125" id="h3-0-125" class="i">+            })
+</a><a href="#h3-0-126" id="h3-0-126" class="i">+        }
+</a><a href="#h3-0-127" id="h3-0-127" class="i">+    }
+</a><a href="#h3-0-128" id="h3-0-128" class="i">+
+</a><a href="#h3-0-129" id="h3-0-129" class="i">+    @Composable
+</a><a href="#h3-0-130" id="h3-0-130" class="i">+    private fun DurationProgress(
+</a><a href="#h3-0-131" id="h3-0-131" class="i">+        duration: Int,
+</a><a href="#h3-0-132" id="h3-0-132" class="i">+        modifier: Modifier = Modifier
+</a><a href="#h3-0-133" id="h3-0-133" class="i">+    ) {
+</a><a href="#h3-0-134" id="h3-0-134" class="i">+        val progress = remember { Animatable(1f) }
+</a><a href="#h3-0-135" id="h3-0-135" class="i">+
+</a><a href="#h3-0-136" id="h3-0-136" class="i">+        LaunchedEffect(Unit) {
+</a><a href="#h3-0-137" id="h3-0-137" class="i">+            progress.animateTo(
+</a><a href="#h3-0-138" id="h3-0-138" class="i">+                targetValue = 0f,
+</a><a href="#h3-0-139" id="h3-0-139" class="i">+                animationSpec = tween(durationMillis = duration, easing = LinearEasing)
+</a><a href="#h3-0-140" id="h3-0-140" class="i">+            )
+</a><a href="#h3-0-141" id="h3-0-141" class="i">+        }
+</a><a href="#h3-0-142" id="h3-0-142" class="i">+
+</a><a href="#h3-0-143" id="h3-0-143" class="i">+        LinearProgressIndicator(
+</a><a href="#h3-0-144" id="h3-0-144" class="i">+            progress = { progress.value },
+</a><a href="#h3-0-145" id="h3-0-145" class="i">+            modifier = modifier
+</a><a href="#h3-0-146" id="h3-0-146" class="i">+        )
+</a><a href="#h3-0-147" id="h3-0-147" class="i">+    }
+</a><a href="#h3-0-148" id="h3-0-148" class="i">+
+</a><a href="#h3-0-149" id="h3-0-149" class="i">+    fun showStatusToast(
+</a><a href="#h3-0-150" id="h3-0-150" class="i">+        icon: ImageVector,
+</a><a href="#h3-0-151" id="h3-0-151" class="i">+        text: String,
+</a><a href="#h3-0-152" id="h3-0-152" class="i">+        durationMs: Int = 2000,
+</a><a href="#h3-0-153" id="h3-0-153" class="i">+        showDuration: Boolean = true,
+</a><a href="#h3-0-154" id="h3-0-154" class="i">+    ) {
+</a><a href="#h3-0-155" id="h3-0-155" class="i">+        showToast(
+</a><a href="#h3-0-156" id="h3-0-156" class="i">+            icon = { Icon(icon, contentDescription = &quot;icon&quot;, modifier = Modifier.size(32.dp)) },
+</a><a href="#h3-0-157" id="h3-0-157" class="i">+            text = {
+</a><a href="#h3-0-158" id="h3-0-158" class="i">+                Text(text, modifier = Modifier.fillMaxWidth(), maxLines = 2, overflow = TextOverflow.Ellipsis)
+</a><a href="#h3-0-159" id="h3-0-159" class="i">+            },
+</a><a href="#h3-0-160" id="h3-0-160" class="i">+            durationMs = durationMs,
+</a><a href="#h3-0-161" id="h3-0-161" class="i">+            showDuration = showDuration
+</a><a href="#h3-0-162" id="h3-0-162" class="i">+        )
+</a><a href="#h3-0-163" id="h3-0-163" class="i">+    }
+</a><a href="#h3-0-164" id="h3-0-164" class="i">+
+</a><a href="#h3-0-165" id="h3-0-165" class="i">+    fun showToast(
+</a><a href="#h3-0-166" id="h3-0-166" class="i">+        icon: @Composable () -&gt; Unit = {
+</a><a href="#h3-0-167" id="h3-0-167" class="i">+            Icon(Icons.Outlined.Warning, contentDescription = &quot;icon&quot;, modifier = Modifier.size(32.dp))
+</a><a href="#h3-0-168" id="h3-0-168" class="i">+        },
+</a><a href="#h3-0-169" id="h3-0-169" class="i">+        text: @Composable () -&gt; Unit = {},
+</a><a href="#h3-0-170" id="h3-0-170" class="i">+        durationMs: Int = 3000,
+</a><a href="#h3-0-171" id="h3-0-171" class="i">+        showDuration: Boolean = true,
+</a><a href="#h3-0-172" id="h3-0-172" class="i">+    ) {
+</a><a href="#h3-0-173" id="h3-0-173" class="i">+        toasts.add(Toast(
+</a><a href="#h3-0-174" id="h3-0-174" class="i">+            composable = {
+</a><a href="#h3-0-175" id="h3-0-175" class="i">+                Card(
+</a><a href="#h3-0-176" id="h3-0-176" class="i">+                    modifier = Modifier
+</a><a href="#h3-0-177" id="h3-0-177" class="i">+                        .padding(16.dp)
+</a><a href="#h3-0-178" id="h3-0-178" class="i">+                        .shadow(8.dp, RoundedCornerShape(8.dp))
+</a><a href="#h3-0-179" id="h3-0-179" class="i">+                        .fillMaxWidth()
+</a><a href="#h3-0-180" id="h3-0-180" class="i">+                        .clip(RoundedCornerShape(8.dp))
+</a><a href="#h3-0-181" id="h3-0-181" class="i">+                ) {
+</a><a href="#h3-0-182" id="h3-0-182" class="i">+                    Row(
+</a><a href="#h3-0-183" id="h3-0-183" class="i">+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+</a><a href="#h3-0-184" id="h3-0-184" class="i">+                        verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h3-0-185" id="h3-0-185" class="i">+                        modifier = Modifier
+</a><a href="#h3-0-186" id="h3-0-186" class="i">+                            .fillMaxWidth()
+</a><a href="#h3-0-187" id="h3-0-187" class="i">+                            .padding(16.dp)
+</a><a href="#h3-0-188" id="h3-0-188" class="i">+                    ) {
+</a><a href="#h3-0-189" id="h3-0-189" class="i">+                        icon()
+</a><a href="#h3-0-190" id="h3-0-190" class="i">+                        text()
+</a><a href="#h3-0-191" id="h3-0-191" class="i">+                    }
+</a><a href="#h3-0-192" id="h3-0-192" class="i">+                    if (showDuration) {
+</a><a href="#h3-0-193" id="h3-0-193" class="i">+                        DurationProgress(duration = durationMs, modifier = Modifier.fillMaxWidth())
+</a><a href="#h3-0-194" id="h3-0-194" class="i">+                    }
+</a><a href="#h3-0-195" id="h3-0-195" class="i">+                }
+</a><a href="#h3-0-196" id="h3-0-196" class="i">+            },
+</a><a href="#h3-0-197" id="h3-0-197" class="i">+            durationMs = durationMs
+</a><a href="#h3-0-198" id="h3-0-198" class="i">+        ))
+</a><a href="#h3-0-199" id="h3-0-199" class="i">+    }
+</a><a href="#h3-0-200" id="h3-0-200" class="i">+}</a><a href="#h3-0-201" id="h3-0-201" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

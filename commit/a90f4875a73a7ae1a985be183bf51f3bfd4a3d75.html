@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(database): db cache - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/a90f4875a73a7ae1a985be183bf51f3bfd4a3d75.html">a90f4875a73a7ae1a985be183bf51f3bfd4a3d75</a>
+<b>parent</b> <a href="../commit/d1c4b4febeb8300fa7fbf6adb762134ba415a8f5.html">d1c4b4febeb8300fa7fbf6adb762134ba415a8f5</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu,  4 Jan 2024 23:09:27 +0100
+
+fix(database): db cache
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/ScopeContent.kt</a></td><td> | </td><td class="num">108</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++</span><span class="d">---------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportMemories.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a></td><td> | </td><td class="num">114</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-------------------------------------</span></td></tr>
+</table></pre><pre>3 files changed, 116 insertions(+), 108 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/ScopeContent.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/ScopeContent.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/ScopeContent.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/ScopeContent.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -261,69 +261,71 @@ class ScopeContent(
+</a>             Spacer(modifier = Modifier.height(16.dp))
+             // e2ee section
+ 
+<a href="#h0-0-3" id="h0-0-3" class="d">-            SectionTitle(translation[&quot;e2ee_title&quot;])
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-            var hasSecretKey by remember { mutableStateOf(context.e2eeImplementation.friendKeyExists(friend.userId))}
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-            var importDialog by remember { mutableStateOf(false) }
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+            if (context.config.root.experimental.e2eEncryption.globalState == true) {
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+                SectionTitle(translation[&quot;e2ee_title&quot;])
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+                var hasSecretKey by remember { mutableStateOf(context.e2eeImplementation.friendKeyExists(friend.userId))}
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+                var importDialog by remember { mutableStateOf(false) }
+</a> 
+<a href="#h0-0-11" id="h0-0-11" class="d">-            if (importDialog) {
+</a><a href="#h0-0-12" id="h0-0-12" class="d">-                Dialog(
+</a><a href="#h0-0-13" id="h0-0-13" class="d">-                    onDismissRequest = { importDialog = false }
+</a><a href="#h0-0-14" id="h0-0-14" class="d">-                ) {
+</a><a href="#h0-0-15" id="h0-0-15" class="d">-                    dialogs.RawInputDialog(onDismiss = { importDialog = false  }, onConfirm = { newKey -&gt;
+</a><a href="#h0-0-16" id="h0-0-16" class="d">-                        importDialog = false
+</a><a href="#h0-0-17" id="h0-0-17" class="d">-                        runCatching {
+</a><a href="#h0-0-18" id="h0-0-18" class="d">-                            val key = Base64.decode(newKey)
+</a><a href="#h0-0-19" id="h0-0-19" class="d">-                            if (key.size != 32) {
+</a><a href="#h0-0-20" id="h0-0-20" class="d">-                                context.longToast(&quot;Invalid key size (must be 32 bytes)&quot;)
+</a><a href="#h0-0-21" id="h0-0-21" class="d">-                                return@runCatching
+</a><a href="#h0-0-22" id="h0-0-22" class="d">-                            }
+</a><a href="#h0-0-23" id="h0-0-23" class="i">+                if (importDialog) {
+</a><a href="#h0-0-24" id="h0-0-24" class="i">+                    Dialog(
+</a><a href="#h0-0-25" id="h0-0-25" class="i">+                        onDismissRequest = { importDialog = false }
+</a><a href="#h0-0-26" id="h0-0-26" class="i">+                    ) {
+</a><a href="#h0-0-27" id="h0-0-27" class="i">+                        dialogs.RawInputDialog(onDismiss = { importDialog = false  }, onConfirm = { newKey -&gt;
+</a><a href="#h0-0-28" id="h0-0-28" class="i">+                            importDialog = false
+</a><a href="#h0-0-29" id="h0-0-29" class="i">+                            runCatching {
+</a><a href="#h0-0-30" id="h0-0-30" class="i">+                                val key = Base64.decode(newKey)
+</a><a href="#h0-0-31" id="h0-0-31" class="i">+                                if (key.size != 32) {
+</a><a href="#h0-0-32" id="h0-0-32" class="i">+                                    context.longToast(&quot;Invalid key size (must be 32 bytes)&quot;)
+</a><a href="#h0-0-33" id="h0-0-33" class="i">+                                    return@runCatching
+</a><a href="#h0-0-34" id="h0-0-34" class="i">+                                }
+</a> 
+<a href="#h0-0-36" id="h0-0-36" class="d">-                            context.e2eeImplementation.storeSharedSecretKey(friend.userId, key)
+</a><a href="#h0-0-37" id="h0-0-37" class="d">-                            context.longToast(&quot;Successfully imported key&quot;)
+</a><a href="#h0-0-38" id="h0-0-38" class="d">-                            hasSecretKey = true
+</a><a href="#h0-0-39" id="h0-0-39" class="d">-                        }.onFailure {
+</a><a href="#h0-0-40" id="h0-0-40" class="d">-                            context.longToast(&quot;Failed to import key: ${it.message}&quot;)
+</a><a href="#h0-0-41" id="h0-0-41" class="d">-                            context.log.error(&quot;Failed to import key&quot;, it)
+</a><a href="#h0-0-42" id="h0-0-42" class="d">-                        }
+</a><a href="#h0-0-43" id="h0-0-43" class="d">-                    })
+</a><a href="#h0-0-44" id="h0-0-44" class="i">+                                context.e2eeImplementation.storeSharedSecretKey(friend.userId, key)
+</a><a href="#h0-0-45" id="h0-0-45" class="i">+                                context.longToast(&quot;Successfully imported key&quot;)
+</a><a href="#h0-0-46" id="h0-0-46" class="i">+                                hasSecretKey = true
+</a><a href="#h0-0-47" id="h0-0-47" class="i">+                            }.onFailure {
+</a><a href="#h0-0-48" id="h0-0-48" class="i">+                                context.longToast(&quot;Failed to import key: ${it.message}&quot;)
+</a><a href="#h0-0-49" id="h0-0-49" class="i">+                                context.log.error(&quot;Failed to import key&quot;, it)
+</a><a href="#h0-0-50" id="h0-0-50" class="i">+                            }
+</a><a href="#h0-0-51" id="h0-0-51" class="i">+                        })
+</a><a href="#h0-0-52" id="h0-0-52" class="i">+                    }
+</a>                 }
+<a href="#h0-0-54" id="h0-0-54" class="d">-            }
+</a> 
+<a href="#h0-0-56" id="h0-0-56" class="d">-            ContentCard {
+</a><a href="#h0-0-57" id="h0-0-57" class="d">-                Row(
+</a><a href="#h0-0-58" id="h0-0-58" class="d">-                    verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h0-0-59" id="h0-0-59" class="d">-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+</a><a href="#h0-0-60" id="h0-0-60" class="d">-                ) {
+</a><a href="#h0-0-61" id="h0-0-61" class="d">-                    if (hasSecretKey) {
+</a><a href="#h0-0-62" id="h0-0-62" class="d">-                        OutlinedButton(onClick = {
+</a><a href="#h0-0-63" id="h0-0-63" class="d">-                            val secretKey = Base64.encode(context.e2eeImplementation.getSharedSecretKey(friend.userId) ?: return@OutlinedButton)
+</a><a href="#h0-0-64" id="h0-0-64" class="d">-                            //TODO: fingerprint auth
+</a><a href="#h0-0-65" id="h0-0-65" class="d">-                            context.activity!!.startActivity(Intent.createChooser(Intent().apply {
+</a><a href="#h0-0-66" id="h0-0-66" class="d">-                                action = Intent.ACTION_SEND
+</a><a href="#h0-0-67" id="h0-0-67" class="d">-                                putExtra(Intent.EXTRA_TEXT, secretKey)
+</a><a href="#h0-0-68" id="h0-0-68" class="d">-                                type = &quot;text/plain&quot;
+</a><a href="#h0-0-69" id="h0-0-69" class="d">-                            }, &quot;&quot;).apply {
+</a><a href="#h0-0-70" id="h0-0-70" class="d">-                                putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(
+</a><a href="#h0-0-71" id="h0-0-71" class="d">-                                    Intent().apply {
+</a><a href="#h0-0-72" id="h0-0-72" class="d">-                                        putExtra(Intent.EXTRA_TEXT, secretKey)
+</a><a href="#h0-0-73" id="h0-0-73" class="d">-                                        putExtra(Intent.EXTRA_SUBJECT, secretKey)
+</a><a href="#h0-0-74" id="h0-0-74" class="d">-                                    })
+</a><a href="#h0-0-75" id="h0-0-75" class="i">+                ContentCard {
+</a><a href="#h0-0-76" id="h0-0-76" class="i">+                    Row(
+</a><a href="#h0-0-77" id="h0-0-77" class="i">+                        verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h0-0-78" id="h0-0-78" class="i">+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+</a><a href="#h0-0-79" id="h0-0-79" class="i">+                    ) {
+</a><a href="#h0-0-80" id="h0-0-80" class="i">+                        if (hasSecretKey) {
+</a><a href="#h0-0-81" id="h0-0-81" class="i">+                            OutlinedButton(onClick = {
+</a><a href="#h0-0-82" id="h0-0-82" class="i">+                                val secretKey = Base64.encode(context.e2eeImplementation.getSharedSecretKey(friend.userId) ?: return@OutlinedButton)
+</a><a href="#h0-0-83" id="h0-0-83" class="i">+                                //TODO: fingerprint auth
+</a><a href="#h0-0-84" id="h0-0-84" class="i">+                                context.activity!!.startActivity(Intent.createChooser(Intent().apply {
+</a><a href="#h0-0-85" id="h0-0-85" class="i">+                                    action = Intent.ACTION_SEND
+</a><a href="#h0-0-86" id="h0-0-86" class="i">+                                    putExtra(Intent.EXTRA_TEXT, secretKey)
+</a><a href="#h0-0-87" id="h0-0-87" class="i">+                                    type = &quot;text/plain&quot;
+</a><a href="#h0-0-88" id="h0-0-88" class="i">+                                }, &quot;&quot;).apply {
+</a><a href="#h0-0-89" id="h0-0-89" class="i">+                                    putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(
+</a><a href="#h0-0-90" id="h0-0-90" class="i">+                                        Intent().apply {
+</a><a href="#h0-0-91" id="h0-0-91" class="i">+                                            putExtra(Intent.EXTRA_TEXT, secretKey)
+</a><a href="#h0-0-92" id="h0-0-92" class="i">+                                            putExtra(Intent.EXTRA_SUBJECT, secretKey)
+</a><a href="#h0-0-93" id="h0-0-93" class="i">+                                        })
+</a><a href="#h0-0-94" id="h0-0-94" class="i">+                                    )
+</a><a href="#h0-0-95" id="h0-0-95" class="i">+                                })
+</a><a href="#h0-0-96" id="h0-0-96" class="i">+                            }) {
+</a><a href="#h0-0-97" id="h0-0-97" class="i">+                                Text(
+</a><a href="#h0-0-98" id="h0-0-98" class="i">+                                    text = &quot;Export Base64&quot;,
+</a><a href="#h0-0-99" id="h0-0-99" class="i">+                                    maxLines = 1
+</a>                                 )
+<a href="#h0-0-101" id="h0-0-101" class="d">-                            })
+</a><a href="#h0-0-102" id="h0-0-102" class="d">-                        }) {
+</a><a href="#h0-0-103" id="h0-0-103" class="i">+                            }
+</a><a href="#h0-0-104" id="h0-0-104" class="i">+                        }
+</a><a href="#h0-0-105" id="h0-0-105" class="i">+
+</a><a href="#h0-0-106" id="h0-0-106" class="i">+                        OutlinedButton(onClick = { importDialog = true }) {
+</a>                             Text(
+<a href="#h0-0-108" id="h0-0-108" class="d">-                                text = &quot;Export Base64&quot;,
+</a><a href="#h0-0-109" id="h0-0-109" class="i">+                                text = &quot;Import Base64&quot;,
+</a>                                 maxLines = 1
+                             )
+                         }
+                     }
+<a href="#h0-0-114" id="h0-0-114" class="d">-
+</a><a href="#h0-0-115" id="h0-0-115" class="d">-                    OutlinedButton(onClick = { importDialog = true }) {
+</a><a href="#h0-0-116" id="h0-0-116" class="d">-                        Text(
+</a><a href="#h0-0-117" id="h0-0-117" class="d">-                            text = &quot;Import Base64&quot;,
+</a><a href="#h0-0-118" id="h0-0-118" class="d">-                            maxLines = 1
+</a><a href="#h0-0-119" id="h0-0-119" class="d">-                        )
+</a><a href="#h0-0-120" id="h0-0-120" class="d">-                    }
+</a>                 }
+             }
+         }
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportMemories.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportMemories.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportMemories.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportMemories.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -363,7 +363,7 @@ class ExportMemories : AbstractAction() {
+</a>             val database = runCatching {
+                 SQLiteDatabase.openDatabase(
+                     context.androidContext.getDatabasePath(&quot;memories.db&quot;),
+<a href="#h1-0-3" id="h1-0-3" class="d">-                    OpenParams.Builder().build(),
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+                    OpenParams.Builder().setOpenFlags(SQLiteDatabase.OPEN_READONLY).build()
+</a>                 )
+             }.getOrNull()
+ 
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -19,17 +19,45 @@ import me.rhunk.snapenhance.core.ModContext
+</a> import me.rhunk.snapenhance.core.manager.Manager
+ 
+ 
+<a href="#h2-0-3" id="h2-0-3" class="i">+enum class DatabaseType(
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+    val fileName: String
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+) {
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+    MAIN(&quot;main.db&quot;),
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+    ARROYO(&quot;arroyo.db&quot;)
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+}
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+
+</a> class DatabaseAccess(
+     private val context: ModContext
+ ) : Manager {
+<a href="#h2-0-13" id="h2-0-13" class="d">-    companion object {
+</a><a href="#h2-0-14" id="h2-0-14" class="d">-        val DATABASES = mapOf(
+</a><a href="#h2-0-15" id="h2-0-15" class="d">-            &quot;main&quot; to &quot;main.db&quot;,
+</a><a href="#h2-0-16" id="h2-0-16" class="d">-            &quot;arroyo&quot; to &quot;arroyo.db&quot;
+</a><a href="#h2-0-17" id="h2-0-17" class="d">-        )
+</a><a href="#h2-0-18" id="h2-0-18" class="i">+    private val openedDatabases = mutableMapOf&lt;DatabaseType, SQLiteDatabase&gt;()
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+    private fun useDatabase(database: DatabaseType, writeMode: Boolean = false): SQLiteDatabase? {
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+        if (openedDatabases.containsKey(database) &amp;&amp; openedDatabases[database]?.isOpen == true) {
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+            return openedDatabases[database]
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+        }
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+        val dbPath = context.androidContext.getDatabasePath(database.fileName)
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+        if (!dbPath.exists()) return null
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+        return runCatching {
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+            SQLiteDatabase.openDatabase(
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+                dbPath,
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+                OpenParams.Builder()
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+                    .setOpenFlags(
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+                        if (writeMode) SQLiteDatabase.OPEN_READWRITE or SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+                        else SQLiteDatabase.OPEN_READONLY
+</a><a href="#h2-0-34" id="h2-0-34" class="i">+                    )
+</a><a href="#h2-0-35" id="h2-0-35" class="i">+                    .setErrorHandler {
+</a><a href="#h2-0-36" id="h2-0-36" class="i">+                        context.androidContext.deleteDatabase(dbPath.absolutePath)
+</a><a href="#h2-0-37" id="h2-0-37" class="i">+                        context.softRestartApp()
+</a><a href="#h2-0-38" id="h2-0-38" class="i">+                    }.build()
+</a><a href="#h2-0-39" id="h2-0-39" class="i">+            )
+</a><a href="#h2-0-40" id="h2-0-40" class="i">+        }.onFailure {
+</a><a href="#h2-0-41" id="h2-0-41" class="i">+            context.log.error(&quot;Failed to open database ${database.fileName}!&quot;, it)
+</a><a href="#h2-0-42" id="h2-0-42" class="i">+        }.getOrNull()?.also {
+</a><a href="#h2-0-43" id="h2-0-43" class="i">+            openedDatabases[database] = it
+</a><a href="#h2-0-44" id="h2-0-44" class="i">+        }
+</a>     }
+<a href="#h2-0-46" id="h2-0-46" class="d">-    private val mainDb by lazy { openLocalDatabase(&quot;main&quot;) }
+</a><a href="#h2-0-47" id="h2-0-47" class="d">-    private val arroyoDb by lazy { openLocalDatabase(&quot;arroyo&quot;) }
+</a><a href="#h2-0-48" id="h2-0-48" class="i">+
+</a> 
+     private inline fun &lt;T&gt; SQLiteDatabase.performOperation(crossinline query: SQLiteDatabase.() -&gt; T?): T? {
+         return runCatching {
+<a href="#h2-1" id="h2-1" class="h">@@ -56,7 +84,7 @@ class DatabaseAccess(
+</a>     }
+ 
+     private val dmOtherParticipantCache by lazy {
+<a href="#h2-1-3" id="h2-1-3" class="d">-        (arroyoDb?.performOperation {
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+        (useDatabase(DatabaseType.ARROYO)?.performOperation {
+</a>             safeRawQuery(
+                 &quot;SELECT client_conversation_id, conversation_type, user_id FROM user_conversation WHERE user_id != ?&quot;,
+                 arrayOf(myUserId)
+<a href="#h2-2" id="h2-2" class="h">@@ -79,49 +107,27 @@ class DatabaseAccess(
+</a>         } ?: emptyMap()).toMutableMap()
+     }
+ 
+<a href="#h2-2-3" id="h2-2-3" class="d">-    private fun openLocalDatabase(databaseName: String, writeMode: Boolean = false): SQLiteDatabase? {
+</a><a href="#h2-2-4" id="h2-2-4" class="d">-        val dbPath = context.androidContext.getDatabasePath(DATABASES[databaseName]!!)
+</a><a href="#h2-2-5" id="h2-2-5" class="d">-        if (!dbPath.exists()) return null
+</a><a href="#h2-2-6" id="h2-2-6" class="d">-        return runCatching {
+</a><a href="#h2-2-7" id="h2-2-7" class="d">-            SQLiteDatabase.openDatabase(
+</a><a href="#h2-2-8" id="h2-2-8" class="d">-                dbPath,
+</a><a href="#h2-2-9" id="h2-2-9" class="d">-                OpenParams.Builder()
+</a><a href="#h2-2-10" id="h2-2-10" class="d">-                    .setOpenFlags(
+</a><a href="#h2-2-11" id="h2-2-11" class="d">-                        if (writeMode) SQLiteDatabase.OPEN_READWRITE or SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING
+</a><a href="#h2-2-12" id="h2-2-12" class="d">-                        else SQLiteDatabase.OPEN_READONLY
+</a><a href="#h2-2-13" id="h2-2-13" class="d">-                    )
+</a><a href="#h2-2-14" id="h2-2-14" class="d">-                    .setErrorHandler {
+</a><a href="#h2-2-15" id="h2-2-15" class="d">-                        context.androidContext.deleteDatabase(dbPath.absolutePath)
+</a><a href="#h2-2-16" id="h2-2-16" class="d">-                        context.softRestartApp()
+</a><a href="#h2-2-17" id="h2-2-17" class="d">-                    }.build()
+</a><a href="#h2-2-18" id="h2-2-18" class="d">-            )
+</a><a href="#h2-2-19" id="h2-2-19" class="d">-        }.onFailure {
+</a><a href="#h2-2-20" id="h2-2-20" class="d">-            context.log.error(&quot;Failed to open database $databaseName!&quot;, it)
+</a><a href="#h2-2-21" id="h2-2-21" class="d">-        }.getOrNull()
+</a><a href="#h2-2-22" id="h2-2-22" class="d">-    }
+</a><a href="#h2-2-23" id="h2-2-23" class="d">-
+</a><a href="#h2-2-24" id="h2-2-24" class="d">-    fun hasMain(): Boolean = mainDb?.isOpen == true
+</a><a href="#h2-2-25" id="h2-2-25" class="d">-    fun hasArroyo(): Boolean = arroyoDb?.isOpen == true
+</a><a href="#h2-2-26" id="h2-2-26" class="i">+    fun hasMain(): Boolean = useDatabase(DatabaseType.MAIN)?.isOpen == true
+</a><a href="#h2-2-27" id="h2-2-27" class="i">+    fun hasArroyo(): Boolean = useDatabase(DatabaseType.ARROYO)?.isOpen == true
+</a> 
+     override fun init() {
+         // perform integrity check on databases
+<a href="#h2-2-31" id="h2-2-31" class="d">-        DATABASES.forEach { (name, fileName) -&gt;
+</a><a href="#h2-2-32" id="h2-2-32" class="d">-            openLocalDatabase(name, writeMode = true)?.apply {
+</a><a href="#h2-2-33" id="h2-2-33" class="i">+        DatabaseType.entries.forEach { type -&gt;
+</a><a href="#h2-2-34" id="h2-2-34" class="i">+            useDatabase(type, writeMode = true)?.apply {
+</a>                 rawQuery(&quot;PRAGMA integrity_check&quot;, null).use { query -&gt;
+                     if (!query.moveToFirst() || query.getString(0).lowercase() != &quot;ok&quot;) {
+<a href="#h2-2-37" id="h2-2-37" class="d">-                        context.log.error(&quot;Failed to perform integrity check on $fileName&quot;)
+</a><a href="#h2-2-38" id="h2-2-38" class="d">-                        context.androidContext.deleteDatabase(fileName)
+</a><a href="#h2-2-39" id="h2-2-39" class="i">+                        context.log.error(&quot;Failed to perform integrity check on ${type.fileName}&quot;)
+</a><a href="#h2-2-40" id="h2-2-40" class="i">+                        context.androidContext.deleteDatabase(type.fileName)
+</a>                         return@apply
+                     }
+<a href="#h2-2-43" id="h2-2-43" class="d">-                    context.log.verbose(&quot;database $fileName integrity check passed&quot;)
+</a><a href="#h2-2-44" id="h2-2-44" class="i">+                    context.log.verbose(&quot;database ${type.fileName} integrity check passed&quot;)
+</a>                 }
+             }?.close()
+         }
+     }
+ 
+     fun finalize() {
+<a href="#h2-2-51" id="h2-2-51" class="d">-        mainDb?.close()
+</a><a href="#h2-2-52" id="h2-2-52" class="d">-        arroyoDb?.close()
+</a><a href="#h2-2-53" id="h2-2-53" class="i">+        openedDatabases.values.forEach { it.close() }
+</a>         context.log.verbose(&quot;Database closed&quot;)
+     }
+ 
+<a href="#h2-3" id="h2-3" class="h">@@ -143,7 +149,7 @@ class DatabaseAccess(
+</a>     }
+ 
+     fun getFeedEntryByUserId(userId: String): FriendFeedEntry? {
+<a href="#h2-3-3" id="h2-3-3" class="d">-        return mainDb?.performOperation {
+</a><a href="#h2-3-4" id="h2-3-4" class="i">+        return useDatabase(DatabaseType.MAIN)?.performOperation {
+</a>             readDatabaseObject(
+                 FriendFeedEntry(),
+                 &quot;FriendsFeedView&quot;,
+<a href="#h2-4" id="h2-4" class="h">@@ -155,7 +161,7 @@ class DatabaseAccess(
+</a> 
+     val myUserId by lazy {
+         context.androidContext.getSharedPreferences(&quot;user_session_shared_pref&quot;, 0).getString(&quot;key_user_id&quot;, null) ?:
+<a href="#h2-4-3" id="h2-4-3" class="d">-        arroyoDb?.performOperation {
+</a><a href="#h2-4-4" id="h2-4-4" class="i">+        useDatabase(DatabaseType.ARROYO)?.performOperation {
+</a>             safeRawQuery(buildString {
+                 append(&quot;SELECT value FROM required_values WHERE key = &#39;USERID&#39;&quot;)
+             }, null)?.use { query -&gt;
+<a href="#h2-5" id="h2-5" class="h">@@ -168,7 +174,7 @@ class DatabaseAccess(
+</a>     }
+ 
+     fun getFeedEntryByConversationId(conversationId: String): FriendFeedEntry? {
+<a href="#h2-5-3" id="h2-5-3" class="d">-        return mainDb?.performOperation {
+</a><a href="#h2-5-4" id="h2-5-4" class="i">+        return useDatabase(DatabaseType.MAIN)?.performOperation {
+</a>             readDatabaseObject(
+                 FriendFeedEntry(),
+                 &quot;FriendsFeedView&quot;,
+<a href="#h2-6" id="h2-6" class="h">@@ -179,7 +185,7 @@ class DatabaseAccess(
+</a>     }
+ 
+     fun getFriendInfo(userId: String): FriendInfo? {
+<a href="#h2-6-3" id="h2-6-3" class="d">-        return mainDb?.performOperation {
+</a><a href="#h2-6-4" id="h2-6-4" class="i">+        return useDatabase(DatabaseType.MAIN)?.performOperation {
+</a>             readDatabaseObject(
+                 FriendInfo(),
+                 &quot;FriendWithUsername&quot;,
+<a href="#h2-7" id="h2-7" class="h">@@ -190,7 +196,7 @@ class DatabaseAccess(
+</a>     }
+ 
+     fun getAllFriends(): List&lt;FriendInfo&gt; {
+<a href="#h2-7-3" id="h2-7-3" class="d">-        return mainDb?.performOperation {
+</a><a href="#h2-7-4" id="h2-7-4" class="i">+        return useDatabase(DatabaseType.MAIN)?.performOperation {
+</a>             safeRawQuery(
+                 &quot;SELECT * FROM FriendWithUsername&quot;,
+                 null
+<a href="#h2-8" id="h2-8" class="h">@@ -209,7 +215,7 @@ class DatabaseAccess(
+</a>     }
+ 
+     fun getFeedEntries(limit: Int): List&lt;FriendFeedEntry&gt; {
+<a href="#h2-8-3" id="h2-8-3" class="d">-        return mainDb?.performOperation {
+</a><a href="#h2-8-4" id="h2-8-4" class="i">+        return useDatabase(DatabaseType.MAIN)?.performOperation {
+</a>             safeRawQuery(
+                 &quot;SELECT * FROM FriendsFeedView ORDER BY _id LIMIT ?&quot;,
+                 arrayOf(limit.toString())
+<a href="#h2-9" id="h2-9" class="h">@@ -228,7 +234,7 @@ class DatabaseAccess(
+</a>     }
+ 
+     fun getConversationMessageFromId(clientMessageId: Long): ConversationMessage? {
+<a href="#h2-9-3" id="h2-9-3" class="d">-        return arroyoDb?.performOperation {
+</a><a href="#h2-9-4" id="h2-9-4" class="i">+        return useDatabase(DatabaseType.ARROYO)?.performOperation {
+</a>             readDatabaseObject(
+                 ConversationMessage(),
+                 &quot;conversation_message&quot;,
+<a href="#h2-10" id="h2-10" class="h">@@ -239,7 +245,7 @@ class DatabaseAccess(
+</a>     }
+ 
+     fun getConversationType(conversationId: String): Int? {
+<a href="#h2-10-3" id="h2-10-3" class="d">-        return arroyoDb?.performOperation {
+</a><a href="#h2-10-4" id="h2-10-4" class="i">+        return useDatabase(DatabaseType.ARROYO)?.performOperation {
+</a>             safeRawQuery(
+                 &quot;SELECT conversation_type FROM user_conversation WHERE client_conversation_id = ?&quot;,
+                 arrayOf(conversationId)
+<a href="#h2-11" id="h2-11" class="h">@@ -253,7 +259,7 @@ class DatabaseAccess(
+</a>     }
+ 
+     fun getConversationLinkFromUserId(userId: String): UserConversationLink? {
+<a href="#h2-11-3" id="h2-11-3" class="d">-        return arroyoDb?.performOperation {
+</a><a href="#h2-11-4" id="h2-11-4" class="i">+        return useDatabase(DatabaseType.ARROYO)?.performOperation {
+</a>             readDatabaseObject(
+                 UserConversationLink(),
+                 &quot;user_conversation&quot;,
+<a href="#h2-12" id="h2-12" class="h">@@ -265,7 +271,7 @@ class DatabaseAccess(
+</a> 
+     fun getDMOtherParticipant(conversationId: String): String? {
+         if (dmOtherParticipantCache.containsKey(conversationId)) return dmOtherParticipantCache[conversationId]
+<a href="#h2-12-3" id="h2-12-3" class="d">-        return arroyoDb?.performOperation {
+</a><a href="#h2-12-4" id="h2-12-4" class="i">+        return useDatabase(DatabaseType.ARROYO)?.performOperation {
+</a>             safeRawQuery(
+                 &quot;SELECT user_id FROM user_conversation WHERE client_conversation_id = ? AND conversation_type = 0&quot;,
+                 arrayOf(conversationId)
+<a href="#h2-13" id="h2-13" class="h">@@ -284,14 +290,14 @@ class DatabaseAccess(
+</a> 
+ 
+     fun getStoryEntryFromId(storyId: String): StoryEntry? {
+<a href="#h2-13-3" id="h2-13-3" class="d">-        return mainDb?.performOperation  {
+</a><a href="#h2-13-4" id="h2-13-4" class="i">+        return useDatabase(DatabaseType.MAIN)?.performOperation  {
+</a>             readDatabaseObject(StoryEntry(), &quot;Story&quot;, &quot;storyId = ?&quot;, arrayOf(storyId))
+         }
+     }
+ 
+     fun getConversationParticipants(conversationId: String): List&lt;String&gt;? {
+         if (dmOtherParticipantCache[conversationId] != null) return dmOtherParticipantCache[conversationId]?.let { listOf(myUserId, it) }
+<a href="#h2-13-11" id="h2-13-11" class="d">-        return arroyoDb?.performOperation {
+</a><a href="#h2-13-12" id="h2-13-12" class="i">+        return useDatabase(DatabaseType.ARROYO)?.performOperation {
+</a>             safeRawQuery(
+                 &quot;SELECT user_id, conversation_type FROM user_conversation WHERE client_conversation_id = ?&quot;,
+                 arrayOf(conversationId)
+<a href="#h2-14" id="h2-14" class="h">@@ -321,7 +327,7 @@ class DatabaseAccess(
+</a>         conversationId: String,
+         limit: Int
+     ): List&lt;ConversationMessage&gt;? {
+<a href="#h2-14-3" id="h2-14-3" class="d">-        return arroyoDb?.performOperation {
+</a><a href="#h2-14-4" id="h2-14-4" class="i">+        return useDatabase(DatabaseType.ARROYO)?.performOperation {
+</a>             safeRawQuery(
+                 &quot;SELECT * FROM conversation_message WHERE client_conversation_id = ? ORDER BY creation_timestamp DESC LIMIT ?&quot;,
+                 arrayOf(conversationId, limit.toString())
+<a href="#h2-15" id="h2-15" class="h">@@ -341,7 +347,7 @@ class DatabaseAccess(
+</a>     }
+ 
+     fun getAddSource(userId: String): String? {
+<a href="#h2-15-3" id="h2-15-3" class="d">-        return mainDb?.performOperation  {
+</a><a href="#h2-15-4" id="h2-15-4" class="i">+        return useDatabase(DatabaseType.MAIN)?.performOperation  {
+</a>             rawQuery(
+                 &quot;SELECT addSource FROM FriendWhoAddedMe WHERE userId = ?&quot;,
+                 arrayOf(userId)
+<a href="#h2-16" id="h2-16" class="h">@@ -355,7 +361,7 @@ class DatabaseAccess(
+</a>     }
+ 
+     fun markFriendStoriesAsSeen(userId: String) {
+<a href="#h2-16-3" id="h2-16-3" class="d">-        openLocalDatabase(&quot;main&quot;, writeMode = true)?.apply {
+</a><a href="#h2-16-4" id="h2-16-4" class="i">+        useDatabase(DatabaseType.MAIN, writeMode = true)?.apply {
+</a>             performOperation {
+                 execSQL(&quot;UPDATE StorySnap SET viewed = 1 WHERE userId = ?&quot;, arrayOf(userId))
+             }
+<a href="#h2-17" id="h2-17" class="h">@@ -364,7 +370,7 @@ class DatabaseAccess(
+</a>     }
+ 
+     fun getAccessTokens(userId: String): Map&lt;String, String&gt;? {
+<a href="#h2-17-3" id="h2-17-3" class="d">-        return mainDb?.performOperation {
+</a><a href="#h2-17-4" id="h2-17-4" class="i">+        return useDatabase(DatabaseType.MAIN)?.performOperation {
+</a>             rawQuery(
+                 &quot;SELECT accessTokensPb FROM SnapToken WHERE userId = ?&quot;,
+                 arrayOf(userId)
+</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: better proto utils - new proto editor - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/9b7ff403025ffafe6682c3641f9ea86ea261c10c.html">9b7ff403025ffafe6682c3641f9ea86ea261c10c</a>
+<b>parent</b> <a href="../commit/1d925136ffbac5559ebce5da21ed7d91980e859c.html">1d925136ffbac5559ebce5da21ed7d91980e859c</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Mon, 28 Aug 2023 02:06:58 +0200
+
+feat: better proto utils
+- new proto editor
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/data/MessageSender.kt</a></td><td> | </td><td class="num">40</td><td><span class="i">++++++++++++++++++++</span><span class="d">--------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/ProfilePictureDownloader.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/UnlimitedSnapViewTime.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoEditor.kt</a></td><td> | </td><td class="num">65</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">--------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoReader.kt</a></td><td> | </td><td class="num">149</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">----------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoWriter.kt</a></td><td> | </td><td class="num">75</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/WireType.kt</a></td><td> | </td><td class="num">14</td><td><span class="i">++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/EncryptionHelper.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++</span><span class="d">----</span></td></tr>
+</table></pre><pre>11 files changed, 256 insertions(+), 121 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/data/MessageSender.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/data/MessageSender.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/data/MessageSender.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/data/MessageSender.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -14,18 +14,18 @@ class MessageSender(
+</a>     companion object {
+         val redSnapProto: (Boolean) -&gt; ByteArray = {hasAudio -&gt;
+             ProtoWriter().apply {
+<a href="#h0-0-3" id="h0-0-3" class="d">-                write(11, 5) {
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-                    write(1) {
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-                        write(1) {
+</a><a href="#h0-0-6" id="h0-0-6" class="d">-                            writeConstant(2, 0)
+</a><a href="#h0-0-7" id="h0-0-7" class="d">-                            writeConstant(12, 0)
+</a><a href="#h0-0-8" id="h0-0-8" class="d">-                            writeConstant(15, 0)
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+                from(11, 5) {
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+                    from(1) {
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+                        from(1) {
+</a><a href="#h0-0-12" id="h0-0-12" class="i">+                            addVarInt(2, 0)
+</a><a href="#h0-0-13" id="h0-0-13" class="i">+                            addVarInt(12, 0)
+</a><a href="#h0-0-14" id="h0-0-14" class="i">+                            addVarInt(15, 0)
+</a>                         }
+<a href="#h0-0-16" id="h0-0-16" class="d">-                        writeConstant(6, 0)
+</a><a href="#h0-0-17" id="h0-0-17" class="i">+                        addVarInt(6, 0)
+</a>                     }
+<a href="#h0-0-19" id="h0-0-19" class="d">-                    write(2) {
+</a><a href="#h0-0-20" id="h0-0-20" class="d">-                        writeConstant(5, if (hasAudio) 1 else 0)
+</a><a href="#h0-0-21" id="h0-0-21" class="d">-                        writeBuffer(6, byteArrayOf())
+</a><a href="#h0-0-22" id="h0-0-22" class="i">+                    from(2) {
+</a><a href="#h0-0-23" id="h0-0-23" class="i">+                        addVarInt(5, if (hasAudio) 1 else 0)
+</a><a href="#h0-0-24" id="h0-0-24" class="i">+                        addBuffer(6, byteArrayOf())
+</a>                     }
+                 }
+             }.toByteArray()
+<a href="#h0-1" id="h0-1" class="h">@@ -33,15 +33,15 @@ class MessageSender(
+</a> 
+         val audioNoteProto: (Long) -&gt; ByteArray = { duration -&gt;
+             ProtoWriter().apply {
+<a href="#h0-1-3" id="h0-1-3" class="d">-                write(6, 1) {
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-                    write(1) {
+</a><a href="#h0-1-5" id="h0-1-5" class="d">-                        writeConstant(2, 4)
+</a><a href="#h0-1-6" id="h0-1-6" class="d">-                        write(5) {
+</a><a href="#h0-1-7" id="h0-1-7" class="d">-                            writeConstant(1, 0)
+</a><a href="#h0-1-8" id="h0-1-8" class="d">-                            writeConstant(2, 0)
+</a><a href="#h0-1-9" id="h0-1-9" class="i">+                from(6, 1) {
+</a><a href="#h0-1-10" id="h0-1-10" class="i">+                    from(1) {
+</a><a href="#h0-1-11" id="h0-1-11" class="i">+                        addVarInt(2, 4)
+</a><a href="#h0-1-12" id="h0-1-12" class="i">+                        from(5) {
+</a><a href="#h0-1-13" id="h0-1-13" class="i">+                            addVarInt(1, 0)
+</a><a href="#h0-1-14" id="h0-1-14" class="i">+                            addVarInt(2, 0)
+</a>                         }
+<a href="#h0-1-16" id="h0-1-16" class="d">-                        writeConstant(7, 0)
+</a><a href="#h0-1-17" id="h0-1-17" class="d">-                        writeConstant(13, duration)
+</a><a href="#h0-1-18" id="h0-1-18" class="i">+                        addVarInt(7, 0)
+</a><a href="#h0-1-19" id="h0-1-19" class="i">+                        addVarInt(13, duration)
+</a>                     }
+                 }
+             }.toByteArray()
+<a href="#h0-2" id="h0-2" class="h">@@ -153,8 +153,8 @@ class MessageSender(
+</a> 
+     fun sendChatMessage(conversations: List&lt;SnapUUID&gt;, message: String, onError: (Any) -&gt; Unit = {}, onSuccess: () -&gt; Unit = {}) {
+         internalSendMessage(conversations, createLocalMessageContentTemplate(ContentType.CHAT, ProtoWriter().apply {
+<a href="#h0-2-3" id="h0-2-3" class="d">-            write(2) {
+</a><a href="#h0-2-4" id="h0-2-4" class="d">-                writeString(1, message)
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+            from(2) {
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+                addString(1, message)
+</a>             }
+         }.toByteArray(), savePolicy = &quot;LIFETIME&quot;), CallbackBuilder(sendMessageCallback)
+             .override(&quot;onSuccess&quot;, callback = { onSuccess() })
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -466,7 +466,7 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>         val messageReader = ProtoReader(messageContent)
+         val urlProto: ByteArray = if (isArroyoMessage) {
+             var finalProto: ByteArray? = null
+<a href="#h1-0-3" id="h1-0-3" class="d">-            messageReader.readPath(4)?.each(5) {
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+            messageReader.eachBuffer(4, 5) {
+</a>                 finalProto = getByteArray(1, 3)
+             }
+             finalProto!!
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/ProfilePictureDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/ProfilePictureDownloader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/ProfilePictureDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/ProfilePictureDownloader.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -64,9 +64,9 @@ class ProfilePictureDownloader : Feature(&quot;ProfilePictureDownloader&quot;, loadParams 
+</a>                     }
+                 }
+ 
+<a href="#h2-0-3" id="h2-0-3" class="d">-                ProtoReader(content).readPath(1, 1, 2) {
+</a><a href="#h2-0-4" id="h2-0-4" class="d">-                    friendUsername = getString(2) ?: return@readPath
+</a><a href="#h2-0-5" id="h2-0-5" class="d">-                    readPath(4) {
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+                ProtoReader(content).followPath(1, 1, 2) {
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+                    friendUsername = getString(2) ?: return@followPath
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+                    followPath(4) {
+</a>                         backgroundUrl = getString(2)
+                         avatarUrl = getString(100)
+                     }
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -28,7 +28,7 @@ class GalleryMediaSendOverride : Feature(&quot;Gallery Media Send Override&quot;, loadPara
+</a> 
+             //prevent story replies
+             val messageProtoReader = ProtoReader(localMessageContent.content)
+<a href="#h3-0-3" id="h3-0-3" class="d">-            if (messageProtoReader.exists(7)) return@subscribe
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+            if (messageProtoReader.contains(7)) return@subscribe
+</a> 
+             event.canceled = true
+ 
+<a href="#h3-1" id="h3-1" class="h">@@ -38,7 +38,7 @@ class GalleryMediaSendOverride : Feature(&quot;Gallery Media Send Override&quot;, loadPara
+</a>                         dialog.dismiss()
+                         val overrideType = typeNames.keys.toTypedArray()[which]
+ 
+<a href="#h3-1-3" id="h3-1-3" class="d">-                        if (overrideType != &quot;ORIGINAL&quot; &amp;&amp; messageProtoReader.readPath(3)?.getCount(3) != 1) {
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+                        if (overrideType != &quot;ORIGINAL&quot; &amp;&amp; messageProtoReader.followPath(3)?.getCount(3) != 1) {
+</a>                             context.runOnUiThread {
+                                 ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity!!)
+                                     .setMessage(context.translation[&quot;gallery_media_send_override.multiple_media_toast&quot;])
+<a href="#h3-2" id="h3-2" class="h">@@ -57,7 +57,7 @@ class GalleryMediaSendOverride : Feature(&quot;Gallery Media Send Override&quot;, loadPara
+</a>                             &quot;NOTE&quot; -&gt; {
+                                 localMessageContent.contentType = ContentType.NOTE
+                                 val mediaDuration =
+<a href="#h3-2-3" id="h3-2-3" class="d">-                                    messageProtoReader.getLong(3, 3, 5, 1, 1, 15) ?: 0
+</a><a href="#h3-2-4" id="h3-2-4" class="i">+                                    messageProtoReader.getVarInt(3, 3, 5, 1, 1, 15) ?: 0
+</a>                                 localMessageContent.content =
+                                     MessageSender.audioNoteProto(mediaDuration)
+                             }
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/UnlimitedSnapViewTime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/UnlimitedSnapViewTime.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/UnlimitedSnapViewTime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/UnlimitedSnapViewTime.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -20,12 +20,12 @@ class UnlimitedSnapViewTime :
+</a>             if (message.messageContent.contentType != ContentType.SNAP) return@hookConstructor
+ 
+             with(message.messageContent) {
+<a href="#h4-0-3" id="h4-0-3" class="d">-                val mediaAttributes = ProtoReader(this.content).readPath(11, 5, 2) ?: return@hookConstructor
+</a><a href="#h4-0-4" id="h4-0-4" class="d">-                if (mediaAttributes.exists(6)) return@hookConstructor
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+                val mediaAttributes = ProtoReader(this.content).followPath(11, 5, 2) ?: return@hookConstructor
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+                if (mediaAttributes.contains(6)) return@hookConstructor
+</a>                 this.content = ProtoEditor(this.content).apply {
+                     edit(11, 5, 2) {
+<a href="#h4-0-9" id="h4-0-9" class="d">-                        mediaAttributes.getInt(5)?.let { writeConstant(5, it) }
+</a><a href="#h4-0-10" id="h4-0-10" class="d">-                        writeBuffer(6, byteArrayOf())
+</a><a href="#h4-0-11" id="h4-0-11" class="i">+                        remove(8)
+</a><a href="#h4-0-12" id="h4-0-12" class="i">+                        addBuffer(6, byteArrayOf())
+</a>                     }
+                 }.toByteArray()
+             }
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoEditor.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoEditor.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoEditor.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoEditor.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -1,39 +1,64 @@
+</a> package me.rhunk.snapenhance.util.protobuf
+ 
+<a href="#h5-0-2" id="h5-0-2" class="i">+
+</a><a href="#h5-0-3" id="h5-0-3" class="i">+typealias WireCallback = EditorContext.() -&gt; Unit
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+
+</a><a href="#h5-0-5" id="h5-0-5" class="i">+class EditorContext(
+</a><a href="#h5-0-6" id="h5-0-6" class="i">+    private val wires: MutableMap&lt;Int, MutableList&lt;Wire&gt;&gt;
+</a><a href="#h5-0-7" id="h5-0-7" class="i">+) {
+</a><a href="#h5-0-8" id="h5-0-8" class="i">+    fun clear() {
+</a><a href="#h5-0-9" id="h5-0-9" class="i">+        wires.clear()
+</a><a href="#h5-0-10" id="h5-0-10" class="i">+    }
+</a><a href="#h5-0-11" id="h5-0-11" class="i">+    fun addWire(wire: Wire) {
+</a><a href="#h5-0-12" id="h5-0-12" class="i">+        wires.getOrPut(wire.id) { mutableListOf() }.add(wire)
+</a><a href="#h5-0-13" id="h5-0-13" class="i">+    }
+</a><a href="#h5-0-14" id="h5-0-14" class="i">+    fun addVarInt(id: Int, value: Int) = addVarInt(id, value.toLong())
+</a><a href="#h5-0-15" id="h5-0-15" class="i">+    fun addVarInt(id: Int, value: Long) = addWire(Wire(id, WireType.VARINT, value))
+</a><a href="#h5-0-16" id="h5-0-16" class="i">+    fun addBuffer(id: Int, value: ByteArray) = addWire(Wire(id, WireType.LENGTH_DELIMITED, value))
+</a><a href="#h5-0-17" id="h5-0-17" class="i">+    fun addString(id: Int, value: String) = addBuffer(id, value.toByteArray())
+</a><a href="#h5-0-18" id="h5-0-18" class="i">+    fun addFixed64(id: Int, value: Long) = addWire(Wire(id, WireType.FIXED64, value))
+</a><a href="#h5-0-19" id="h5-0-19" class="i">+    fun addFixed32(id: Int, value: Int) = addWire(Wire(id, WireType.FIXED32, value))
+</a><a href="#h5-0-20" id="h5-0-20" class="i">+
+</a><a href="#h5-0-21" id="h5-0-21" class="i">+    fun firstOrNull(id: Int) = wires[id]?.firstOrNull()
+</a><a href="#h5-0-22" id="h5-0-22" class="i">+    fun getOrNull(id: Int) = wires[id]
+</a><a href="#h5-0-23" id="h5-0-23" class="i">+    fun get(id: Int) = wires[id]!!
+</a><a href="#h5-0-24" id="h5-0-24" class="i">+
+</a><a href="#h5-0-25" id="h5-0-25" class="i">+    fun remove(id: Int) = wires.remove(id)
+</a><a href="#h5-0-26" id="h5-0-26" class="i">+    fun remove(id: Int, index: Int) = wires[id]?.removeAt(index)
+</a><a href="#h5-0-27" id="h5-0-27" class="i">+}
+</a><a href="#h5-0-28" id="h5-0-28" class="i">+
+</a> class ProtoEditor(
+     private var buffer: ByteArray
+ ) {
+<a href="#h5-0-32" id="h5-0-32" class="d">-    fun edit(vararg path: Int, callback: ProtoWriter.() -&gt; Unit) {
+</a><a href="#h5-0-33" id="h5-0-33" class="d">-        val writer = ProtoWriter()
+</a><a href="#h5-0-34" id="h5-0-34" class="d">-        callback(writer)
+</a><a href="#h5-0-35" id="h5-0-35" class="d">-        buffer = writeAtPath(path, 0, ProtoReader(buffer), writer.toByteArray())
+</a><a href="#h5-0-36" id="h5-0-36" class="i">+    fun edit(vararg path: Int, callback: WireCallback) {
+</a><a href="#h5-0-37" id="h5-0-37" class="i">+        buffer = writeAtPath(path, 0, ProtoReader(buffer), callback)
+</a>     }
+ 
+<a href="#h5-0-40" id="h5-0-40" class="d">-    private fun writeAtPath(path: IntArray, currentIndex: Int, rootReader: ProtoReader, bufferToWrite: ByteArray): ByteArray {
+</a><a href="#h5-0-41" id="h5-0-41" class="d">-        if (currentIndex == path.size) {
+</a><a href="#h5-0-42" id="h5-0-42" class="d">-            return bufferToWrite
+</a><a href="#h5-0-43" id="h5-0-43" class="d">-        }
+</a><a href="#h5-0-44" id="h5-0-44" class="d">-        val id = path[currentIndex]
+</a><a href="#h5-0-45" id="h5-0-45" class="i">+    private fun writeAtPath(path: IntArray, currentIndex: Int, rootReader: ProtoReader, wireToWriteCallback: WireCallback): ByteArray {
+</a><a href="#h5-0-46" id="h5-0-46" class="i">+        val id = path.getOrNull(currentIndex)
+</a>         val output = ProtoWriter()
+<a href="#h5-0-48" id="h5-0-48" class="d">-        val wires = mutableListOf&lt;Pair&lt;Int, ByteArray&gt;&gt;()
+</a><a href="#h5-0-49" id="h5-0-49" class="i">+        val wires = mutableMapOf&lt;Int, MutableList&lt;Wire&gt;&gt;()
+</a> 
+<a href="#h5-0-51" id="h5-0-51" class="d">-        rootReader.list { tag, value -&gt;
+</a><a href="#h5-0-52" id="h5-0-52" class="d">-            if (tag == id) {
+</a><a href="#h5-0-53" id="h5-0-53" class="d">-                val childReader = rootReader.readPath(id)
+</a><a href="#h5-0-54" id="h5-0-54" class="i">+        rootReader.forEach { wireId, value -&gt;
+</a><a href="#h5-0-55" id="h5-0-55" class="i">+            wires.putIfAbsent(wireId, mutableListOf())
+</a><a href="#h5-0-56" id="h5-0-56" class="i">+            if (id != null &amp;&amp; wireId == id) {
+</a><a href="#h5-0-57" id="h5-0-57" class="i">+                val childReader = rootReader.followPath(id)
+</a>                 if (childReader == null) {
+<a href="#h5-0-59" id="h5-0-59" class="d">-                    wires.add(Pair(tag, value))
+</a><a href="#h5-0-60" id="h5-0-60" class="d">-                    return@list
+</a><a href="#h5-0-61" id="h5-0-61" class="i">+                    wires.getOrPut(wireId) { mutableListOf() }.add(value)
+</a><a href="#h5-0-62" id="h5-0-62" class="i">+                    return@forEach
+</a>                 }
+<a href="#h5-0-64" id="h5-0-64" class="d">-                wires.add(Pair(tag, writeAtPath(path, currentIndex + 1, childReader, bufferToWrite)))
+</a><a href="#h5-0-65" id="h5-0-65" class="d">-                return@list
+</a><a href="#h5-0-66" id="h5-0-66" class="i">+                wires[wireId]!!.add(Wire(wireId, WireType.LENGTH_DELIMITED, writeAtPath(path, currentIndex + 1, childReader, wireToWriteCallback)))
+</a><a href="#h5-0-67" id="h5-0-67" class="i">+                return@forEach
+</a>             }
+<a href="#h5-0-69" id="h5-0-69" class="d">-            wires.add(Pair(tag, value))
+</a><a href="#h5-0-70" id="h5-0-70" class="i">+            wires[wireId]!!.add(value)
+</a>         }
+ 
+<a href="#h5-0-73" id="h5-0-73" class="d">-        wires.forEach { (tag, value) -&gt;
+</a><a href="#h5-0-74" id="h5-0-74" class="d">-            output.writeBuffer(tag, value)
+</a><a href="#h5-0-75" id="h5-0-75" class="i">+        if (currentIndex == path.size) {
+</a><a href="#h5-0-76" id="h5-0-76" class="i">+            wireToWriteCallback(EditorContext(wires))
+</a>         }
+ 
+<a href="#h5-0-79" id="h5-0-79" class="i">+        wires.values.flatten().forEach(output::addWire)
+</a><a href="#h5-0-80" id="h5-0-80" class="i">+
+</a>         return output.toByteArray()
+     }
+ 
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoReader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoReader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoReader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoReader.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -1,6 +1,6 @@
+</a> package me.rhunk.snapenhance.util.protobuf
+ 
+<a href="#h6-0-2" id="h6-0-2" class="d">-data class Wire(val type: Int, val value: Any)
+</a><a href="#h6-0-3" id="h6-0-3" class="i">+data class Wire(val id: Int, val type: WireType, val value: Any)
+</a> 
+ class ProtoReader(private val buffer: ByteArray) {
+     private var offset: Int = 0
+<a href="#h6-1" id="h6-1" class="h">@@ -32,19 +32,46 @@ class ProtoReader(private val buffer: ByteArray) {
+</a>         while (offset &lt; buffer.size) {
+             val tag = readVarInt().toInt()
+             val id = tag ushr 3
+<a href="#h6-1-3" id="h6-1-3" class="d">-            val type = tag and 0x7
+</a><a href="#h6-1-4" id="h6-1-4" class="i">+            val type = WireType.fromValue(tag and 0x7) ?: break
+</a>             try {
+                 val value = when (type) {
+<a href="#h6-1-7" id="h6-1-7" class="d">-                    0 -&gt; readVarInt().toString().toByteArray()
+</a><a href="#h6-1-8" id="h6-1-8" class="d">-                    2 -&gt; {
+</a><a href="#h6-1-9" id="h6-1-9" class="i">+                    WireType.VARINT -&gt; readVarInt()
+</a><a href="#h6-1-10" id="h6-1-10" class="i">+                    WireType.FIXED64 -&gt; {
+</a><a href="#h6-1-11" id="h6-1-11" class="i">+                        val bytes = ByteArray(8)
+</a><a href="#h6-1-12" id="h6-1-12" class="i">+                        for (i in 0..7) {
+</a><a href="#h6-1-13" id="h6-1-13" class="i">+                            bytes[i] = readByte()
+</a><a href="#h6-1-14" id="h6-1-14" class="i">+                        }
+</a><a href="#h6-1-15" id="h6-1-15" class="i">+                        bytes
+</a><a href="#h6-1-16" id="h6-1-16" class="i">+                    }
+</a><a href="#h6-1-17" id="h6-1-17" class="i">+                    WireType.LENGTH_DELIMITED -&gt; {
+</a>                         val length = readVarInt().toInt()
+<a href="#h6-1-19" id="h6-1-19" class="d">-                        val value = buffer.copyOfRange(offset, offset + length)
+</a><a href="#h6-1-20" id="h6-1-20" class="d">-                        offset += length
+</a><a href="#h6-1-21" id="h6-1-21" class="d">-                        value
+</a><a href="#h6-1-22" id="h6-1-22" class="i">+                        val bytes = ByteArray(length)
+</a><a href="#h6-1-23" id="h6-1-23" class="i">+                        for (i in 0 until length) {
+</a><a href="#h6-1-24" id="h6-1-24" class="i">+                            bytes[i] = readByte()
+</a><a href="#h6-1-25" id="h6-1-25" class="i">+                        }
+</a><a href="#h6-1-26" id="h6-1-26" class="i">+                        bytes
+</a><a href="#h6-1-27" id="h6-1-27" class="i">+                    }
+</a><a href="#h6-1-28" id="h6-1-28" class="i">+                    WireType.START_GROUP -&gt; {
+</a><a href="#h6-1-29" id="h6-1-29" class="i">+                        val bytes = mutableListOf&lt;Byte&gt;()
+</a><a href="#h6-1-30" id="h6-1-30" class="i">+                        while (true) {
+</a><a href="#h6-1-31" id="h6-1-31" class="i">+                            val b = readByte()
+</a><a href="#h6-1-32" id="h6-1-32" class="i">+                            if (b.toInt() == WireType.END_GROUP.value) {
+</a><a href="#h6-1-33" id="h6-1-33" class="i">+                                break
+</a><a href="#h6-1-34" id="h6-1-34" class="i">+                            }
+</a><a href="#h6-1-35" id="h6-1-35" class="i">+                            bytes.add(b)
+</a><a href="#h6-1-36" id="h6-1-36" class="i">+                        }
+</a><a href="#h6-1-37" id="h6-1-37" class="i">+                        bytes.toByteArray()
+</a>                     }
+<a href="#h6-1-39" id="h6-1-39" class="d">-                    else -&gt; break
+</a><a href="#h6-1-40" id="h6-1-40" class="i">+                    WireType.FIXED32 -&gt; {
+</a><a href="#h6-1-41" id="h6-1-41" class="i">+                        val bytes = ByteArray(4)
+</a><a href="#h6-1-42" id="h6-1-42" class="i">+                        for (i in 0..3) {
+</a><a href="#h6-1-43" id="h6-1-43" class="i">+                            bytes[i] = readByte()
+</a><a href="#h6-1-44" id="h6-1-44" class="i">+                        }
+</a><a href="#h6-1-45" id="h6-1-45" class="i">+                        bytes
+</a><a href="#h6-1-46" id="h6-1-46" class="i">+                    }
+</a><a href="#h6-1-47" id="h6-1-47" class="i">+                    WireType.END_GROUP -&gt; continue
+</a>                 }
+<a href="#h6-1-49" id="h6-1-49" class="d">-                values.getOrPut(id) { mutableListOf() }.add(Wire(type, value))
+</a><a href="#h6-1-50" id="h6-1-50" class="i">+                values.getOrPut(id) { mutableListOf() }.add(Wire(id, type, value))
+</a>             } catch (t: Throwable) {
+                 values.clear()
+                 break
+<a href="#h6-2" id="h6-2" class="h">@@ -52,13 +79,19 @@ class ProtoReader(private val buffer: ByteArray) {
+</a>         }
+     }
+ 
+<a href="#h6-2-3" id="h6-2-3" class="d">-    fun readPath(vararg ids: Int, reader: (ProtoReader.() -&gt; Unit)? = null): ProtoReader? {
+</a><a href="#h6-2-4" id="h6-2-4" class="i">+    fun followPath(vararg ids: Int, excludeLast: Boolean = false, reader: (ProtoReader.() -&gt; Unit)? = null): ProtoReader? {
+</a>         var thisReader = this
+<a href="#h6-2-6" id="h6-2-6" class="d">-        ids.forEach { id -&gt;
+</a><a href="#h6-2-7" id="h6-2-7" class="d">-            if (!thisReader.exists(id)) {
+</a><a href="#h6-2-8" id="h6-2-8" class="i">+        ids.let {
+</a><a href="#h6-2-9" id="h6-2-9" class="i">+            if (excludeLast) {
+</a><a href="#h6-2-10" id="h6-2-10" class="i">+                it.sliceArray(0 until it.size - 1)
+</a><a href="#h6-2-11" id="h6-2-11" class="i">+            } else {
+</a><a href="#h6-2-12" id="h6-2-12" class="i">+                it
+</a><a href="#h6-2-13" id="h6-2-13" class="i">+            }
+</a><a href="#h6-2-14" id="h6-2-14" class="i">+        }.forEach { id -&gt;
+</a><a href="#h6-2-15" id="h6-2-15" class="i">+            if (!thisReader.contains(id)) {
+</a>                 return null
+             }
+<a href="#h6-2-18" id="h6-2-18" class="d">-            thisReader = ProtoReader(thisReader.get(id) as ByteArray)
+</a><a href="#h6-2-19" id="h6-2-19" class="i">+            thisReader = ProtoReader(thisReader.getByteArray(id) ?: return null)
+</a>         }
+         if (reader != null) {
+             thisReader.reader()
+<a href="#h6-3" id="h6-3" class="h">@@ -66,65 +99,77 @@ class ProtoReader(private val buffer: ByteArray) {
+</a>         return thisReader
+     }
+ 
+<a href="#h6-3-3" id="h6-3-3" class="d">-    fun pathExists(vararg ids: Int): Boolean {
+</a><a href="#h6-3-4" id="h6-3-4" class="i">+    fun containsPath(vararg ids: Int): Boolean {
+</a>         var thisReader = this
+         ids.forEach { id -&gt;
+<a href="#h6-3-7" id="h6-3-7" class="d">-            if (!thisReader.exists(id)) {
+</a><a href="#h6-3-8" id="h6-3-8" class="i">+            if (!thisReader.contains(id)) {
+</a>                 return false
+             }
+<a href="#h6-3-11" id="h6-3-11" class="d">-            thisReader = ProtoReader(thisReader.get(id) as ByteArray)
+</a><a href="#h6-3-12" id="h6-3-12" class="i">+            thisReader = ProtoReader(thisReader.getByteArray(id) ?: return false)
+</a>         }
+         return true
+     }
+ 
+<a href="#h6-3-17" id="h6-3-17" class="d">-    fun getByteArray(id: Int) = values[id]?.first()?.value as ByteArray?
+</a><a href="#h6-3-18" id="h6-3-18" class="d">-    fun getByteArray(vararg ids: Int): ByteArray? {
+</a><a href="#h6-3-19" id="h6-3-19" class="d">-        if (ids.isEmpty() || ids.size &lt; 2) {
+</a><a href="#h6-3-20" id="h6-3-20" class="d">-            return null
+</a><a href="#h6-3-21" id="h6-3-21" class="d">-        }
+</a><a href="#h6-3-22" id="h6-3-22" class="d">-        val lastId = ids.last()
+</a><a href="#h6-3-23" id="h6-3-23" class="d">-        var value: ByteArray? = null
+</a><a href="#h6-3-24" id="h6-3-24" class="d">-        readPath(*(ids.copyOfRange(0, ids.size - 1))) {
+</a><a href="#h6-3-25" id="h6-3-25" class="d">-            value = getByteArray(lastId)
+</a><a href="#h6-3-26" id="h6-3-26" class="i">+    fun forEach(reader: (Int, Wire) -&gt; Unit) {
+</a><a href="#h6-3-27" id="h6-3-27" class="i">+        values.forEach { (id, wires) -&gt;
+</a><a href="#h6-3-28" id="h6-3-28" class="i">+            wires.forEach { wire -&gt;
+</a><a href="#h6-3-29" id="h6-3-29" class="i">+                reader(id, wire)
+</a><a href="#h6-3-30" id="h6-3-30" class="i">+            }
+</a>         }
+<a href="#h6-3-32" id="h6-3-32" class="d">-        return value
+</a>     }
+ 
+<a href="#h6-3-35" id="h6-3-35" class="d">-    fun getString(id: Int) = getByteArray(id)?.toString(Charsets.UTF_8)
+</a><a href="#h6-3-36" id="h6-3-36" class="d">-    fun getString(vararg ids: Int) = getByteArray(*ids)?.toString(Charsets.UTF_8)
+</a><a href="#h6-3-37" id="h6-3-37" class="d">-
+</a><a href="#h6-3-38" id="h6-3-38" class="d">-    fun getInt(id: Int) = getString(id)?.toInt()
+</a><a href="#h6-3-39" id="h6-3-39" class="d">-    fun getInt(vararg ids: Int) = getString(*ids)?.toInt()
+</a><a href="#h6-3-40" id="h6-3-40" class="d">-
+</a><a href="#h6-3-41" id="h6-3-41" class="d">-    fun getLong(id: Int) = getString(id)?.toLong()
+</a><a href="#h6-3-42" id="h6-3-42" class="d">-    fun getLong(vararg ids: Int) = getString(*ids)?.toLong()
+</a><a href="#h6-3-43" id="h6-3-43" class="d">-
+</a><a href="#h6-3-44" id="h6-3-44" class="d">-    fun exists(id: Int) = values.containsKey(id)
+</a><a href="#h6-3-45" id="h6-3-45" class="d">-
+</a><a href="#h6-3-46" id="h6-3-46" class="d">-    fun get(id: Int) = values[id]!!.first().value
+</a><a href="#h6-3-47" id="h6-3-47" class="d">-
+</a><a href="#h6-3-48" id="h6-3-48" class="d">-    fun isValid() = values.isNotEmpty()
+</a><a href="#h6-3-49" id="h6-3-49" class="d">-
+</a><a href="#h6-3-50" id="h6-3-50" class="d">-    fun getCount(id: Int) = values[id]!!.size
+</a><a href="#h6-3-51" id="h6-3-51" class="i">+    fun forEach(vararg id: Int, reader: ProtoReader.() -&gt; Unit) {
+</a><a href="#h6-3-52" id="h6-3-52" class="i">+        followPath(*id)?.eachBuffer { _, buffer -&gt;
+</a><a href="#h6-3-53" id="h6-3-53" class="i">+            ProtoReader(buffer).reader()
+</a><a href="#h6-3-54" id="h6-3-54" class="i">+        }
+</a><a href="#h6-3-55" id="h6-3-55" class="i">+    }
+</a> 
+<a href="#h6-3-57" id="h6-3-57" class="d">-    fun each(id: Int, reader: ProtoReader.(index: Int) -&gt; Unit) {
+</a><a href="#h6-3-58" id="h6-3-58" class="d">-        values[id]!!.forEachIndexed { index, _ -&gt;
+</a><a href="#h6-3-59" id="h6-3-59" class="d">-            ProtoReader(values[id]!![index].value as ByteArray).reader(index)
+</a><a href="#h6-3-60" id="h6-3-60" class="i">+    fun eachBuffer(vararg ids: Int, reader: ProtoReader.() -&gt; Unit) {
+</a><a href="#h6-3-61" id="h6-3-61" class="i">+        followPath(*ids, excludeLast = true)?.eachBuffer { id, buffer -&gt;
+</a><a href="#h6-3-62" id="h6-3-62" class="i">+            if (id == ids.last()) {
+</a><a href="#h6-3-63" id="h6-3-63" class="i">+                ProtoReader(buffer).reader()
+</a><a href="#h6-3-64" id="h6-3-64" class="i">+            }
+</a>         }
+     }
+ 
+<a href="#h6-3-68" id="h6-3-68" class="d">-    fun list(reader: (id: Int, data: ByteArray) -&gt; Unit) {
+</a><a href="#h6-3-69" id="h6-3-69" class="i">+    fun eachBuffer(reader: (Int, ByteArray) -&gt; Unit) {
+</a>         values.forEach { (id, wires) -&gt;
+<a href="#h6-3-71" id="h6-3-71" class="d">-            wires.forEachIndexed { index, _ -&gt;
+</a><a href="#h6-3-72" id="h6-3-72" class="d">-                reader(id, wires[index].value as ByteArray)
+</a><a href="#h6-3-73" id="h6-3-73" class="i">+            wires.forEach { wire -&gt;
+</a><a href="#h6-3-74" id="h6-3-74" class="i">+                if (wire.type == WireType.LENGTH_DELIMITED) {
+</a><a href="#h6-3-75" id="h6-3-75" class="i">+                    reader(id, wire.value as ByteArray)
+</a><a href="#h6-3-76" id="h6-3-76" class="i">+                }
+</a>             }
+         }
+     }
+ 
+<a href="#h6-3-81" id="h6-3-81" class="d">-    fun eachExists(id: Int, reader: ProtoReader.(index: Int) -&gt; Unit) {
+</a><a href="#h6-3-82" id="h6-3-82" class="d">-        if (!exists(id)) {
+</a><a href="#h6-3-83" id="h6-3-83" class="d">-            return
+</a><a href="#h6-3-84" id="h6-3-84" class="i">+    fun contains(id: Int) = values.containsKey(id)
+</a><a href="#h6-3-85" id="h6-3-85" class="i">+
+</a><a href="#h6-3-86" id="h6-3-86" class="i">+    fun getWire(id: Int) = values[id]?.firstOrNull()
+</a><a href="#h6-3-87" id="h6-3-87" class="i">+    fun getRawValue(id: Int) = getWire(id)?.value
+</a><a href="#h6-3-88" id="h6-3-88" class="i">+    fun getByteArray(id: Int) = getRawValue(id) as? ByteArray
+</a><a href="#h6-3-89" id="h6-3-89" class="i">+    fun getByteArray(vararg ids: Int) = followPath(*ids, excludeLast = true)?.getByteArray(ids.last())
+</a><a href="#h6-3-90" id="h6-3-90" class="i">+    fun getString(id: Int) = getByteArray(id)?.toString(Charsets.UTF_8)
+</a><a href="#h6-3-91" id="h6-3-91" class="i">+    fun getString(vararg ids: Int) = followPath(*ids, excludeLast = true)?.getString(ids.last())
+</a><a href="#h6-3-92" id="h6-3-92" class="i">+    fun getVarInt(id: Int) = getRawValue(id) as? Long
+</a><a href="#h6-3-93" id="h6-3-93" class="i">+    fun getVarInt(vararg ids: Int) = followPath(*ids, excludeLast = true)?.getVarInt(ids.last())
+</a><a href="#h6-3-94" id="h6-3-94" class="i">+    fun getCount(id: Int) = values[id]?.size ?: 0
+</a><a href="#h6-3-95" id="h6-3-95" class="i">+
+</a><a href="#h6-3-96" id="h6-3-96" class="i">+    fun getFixed64(id: Int): Long {
+</a><a href="#h6-3-97" id="h6-3-97" class="i">+        val bytes = getByteArray(id) ?: return 0L
+</a><a href="#h6-3-98" id="h6-3-98" class="i">+        var value = 0L
+</a><a href="#h6-3-99" id="h6-3-99" class="i">+        for (i in 0..7) {
+</a><a href="#h6-3-100" id="h6-3-100" class="i">+            value = value or ((bytes[i].toLong() and 0xFF) shl (i * 8))
+</a><a href="#h6-3-101" id="h6-3-101" class="i">+        }
+</a><a href="#h6-3-102" id="h6-3-102" class="i">+        return value
+</a><a href="#h6-3-103" id="h6-3-103" class="i">+    }
+</a><a href="#h6-3-104" id="h6-3-104" class="i">+
+</a><a href="#h6-3-105" id="h6-3-105" class="i">+
+</a><a href="#h6-3-106" id="h6-3-106" class="i">+    fun getFixed32(id: Int): Int {
+</a><a href="#h6-3-107" id="h6-3-107" class="i">+        val bytes = getByteArray(id) ?: return 0
+</a><a href="#h6-3-108" id="h6-3-108" class="i">+        var value = 0
+</a><a href="#h6-3-109" id="h6-3-109" class="i">+        for (i in 0..3) {
+</a><a href="#h6-3-110" id="h6-3-110" class="i">+            value = value or ((bytes[i].toInt() and 0xFF) shl (i * 8))
+</a>         }
+<a href="#h6-3-112" id="h6-3-112" class="d">-        each(id, reader)
+</a><a href="#h6-3-113" id="h6-3-113" class="i">+        return value
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoWriter.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoWriter.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoWriter.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoWriter.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -23,43 +23,94 @@ class ProtoWriter {
+</a>         stream.write(v.toInt())
+     }
+ 
+<a href="#h7-0-3" id="h7-0-3" class="d">-    fun writeBuffer(id: Int, value: ByteArray) {
+</a><a href="#h7-0-4" id="h7-0-4" class="d">-        writeVarInt(id shl 3 or 2)
+</a><a href="#h7-0-5" id="h7-0-5" class="i">+    fun addBuffer(id: Int, value: ByteArray) {
+</a><a href="#h7-0-6" id="h7-0-6" class="i">+        writeVarInt(id shl 3 or WireType.LENGTH_DELIMITED.value)
+</a>         writeVarInt(value.size)
+         stream.write(value)
+     }
+ 
+<a href="#h7-0-11" id="h7-0-11" class="d">-    fun writeConstant(id: Int, value: Int) {
+</a><a href="#h7-0-12" id="h7-0-12" class="d">-        writeVarInt(id shl 3)
+</a><a href="#h7-0-13" id="h7-0-13" class="d">-        writeVarInt(value)
+</a><a href="#h7-0-14" id="h7-0-14" class="d">-    }
+</a><a href="#h7-0-15" id="h7-0-15" class="i">+    fun addVarInt(id: Int, value: Int) = addVarInt(id, value.toLong())
+</a> 
+<a href="#h7-0-17" id="h7-0-17" class="d">-    fun writeConstant(id: Int, value: Long) {
+</a><a href="#h7-0-18" id="h7-0-18" class="i">+    fun addVarInt(id: Int, value: Long) {
+</a>         writeVarInt(id shl 3)
+         writeVarLong(value)
+     }
+ 
+<a href="#h7-0-23" id="h7-0-23" class="d">-    fun writeString(id: Int, value: String) = writeBuffer(id, value.toByteArray())
+</a><a href="#h7-0-24" id="h7-0-24" class="i">+    fun addString(id: Int, value: String) = addBuffer(id, value.toByteArray())
+</a><a href="#h7-0-25" id="h7-0-25" class="i">+
+</a><a href="#h7-0-26" id="h7-0-26" class="i">+    fun addFixed32(id: Int, value: Int) {
+</a><a href="#h7-0-27" id="h7-0-27" class="i">+        writeVarInt(id shl 3 or WireType.FIXED32.value)
+</a><a href="#h7-0-28" id="h7-0-28" class="i">+        val bytes = ByteArray(4)
+</a><a href="#h7-0-29" id="h7-0-29" class="i">+        for (i in 0..3) {
+</a><a href="#h7-0-30" id="h7-0-30" class="i">+            bytes[i] = (value shr (i * 8)).toByte()
+</a><a href="#h7-0-31" id="h7-0-31" class="i">+        }
+</a><a href="#h7-0-32" id="h7-0-32" class="i">+        stream.write(bytes)
+</a><a href="#h7-0-33" id="h7-0-33" class="i">+    }
+</a><a href="#h7-0-34" id="h7-0-34" class="i">+
+</a><a href="#h7-0-35" id="h7-0-35" class="i">+    fun addFixed64(id: Int, value: Long) {
+</a><a href="#h7-0-36" id="h7-0-36" class="i">+        writeVarInt(id shl 3 or WireType.FIXED64.value)
+</a><a href="#h7-0-37" id="h7-0-37" class="i">+        val bytes = ByteArray(8)
+</a><a href="#h7-0-38" id="h7-0-38" class="i">+        for (i in 0..7) {
+</a><a href="#h7-0-39" id="h7-0-39" class="i">+            bytes[i] = (value shr (i * 8)).toByte()
+</a><a href="#h7-0-40" id="h7-0-40" class="i">+        }
+</a><a href="#h7-0-41" id="h7-0-41" class="i">+        stream.write(bytes)
+</a><a href="#h7-0-42" id="h7-0-42" class="i">+    }
+</a> 
+<a href="#h7-0-44" id="h7-0-44" class="d">-    fun write(id: Int, writer: ProtoWriter.() -&gt; Unit) {
+</a><a href="#h7-0-45" id="h7-0-45" class="i">+    fun from(id: Int, writer: ProtoWriter.() -&gt; Unit) {
+</a>         val writerStream = ProtoWriter()
+         writer(writerStream)
+<a href="#h7-0-48" id="h7-0-48" class="d">-        writeBuffer(id, writerStream.stream.toByteArray())
+</a><a href="#h7-0-49" id="h7-0-49" class="i">+        addBuffer(id, writerStream.stream.toByteArray())
+</a>     }
+ 
+<a href="#h7-0-52" id="h7-0-52" class="d">-    fun write(vararg ids: Int, writer: ProtoWriter.() -&gt; Unit) {
+</a><a href="#h7-0-53" id="h7-0-53" class="i">+    fun from(vararg ids: Int, writer: ProtoWriter.() -&gt; Unit) {
+</a>         val writerStream = ProtoWriter()
+         writer(writerStream)
+         var stream = writerStream.stream.toByteArray()
+         ids.reversed().forEach { id -&gt;
+             with(ProtoWriter()) {
+<a href="#h7-0-59" id="h7-0-59" class="d">-                writeBuffer(id, stream)
+</a><a href="#h7-0-60" id="h7-0-60" class="i">+                addBuffer(id, stream)
+</a>                 stream = this.stream.toByteArray()
+             }
+         }
+         stream.let(this.stream::write)
+     }
+ 
+<a href="#h7-0-67" id="h7-0-67" class="i">+    fun addWire(wire: Wire) {
+</a><a href="#h7-0-68" id="h7-0-68" class="i">+        writeVarInt(wire.id shl 3 or wire.type.value)
+</a><a href="#h7-0-69" id="h7-0-69" class="i">+        when (wire.type) {
+</a><a href="#h7-0-70" id="h7-0-70" class="i">+            WireType.VARINT -&gt; writeVarLong(wire.value as Long)
+</a><a href="#h7-0-71" id="h7-0-71" class="i">+            WireType.FIXED64, WireType.FIXED32 -&gt; {
+</a><a href="#h7-0-72" id="h7-0-72" class="i">+                when (wire.value) {
+</a><a href="#h7-0-73" id="h7-0-73" class="i">+                    is Int -&gt; {
+</a><a href="#h7-0-74" id="h7-0-74" class="i">+                        val bytes = ByteArray(4)
+</a><a href="#h7-0-75" id="h7-0-75" class="i">+                        for (i in 0..3) {
+</a><a href="#h7-0-76" id="h7-0-76" class="i">+                            bytes[i] = (wire.value shr (i * 8)).toByte()
+</a><a href="#h7-0-77" id="h7-0-77" class="i">+                        }
+</a><a href="#h7-0-78" id="h7-0-78" class="i">+                        stream.write(bytes)
+</a><a href="#h7-0-79" id="h7-0-79" class="i">+                    }
+</a><a href="#h7-0-80" id="h7-0-80" class="i">+                    is Long -&gt; {
+</a><a href="#h7-0-81" id="h7-0-81" class="i">+                        val bytes = ByteArray(8)
+</a><a href="#h7-0-82" id="h7-0-82" class="i">+                        for (i in 0..7) {
+</a><a href="#h7-0-83" id="h7-0-83" class="i">+                            bytes[i] = (wire.value shr (i * 8)).toByte()
+</a><a href="#h7-0-84" id="h7-0-84" class="i">+                        }
+</a><a href="#h7-0-85" id="h7-0-85" class="i">+                        stream.write(bytes)
+</a><a href="#h7-0-86" id="h7-0-86" class="i">+                    }
+</a><a href="#h7-0-87" id="h7-0-87" class="i">+                    is ByteArray -&gt; stream.write(wire.value)
+</a><a href="#h7-0-88" id="h7-0-88" class="i">+                }
+</a><a href="#h7-0-89" id="h7-0-89" class="i">+            }
+</a><a href="#h7-0-90" id="h7-0-90" class="i">+            WireType.LENGTH_DELIMITED -&gt; {
+</a><a href="#h7-0-91" id="h7-0-91" class="i">+                val value = wire.value as ByteArray
+</a><a href="#h7-0-92" id="h7-0-92" class="i">+                writeVarInt(value.size)
+</a><a href="#h7-0-93" id="h7-0-93" class="i">+                stream.write(value)
+</a><a href="#h7-0-94" id="h7-0-94" class="i">+            }
+</a><a href="#h7-0-95" id="h7-0-95" class="i">+            WireType.START_GROUP -&gt; {
+</a><a href="#h7-0-96" id="h7-0-96" class="i">+                val value = wire.value as ByteArray
+</a><a href="#h7-0-97" id="h7-0-97" class="i">+                stream.write(value)
+</a><a href="#h7-0-98" id="h7-0-98" class="i">+            }
+</a><a href="#h7-0-99" id="h7-0-99" class="i">+            WireType.END_GROUP -&gt; return
+</a><a href="#h7-0-100" id="h7-0-100" class="i">+        }
+</a><a href="#h7-0-101" id="h7-0-101" class="i">+    }
+</a><a href="#h7-0-102" id="h7-0-102" class="i">+
+</a>     fun toByteArray(): ByteArray {
+         return stream.toByteArray()
+     }
+<b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/WireType.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/WireType.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/WireType.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/WireType.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -0,0 +1,14 @@
+</a><a href="#h8-0-0" id="h8-0-0" class="i">+package me.rhunk.snapenhance.util.protobuf;
+</a><a href="#h8-0-1" id="h8-0-1" class="i">+
+</a><a href="#h8-0-2" id="h8-0-2" class="i">+enum class WireType(val value: Int) {
+</a><a href="#h8-0-3" id="h8-0-3" class="i">+    VARINT(0),
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+    FIXED64(1),
+</a><a href="#h8-0-5" id="h8-0-5" class="i">+    LENGTH_DELIMITED(2),
+</a><a href="#h8-0-6" id="h8-0-6" class="i">+    START_GROUP(3),
+</a><a href="#h8-0-7" id="h8-0-7" class="i">+    END_GROUP(4),
+</a><a href="#h8-0-8" id="h8-0-8" class="i">+    FIXED32(5);
+</a><a href="#h8-0-9" id="h8-0-9" class="i">+
+</a><a href="#h8-0-10" id="h8-0-10" class="i">+    companion object {
+</a><a href="#h8-0-11" id="h8-0-11" class="i">+        fun fromValue(value: Int) = values().firstOrNull { it.value == value }
+</a><a href="#h8-0-12" id="h8-0-12" class="i">+    }
+</a><a href="#h8-0-13" id="h8-0-13" class="i">+}
+</a><b>diff --git a/<a id="h9" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/snap/EncryptionHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/EncryptionHelper.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/snap/EncryptionHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/EncryptionHelper.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -13,12 +13,12 @@ import javax.crypto.spec.SecretKeySpec
+</a> object EncryptionHelper {
+     fun getEncryptionKeys(contentType: ContentType, messageProto: ProtoReader, isArroyo: Boolean): Pair&lt;ByteArray, ByteArray&gt;? {
+         val messageMediaInfo = MediaDownloaderHelper.getMessageMediaInfo(messageProto, contentType, isArroyo) ?: return null
+<a href="#h9-0-3" id="h9-0-3" class="d">-        val encryptionProtoIndex = if (messageMediaInfo.exists(Constants.ENCRYPTION_PROTO_INDEX_V2)) {
+</a><a href="#h9-0-4" id="h9-0-4" class="i">+        val encryptionProtoIndex = if (messageMediaInfo.contains(Constants.ENCRYPTION_PROTO_INDEX_V2)) {
+</a>             Constants.ENCRYPTION_PROTO_INDEX_V2
+         } else {
+             Constants.ENCRYPTION_PROTO_INDEX
+         }
+<a href="#h9-0-9" id="h9-0-9" class="d">-        val encryptionProto = messageMediaInfo.readPath(encryptionProtoIndex) ?: return null
+</a><a href="#h9-0-10" id="h9-0-10" class="i">+        val encryptionProto = messageMediaInfo.followPath(encryptionProtoIndex) ?: return null
+</a> 
+         var key: ByteArray = encryptionProto.getByteArray(1)!!
+         var iv: ByteArray = encryptionProto.getByteArray(2)!!
+<b>diff --git a/<a id="h10" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -19,12 +19,12 @@ import java.util.zip.ZipInputStream
+</a> 
+ object MediaDownloaderHelper {
+     fun getMessageMediaInfo(protoReader: ProtoReader, contentType: ContentType, isArroyo: Boolean): ProtoReader? {
+<a href="#h10-0-3" id="h10-0-3" class="d">-        val messageContainerPath = if (isArroyo) protoReader.readPath(*Constants.ARROYO_MEDIA_CONTAINER_PROTO_PATH)!! else protoReader
+</a><a href="#h10-0-4" id="h10-0-4" class="i">+        val messageContainerPath = if (isArroyo) protoReader.followPath(*Constants.ARROYO_MEDIA_CONTAINER_PROTO_PATH)!! else protoReader
+</a>         val mediaContainerPath = if (contentType == ContentType.NOTE) intArrayOf(6, 1, 1) else intArrayOf(5, 1, 1)
+ 
+         return when (contentType) {
+<a href="#h10-0-8" id="h10-0-8" class="d">-            ContentType.NOTE -&gt; messageContainerPath.readPath(*mediaContainerPath)
+</a><a href="#h10-0-9" id="h10-0-9" class="d">-            ContentType.SNAP -&gt; messageContainerPath.readPath(*(intArrayOf(11) + mediaContainerPath))
+</a><a href="#h10-0-10" id="h10-0-10" class="i">+            ContentType.NOTE -&gt; messageContainerPath.followPath(*mediaContainerPath)
+</a><a href="#h10-0-11" id="h10-0-11" class="i">+            ContentType.SNAP -&gt; messageContainerPath.followPath(*(intArrayOf(11) + mediaContainerPath))
+</a>             ContentType.EXTERNAL_MEDIA -&gt; {
+                 val externalMediaTypes = arrayOf(
+                     intArrayOf(3, 3), //normal external media
+<a href="#h10-1" id="h10-1" class="h">@@ -32,7 +32,7 @@ object MediaDownloaderHelper {
+</a>                     intArrayOf(7, 3) //original story reply
+                 )
+                 externalMediaTypes.forEach { path -&gt;
+<a href="#h10-1-3" id="h10-1-3" class="d">-                    messageContainerPath.readPath(*(path + mediaContainerPath))?.also { return it }
+</a><a href="#h10-1-4" id="h10-1-4" class="i">+                    messageContainerPath.followPath(*(path + mediaContainerPath))?.also { return it }
+</a>                 }
+                 null
+             }
+</pre>
+</div>
+</body>
+</html>

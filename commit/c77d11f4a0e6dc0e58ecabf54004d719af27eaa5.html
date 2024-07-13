@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(experimental): account switcher - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/c77d11f4a0e6dc0e58ecabf54004d719af27eaa5.html">c77d11f4a0e6dc0e58ecabf54004d719af27eaa5</a>
+<b>parent</b> <a href="../commit/b4f6e4f3bdeba0c48fa2eacd1a865a8717149d04.html">b4f6e4f3bdeba0c48fa2eacd1a865a8717149d04</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat,  9 Mar 2024 15:03:35 +0100
+
+feat(experimental): account switcher
+
+<b>Diffstat:</b>
+<table><tr><td class="A">A</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/RemoteAccountStorage.kt</a></td><td> | </td><td class="num">51</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h3">common/src/main/aidl/me/rhunk/snapenhance/bridge/AccountStorage.aidl</a></td><td> | </td><td class="num">11</td><td><span class="i">+++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">common/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl</a></td><td> | </td><td class="num">3</td><td><span class="i">+++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">10</td><td><span class="i">++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></td><td> | </td><td class="num">5</td><td><span class="i">+++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">+++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/AccountSwitcher.kt</a></td><td> | </td><td class="num">528</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">core/src/main/kotlin/me/rhunk/snapenhance/core/util/ktx/AndroidExt.kt</a></td><td> | </td><td class="num">25</td><td><span class="i">+++++++++++++++++++++++</span><span class="d">--</span></td></tr>
+</table></pre><pre>11 files changed, 637 insertions(+), 2 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteAccountStorage.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteAccountStorage.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteAccountStorage.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteAccountStorage.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -0,0 +1,50 @@
+</a><a href="#h0-0-0" id="h0-0-0" class="i">+package me.rhunk.snapenhance
+</a><a href="#h0-0-1" id="h0-0-1" class="i">+
+</a><a href="#h0-0-2" id="h0-0-2" class="i">+import android.os.ParcelFileDescriptor
+</a><a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.bridge.AccountStorage
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+import me.rhunk.snapenhance.core.util.ktx.toParcelFileDescriptor
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+class RemoteAccountStorage(
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+    private val context: RemoteSideContext
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+): AccountStorage.Stub() {
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+    private val accountFolder = context.androidContext.filesDir.resolve(&quot;accounts&quot;).also {
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+        if (!it.exists()) it.mkdirs()
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+    }
+</a><a href="#h0-0-12" id="h0-0-12" class="i">+
+</a><a href="#h0-0-13" id="h0-0-13" class="i">+    override fun getAccounts(): Map&lt;String, String&gt; {
+</a><a href="#h0-0-14" id="h0-0-14" class="i">+        return accountFolder.listFiles()?.sortedByDescending { it.lastModified() }?.mapNotNull { file -&gt;
+</a><a href="#h0-0-15" id="h0-0-15" class="i">+            if (!file.name.endsWith(&quot;.zip&quot;) || !file.name.contains(&quot;|&quot;)) return@mapNotNull null
+</a><a href="#h0-0-16" id="h0-0-16" class="i">+            file.nameWithoutExtension.split(&#39;|&#39;).let { it[0] to it[1] }
+</a><a href="#h0-0-17" id="h0-0-17" class="i">+        }?.toMap() ?: emptyMap()
+</a><a href="#h0-0-18" id="h0-0-18" class="i">+    }
+</a><a href="#h0-0-19" id="h0-0-19" class="i">+
+</a><a href="#h0-0-20" id="h0-0-20" class="i">+    override fun addAccount(userId: String, username: String, pfd: ParcelFileDescriptor) {
+</a><a href="#h0-0-21" id="h0-0-21" class="i">+        removeAccount(userId)
+</a><a href="#h0-0-22" id="h0-0-22" class="i">+        accountFolder.resolve(&quot;$userId|$username.zip&quot;).outputStream().use { fileOutputStream -&gt;
+</a><a href="#h0-0-23" id="h0-0-23" class="i">+            ParcelFileDescriptor.AutoCloseInputStream(pfd).use {
+</a><a href="#h0-0-24" id="h0-0-24" class="i">+                it.copyTo(fileOutputStream)
+</a><a href="#h0-0-25" id="h0-0-25" class="i">+            }
+</a><a href="#h0-0-26" id="h0-0-26" class="i">+        }
+</a><a href="#h0-0-27" id="h0-0-27" class="i">+    }
+</a><a href="#h0-0-28" id="h0-0-28" class="i">+
+</a><a href="#h0-0-29" id="h0-0-29" class="i">+    override fun removeAccount(userId: String) {
+</a><a href="#h0-0-30" id="h0-0-30" class="i">+        accountFolder.listFiles()?.firstOrNull {
+</a><a href="#h0-0-31" id="h0-0-31" class="i">+            it.nameWithoutExtension.startsWith(userId)
+</a><a href="#h0-0-32" id="h0-0-32" class="i">+        }?.also {
+</a><a href="#h0-0-33" id="h0-0-33" class="i">+            context.log.verbose(&quot;Removing account file: ${it.name}&quot;)
+</a><a href="#h0-0-34" id="h0-0-34" class="i">+            it.delete()
+</a><a href="#h0-0-35" id="h0-0-35" class="i">+        }
+</a><a href="#h0-0-36" id="h0-0-36" class="i">+    }
+</a><a href="#h0-0-37" id="h0-0-37" class="i">+
+</a><a href="#h0-0-38" id="h0-0-38" class="i">+    override fun isAccountExists(userId: String): Boolean {
+</a><a href="#h0-0-39" id="h0-0-39" class="i">+        return accountFolder.listFiles()?.any {
+</a><a href="#h0-0-40" id="h0-0-40" class="i">+            it.nameWithoutExtension.startsWith(userId)
+</a><a href="#h0-0-41" id="h0-0-41" class="i">+        } ?: false
+</a><a href="#h0-0-42" id="h0-0-42" class="i">+    }
+</a><a href="#h0-0-43" id="h0-0-43" class="i">+
+</a><a href="#h0-0-44" id="h0-0-44" class="i">+    override fun getAccountData(userId: String): ParcelFileDescriptor? {
+</a><a href="#h0-0-45" id="h0-0-45" class="i">+        return accountFolder.listFiles()?.firstOrNull {
+</a><a href="#h0-0-46" id="h0-0-46" class="i">+            it.nameWithoutExtension.startsWith(userId)
+</a><a href="#h0-0-47" id="h0-0-47" class="i">+        }?.inputStream()?.toParcelFileDescriptor(context.coroutineScope)
+</a><a href="#h0-0-48" id="h0-0-48" class="i">+    }
+</a><a href="#h0-0-49" id="h0-0-49" class="i">+}</a><a href="#h0-0-50" id="h0-0-50" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -71,6 +71,7 @@ class RemoteSideContext(
+</a>     val e2eeImplementation = E2EEImplementation(this)
+     val messageLogger by lazy { LoggerWrapper(androidContext.getDatabasePath(BridgeFileType.MESSAGE_LOGGER_DATABASE.fileName)) }
+     val tracker = RemoteTracker(this)
+<a href="#h1-0-3" id="h1-0-3" class="i">+    val accountStorage = RemoteAccountStorage(this)
+</a> 
+     //used to load bitmoji selfies and download previews
+     val imageLoader by lazy {
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -178,6 +178,7 @@ class BridgeService : Service() {
+</a>         override fun getE2eeInterface() = remoteSideContext.e2eeImplementation
+         override fun getLogger() = remoteSideContext.messageLogger
+         override fun getTracker() = remoteSideContext.tracker
+<a href="#h2-0-3" id="h2-0-3" class="i">+        override fun getAccountStorage() = remoteSideContext.accountStorage
+</a>         override fun registerMessagingBridge(bridge: MessagingBridge) {
+             messagingBridge = bridge
+         }
+<b>diff --git a/<a id="h3" href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/AccountStorage.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/AccountStorage.aidl</a> b/<a href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/AccountStorage.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/AccountStorage.aidl</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -0,0 +1,10 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="i">+package me.rhunk.snapenhance.bridge;
+</a><a href="#h3-0-1" id="h3-0-1" class="i">+
+</a><a href="#h3-0-2" id="h3-0-2" class="i">+
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+interface AccountStorage {
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+    Map&lt;String, String&gt; getAccounts(); // userId -&gt; username
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+    void addAccount(String userId, String username, in ParcelFileDescriptor data);
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+    void removeAccount(String userId);
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+    boolean isAccountExists(String userId);
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+    @nullable ParcelFileDescriptor getAccountData(String userId);
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+}</a><a href="#h3-0-10" id="h3-0-10" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h4" href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl</a> b/<a href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -9,6 +9,7 @@ import me.rhunk.snapenhance.bridge.logger.LoggerInterface;
+</a> import me.rhunk.snapenhance.bridge.logger.TrackerInterface;
+ import me.rhunk.snapenhance.bridge.ConfigStateListener;
+ import me.rhunk.snapenhance.bridge.snapclient.MessagingBridge;
+<a href="#h4-0-3" id="h4-0-3" class="i">+import me.rhunk.snapenhance.bridge.AccountStorage;
+</a> 
+ interface BridgeInterface {
+     /**
+<a href="#h4-1" id="h4-1" class="h">@@ -84,6 +85,8 @@ interface BridgeInterface {
+</a> 
+     TrackerInterface getTracker();
+ 
+<a href="#h4-1-3" id="h4-1-3" class="i">+    AccountStorage getAccountStorage();
+</a><a href="#h4-1-4" id="h4-1-4" class="i">+
+</a>     oneway void registerMessagingBridge(MessagingBridge bridge);
+ 
+     oneway void openSettingsOverlay();
+<b>diff --git a/<a id="h5" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -690,6 +690,16 @@
+</a>                         &quot;name&quot;: &quot;Call Recorder&quot;,
+                         &quot;description&quot;: &quot;Automatically records audio calls&quot;
+                     },
+<a href="#h5-0-3" id="h5-0-3" class="i">+                    &quot;account_switcher&quot;: {
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+                        &quot;name&quot;: &quot;Account Switcher&quot;,
+</a><a href="#h5-0-5" id="h5-0-5" class="i">+                        &quot;description&quot;: &quot;Allows you to switch between accounts without logging out\nLong press on the search icon next to your Bitmoji profile to open the menu\nNote: this feature is experimental and will likely change in the future&quot;,
+</a><a href="#h5-0-6" id="h5-0-6" class="i">+                        &quot;properties&quot;: {
+</a><a href="#h5-0-7" id="h5-0-7" class="i">+                            &quot;auto_backup_current_account&quot;: {
+</a><a href="#h5-0-8" id="h5-0-8" class="i">+                                &quot;name&quot;: &quot;Auto Backup Current Account&quot;,
+</a><a href="#h5-0-9" id="h5-0-9" class="i">+                                &quot;description&quot;: &quot;Automatically backs up the current account when logging out or switching accounts&quot;
+</a><a href="#h5-0-10" id="h5-0-10" class="i">+                            }
+</a><a href="#h5-0-11" id="h5-0-11" class="i">+                        }
+</a><a href="#h5-0-12" id="h5-0-12" class="i">+                    },
+</a>                     &quot;app_passcode&quot;: {
+                         &quot;name&quot;: &quot;App Passcode&quot;,
+                         &quot;description&quot;: &quot;Sets a passcode to lock the app&quot;
+<b>diff --git a/<a id="h6" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -18,6 +18,10 @@ class Experimental : ConfigContainer() {
+</a>         val forceMessageEncryption = boolean(&quot;force_message_encryption&quot;)
+     }
+ 
+<a href="#h6-0-3" id="h6-0-3" class="i">+    class AccountSwitcherConfig : ConfigContainer(hasGlobalState = true) {
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+        val autoBackupCurrentAccount = boolean(&quot;auto_backup_current_account&quot;, defaultValue = true)
+</a><a href="#h6-0-5" id="h6-0-5" class="i">+    }
+</a><a href="#h6-0-6" id="h6-0-6" class="i">+
+</a>     val nativeHooks = container(&quot;native_hooks&quot;, NativeHooks()) { icon = &quot;Memory&quot;; requireRestart() }
+     val sessionEvents = container(&quot;session_events&quot;, SessionEventsConfig()) { requireRestart(); nativeHooks() }
+     val spoof = container(&quot;spoof&quot;, Spoof()) { icon = &quot;Fingerprint&quot; ; addNotices(FeatureNotice.BAN_RISK); requireRestart() }
+<a href="#h6-1" id="h6-1" class="h">@@ -25,6 +29,7 @@ class Experimental : ConfigContainer() {
+</a>     val newChatActionMenu = boolean(&quot;new_chat_action_menu&quot;) { requireRestart() }
+     val storyLogger = boolean(&quot;story_logger&quot;) { requireRestart(); addNotices(FeatureNotice.UNSTABLE); }
+     val callRecorder = boolean(&quot;call_recorder&quot;) { requireRestart(); addNotices(FeatureNotice.UNSTABLE); }
+<a href="#h6-1-3" id="h6-1-3" class="i">+    val accountSwitcher = container(&quot;account_switcher&quot;, AccountSwitcherConfig()) { requireRestart(); addNotices(FeatureNotice.UNSTABLE) }
+</a>     val appPasscode = string(&quot;app_passcode&quot;)
+     val appLockOnResume = boolean(&quot;app_lock_on_resume&quot;)
+     val infiniteStoryBoost = boolean(&quot;infinite_story_boost&quot;)
+<b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -11,6 +11,7 @@ import android.os.Handler
+</a> import android.os.HandlerThread
+ import android.os.IBinder
+ import de.robv.android.xposed.XposedHelpers
+<a href="#h7-0-3" id="h7-0-3" class="i">+import me.rhunk.snapenhance.bridge.AccountStorage
+</a> import me.rhunk.snapenhance.bridge.BridgeInterface
+ import me.rhunk.snapenhance.bridge.ConfigStateListener
+ import me.rhunk.snapenhance.bridge.DownloadCallback
+<a href="#h7-1" id="h7-1" class="h">@@ -200,6 +201,8 @@ class BridgeClient(
+</a> 
+     fun getTracker(): TrackerInterface = safeServiceCall { service.tracker }
+ 
+<a href="#h7-1-3" id="h7-1-3" class="i">+    fun getAccountStorage(): AccountStorage = safeServiceCall { service.accountStorage }
+</a><a href="#h7-1-4" id="h7-1-4" class="i">+
+</a>     fun registerMessagingBridge(bridge: MessagingBridge) = safeServiceCall { service.registerMessagingBridge(bridge) }
+ 
+     fun openSettingsOverlay() = safeServiceCall { service.openSettingsOverlay() }
+<b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/AccountSwitcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/AccountSwitcher.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/AccountSwitcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/AccountSwitcher.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -0,0 +1,527 @@
+</a><a href="#h8-0-0" id="h8-0-0" class="i">+package me.rhunk.snapenhance.core.features.impl.experiments
+</a><a href="#h8-0-1" id="h8-0-1" class="i">+
+</a><a href="#h8-0-2" id="h8-0-2" class="i">+import android.annotation.SuppressLint
+</a><a href="#h8-0-3" id="h8-0-3" class="i">+import android.app.Activity
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+import android.content.Intent
+</a><a href="#h8-0-5" id="h8-0-5" class="i">+import android.database.sqlite.SQLiteDatabase
+</a><a href="#h8-0-6" id="h8-0-6" class="i">+import android.net.Uri
+</a><a href="#h8-0-7" id="h8-0-7" class="i">+import android.os.ParcelFileDescriptor
+</a><a href="#h8-0-8" id="h8-0-8" class="i">+import android.widget.Button
+</a><a href="#h8-0-9" id="h8-0-9" class="i">+import android.widget.FrameLayout
+</a><a href="#h8-0-10" id="h8-0-10" class="i">+import androidx.compose.foundation.layout.Arrangement
+</a><a href="#h8-0-11" id="h8-0-11" class="i">+import androidx.compose.foundation.layout.Column
+</a><a href="#h8-0-12" id="h8-0-12" class="i">+import androidx.compose.foundation.layout.Row
+</a><a href="#h8-0-13" id="h8-0-13" class="i">+import androidx.compose.foundation.layout.fillMaxWidth
+</a><a href="#h8-0-14" id="h8-0-14" class="i">+import androidx.compose.foundation.layout.padding
+</a><a href="#h8-0-15" id="h8-0-15" class="i">+import androidx.compose.foundation.lazy.LazyColumn
+</a><a href="#h8-0-16" id="h8-0-16" class="i">+import androidx.compose.foundation.lazy.items
+</a><a href="#h8-0-17" id="h8-0-17" class="i">+import androidx.compose.material.icons.Icons
+</a><a href="#h8-0-18" id="h8-0-18" class="i">+import androidx.compose.material.icons.filled.Delete
+</a><a href="#h8-0-19" id="h8-0-19" class="i">+import androidx.compose.material.icons.filled.SaveAlt
+</a><a href="#h8-0-20" id="h8-0-20" class="i">+import androidx.compose.material3.*
+</a><a href="#h8-0-21" id="h8-0-21" class="i">+import androidx.compose.runtime.*
+</a><a href="#h8-0-22" id="h8-0-22" class="i">+import androidx.compose.ui.Alignment
+</a><a href="#h8-0-23" id="h8-0-23" class="i">+import androidx.compose.ui.Modifier
+</a><a href="#h8-0-24" id="h8-0-24" class="i">+import androidx.compose.ui.text.style.TextAlign
+</a><a href="#h8-0-25" id="h8-0-25" class="i">+import androidx.compose.ui.unit.dp
+</a><a href="#h8-0-26" id="h8-0-26" class="i">+import androidx.compose.ui.unit.sp
+</a><a href="#h8-0-27" id="h8-0-27" class="i">+import kotlinx.coroutines.Dispatchers
+</a><a href="#h8-0-28" id="h8-0-28" class="i">+import kotlinx.coroutines.launch
+</a><a href="#h8-0-29" id="h8-0-29" class="i">+import kotlinx.coroutines.withContext
+</a><a href="#h8-0-30" id="h8-0-30" class="i">+import me.rhunk.snapenhance.common.data.FileType
+</a><a href="#h8-0-31" id="h8-0-31" class="i">+import me.rhunk.snapenhance.common.ui.AppMaterialTheme
+</a><a href="#h8-0-32" id="h8-0-32" class="i">+import me.rhunk.snapenhance.common.ui.createComposeAlertDialog
+</a><a href="#h8-0-33" id="h8-0-33" class="i">+import me.rhunk.snapenhance.common.util.snap.MediaDownloaderHelper
+</a><a href="#h8-0-34" id="h8-0-34" class="i">+import me.rhunk.snapenhance.core.event.events.impl.AddViewEvent
+</a><a href="#h8-0-35" id="h8-0-35" class="i">+import me.rhunk.snapenhance.core.features.Feature
+</a><a href="#h8-0-36" id="h8-0-36" class="i">+import me.rhunk.snapenhance.core.features.FeatureLoadParams
+</a><a href="#h8-0-37" id="h8-0-37" class="i">+import me.rhunk.snapenhance.core.util.hook.HookStage
+</a><a href="#h8-0-38" id="h8-0-38" class="i">+import me.rhunk.snapenhance.core.util.hook.hook
+</a><a href="#h8-0-39" id="h8-0-39" class="i">+import me.rhunk.snapenhance.core.util.ktx.getId
+</a><a href="#h8-0-40" id="h8-0-40" class="i">+import me.rhunk.snapenhance.core.util.ktx.toParcelFileDescriptor
+</a><a href="#h8-0-41" id="h8-0-41" class="i">+import me.rhunk.snapenhance.core.util.ktx.vibrateLongPress
+</a><a href="#h8-0-42" id="h8-0-42" class="i">+import java.io.File
+</a><a href="#h8-0-43" id="h8-0-43" class="i">+import java.util.zip.ZipEntry
+</a><a href="#h8-0-44" id="h8-0-44" class="i">+import java.util.zip.ZipInputStream
+</a><a href="#h8-0-45" id="h8-0-45" class="i">+import java.util.zip.ZipOutputStream
+</a><a href="#h8-0-46" id="h8-0-46" class="i">+import kotlin.random.Random
+</a><a href="#h8-0-47" id="h8-0-47" class="i">+
+</a><a href="#h8-0-48" id="h8-0-48" class="i">+class AccountSwitcher: Feature(&quot;Account Switcher&quot;, loadParams = FeatureLoadParams.INIT_SYNC or FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+</a><a href="#h8-0-49" id="h8-0-49" class="i">+    private var activity: Activity? = null
+</a><a href="#h8-0-50" id="h8-0-50" class="i">+    private var exportCallback: Pair&lt;Int, String&gt;? = null // requestCode -&gt; userId
+</a><a href="#h8-0-51" id="h8-0-51" class="i">+    private var importRequestCode: Int? = null
+</a><a href="#h8-0-52" id="h8-0-52" class="i">+
+</a><a href="#h8-0-53" id="h8-0-53" class="i">+    private val users = mutableStateListOf&lt;Pair&lt;String, String&gt;&gt;()
+</a><a href="#h8-0-54" id="h8-0-54" class="i">+    private val isLoggingActivity get() = activity?.javaClass?.name?.endsWith(&quot;LoginSignupActivity&quot;) == true
+</a><a href="#h8-0-55" id="h8-0-55" class="i">+
+</a><a href="#h8-0-56" id="h8-0-56" class="i">+    private fun updateUsers() {
+</a><a href="#h8-0-57" id="h8-0-57" class="i">+        users.clear()
+</a><a href="#h8-0-58" id="h8-0-58" class="i">+        runCatching {
+</a><a href="#h8-0-59" id="h8-0-59" class="i">+            users.addAll(context.bridgeClient.getAccountStorage().accounts.map { it.key to it.value })
+</a><a href="#h8-0-60" id="h8-0-60" class="i">+        }.onFailure {
+</a><a href="#h8-0-61" id="h8-0-61" class="i">+            context.log.error(&quot;Failed to update users&quot;, it)
+</a><a href="#h8-0-62" id="h8-0-62" class="i">+        }
+</a><a href="#h8-0-63" id="h8-0-63" class="i">+    }
+</a><a href="#h8-0-64" id="h8-0-64" class="i">+
+</a><a href="#h8-0-65" id="h8-0-65" class="i">+    @Composable
+</a><a href="#h8-0-66" id="h8-0-66" class="i">+    private fun ManagementPopup() {
+</a><a href="#h8-0-67" id="h8-0-67" class="i">+        LaunchedEffect(Unit) {
+</a><a href="#h8-0-68" id="h8-0-68" class="i">+            withContext(Dispatchers.IO) {
+</a><a href="#h8-0-69" id="h8-0-69" class="i">+                updateUsers()
+</a><a href="#h8-0-70" id="h8-0-70" class="i">+            }
+</a><a href="#h8-0-71" id="h8-0-71" class="i">+        }
+</a><a href="#h8-0-72" id="h8-0-72" class="i">+
+</a><a href="#h8-0-73" id="h8-0-73" class="i">+
+</a><a href="#h8-0-74" id="h8-0-74" class="i">+        Column(
+</a><a href="#h8-0-75" id="h8-0-75" class="i">+            verticalArrangement = Arrangement.SpaceBetween,
+</a><a href="#h8-0-76" id="h8-0-76" class="i">+        ) {
+</a><a href="#h8-0-77" id="h8-0-77" class="i">+            Text(&quot;Account Switcher&quot;, modifier = Modifier
+</a><a href="#h8-0-78" id="h8-0-78" class="i">+                .padding(16.dp)
+</a><a href="#h8-0-79" id="h8-0-79" class="i">+                .fillMaxWidth(), textAlign = TextAlign.Center, fontSize = 25.sp)
+</a><a href="#h8-0-80" id="h8-0-80" class="i">+
+</a><a href="#h8-0-81" id="h8-0-81" class="i">+            LazyColumn(
+</a><a href="#h8-0-82" id="h8-0-82" class="i">+                modifier = Modifier
+</a><a href="#h8-0-83" id="h8-0-83" class="i">+                    .fillMaxWidth()
+</a><a href="#h8-0-84" id="h8-0-84" class="i">+                    .weight(1f)
+</a><a href="#h8-0-85" id="h8-0-85" class="i">+            ) {
+</a><a href="#h8-0-86" id="h8-0-86" class="i">+                item {
+</a><a href="#h8-0-87" id="h8-0-87" class="i">+                    if (users.isEmpty()) {
+</a><a href="#h8-0-88" id="h8-0-88" class="i">+                        Text(&quot;No accounts found! To start, backup your current account.&quot;, modifier = Modifier
+</a><a href="#h8-0-89" id="h8-0-89" class="i">+                            .padding(16.dp)
+</a><a href="#h8-0-90" id="h8-0-90" class="i">+                            .padding(16.dp)
+</a><a href="#h8-0-91" id="h8-0-91" class="i">+                            .fillMaxWidth(), textAlign = TextAlign.Center)
+</a><a href="#h8-0-92" id="h8-0-92" class="i">+                    }
+</a><a href="#h8-0-93" id="h8-0-93" class="i">+                }
+</a><a href="#h8-0-94" id="h8-0-94" class="i">+
+</a><a href="#h8-0-95" id="h8-0-95" class="i">+                items(users) { user -&gt;
+</a><a href="#h8-0-96" id="h8-0-96" class="i">+                    var removeAccountPopup by remember { mutableStateOf(false) }
+</a><a href="#h8-0-97" id="h8-0-97" class="i">+
+</a><a href="#h8-0-98" id="h8-0-98" class="i">+                    Card(
+</a><a href="#h8-0-99" id="h8-0-99" class="i">+                        modifier = Modifier
+</a><a href="#h8-0-100" id="h8-0-100" class="i">+                            .fillMaxWidth()
+</a><a href="#h8-0-101" id="h8-0-101" class="i">+                            .padding(5.dp),
+</a><a href="#h8-0-102" id="h8-0-102" class="i">+                        colors = CardDefaults.cardColors(
+</a><a href="#h8-0-103" id="h8-0-103" class="i">+                            containerColor = if (!isLoggingActivity &amp;&amp; context.database.myUserId == user.first) MaterialTheme.colorScheme.surfaceBright
+</a><a href="#h8-0-104" id="h8-0-104" class="i">+                            else MaterialTheme.colorScheme.surfaceDim
+</a><a href="#h8-0-105" id="h8-0-105" class="i">+                        ) ,
+</a><a href="#h8-0-106" id="h8-0-106" class="i">+                        onClick = {
+</a><a href="#h8-0-107" id="h8-0-107" class="i">+                            runCatching {
+</a><a href="#h8-0-108" id="h8-0-108" class="i">+                                if (!isLoggingActivity &amp;&amp; context.database.myUserId == user.first) {
+</a><a href="#h8-0-109" id="h8-0-109" class="i">+                                    context.shortToast(&quot;Already logged in as ${user.second}&quot;)
+</a><a href="#h8-0-110" id="h8-0-110" class="i">+                                    return@runCatching
+</a><a href="#h8-0-111" id="h8-0-111" class="i">+                                }
+</a><a href="#h8-0-112" id="h8-0-112" class="i">+
+</a><a href="#h8-0-113" id="h8-0-113" class="i">+                                if (!isLoggingActivity &amp;&amp; context.config.experimental.accountSwitcher.autoBackupCurrentAccount.get()) {
+</a><a href="#h8-0-114" id="h8-0-114" class="i">+                                    backupCurrentAccount()
+</a><a href="#h8-0-115" id="h8-0-115" class="i">+                                }
+</a><a href="#h8-0-116" id="h8-0-116" class="i">+
+</a><a href="#h8-0-117" id="h8-0-117" class="i">+                                login(userId = user.first, username = user.second)
+</a><a href="#h8-0-118" id="h8-0-118" class="i">+                            }.onFailure {
+</a><a href="#h8-0-119" id="h8-0-119" class="i">+                                context.shortToast(&quot;Failed to login. Check logs for more info.&quot;)
+</a><a href="#h8-0-120" id="h8-0-120" class="i">+                                context.log.error(&quot;Failed to login&quot;, it)
+</a><a href="#h8-0-121" id="h8-0-121" class="i">+                            }
+</a><a href="#h8-0-122" id="h8-0-122" class="i">+                        }
+</a><a href="#h8-0-123" id="h8-0-123" class="i">+                    ) {
+</a><a href="#h8-0-124" id="h8-0-124" class="i">+                        Row(
+</a><a href="#h8-0-125" id="h8-0-125" class="i">+                            modifier = Modifier.fillMaxWidth(),
+</a><a href="#h8-0-126" id="h8-0-126" class="i">+                            verticalAlignment = Alignment.CenterVertically
+</a><a href="#h8-0-127" id="h8-0-127" class="i">+                        ) {
+</a><a href="#h8-0-128" id="h8-0-128" class="i">+                            Text(user.second, modifier = Modifier
+</a><a href="#h8-0-129" id="h8-0-129" class="i">+                                .padding(10.dp)
+</a><a href="#h8-0-130" id="h8-0-130" class="i">+                                .weight(1f))
+</a><a href="#h8-0-131" id="h8-0-131" class="i">+                            Row(
+</a><a href="#h8-0-132" id="h8-0-132" class="i">+                                modifier = Modifier
+</a><a href="#h8-0-133" id="h8-0-133" class="i">+                                    .padding(3.dp),
+</a><a href="#h8-0-134" id="h8-0-134" class="i">+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+</a><a href="#h8-0-135" id="h8-0-135" class="i">+                            ) {
+</a><a href="#h8-0-136" id="h8-0-136" class="i">+                                FilledIconButton(onClick = {
+</a><a href="#h8-0-137" id="h8-0-137" class="i">+                                    val requestCode = Random.nextInt(100, 65535)
+</a><a href="#h8-0-138" id="h8-0-138" class="i">+                                    exportCallback = requestCode to user.first
+</a><a href="#h8-0-139" id="h8-0-139" class="i">+
+</a><a href="#h8-0-140" id="h8-0-140" class="i">+                                    activity?.startActivityForResult(
+</a><a href="#h8-0-141" id="h8-0-141" class="i">+                                        Intent.createChooser(
+</a><a href="#h8-0-142" id="h8-0-142" class="i">+                                            Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+</a><a href="#h8-0-143" id="h8-0-143" class="i">+                                                addCategory(Intent.CATEGORY_OPENABLE)
+</a><a href="#h8-0-144" id="h8-0-144" class="i">+                                                type = &quot;application/zip&quot;
+</a><a href="#h8-0-145" id="h8-0-145" class="i">+                                                putExtra(Intent.EXTRA_TITLE, &quot;account_${user.second}.zip&quot;)
+</a><a href="#h8-0-146" id="h8-0-146" class="i">+                                            },
+</a><a href="#h8-0-147" id="h8-0-147" class="i">+                                            &quot;Export account&quot;
+</a><a href="#h8-0-148" id="h8-0-148" class="i">+                                        ),
+</a><a href="#h8-0-149" id="h8-0-149" class="i">+                                        requestCode
+</a><a href="#h8-0-150" id="h8-0-150" class="i">+                                    )
+</a><a href="#h8-0-151" id="h8-0-151" class="i">+                                }) {
+</a><a href="#h8-0-152" id="h8-0-152" class="i">+                                    Icon(Icons.Default.SaveAlt, contentDescription = &quot;Export account&quot;)
+</a><a href="#h8-0-153" id="h8-0-153" class="i">+                                }
+</a><a href="#h8-0-154" id="h8-0-154" class="i">+                                FilledIconButton(onClick = {
+</a><a href="#h8-0-155" id="h8-0-155" class="i">+                                    removeAccountPopup = true
+</a><a href="#h8-0-156" id="h8-0-156" class="i">+                                }) {
+</a><a href="#h8-0-157" id="h8-0-157" class="i">+                                    Icon(Icons.Default.Delete, contentDescription = &quot;Remove account&quot;)
+</a><a href="#h8-0-158" id="h8-0-158" class="i">+                                }
+</a><a href="#h8-0-159" id="h8-0-159" class="i">+                            }
+</a><a href="#h8-0-160" id="h8-0-160" class="i">+                        }
+</a><a href="#h8-0-161" id="h8-0-161" class="i">+                    }
+</a><a href="#h8-0-162" id="h8-0-162" class="i">+
+</a><a href="#h8-0-163" id="h8-0-163" class="i">+                    if (removeAccountPopup) {
+</a><a href="#h8-0-164" id="h8-0-164" class="i">+                        AlertDialog(
+</a><a href="#h8-0-165" id="h8-0-165" class="i">+                            onDismissRequest = { removeAccountPopup = false },
+</a><a href="#h8-0-166" id="h8-0-166" class="i">+                            confirmButton = {
+</a><a href="#h8-0-167" id="h8-0-167" class="i">+                                Button(onClick = {
+</a><a href="#h8-0-168" id="h8-0-168" class="i">+                                    context.bridgeClient.getAccountStorage().removeAccount(user.first)
+</a><a href="#h8-0-169" id="h8-0-169" class="i">+                                    removeAccountPopup = false
+</a><a href="#h8-0-170" id="h8-0-170" class="i">+                                    updateUsers()
+</a><a href="#h8-0-171" id="h8-0-171" class="i">+                                }) {
+</a><a href="#h8-0-172" id="h8-0-172" class="i">+                                    Text(&quot;Remove&quot;)
+</a><a href="#h8-0-173" id="h8-0-173" class="i">+                                }
+</a><a href="#h8-0-174" id="h8-0-174" class="i">+                            },
+</a><a href="#h8-0-175" id="h8-0-175" class="i">+                            title = { Text(&quot;Remove account&quot;) },
+</a><a href="#h8-0-176" id="h8-0-176" class="i">+                            text = { Text(&quot;Are you sure you want to remove ${user.second}?&quot;) },
+</a><a href="#h8-0-177" id="h8-0-177" class="i">+                            dismissButton = {
+</a><a href="#h8-0-178" id="h8-0-178" class="i">+                                Button(onClick = {
+</a><a href="#h8-0-179" id="h8-0-179" class="i">+                                    removeAccountPopup = false
+</a><a href="#h8-0-180" id="h8-0-180" class="i">+                                }) {
+</a><a href="#h8-0-181" id="h8-0-181" class="i">+                                    Text(&quot;Cancel&quot;)
+</a><a href="#h8-0-182" id="h8-0-182" class="i">+                                }
+</a><a href="#h8-0-183" id="h8-0-183" class="i">+                            },
+</a><a href="#h8-0-184" id="h8-0-184" class="i">+                        )
+</a><a href="#h8-0-185" id="h8-0-185" class="i">+                    }
+</a><a href="#h8-0-186" id="h8-0-186" class="i">+                }
+</a><a href="#h8-0-187" id="h8-0-187" class="i">+            }
+</a><a href="#h8-0-188" id="h8-0-188" class="i">+
+</a><a href="#h8-0-189" id="h8-0-189" class="i">+            Column(
+</a><a href="#h8-0-190" id="h8-0-190" class="i">+                modifier = Modifier
+</a><a href="#h8-0-191" id="h8-0-191" class="i">+                    .fillMaxWidth()
+</a><a href="#h8-0-192" id="h8-0-192" class="i">+                    .padding(5.dp),
+</a><a href="#h8-0-193" id="h8-0-193" class="i">+                verticalArrangement = Arrangement.spacedBy(1.dp)
+</a><a href="#h8-0-194" id="h8-0-194" class="i">+            ) {
+</a><a href="#h8-0-195" id="h8-0-195" class="i">+                Button(
+</a><a href="#h8-0-196" id="h8-0-196" class="i">+                    modifier = Modifier.fillMaxWidth(),
+</a><a href="#h8-0-197" id="h8-0-197" class="i">+                    onClick = {
+</a><a href="#h8-0-198" id="h8-0-198" class="i">+                        activity?.startActivityForResult(
+</a><a href="#h8-0-199" id="h8-0-199" class="i">+                            Intent.createChooser(
+</a><a href="#h8-0-200" id="h8-0-200" class="i">+                                Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+</a><a href="#h8-0-201" id="h8-0-201" class="i">+                                    addCategory(Intent.CATEGORY_OPENABLE)
+</a><a href="#h8-0-202" id="h8-0-202" class="i">+                                    type = &quot;application/zip&quot;
+</a><a href="#h8-0-203" id="h8-0-203" class="i">+                                },
+</a><a href="#h8-0-204" id="h8-0-204" class="i">+                                &quot;Import account&quot;
+</a><a href="#h8-0-205" id="h8-0-205" class="i">+                            ),
+</a><a href="#h8-0-206" id="h8-0-206" class="i">+                            Random.nextInt(100, 65535).also {
+</a><a href="#h8-0-207" id="h8-0-207" class="i">+                                importRequestCode = it
+</a><a href="#h8-0-208" id="h8-0-208" class="i">+                            }
+</a><a href="#h8-0-209" id="h8-0-209" class="i">+                        )
+</a><a href="#h8-0-210" id="h8-0-210" class="i">+                    }
+</a><a href="#h8-0-211" id="h8-0-211" class="i">+                ) {
+</a><a href="#h8-0-212" id="h8-0-212" class="i">+                    Text(&quot;Import account&quot;)
+</a><a href="#h8-0-213" id="h8-0-213" class="i">+                }
+</a><a href="#h8-0-214" id="h8-0-214" class="i">+
+</a><a href="#h8-0-215" id="h8-0-215" class="i">+                if (!isLoggingActivity) {
+</a><a href="#h8-0-216" id="h8-0-216" class="i">+                    Button(
+</a><a href="#h8-0-217" id="h8-0-217" class="i">+                        modifier = Modifier
+</a><a href="#h8-0-218" id="h8-0-218" class="i">+                            .fillMaxWidth(),
+</a><a href="#h8-0-219" id="h8-0-219" class="i">+                        onClick = {
+</a><a href="#h8-0-220" id="h8-0-220" class="i">+                            backupCurrentAccount()
+</a><a href="#h8-0-221" id="h8-0-221" class="i">+                            updateUsers()
+</a><a href="#h8-0-222" id="h8-0-222" class="i">+                        }
+</a><a href="#h8-0-223" id="h8-0-223" class="i">+                    ) {
+</a><a href="#h8-0-224" id="h8-0-224" class="i">+                        Text(&quot;Backup current account&quot;)
+</a><a href="#h8-0-225" id="h8-0-225" class="i">+                    }
+</a><a href="#h8-0-226" id="h8-0-226" class="i">+                    Button(
+</a><a href="#h8-0-227" id="h8-0-227" class="i">+                        modifier = Modifier
+</a><a href="#h8-0-228" id="h8-0-228" class="i">+                            .fillMaxWidth(),
+</a><a href="#h8-0-229" id="h8-0-229" class="i">+                        onClick = {
+</a><a href="#h8-0-230" id="h8-0-230" class="i">+                            if (context.config.experimental.accountSwitcher.autoBackupCurrentAccount.get()) {
+</a><a href="#h8-0-231" id="h8-0-231" class="i">+                                backupCurrentAccount()
+</a><a href="#h8-0-232" id="h8-0-232" class="i">+                            }
+</a><a href="#h8-0-233" id="h8-0-233" class="i">+                            logout()
+</a><a href="#h8-0-234" id="h8-0-234" class="i">+                        }
+</a><a href="#h8-0-235" id="h8-0-235" class="i">+                    ) {
+</a><a href="#h8-0-236" id="h8-0-236" class="i">+                        Text(&quot;Logout&quot;)
+</a><a href="#h8-0-237" id="h8-0-237" class="i">+                    }
+</a><a href="#h8-0-238" id="h8-0-238" class="i">+                }
+</a><a href="#h8-0-239" id="h8-0-239" class="i">+            }
+</a><a href="#h8-0-240" id="h8-0-240" class="i">+        }
+</a><a href="#h8-0-241" id="h8-0-241" class="i">+    }
+</a><a href="#h8-0-242" id="h8-0-242" class="i">+
+</a><a href="#h8-0-243" id="h8-0-243" class="i">+
+</a><a href="#h8-0-244" id="h8-0-244" class="i">+    private fun showManagementPopup() {
+</a><a href="#h8-0-245" id="h8-0-245" class="i">+        context.runOnUiThread {
+</a><a href="#h8-0-246" id="h8-0-246" class="i">+            createComposeAlertDialog(activity!!) {
+</a><a href="#h8-0-247" id="h8-0-247" class="i">+                AppMaterialTheme(isDarkTheme = true) {
+</a><a href="#h8-0-248" id="h8-0-248" class="i">+                    Surface(
+</a><a href="#h8-0-249" id="h8-0-249" class="i">+                        modifier = Modifier.fillMaxWidth(),
+</a><a href="#h8-0-250" id="h8-0-250" class="i">+                        color = MaterialTheme.colorScheme.surface
+</a><a href="#h8-0-251" id="h8-0-251" class="i">+                    ) {
+</a><a href="#h8-0-252" id="h8-0-252" class="i">+                        ManagementPopup()
+</a><a href="#h8-0-253" id="h8-0-253" class="i">+                    }
+</a><a href="#h8-0-254" id="h8-0-254" class="i">+                }
+</a><a href="#h8-0-255" id="h8-0-255" class="i">+            }.show()
+</a><a href="#h8-0-256" id="h8-0-256" class="i">+        }
+</a><a href="#h8-0-257" id="h8-0-257" class="i">+    }
+</a><a href="#h8-0-258" id="h8-0-258" class="i">+
+</a><a href="#h8-0-259" id="h8-0-259" class="i">+    private fun logout() {
+</a><a href="#h8-0-260" id="h8-0-260" class="i">+        context.androidContext.dataDir.resolve( &quot;shared_prefs/user_session_shared_pref.xml&quot;).takeIf { it.exists() }?.delete()
+</a><a href="#h8-0-261" id="h8-0-261" class="i">+        context.shortToast(&quot;Logged out&quot;)
+</a><a href="#h8-0-262" id="h8-0-262" class="i">+        context.softRestartApp()
+</a><a href="#h8-0-263" id="h8-0-263" class="i">+    }
+</a><a href="#h8-0-264" id="h8-0-264" class="i">+
+</a><a href="#h8-0-265" id="h8-0-265" class="i">+    private fun login(userId: String, username: String) {
+</a><a href="#h8-0-266" id="h8-0-266" class="i">+        val accountData = context.bridgeClient.getAccountStorage().getAccountData(userId)?.let { pfd -&gt;
+</a><a href="#h8-0-267" id="h8-0-267" class="i">+            ParcelFileDescriptor.AutoCloseInputStream(pfd).use { it.readBytes() }
+</a><a href="#h8-0-268" id="h8-0-268" class="i">+        }
+</a><a href="#h8-0-269" id="h8-0-269" class="i">+        if (accountData == null) {
+</a><a href="#h8-0-270" id="h8-0-270" class="i">+            context.shortToast(&quot;Account data not found&quot;)
+</a><a href="#h8-0-271" id="h8-0-271" class="i">+            return
+</a><a href="#h8-0-272" id="h8-0-272" class="i">+        }
+</a><a href="#h8-0-273" id="h8-0-273" class="i">+
+</a><a href="#h8-0-274" id="h8-0-274" class="i">+        arrayOf(
+</a><a href="#h8-0-275" id="h8-0-275" class="i">+            context.androidContext.filesDir,
+</a><a href="#h8-0-276" id="h8-0-276" class="i">+            context.androidContext.cacheDir,
+</a><a href="#h8-0-277" id="h8-0-277" class="i">+            context.androidContext.dataDir.resolve(&quot;databases&quot;),
+</a><a href="#h8-0-278" id="h8-0-278" class="i">+        ).forEach { dir -&gt; dir.listFiles()?.forEach { it.deleteRecursively() } }
+</a><a href="#h8-0-279" id="h8-0-279" class="i">+
+</a><a href="#h8-0-280" id="h8-0-280" class="i">+        val zipInputStream = ZipInputStream(accountData.inputStream())
+</a><a href="#h8-0-281" id="h8-0-281" class="i">+        var entry: ZipEntry?
+</a><a href="#h8-0-282" id="h8-0-282" class="i">+        while (zipInputStream.nextEntry.also { entry = it } != null) {
+</a><a href="#h8-0-283" id="h8-0-283" class="i">+            val file = context.androidContext.dataDir.resolve(entry!!.name)
+</a><a href="#h8-0-284" id="h8-0-284" class="i">+            if (file.exists()) {
+</a><a href="#h8-0-285" id="h8-0-285" class="i">+                file.delete()
+</a><a href="#h8-0-286" id="h8-0-286" class="i">+            } else {
+</a><a href="#h8-0-287" id="h8-0-287" class="i">+                file.parentFile?.mkdirs()
+</a><a href="#h8-0-288" id="h8-0-288" class="i">+            }
+</a><a href="#h8-0-289" id="h8-0-289" class="i">+            context.log.debug(&quot;Extracting ${file.absolutePath}&quot;)
+</a><a href="#h8-0-290" id="h8-0-290" class="i">+            file.outputStream().use {
+</a><a href="#h8-0-291" id="h8-0-291" class="i">+                zipInputStream.copyTo(it)
+</a><a href="#h8-0-292" id="h8-0-292" class="i">+            }
+</a><a href="#h8-0-293" id="h8-0-293" class="i">+        }
+</a><a href="#h8-0-294" id="h8-0-294" class="i">+
+</a><a href="#h8-0-295" id="h8-0-295" class="i">+        context.log.debug(&quot;Account data restored&quot;)
+</a><a href="#h8-0-296" id="h8-0-296" class="i">+        context.shortToast(&quot;Logged in as $username&quot;)
+</a><a href="#h8-0-297" id="h8-0-297" class="i">+        context.softRestartApp()
+</a><a href="#h8-0-298" id="h8-0-298" class="i">+    }
+</a><a href="#h8-0-299" id="h8-0-299" class="i">+
+</a><a href="#h8-0-300" id="h8-0-300" class="i">+    private fun getCurrentAccountData(): ParcelFileDescriptor {
+</a><a href="#h8-0-301" id="h8-0-301" class="i">+        val pfd = ParcelFileDescriptor.createPipe()
+</a><a href="#h8-0-302" id="h8-0-302" class="i">+
+</a><a href="#h8-0-303" id="h8-0-303" class="i">+        context.coroutineScope.launch(Dispatchers.IO) {
+</a><a href="#h8-0-304" id="h8-0-304" class="i">+            val zipOutputStream = ZipOutputStream(ParcelFileDescriptor.AutoCloseOutputStream(pfd[1]))
+</a><a href="#h8-0-305" id="h8-0-305" class="i">+
+</a><a href="#h8-0-306" id="h8-0-306" class="i">+            for (file in arrayOf(
+</a><a href="#h8-0-307" id="h8-0-307" class="i">+                &quot;databases/main.db&quot;,
+</a><a href="#h8-0-308" id="h8-0-308" class="i">+                &quot;databases/main.db-shm&quot;,
+</a><a href="#h8-0-309" id="h8-0-309" class="i">+                &quot;databases/main.db-wal&quot;,
+</a><a href="#h8-0-310" id="h8-0-310" class="i">+                &quot;databases/core.db&quot;,
+</a><a href="#h8-0-311" id="h8-0-311" class="i">+                &quot;databases/core.db-wal&quot;,
+</a><a href="#h8-0-312" id="h8-0-312" class="i">+                &quot;databases/core.db-shm&quot;,
+</a><a href="#h8-0-313" id="h8-0-313" class="i">+                &quot;shared_prefs/user_session_shared_pref.xml&quot;,
+</a><a href="#h8-0-314" id="h8-0-314" class="i">+                &quot;shared_prefs/user_device_identity_keys.xml&quot;,
+</a><a href="#h8-0-315" id="h8-0-315" class="i">+                &quot;shared_prefs/com.google.android.gms.appid.xml&quot;,
+</a><a href="#h8-0-316" id="h8-0-316" class="i">+            )) {
+</a><a href="#h8-0-317" id="h8-0-317" class="i">+                context.androidContext.dataDir.resolve(file).takeIf { it.exists() }?.inputStream()?.use {
+</a><a href="#h8-0-318" id="h8-0-318" class="i">+                    context.log.verbose(&quot;Adding $file to zip&quot;)
+</a><a href="#h8-0-319" id="h8-0-319" class="i">+                    zipOutputStream.putNextEntry(ZipEntry(file))
+</a><a href="#h8-0-320" id="h8-0-320" class="i">+                    it.copyTo(zipOutputStream)
+</a><a href="#h8-0-321" id="h8-0-321" class="i">+                    zipOutputStream.closeEntry()
+</a><a href="#h8-0-322" id="h8-0-322" class="i">+                }
+</a><a href="#h8-0-323" id="h8-0-323" class="i">+            }
+</a><a href="#h8-0-324" id="h8-0-324" class="i">+            zipOutputStream.flush()
+</a><a href="#h8-0-325" id="h8-0-325" class="i">+            zipOutputStream.close()
+</a><a href="#h8-0-326" id="h8-0-326" class="i">+        }
+</a><a href="#h8-0-327" id="h8-0-327" class="i">+
+</a><a href="#h8-0-328" id="h8-0-328" class="i">+        return pfd[0]
+</a><a href="#h8-0-329" id="h8-0-329" class="i">+    }
+</a><a href="#h8-0-330" id="h8-0-330" class="i">+
+</a><a href="#h8-0-331" id="h8-0-331" class="i">+    private fun backupCurrentAccount() {
+</a><a href="#h8-0-332" id="h8-0-332" class="i">+        runCatching {
+</a><a href="#h8-0-333" id="h8-0-333" class="i">+            context.bridgeClient.getAccountStorage().addAccount(
+</a><a href="#h8-0-334" id="h8-0-334" class="i">+                context.database.myUserId,
+</a><a href="#h8-0-335" id="h8-0-335" class="i">+                context.database.getFriendInfo(context.database.myUserId)?.mutableUsername ?: &quot;Unknown username&quot;,
+</a><a href="#h8-0-336" id="h8-0-336" class="i">+                getCurrentAccountData()
+</a><a href="#h8-0-337" id="h8-0-337" class="i">+            )
+</a><a href="#h8-0-338" id="h8-0-338" class="i">+            context.shortToast(&quot;Account backed up!&quot;)
+</a><a href="#h8-0-339" id="h8-0-339" class="i">+        }.onFailure {
+</a><a href="#h8-0-340" id="h8-0-340" class="i">+            context.shortToast(&quot;Failed to backup account. Check logs for more info.&quot;)
+</a><a href="#h8-0-341" id="h8-0-341" class="i">+            context.log.error(&quot;Failed to backup account&quot;, it)
+</a><a href="#h8-0-342" id="h8-0-342" class="i">+        }
+</a><a href="#h8-0-343" id="h8-0-343" class="i">+    }
+</a><a href="#h8-0-344" id="h8-0-344" class="i">+
+</a><a href="#h8-0-345" id="h8-0-345" class="i">+    private fun importAccount(fileUri: Uri) {
+</a><a href="#h8-0-346" id="h8-0-346" class="i">+        var tempZip: File? = null
+</a><a href="#h8-0-347" id="h8-0-347" class="i">+        var mainDbFile: File? = null
+</a><a href="#h8-0-348" id="h8-0-348" class="i">+        var mainDbWalFile: File? = null
+</a><a href="#h8-0-349" id="h8-0-349" class="i">+        var mainDbShmFile: File? = null
+</a><a href="#h8-0-350" id="h8-0-350" class="i">+
+</a><a href="#h8-0-351" id="h8-0-351" class="i">+        runCatching {
+</a><a href="#h8-0-352" id="h8-0-352" class="i">+            // copy zip file
+</a><a href="#h8-0-353" id="h8-0-353" class="i">+            activity!!.contentResolver.openInputStream(fileUri)?.use { input -&gt;
+</a><a href="#h8-0-354" id="h8-0-354" class="i">+                val bufferedInputStream = input.buffered()
+</a><a href="#h8-0-355" id="h8-0-355" class="i">+                val fileType = MediaDownloaderHelper.getFileType(bufferedInputStream)
+</a><a href="#h8-0-356" id="h8-0-356" class="i">+
+</a><a href="#h8-0-357" id="h8-0-357" class="i">+                if (fileType != FileType.ZIP) {
+</a><a href="#h8-0-358" id="h8-0-358" class="i">+                    throw Exception(&quot;Invalid file type&quot;)
+</a><a href="#h8-0-359" id="h8-0-359" class="i">+                }
+</a><a href="#h8-0-360" id="h8-0-360" class="i">+
+</a><a href="#h8-0-361" id="h8-0-361" class="i">+                context.androidContext.cacheDir.resolve(System.currentTimeMillis().toString()).also {
+</a><a href="#h8-0-362" id="h8-0-362" class="i">+                    tempZip = it
+</a><a href="#h8-0-363" id="h8-0-363" class="i">+                }.outputStream().use { output -&gt;
+</a><a href="#h8-0-364" id="h8-0-364" class="i">+                    bufferedInputStream.copyTo(output)
+</a><a href="#h8-0-365" id="h8-0-365" class="i">+                }
+</a><a href="#h8-0-366" id="h8-0-366" class="i">+            }
+</a><a href="#h8-0-367" id="h8-0-367" class="i">+
+</a><a href="#h8-0-368" id="h8-0-368" class="i">+            context.log.verbose(&quot;Extracting account data&quot;)
+</a><a href="#h8-0-369" id="h8-0-369" class="i">+
+</a><a href="#h8-0-370" id="h8-0-370" class="i">+            // extract main.db in cache
+</a><a href="#h8-0-371" id="h8-0-371" class="i">+            tempZip?.inputStream().use { fileInputStream -&gt;
+</a><a href="#h8-0-372" id="h8-0-372" class="i">+                val zipInputStream = ZipInputStream(fileInputStream)
+</a><a href="#h8-0-373" id="h8-0-373" class="i">+                var entry: ZipEntry?
+</a><a href="#h8-0-374" id="h8-0-374" class="i">+                while (zipInputStream.nextEntry.also { entry = it } != null) {
+</a><a href="#h8-0-375" id="h8-0-375" class="i">+                    val fileName = entry?.name?.substringAfterLast(&#39;/&#39;) ?: continue
+</a><a href="#h8-0-376" id="h8-0-376" class="i">+                    if (!fileName.startsWith(&quot;main.db&quot;)) continue
+</a><a href="#h8-0-377" id="h8-0-377" class="i">+
+</a><a href="#h8-0-378" id="h8-0-378" class="i">+                    val file = context.androidContext.cacheDir.resolve(fileName)
+</a><a href="#h8-0-379" id="h8-0-379" class="i">+                    context.log.verbose(&quot;Found ${entry!!.name} in zip file&quot;)
+</a><a href="#h8-0-380" id="h8-0-380" class="i">+
+</a><a href="#h8-0-381" id="h8-0-381" class="i">+                    when (fileName) {
+</a><a href="#h8-0-382" id="h8-0-382" class="i">+                        &quot;main.db&quot; -&gt; mainDbFile = file
+</a><a href="#h8-0-383" id="h8-0-383" class="i">+                        &quot;main.db-wal&quot; -&gt; mainDbWalFile = file
+</a><a href="#h8-0-384" id="h8-0-384" class="i">+                        &quot;main.db-shm&quot; -&gt; mainDbShmFile = file
+</a><a href="#h8-0-385" id="h8-0-385" class="i">+                    }
+</a><a href="#h8-0-386" id="h8-0-386" class="i">+
+</a><a href="#h8-0-387" id="h8-0-387" class="i">+                    file.outputStream().use {
+</a><a href="#h8-0-388" id="h8-0-388" class="i">+                        zipInputStream.copyTo(it)
+</a><a href="#h8-0-389" id="h8-0-389" class="i">+                    }
+</a><a href="#h8-0-390" id="h8-0-390" class="i">+                }
+</a><a href="#h8-0-391" id="h8-0-391" class="i">+            }
+</a><a href="#h8-0-392" id="h8-0-392" class="i">+
+</a><a href="#h8-0-393" id="h8-0-393" class="i">+            assert(mainDbFile != null) { &quot;main.db not found in zip file&quot; }
+</a><a href="#h8-0-394" id="h8-0-394" class="i">+
+</a><a href="#h8-0-395" id="h8-0-395" class="i">+            SQLiteDatabase.openDatabase(mainDbFile!!.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use {  sqliteDatabase -&gt;
+</a><a href="#h8-0-396" id="h8-0-396" class="i">+                val userId = sqliteDatabase.rawQuery(&quot;SELECT userId FROM SnapToken&quot;, null).use {
+</a><a href="#h8-0-397" id="h8-0-397" class="i">+                    if (!it.moveToFirst()) throw Exception(&quot;userId not found in main.db&quot;)
+</a><a href="#h8-0-398" id="h8-0-398" class="i">+                    it.getString(0)
+</a><a href="#h8-0-399" id="h8-0-399" class="i">+                }
+</a><a href="#h8-0-400" id="h8-0-400" class="i">+                context.log.verbose(&quot;Found userId $userId&quot;)
+</a><a href="#h8-0-401" id="h8-0-401" class="i">+                val username = sqliteDatabase.rawQuery(&quot;SELECT username FROM Friend WHERE userId = ?&quot;, arrayOf(userId)).use {
+</a><a href="#h8-0-402" id="h8-0-402" class="i">+                    if (!it.moveToFirst()) throw Exception(&quot;username not found in main.db&quot;)
+</a><a href="#h8-0-403" id="h8-0-403" class="i">+                    it.getString(0)
+</a><a href="#h8-0-404" id="h8-0-404" class="i">+                }
+</a><a href="#h8-0-405" id="h8-0-405" class="i">+                context.log.verbose(&quot;Found username $username&quot;)
+</a><a href="#h8-0-406" id="h8-0-406" class="i">+                tempZip?.inputStream()?.use {
+</a><a href="#h8-0-407" id="h8-0-407" class="i">+                    context.bridgeClient.getAccountStorage().addAccount(
+</a><a href="#h8-0-408" id="h8-0-408" class="i">+                        userId,
+</a><a href="#h8-0-409" id="h8-0-409" class="i">+                        username,
+</a><a href="#h8-0-410" id="h8-0-410" class="i">+                        it.toParcelFileDescriptor(context.coroutineScope)
+</a><a href="#h8-0-411" id="h8-0-411" class="i">+                    )
+</a><a href="#h8-0-412" id="h8-0-412" class="i">+                }
+</a><a href="#h8-0-413" id="h8-0-413" class="i">+                context.shortToast(&quot;Imported $username!&quot;)
+</a><a href="#h8-0-414" id="h8-0-414" class="i">+                updateUsers()
+</a><a href="#h8-0-415" id="h8-0-415" class="i">+            }
+</a><a href="#h8-0-416" id="h8-0-416" class="i">+        }.onFailure {
+</a><a href="#h8-0-417" id="h8-0-417" class="i">+            context.shortToast(&quot;Failed to import account: ${it.message}&quot;)
+</a><a href="#h8-0-418" id="h8-0-418" class="i">+            context.log.error(&quot;Failed to import account&quot;, it)
+</a><a href="#h8-0-419" id="h8-0-419" class="i">+        }
+</a><a href="#h8-0-420" id="h8-0-420" class="i">+
+</a><a href="#h8-0-421" id="h8-0-421" class="i">+        tempZip?.delete()
+</a><a href="#h8-0-422" id="h8-0-422" class="i">+        mainDbFile?.delete()
+</a><a href="#h8-0-423" id="h8-0-423" class="i">+        mainDbWalFile?.delete()
+</a><a href="#h8-0-424" id="h8-0-424" class="i">+        mainDbShmFile?.delete()
+</a><a href="#h8-0-425" id="h8-0-425" class="i">+    }
+</a><a href="#h8-0-426" id="h8-0-426" class="i">+
+</a><a href="#h8-0-427" id="h8-0-427" class="i">+    private fun hookActivityResult(activityClass: Class&lt;*&gt;) {
+</a><a href="#h8-0-428" id="h8-0-428" class="i">+        activityClass.hook(&quot;onActivityResult&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h8-0-429" id="h8-0-429" class="i">+            val requestCode = param.arg&lt;Int&gt;(0)
+</a><a href="#h8-0-430" id="h8-0-430" class="i">+            val resultCode = param.arg&lt;Int&gt;(1)
+</a><a href="#h8-0-431" id="h8-0-431" class="i">+            val intent = param.arg&lt;Intent&gt;(2)
+</a><a href="#h8-0-432" id="h8-0-432" class="i">+
+</a><a href="#h8-0-433" id="h8-0-433" class="i">+            if (importRequestCode == requestCode) {
+</a><a href="#h8-0-434" id="h8-0-434" class="i">+                importRequestCode = null
+</a><a href="#h8-0-435" id="h8-0-435" class="i">+                if (resultCode != Activity.RESULT_OK) return@hook
+</a><a href="#h8-0-436" id="h8-0-436" class="i">+                val uri = intent.data ?: return@hook
+</a><a href="#h8-0-437" id="h8-0-437" class="i">+
+</a><a href="#h8-0-438" id="h8-0-438" class="i">+                context.coroutineScope.launch { importAccount(uri) }
+</a><a href="#h8-0-439" id="h8-0-439" class="i">+            }
+</a><a href="#h8-0-440" id="h8-0-440" class="i">+
+</a><a href="#h8-0-441" id="h8-0-441" class="i">+            if (exportCallback?.first == requestCode) {
+</a><a href="#h8-0-442" id="h8-0-442" class="i">+                val userId = exportCallback?.second
+</a><a href="#h8-0-443" id="h8-0-443" class="i">+                exportCallback = null
+</a><a href="#h8-0-444" id="h8-0-444" class="i">+                param.setResult(null)
+</a><a href="#h8-0-445" id="h8-0-445" class="i">+                if (resultCode != Activity.RESULT_OK) return@hook
+</a><a href="#h8-0-446" id="h8-0-446" class="i">+
+</a><a href="#h8-0-447" id="h8-0-447" class="i">+                context.coroutineScope.launch {
+</a><a href="#h8-0-448" id="h8-0-448" class="i">+                    runCatching {
+</a><a href="#h8-0-449" id="h8-0-449" class="i">+                        intent.data?.let { uri -&gt;
+</a><a href="#h8-0-450" id="h8-0-450" class="i">+                            val accountDataPfd = context.bridgeClient.getAccountStorage().getAccountData(userId) ?: throw Exception(&quot;Account data not found&quot;)
+</a><a href="#h8-0-451" id="h8-0-451" class="i">+                            context.androidContext.contentResolver.openOutputStream(uri)?.use { outputStream -&gt;
+</a><a href="#h8-0-452" id="h8-0-452" class="i">+                                ParcelFileDescriptor.AutoCloseInputStream(accountDataPfd).use {
+</a><a href="#h8-0-453" id="h8-0-453" class="i">+                                    it.copyTo(outputStream)
+</a><a href="#h8-0-454" id="h8-0-454" class="i">+                                }
+</a><a href="#h8-0-455" id="h8-0-455" class="i">+                            }
+</a><a href="#h8-0-456" id="h8-0-456" class="i">+                            context.shortToast(&quot;Account exported!&quot;)
+</a><a href="#h8-0-457" id="h8-0-457" class="i">+                        }
+</a><a href="#h8-0-458" id="h8-0-458" class="i">+                    }.onFailure {
+</a><a href="#h8-0-459" id="h8-0-459" class="i">+                        context.shortToast(&quot;Failed to export account. Check logs for more info.&quot;)
+</a><a href="#h8-0-460" id="h8-0-460" class="i">+                        context.log.error(&quot;Failed to export account&quot;, it)
+</a><a href="#h8-0-461" id="h8-0-461" class="i">+                    }
+</a><a href="#h8-0-462" id="h8-0-462" class="i">+                }
+</a><a href="#h8-0-463" id="h8-0-463" class="i">+            }
+</a><a href="#h8-0-464" id="h8-0-464" class="i">+        }
+</a><a href="#h8-0-465" id="h8-0-465" class="i">+    }
+</a><a href="#h8-0-466" id="h8-0-466" class="i">+
+</a><a href="#h8-0-467" id="h8-0-467" class="i">+    override fun onActivityCreate() {
+</a><a href="#h8-0-468" id="h8-0-468" class="i">+        if (context.config.experimental.accountSwitcher.globalState != true) return
+</a><a href="#h8-0-469" id="h8-0-469" class="i">+
+</a><a href="#h8-0-470" id="h8-0-470" class="i">+        activity = context.mainActivity!!
+</a><a href="#h8-0-471" id="h8-0-471" class="i">+        hookActivityResult(activity!!::class.java)
+</a><a href="#h8-0-472" id="h8-0-472" class="i">+        val hovaHeaderSearchIcon = activity!!.resources.getId(&quot;hova_header_search_icon&quot;)
+</a><a href="#h8-0-473" id="h8-0-473" class="i">+
+</a><a href="#h8-0-474" id="h8-0-474" class="i">+        context.event.subscribe(AddViewEvent::class) { event -&gt;
+</a><a href="#h8-0-475" id="h8-0-475" class="i">+            if (event.view.id != hovaHeaderSearchIcon) return@subscribe
+</a><a href="#h8-0-476" id="h8-0-476" class="i">+
+</a><a href="#h8-0-477" id="h8-0-477" class="i">+            event.view.setOnLongClickListener {
+</a><a href="#h8-0-478" id="h8-0-478" class="i">+                activity!!.vibrateLongPress()
+</a><a href="#h8-0-479" id="h8-0-479" class="i">+                showManagementPopup()
+</a><a href="#h8-0-480" id="h8-0-480" class="i">+                false
+</a><a href="#h8-0-481" id="h8-0-481" class="i">+            }
+</a><a href="#h8-0-482" id="h8-0-482" class="i">+        }
+</a><a href="#h8-0-483" id="h8-0-483" class="i">+    }
+</a><a href="#h8-0-484" id="h8-0-484" class="i">+
+</a><a href="#h8-0-485" id="h8-0-485" class="i">+    @SuppressLint(&quot;SetTextI18n&quot;)
+</a><a href="#h8-0-486" id="h8-0-486" class="i">+    override fun init() {
+</a><a href="#h8-0-487" id="h8-0-487" class="i">+        if (context.config.experimental.accountSwitcher.globalState != true) return
+</a><a href="#h8-0-488" id="h8-0-488" class="i">+
+</a><a href="#h8-0-489" id="h8-0-489" class="i">+        findClass(&quot;com.snap.identity.service.ForcedLogoutBroadcastReceiver&quot;).hook(&quot;onReceive&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h8-0-490" id="h8-0-490" class="i">+            val intent = param.arg&lt;Intent&gt;(1)
+</a><a href="#h8-0-491" id="h8-0-491" class="i">+            if (isLoggingActivity) return@hook
+</a><a href="#h8-0-492" id="h8-0-492" class="i">+            if (intent.getBooleanExtra(&quot;forced&quot;, false) &amp;&amp; !context.config.experimental.preventForcedLogout.get()) {
+</a><a href="#h8-0-493" id="h8-0-493" class="i">+                runCatching {
+</a><a href="#h8-0-494" id="h8-0-494" class="i">+                    val accountStorage = context.bridgeClient.getAccountStorage()
+</a><a href="#h8-0-495" id="h8-0-495" class="i">+
+</a><a href="#h8-0-496" id="h8-0-496" class="i">+                    if (accountStorage.isAccountExists(context.database.myUserId)) {
+</a><a href="#h8-0-497" id="h8-0-497" class="i">+                        accountStorage.removeAccount(context.database.myUserId)
+</a><a href="#h8-0-498" id="h8-0-498" class="i">+                        context.shortToast(&quot;Removed account due to forced logout&quot;)
+</a><a href="#h8-0-499" id="h8-0-499" class="i">+                    }
+</a><a href="#h8-0-500" id="h8-0-500" class="i">+                }
+</a><a href="#h8-0-501" id="h8-0-501" class="i">+                return@hook
+</a><a href="#h8-0-502" id="h8-0-502" class="i">+            }
+</a><a href="#h8-0-503" id="h8-0-503" class="i">+
+</a><a href="#h8-0-504" id="h8-0-504" class="i">+            if (context.config.experimental.accountSwitcher.autoBackupCurrentAccount.get()) {
+</a><a href="#h8-0-505" id="h8-0-505" class="i">+                backupCurrentAccount()
+</a><a href="#h8-0-506" id="h8-0-506" class="i">+            }
+</a><a href="#h8-0-507" id="h8-0-507" class="i">+        }
+</a><a href="#h8-0-508" id="h8-0-508" class="i">+
+</a><a href="#h8-0-509" id="h8-0-509" class="i">+        findClass(&quot;com.snap.identity.loginsignup.ui.LoginSignupActivity&quot;).apply {
+</a><a href="#h8-0-510" id="h8-0-510" class="i">+            hookActivityResult(this)
+</a><a href="#h8-0-511" id="h8-0-511" class="i">+            hook(&quot;onCreate&quot;, HookStage.AFTER) { param -&gt;
+</a><a href="#h8-0-512" id="h8-0-512" class="i">+                activity = param.thisObject()
+</a><a href="#h8-0-513" id="h8-0-513" class="i">+                activity!!.findViewById&lt;FrameLayout&gt;(android.R.id.content).addView(Button(activity).apply {
+</a><a href="#h8-0-514" id="h8-0-514" class="i">+                    text = &quot;Switch Account&quot;
+</a><a href="#h8-0-515" id="h8-0-515" class="i">+                    layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
+</a><a href="#h8-0-516" id="h8-0-516" class="i">+                        gravity = android.view.Gravity.TOP or android.view.Gravity.START
+</a><a href="#h8-0-517" id="h8-0-517" class="i">+                        setMargins(32, 32, 0, 0)
+</a><a href="#h8-0-518" id="h8-0-518" class="i">+                    }
+</a><a href="#h8-0-519" id="h8-0-519" class="i">+                    setOnClickListener {
+</a><a href="#h8-0-520" id="h8-0-520" class="i">+                        showManagementPopup()
+</a><a href="#h8-0-521" id="h8-0-521" class="i">+                    }
+</a><a href="#h8-0-522" id="h8-0-522" class="i">+                })
+</a><a href="#h8-0-523" id="h8-0-523" class="i">+            }
+</a><a href="#h8-0-524" id="h8-0-524" class="i">+        }
+</a><a href="#h8-0-525" id="h8-0-525" class="i">+    }
+</a><a href="#h8-0-526" id="h8-0-526" class="i">+}</a><a href="#h8-0-527" id="h8-0-527" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h9" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -122,6 +122,7 @@ class FeatureManager(
+</a>             DefaultVolumeControls(),
+             CallRecorder(),
+             DisableMemoriesSnapFeed(),
+<a href="#h9-0-3" id="h9-0-3" class="i">+            AccountSwitcher(),
+</a>         )
+ 
+         initializeFeatures()
+<b>diff --git a/<a id="h10" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/ktx/AndroidExt.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/ktx/AndroidExt.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/ktx/AndroidExt.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/ktx/AndroidExt.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -6,10 +6,15 @@ import android.content.res.Resources
+</a> import android.content.res.Resources.Theme
+ import android.content.res.TypedArray
+ import android.graphics.drawable.Drawable
+<a href="#h10-0-3" id="h10-0-3" class="i">+import android.os.ParcelFileDescriptor
+</a> import android.os.VibrationEffect
+ import android.os.Vibrator
+ import androidx.core.graphics.ColorUtils
+<a href="#h10-0-7" id="h10-0-7" class="i">+import kotlinx.coroutines.CoroutineScope
+</a><a href="#h10-0-8" id="h10-0-8" class="i">+import kotlinx.coroutines.Dispatchers
+</a><a href="#h10-0-9" id="h10-0-9" class="i">+import kotlinx.coroutines.launch
+</a> import me.rhunk.snapenhance.common.Constants
+<a href="#h10-0-11" id="h10-0-11" class="i">+import java.io.InputStream
+</a> 
+ 
+ @SuppressLint(&quot;DiscouragedApi&quot;)
+<a href="#h10-1" id="h10-1" class="h">@@ -52,4 +57,21 @@ fun Context.isDarkTheme(): Boolean {
+</a>     ).getColor(0, 0).let {
+         ColorUtils.calculateLuminance(it) &gt; 0.5
+     }
+<a href="#h10-1-3" id="h10-1-3" class="d">-}</a><a href="#h10-1-4" id="h10-1-4" class="d">-
+\ No newline at end of file
+</a><a href="#h10-1-5" id="h10-1-5" class="i">+}
+</a><a href="#h10-1-6" id="h10-1-6" class="i">+
+</a><a href="#h10-1-7" id="h10-1-7" class="i">+fun InputStream.toParcelFileDescriptor(coroutineScope: CoroutineScope): ParcelFileDescriptor {
+</a><a href="#h10-1-8" id="h10-1-8" class="i">+    val pfd = ParcelFileDescriptor.createPipe()
+</a><a href="#h10-1-9" id="h10-1-9" class="i">+    val fos = ParcelFileDescriptor.AutoCloseOutputStream(pfd[1])
+</a><a href="#h10-1-10" id="h10-1-10" class="i">+
+</a><a href="#h10-1-11" id="h10-1-11" class="i">+    coroutineScope.launch(Dispatchers.IO) {
+</a><a href="#h10-1-12" id="h10-1-12" class="i">+        try {
+</a><a href="#h10-1-13" id="h10-1-13" class="i">+            copyTo(fos)
+</a><a href="#h10-1-14" id="h10-1-14" class="i">+        } finally {
+</a><a href="#h10-1-15" id="h10-1-15" class="i">+            close()
+</a><a href="#h10-1-16" id="h10-1-16" class="i">+            fos.flush()
+</a><a href="#h10-1-17" id="h10-1-17" class="i">+            fos.close()
+</a><a href="#h10-1-18" id="h10-1-18" class="i">+        }
+</a><a href="#h10-1-19" id="h10-1-19" class="i">+    }
+</a><a href="#h10-1-20" id="h10-1-20" class="i">+
+</a><a href="#h10-1-21" id="h10-1-21" class="i">+    return pfd[0]
+</a><a href="#h10-1-22" id="h10-1-22" class="i">+}
+</a></pre>
+</div>
+</body>
+</html>

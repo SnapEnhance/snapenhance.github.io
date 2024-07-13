@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>refactor: account switcher - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/4ecf5f81773dd351c2f99b1dfd8a435f98da4468.html">4ecf5f81773dd351c2f99b1dfd8a435f98da4468</a>
+<b>parent</b> <a href="../commit/c77d11f4a0e6dc0e58ecabf54004d719af27eaa5.html">c77d11f4a0e6dc0e58ecabf54004d719af27eaa5</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat,  9 Mar 2024 15:07:56 +0100
+
+refactor: account switcher
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/AccountSwitcher.kt</a></td><td> | </td><td class="num">22</td><td><span class="i">+++++++++++</span><span class="d">-----------</span></td></tr>
+</table></pre><pre>1 file changed, 11 insertions(+), 11 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/AccountSwitcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/AccountSwitcher.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/AccountSwitcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/AccountSwitcher.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -51,13 +51,13 @@ class AccountSwitcher: Feature(&quot;Account Switcher&quot;, loadParams = FeatureLoadParam
+</a>     private var exportCallback: Pair&lt;Int, String&gt;? = null // requestCode -&gt; userId
+     private var importRequestCode: Int? = null
+ 
+<a href="#h0-0-3" id="h0-0-3" class="d">-    private val users = mutableStateListOf&lt;Pair&lt;String, String&gt;&gt;()
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-    private val isLoggingActivity get() = activity?.javaClass?.name?.endsWith(&quot;LoginSignupActivity&quot;) == true
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+    private val accounts = mutableStateListOf&lt;Pair&lt;String, String&gt;&gt;()
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+    private val isLoginActivity get() = activity?.javaClass?.name?.endsWith(&quot;LoginSignupActivity&quot;) == true
+</a> 
+     private fun updateUsers() {
+<a href="#h0-0-9" id="h0-0-9" class="d">-        users.clear()
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+        accounts.clear()
+</a>         runCatching {
+<a href="#h0-0-12" id="h0-0-12" class="d">-            users.addAll(context.bridgeClient.getAccountStorage().accounts.map { it.key to it.value })
+</a><a href="#h0-0-13" id="h0-0-13" class="i">+            accounts.addAll(context.bridgeClient.getAccountStorage().accounts.map { it.key to it.value })
+</a>         }.onFailure {
+             context.log.error(&quot;Failed to update users&quot;, it)
+         }
+<a href="#h0-1" id="h0-1" class="h">@@ -85,7 +85,7 @@ class AccountSwitcher: Feature(&quot;Account Switcher&quot;, loadParams = FeatureLoadParam
+</a>                     .weight(1f)
+             ) {
+                 item {
+<a href="#h0-1-3" id="h0-1-3" class="d">-                    if (users.isEmpty()) {
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+                    if (accounts.isEmpty()) {
+</a>                         Text(&quot;No accounts found! To start, backup your current account.&quot;, modifier = Modifier
+                             .padding(16.dp)
+                             .padding(16.dp)
+<a href="#h0-2" id="h0-2" class="h">@@ -93,7 +93,7 @@ class AccountSwitcher: Feature(&quot;Account Switcher&quot;, loadParams = FeatureLoadParam
+</a>                     }
+                 }
+ 
+<a href="#h0-2-3" id="h0-2-3" class="d">-                items(users) { user -&gt;
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+                items(accounts) { user -&gt;
+</a>                     var removeAccountPopup by remember { mutableStateOf(false) }
+ 
+                     Card(
+<a href="#h0-3" id="h0-3" class="h">@@ -101,17 +101,17 @@ class AccountSwitcher: Feature(&quot;Account Switcher&quot;, loadParams = FeatureLoadParam
+</a>                             .fillMaxWidth()
+                             .padding(5.dp),
+                         colors = CardDefaults.cardColors(
+<a href="#h0-3-3" id="h0-3-3" class="d">-                            containerColor = if (!isLoggingActivity &amp;&amp; context.database.myUserId == user.first) MaterialTheme.colorScheme.surfaceBright
+</a><a href="#h0-3-4" id="h0-3-4" class="i">+                            containerColor = if (!isLoginActivity &amp;&amp; context.database.myUserId == user.first) MaterialTheme.colorScheme.surfaceBright
+</a>                             else MaterialTheme.colorScheme.surfaceDim
+                         ) ,
+                         onClick = {
+                             runCatching {
+<a href="#h0-3-9" id="h0-3-9" class="d">-                                if (!isLoggingActivity &amp;&amp; context.database.myUserId == user.first) {
+</a><a href="#h0-3-10" id="h0-3-10" class="i">+                                if (!isLoginActivity &amp;&amp; context.database.myUserId == user.first) {
+</a>                                     context.shortToast(&quot;Already logged in as ${user.second}&quot;)
+                                     return@runCatching
+                                 }
+ 
+<a href="#h0-3-15" id="h0-3-15" class="d">-                                if (!isLoggingActivity &amp;&amp; context.config.experimental.accountSwitcher.autoBackupCurrentAccount.get()) {
+</a><a href="#h0-3-16" id="h0-3-16" class="i">+                                if (!isLoginActivity &amp;&amp; context.config.experimental.accountSwitcher.autoBackupCurrentAccount.get()) {
+</a>                                     backupCurrentAccount()
+                                 }
+ 
+<a href="#h0-4" id="h0-4" class="h">@@ -213,7 +213,7 @@ class AccountSwitcher: Feature(&quot;Account Switcher&quot;, loadParams = FeatureLoadParam
+</a>                     Text(&quot;Import account&quot;)
+                 }
+ 
+<a href="#h0-4-3" id="h0-4-3" class="d">-                if (!isLoggingActivity) {
+</a><a href="#h0-4-4" id="h0-4-4" class="i">+                if (!isLoginActivity) {
+</a>                     Button(
+                         modifier = Modifier
+                             .fillMaxWidth(),
+<a href="#h0-5" id="h0-5" class="h">@@ -489,7 +489,7 @@ class AccountSwitcher: Feature(&quot;Account Switcher&quot;, loadParams = FeatureLoadParam
+</a> 
+         findClass(&quot;com.snap.identity.service.ForcedLogoutBroadcastReceiver&quot;).hook(&quot;onReceive&quot;, HookStage.BEFORE) { param -&gt;
+             val intent = param.arg&lt;Intent&gt;(1)
+<a href="#h0-5-3" id="h0-5-3" class="d">-            if (isLoggingActivity) return@hook
+</a><a href="#h0-5-4" id="h0-5-4" class="i">+            if (isLoginActivity) return@hook
+</a>             if (intent.getBooleanExtra(&quot;forced&quot;, false) &amp;&amp; !context.config.experimental.preventForcedLogout.get()) {
+                 runCatching {
+                     val accountStorage = context.bridgeClient.getAccountStorage()
+</pre>
+</div>
+</body>
+</html>

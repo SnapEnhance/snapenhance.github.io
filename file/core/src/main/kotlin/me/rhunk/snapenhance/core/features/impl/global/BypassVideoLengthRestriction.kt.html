@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BypassVideoLengthRestriction.kt - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../../../../../../../../../../../../logo.png"/>
+<link rel="alternate icon" href="../../../../../../../../../../../../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../../../../../../../../../../../../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../../../../../../../../../../../../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../../../../../../../../../../../../"><img src="../../../../../../../../../../../../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../../../../../../../../../../../../about.html">About</a> | <a href="../../../../../../../../../../../../log.html">Log</a> | <a href="../../../../../../../../../../../../files.html">Files</a> | <a href="../../../../../../../../../../../../refs.html">Refs</a> | <a href="../../../../../../../../../../../../file/.gitmodules.html">Submodules</a> | <a href="../../../../../../../../../../../../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<p> BypassVideoLengthRestriction.kt (3403B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/BypassVideoLengthRestriction.kt">raw</a></p><hr/><pre id="blob">
+<a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core.features.impl.global
+<a href="#l2" class="line" id="l2">      2</a> 
+<a href="#l3" class="line" id="l3">      3</a> import android.os.Build
+<a href="#l4" class="line" id="l4">      4</a> import android.os.FileObserver
+<a href="#l5" class="line" id="l5">      5</a> import com.google.gson.JsonParser
+<a href="#l6" class="line" id="l6">      6</a> import me.rhunk.snapenhance.core.event.events.impl.SendMessageWithContentEvent
+<a href="#l7" class="line" id="l7">      7</a> import me.rhunk.snapenhance.core.features.Feature
+<a href="#l8" class="line" id="l8">      8</a> import me.rhunk.snapenhance.core.features.FeatureLoadParams
+<a href="#l9" class="line" id="l9">      9</a> import me.rhunk.snapenhance.core.util.hook.HookStage
+<a href="#l10" class="line" id="l10">     10</a> import me.rhunk.snapenhance.core.util.hook.hookConstructor
+<a href="#l11" class="line" id="l11">     11</a> import me.rhunk.snapenhance.core.util.ktx.setObjectField
+<a href="#l12" class="line" id="l12">     12</a> import me.rhunk.snapenhance.mapper.impl.DefaultMediaItemMapper
+<a href="#l13" class="line" id="l13">     13</a> import java.io.File
+<a href="#l14" class="line" id="l14">     14</a> 
+<a href="#l15" class="line" id="l15">     15</a> class BypassVideoLengthRestriction :
+<a href="#l16" class="line" id="l16">     16</a>     Feature(&quot;BypassVideoLengthRestriction&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_ASYNC) {
+<a href="#l17" class="line" id="l17">     17</a>     private lateinit var fileObserver: FileObserver
+<a href="#l18" class="line" id="l18">     18</a> 
+<a href="#l19" class="line" id="l19">     19</a>     override fun asyncOnActivityCreate() {
+<a href="#l20" class="line" id="l20">     20</a>         val mode = context.config.global.bypassVideoLengthRestriction.getNullable()
+<a href="#l21" class="line" id="l21">     21</a> 
+<a href="#l22" class="line" id="l22">     22</a>         if (mode == &quot;single&quot;) {
+<a href="#l23" class="line" id="l23">     23</a>             //fix black videos when story is posted
+<a href="#l24" class="line" id="l24">     24</a>             if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.Q) {
+<a href="#l25" class="line" id="l25">     25</a>                 val postedStorySnapFolder =
+<a href="#l26" class="line" id="l26">     26</a>                     File(context.androidContext.filesDir, &quot;file_manager/posted_story_snap&quot;)
+<a href="#l27" class="line" id="l27">     27</a> 
+<a href="#l28" class="line" id="l28">     28</a>                 fileObserver = (object : FileObserver(postedStorySnapFolder, MOVED_TO) {
+<a href="#l29" class="line" id="l29">     29</a>                     override fun onEvent(event: Int, path: String?) {
+<a href="#l30" class="line" id="l30">     30</a>                         if (event != MOVED_TO || path?.endsWith(&quot;posted_story_snap.2&quot;) != true) return
+<a href="#l31" class="line" id="l31">     31</a>                         fileObserver.stopWatching()
+<a href="#l32" class="line" id="l32">     32</a> 
+<a href="#l33" class="line" id="l33">     33</a>                         val file = File(postedStorySnapFolder, path)
+<a href="#l34" class="line" id="l34">     34</a>                         runCatching {
+<a href="#l35" class="line" id="l35">     35</a>                             val fileContent = JsonParser.parseReader(file.reader()).asJsonObject
+<a href="#l36" class="line" id="l36">     36</a>                             if (fileContent[&quot;timerOrDuration&quot;].asLong &lt; 0) file.delete()
+<a href="#l37" class="line" id="l37">     37</a>                         }.onFailure {
+<a href="#l38" class="line" id="l38">     38</a>                             context.log.error(&quot;Failed to read story metadata file&quot;, it)
+<a href="#l39" class="line" id="l39">     39</a>                         }
+<a href="#l40" class="line" id="l40">     40</a>                     }
+<a href="#l41" class="line" id="l41">     41</a>                 })
+<a href="#l42" class="line" id="l42">     42</a> 
+<a href="#l43" class="line" id="l43">     43</a>                 context.event.subscribe(SendMessageWithContentEvent::class) { event -&gt;
+<a href="#l44" class="line" id="l44">     44</a>                     if (event.destinations.stories!!.isEmpty()) return@subscribe
+<a href="#l45" class="line" id="l45">     45</a>                     fileObserver.startWatching()
+<a href="#l46" class="line" id="l46">     46</a>                 }
+<a href="#l47" class="line" id="l47">     47</a>             }
+<a href="#l48" class="line" id="l48">     48</a> 
+<a href="#l49" class="line" id="l49">     49</a>             context.mappings.useMapper(DefaultMediaItemMapper::class) {
+<a href="#l50" class="line" id="l50">     50</a>                 defaultMediaItem.getAsClass()?.hookConstructor(HookStage.BEFORE) { param -&gt;
+<a href="#l51" class="line" id="l51">     51</a>                     //set the video length argument
+<a href="#l52" class="line" id="l52">     52</a>                     param.setArg(5, -1L)
+<a href="#l53" class="line" id="l53">     53</a>                 }
+<a href="#l54" class="line" id="l54">     54</a>             }
+<a href="#l55" class="line" id="l55">     55</a>         }
+<a href="#l56" class="line" id="l56">     56</a> 
+<a href="#l57" class="line" id="l57">     57</a>         //TODO: allow split from any source
+<a href="#l58" class="line" id="l58">     58</a>         if (mode == &quot;split&quot;) {
+<a href="#l59" class="line" id="l59">     59</a>             // memories grid
+<a href="#l60" class="line" id="l60">     60</a>             context.mappings.useMapper(DefaultMediaItemMapper::class) {
+<a href="#l61" class="line" id="l61">     61</a>                 cameraRollMediaId.getAsClass()?.hookConstructor(HookStage.AFTER) { param -&gt;
+<a href="#l62" class="line" id="l62">     62</a>                     //set the durationMs field
+<a href="#l63" class="line" id="l63">     63</a>                     param.thisObject&lt;Any&gt;()
+<a href="#l64" class="line" id="l64">     64</a>                         .setObjectField(durationMsField.get()!!, -1L)
+<a href="#l65" class="line" id="l65">     65</a>                 }
+<a href="#l66" class="line" id="l66">     66</a>             }
+<a href="#l67" class="line" id="l67">     67</a> 
+<a href="#l68" class="line" id="l68">     68</a>             // chat camera roll grid
+<a href="#l69" class="line" id="l69">     69</a>             findClass(&quot;com.snap.composer.memories.MemoriesPickerVideoDurationConfig&quot;).hookConstructor(HookStage.AFTER) { param -&gt;
+<a href="#l70" class="line" id="l70">     70</a>                 param.thisObject&lt;Any&gt;().apply {
+<a href="#l71" class="line" id="l71">     71</a>                     setObjectField(&quot;_maxSingleItemDurationMs&quot;, null)
+<a href="#l72" class="line" id="l72">     72</a>                     setObjectField(&quot;_maxTotalDurationMs&quot;, null)
+<a href="#l73" class="line" id="l73">     73</a>                 }
+<a href="#l74" class="line" id="l74">     74</a>             }
+<a href="#l75" class="line" id="l75">     75</a>         }
+<a href="#l76" class="line" id="l76">     76</a>     }
+<a href="#l77" class="line" id="l77">     77</a> }</pre>
+</div>
+</body>
+</html>

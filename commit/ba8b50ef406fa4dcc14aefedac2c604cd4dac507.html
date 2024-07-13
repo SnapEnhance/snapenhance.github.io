@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>perf(scripting): parcel file descriptor - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/ba8b50ef406fa4dcc14aefedac2c604cd4dac507.html">ba8b50ef406fa4dcc14aefedac2c604cd4dac507</a>
+<b>parent</b> <a href="../commit/51869e56a86a9fcd75d80f9db3bf565978c8e03e.html">51869e56a86a9fcd75d80f9db3bf565978c8e03e</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed,  1 May 2024 02:52:55 +0200
+
+perf(scripting): parcel file descriptor
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></td><td> | </td><td class="num">21</td><td><span class="i">+++++++++++++</span><span class="d">--------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ScriptRuntime.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">+++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">++++++</span><span class="d">-</span></td></tr>
+</table></pre><pre>4 files changed, 27 insertions(+), 10 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,6 +1,8 @@
+</a> package me.rhunk.snapenhance.scripting
+ 
+<a href="#h0-0-2" id="h0-0-2" class="i">+import android.annotation.SuppressLint
+</a> import android.net.Uri
+<a href="#h0-0-4" id="h0-0-4" class="i">+import android.os.ParcelFileDescriptor
+</a> import androidx.documentfile.provider.DocumentFile
+ import me.rhunk.snapenhance.RemoteSideContext
+ import me.rhunk.snapenhance.bridge.scripting.AutoReloadListener
+<a href="#h0-1" id="h0-1" class="h">@@ -11,6 +13,7 @@ import me.rhunk.snapenhance.common.scripting.bindings.BindingSide
+</a> import me.rhunk.snapenhance.common.scripting.impl.ConfigInterface
+ import me.rhunk.snapenhance.common.scripting.impl.ConfigTransactionType
+ import me.rhunk.snapenhance.common.scripting.type.ModuleInfo
+<a href="#h0-1-3" id="h0-1-3" class="i">+import me.rhunk.snapenhance.core.util.ktx.toParcelFileDescriptor
+</a> import me.rhunk.snapenhance.scripting.impl.IPCListeners
+ import me.rhunk.snapenhance.scripting.impl.ManagerIPC
+ import me.rhunk.snapenhance.scripting.impl.ManagerScriptConfig
+<a href="#h0-2" id="h0-2" class="h">@@ -49,8 +52,10 @@ class RemoteScriptManager(
+</a>         getScriptFileNames().forEach { name -&gt;
+             runCatching {
+                 getScriptInputStream(name) { stream -&gt;
+<a href="#h0-2-3" id="h0-2-3" class="d">-                    runtime.getModuleInfo(stream!!).also { info -&gt;
+</a><a href="#h0-2-4" id="h0-2-4" class="d">-                        cachedModuleInfo[name] = info
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+                    stream?.use {
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+                        runtime.getModuleInfo(it).also { info -&gt;
+</a><a href="#h0-2-7" id="h0-2-7" class="i">+                            cachedModuleInfo[name] = info
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+                        }
+</a>                     }
+                 }
+             }.onFailure {
+<a href="#h0-3" id="h0-3" class="h">@@ -92,9 +97,10 @@ class RemoteScriptManager(
+</a>         runtime.unload(scriptPath)
+     }
+ 
+<a href="#h0-3-3" id="h0-3-3" class="i">+    @SuppressLint(&quot;Recycle&quot;)
+</a>     private fun &lt;R&gt; getScriptInputStream(name: String, callback: (InputStream?) -&gt; R): R {
+         val file = getScriptsFolder()?.findFile(name) ?: return callback(null)
+<a href="#h0-3-6" id="h0-3-6" class="d">-        return context.androidContext.contentResolver.openInputStream(file.uri)?.use(callback) ?: callback(null)
+</a><a href="#h0-3-7" id="h0-3-7" class="i">+        return context.androidContext.contentResolver.openInputStream(file.uri)?.let(callback) ?: callback(null)
+</a>     }
+ 
+     fun getModuleDataFolder(moduleFileName: String): File {
+<a href="#h0-4" id="h0-4" class="h">@@ -123,15 +129,14 @@ class RemoteScriptManager(
+</a>         }.getOrDefault(emptyList())
+     }
+ 
+<a href="#h0-4-3" id="h0-4-3" class="d">-    override fun getScriptContent(moduleName: String): String? {
+</a><a href="#h0-4-4" id="h0-4-4" class="i">+    override fun getScriptContent(moduleName: String): ParcelFileDescriptor? {
+</a>         if (moduleName.startsWith(&quot;composer/&quot;)) {
+             return runCatching {
+<a href="#h0-4-7" id="h0-4-7" class="d">-                context.androidContext.assets.open(&quot;composer/${moduleName.removePrefix(&quot;composer/&quot;)}&quot;).use {
+</a><a href="#h0-4-8" id="h0-4-8" class="d">-                    it.bufferedReader().readText()
+</a><a href="#h0-4-9" id="h0-4-9" class="d">-                }
+</a><a href="#h0-4-10" id="h0-4-10" class="i">+                context.androidContext.assets.open(&quot;composer/${moduleName.removePrefix(&quot;composer/&quot;)}&quot;)
+</a><a href="#h0-4-11" id="h0-4-11" class="i">+                    .toParcelFileDescriptor(context.coroutineScope)
+</a>             }.getOrNull()
+         }
+<a href="#h0-4-14" id="h0-4-14" class="d">-        return getScriptInputStream(moduleName) { it?.bufferedReader()?.readText() }
+</a><a href="#h0-4-15" id="h0-4-15" class="i">+        return getScriptInputStream(moduleName) { it?.toParcelFileDescriptor(context.coroutineScope) }
+</a>     }
+ 
+     override fun registerIPCListener(channel: String, eventName: String, listener: IPCListener) {
+<b>diff --git a/<a id="h1" href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl</a> b/<a href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -6,7 +6,7 @@ import me.rhunk.snapenhance.bridge.scripting.AutoReloadListener;
+</a> interface IScripting {
+     List&lt;String&gt; getEnabledScripts();
+ 
+<a href="#h1-0-3" id="h1-0-3" class="d">-    @nullable String getScriptContent(String path);
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    @nullable ParcelFileDescriptor getScriptContent(String path);
+</a> 
+     oneway void registerIPCListener(String channel, String eventName, IPCListener listener);
+ 
+<b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ScriptRuntime.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ScriptRuntime.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ScriptRuntime.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ScriptRuntime.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,6 +1,7 @@
+</a> package me.rhunk.snapenhance.common.scripting
+ 
+ import android.content.Context
+<a href="#h2-0-3" id="h2-0-3" class="i">+import android.os.ParcelFileDescriptor
+</a> import me.rhunk.snapenhance.bridge.scripting.IScripting
+ import me.rhunk.snapenhance.common.logger.AbstractLogger
+ import me.rhunk.snapenhance.common.scripting.type.ModuleInfo
+<a href="#h2-1" id="h2-1" class="h">@@ -80,6 +81,12 @@ open class ScriptRuntime(
+</a>         modules.remove(scriptPath)
+     }
+ 
+<a href="#h2-1-3" id="h2-1-3" class="i">+    fun load(scriptPath: String, pfd: ParcelFileDescriptor) {
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+        load(scriptPath, ParcelFileDescriptor.AutoCloseInputStream(pfd).use {
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+            it.readBytes().toString(Charsets.UTF_8)
+</a><a href="#h2-1-6" id="h2-1-6" class="i">+        })
+</a><a href="#h2-1-7" id="h2-1-7" class="i">+    }
+</a><a href="#h2-1-8" id="h2-1-8" class="i">+
+</a>     fun load(scriptPath: String, content: String): JSModule? {
+         logger.info(&quot;Loading module $scriptPath&quot;)
+         return runCatching {
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -1,5 +1,6 @@
+</a> package me.rhunk.snapenhance.core.features.impl.experiments
+ 
+<a href="#h3-0-2" id="h3-0-2" class="i">+import android.os.ParcelFileDescriptor
+</a> import android.widget.FrameLayout
+ import androidx.compose.foundation.layout.Arrangement
+ import androidx.compose.foundation.layout.Column
+<a href="#h3-1" id="h3-1" class="h">@@ -186,7 +187,11 @@ class ComposerHooks: Feature(&quot;ComposerHooks&quot;, loadParams = FeatureLoadParams.ACT
+</a>     }
+ 
+     private fun loadHooks() {
+<a href="#h3-1-3" id="h3-1-3" class="d">-        val loaderScript = context.scriptRuntime.scripting.getScriptContent(&quot;composer/loader.js&quot;) ?: run {
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+        val loaderScript = context.scriptRuntime.scripting.getScriptContent(&quot;composer/loader.js&quot;)?.let { pfd -&gt;
+</a><a href="#h3-1-5" id="h3-1-5" class="i">+            ParcelFileDescriptor.AutoCloseInputStream(pfd).use {
+</a><a href="#h3-1-6" id="h3-1-6" class="i">+                it.readBytes().toString(Charsets.UTF_8)
+</a><a href="#h3-1-7" id="h3-1-7" class="i">+            }
+</a><a href="#h3-1-8" id="h3-1-8" class="i">+        } ?: run {
+</a>             context.log.error(&quot;Failed to load composer loader script&quot;)
+             return
+         }
+</pre>
+</div>
+</body>
+</html>

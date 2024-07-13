@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: force image format - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/b004f92b9cd9751fa0f22403b8b07ae426cd58cd.html">b004f92b9cd9751fa0f22403b8b07ae426cd58cd</a>
+<b>parent</b> <a href="../commit/d0668b67d4c64b2b70d5e9ae9c88af8161abe8e9.html">d0668b67d4c64b2b70d5e9ae9c88af8161abe8e9</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 25 Aug 2023 03:14:09 +0200
+
+feat: force image format
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a></td><td> | </td><td class="num">23</td><td><span class="i">++++++++++++++++++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/DownloaderConfig.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">+++</span><span class="d"></span></td></tr>
+</table></pre><pre>3 files changed, 29 insertions(+), 1 deletion(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -2,6 +2,8 @@ package me.rhunk.snapenhance.download
+</a> 
+ import android.annotation.SuppressLint
+ import android.content.Intent
+<a href="#h0-0-3" id="h0-0-3" class="i">+import android.graphics.Bitmap
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+import android.graphics.BitmapFactory
+</a> import android.net.Uri
+ import android.widget.Toast
+ import androidx.documentfile.provider.DocumentFile
+<a href="#h0-1" id="h0-1" class="h">@@ -121,12 +123,31 @@ class DownloadProcessor (
+</a>         if (coroutineContext.job.isCancelled) return
+ 
+         runCatching {
+<a href="#h0-1-3" id="h0-1-3" class="d">-            val fileType = FileType.fromFile(inputFile)
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+            var fileType = FileType.fromFile(inputFile)
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+
+</a>             if (fileType == FileType.UNKNOWN) {
+                 callbackOnFailure(translation.format(&quot;failed_gallery_toast&quot;, &quot;error&quot; to &quot;Unknown media type&quot;), null)
+                 return
+             }
+ 
+<a href="#h0-1-11" id="h0-1-11" class="i">+            if (fileType.isImage) {
+</a><a href="#h0-1-12" id="h0-1-12" class="i">+                remoteSideContext.config.root.downloader.forceImageFormat.getNullable()?.let { format -&gt;
+</a><a href="#h0-1-13" id="h0-1-13" class="i">+                    val bitmap = BitmapFactory.decodeFile(inputFile.absolutePath) ?: throw Exception(&quot;Failed to decode bitmap&quot;)
+</a><a href="#h0-1-14" id="h0-1-14" class="i">+                    @Suppress(&quot;DEPRECATION&quot;) val compressFormat = when (format) {
+</a><a href="#h0-1-15" id="h0-1-15" class="i">+                        &quot;png&quot; -&gt; Bitmap.CompressFormat.PNG
+</a><a href="#h0-1-16" id="h0-1-16" class="i">+                        &quot;jpg&quot; -&gt; Bitmap.CompressFormat.JPEG
+</a><a href="#h0-1-17" id="h0-1-17" class="i">+                        &quot;webp&quot; -&gt; Bitmap.CompressFormat.WEBP
+</a><a href="#h0-1-18" id="h0-1-18" class="i">+                        else -&gt; throw Exception(&quot;Invalid image format&quot;)
+</a><a href="#h0-1-19" id="h0-1-19" class="i">+                    }
+</a><a href="#h0-1-20" id="h0-1-20" class="i">+
+</a><a href="#h0-1-21" id="h0-1-21" class="i">+                    val outputStream = inputFile.outputStream()
+</a><a href="#h0-1-22" id="h0-1-22" class="i">+                    bitmap.compress(compressFormat, 100, outputStream)
+</a><a href="#h0-1-23" id="h0-1-23" class="i">+                    outputStream.close()
+</a><a href="#h0-1-24" id="h0-1-24" class="i">+
+</a><a href="#h0-1-25" id="h0-1-25" class="i">+                    fileType = FileType.fromFile(inputFile)
+</a><a href="#h0-1-26" id="h0-1-26" class="i">+                }
+</a><a href="#h0-1-27" id="h0-1-27" class="i">+            }
+</a><a href="#h0-1-28" id="h0-1-28" class="i">+
+</a>             val fileName = downloadObject.metadata.outputPath.substringAfterLast(&quot;/&quot;) + &quot;.&quot; + fileType.fileExtension
+ 
+             val outputFolder = DocumentFile.fromTreeUri(remoteSideContext.androidContext, Uri.parse(remoteSideContext.config.root.downloader.saveFolder.get()))
+<b>diff --git a/<a id="h1" href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a> b/<a href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -123,6 +123,10 @@
+</a>                         &quot;name&quot;: &quot;Merge Overlays&quot;,
+                         &quot;description&quot;: &quot;Combines the text and the media of a Snap into a single file&quot;
+                     },
+<a href="#h1-0-3" id="h1-0-3" class="i">+                    &quot;force_image_format&quot;: {
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+                        &quot;name&quot;: &quot;Force Image Format&quot;,
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+                        &quot;description&quot;: &quot;Forces images to be saved as a specific format&quot;
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+                    },
+</a>                     &quot;chat_download_context_menu&quot;: {
+                         &quot;name&quot;: &quot;Chat Download Context Menu&quot;,
+                         &quot;description&quot;: &quot;Allows to download messages from a conversation by long pressing them&quot;
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/DownloaderConfig.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/DownloaderConfig.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/DownloaderConfig.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/DownloaderConfig.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -22,6 +22,9 @@ class DownloaderConfig : ConfigContainer() {
+</a>     ).apply { set(mutableListOf(&quot;append_hash&quot;, &quot;append_date_time&quot;, &quot;append_type&quot;, &quot;append_username&quot;)) }
+     val allowDuplicate = boolean(&quot;allow_duplicate&quot;)
+     val mergeOverlays = boolean(&quot;merge_overlays&quot;) { addNotices(FeatureNotice.MAY_CAUSE_CRASHES) }
+<a href="#h2-0-3" id="h2-0-3" class="i">+    val forceImageFormat = unique(&quot;force_image_format&quot;, &quot;jpg&quot;, &quot;png&quot;, &quot;webp&quot;) {
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+        addFlags(ConfigFlag.NO_TRANSLATE)
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+    }
+</a>     val chatDownloadContextMenu = boolean(&quot;chat_download_context_menu&quot;)
+     val logging = multiple(&quot;logging&quot;, &quot;started&quot;, &quot;success&quot;, &quot;progress&quot;, &quot;failure&quot;).apply {
+         set(mutableListOf(&quot;started&quot;, &quot;success&quot;))
+</pre>
+</div>
+</body>
+</html>

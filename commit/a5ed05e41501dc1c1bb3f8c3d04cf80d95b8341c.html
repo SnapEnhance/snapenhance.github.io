@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: custom camera frame rate - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/a5ed05e41501dc1c1bb3f8c3d04cf80d95b8341c.html">a5ed05e41501dc1c1bb3f8c3d04cf80d95b8341c</a>
+<b>parent</b> <a href="../commit/e144c932808ec9e1ca638d6ce717d55c6fc265cd.html">e144c932808ec9e1ca638d6ce717d55c6fc265cd</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Mon, 28 Aug 2023 22:51:40 +0200
+
+feat: custom camera frame rate
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">6</td><td><span class="i">+++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Camera.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">+++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ConfigurationOverride.kt</a></td><td> | </td><td class="num">1</td><td><span class="i"></span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/CameraTweaks.kt</a></td><td> | </td><td class="num">19</td><td><span class="i">+++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>4 files changed, 25 insertions(+), 5 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a> b/<a href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -289,9 +289,9 @@
+</a>                         &quot;name&quot;: &quot;Override Picture Resolution&quot;,
+                         &quot;description&quot;: &quot;Overrides the picture resolution&quot;
+                     },
+<a href="#h0-0-3" id="h0-0-3" class="d">-                    &quot;force_highest_frame_rate&quot;: {
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-                        &quot;name&quot;: &quot;Force Highest Frame Rate&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-                        &quot;description&quot;: &quot;Forces the highest possible frame rate&quot;
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                    &quot;custom_frame_rate&quot;: {
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+                        &quot;name&quot;: &quot;Custom Frame Rate&quot;,
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+                        &quot;description&quot;: &quot;Overrides the camera frame rate&quot;
+</a>                     },
+                     &quot;force_camera_source_encoding&quot;: {
+                         &quot;name&quot;: &quot;Force Camera Source Encoding&quot;,
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Camera.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Camera.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Camera.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Camera.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -12,6 +12,8 @@ class Camera : ConfigContainer() {
+</a>         { addFlags(ConfigFlag.NO_TRANSLATE) }
+     val overridePictureResolution = unique(&quot;override_picture_resolution&quot;, *CameraTweaks.resolutions.toTypedArray())
+         { addFlags(ConfigFlag.NO_TRANSLATE) }
+<a href="#h1-0-3" id="h1-0-3" class="d">-    val forceHighestFrameRate = boolean(&quot;force_highest_frame_rate&quot;) { addNotices(FeatureNotice.MAY_BREAK_INTERNAL_BEHAVIOR) }
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    val customFrameRate = unique(&quot;custom_frame_rate&quot;,
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+        &quot;5&quot;, &quot;10&quot;, &quot;20&quot;, &quot;25&quot;, &quot;30&quot;, &quot;48&quot;, &quot;60&quot;, &quot;90&quot;, &quot;120&quot;
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+    ) { addNotices(FeatureNotice.MAY_BREAK_INTERNAL_BEHAVIOR); addFlags(ConfigFlag.NO_TRANSLATE) }
+</a>     val forceCameraSourceEncoding = boolean(&quot;force_camera_source_encoding&quot;)
+ }
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ConfigurationOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ConfigurationOverride.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ConfigurationOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ConfigurationOverride.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -17,7 +17,6 @@ class ConfigurationOverride : Feature(&quot;Configuration Override&quot;, loadParams = Fea
+</a> 
+         overrideProperty(&quot;STREAK_EXPIRATION_INFO&quot;, { context.config.userInterface.streakExpirationInfo.get() }, true)
+ 
+<a href="#h2-0-3" id="h2-0-3" class="d">-        overrideProperty(&quot;FORCE_CAMERA_HIGHEST_FPS&quot;, { context.config.camera.forceHighestFrameRate.get() }, true)
+</a>         overrideProperty(&quot;MEDIA_RECORDER_MAX_QUALITY_LEVEL&quot;, { context.config.camera.forceCameraSourceEncoding.get() }, true)
+         overrideProperty(&quot;REDUCE_MY_PROFILE_UI_COMPLEXITY&quot;, { context.config.userInterface.mapFriendNameTags.get() }, true)
+         overrideProperty(&quot;ENABLE_LONG_SNAP_SENDING&quot;, { context.config.global.disableSnapSplitting.get() }, true)
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/CameraTweaks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/CameraTweaks.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/CameraTweaks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/CameraTweaks.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -4,13 +4,17 @@ import android.Manifest
+</a> import android.annotation.SuppressLint
+ import android.content.ContextWrapper
+ import android.content.pm.PackageManager
+<a href="#h3-0-3" id="h3-0-3" class="i">+import android.hardware.camera2.CameraCharacteristics
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import android.hardware.camera2.CameraCharacteristics.Key
+</a> import android.hardware.camera2.CameraManager
+<a href="#h3-0-6" id="h3-0-6" class="i">+import android.util.Range
+</a> import me.rhunk.snapenhance.data.wrapper.impl.ScSize
+ import me.rhunk.snapenhance.features.Feature
+ import me.rhunk.snapenhance.features.FeatureLoadParams
+ import me.rhunk.snapenhance.hook.HookStage
+ import me.rhunk.snapenhance.hook.hook
+ import me.rhunk.snapenhance.hook.hookConstructor
+<a href="#h3-0-13" id="h3-0-13" class="i">+import me.rhunk.snapenhance.util.ktx.setObjectField
+</a> 
+ class CameraTweaks : Feature(&quot;Camera Tweaks&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+     companion object {
+<a href="#h3-1" id="h3-1" class="h">@@ -39,6 +43,21 @@ class CameraTweaks : Feature(&quot;Camera Tweaks&quot;, loadParams = FeatureLoadParams.ACT
+</a>         val previewResolutionConfig = context.config.camera.overridePreviewResolution.getNullable()?.let { parseResolution(it) }
+         val captureResolutionConfig = context.config.camera.overridePictureResolution.getNullable()?.let { parseResolution(it) }
+ 
+<a href="#h3-1-3" id="h3-1-3" class="i">+        context.config.camera.customFrameRate.getNullable()?.also { value -&gt;
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+            val customFrameRate = value.toInt()
+</a><a href="#h3-1-5" id="h3-1-5" class="i">+            CameraCharacteristics::class.java.hook(&quot;get&quot;, HookStage.AFTER)  { param -&gt;
+</a><a href="#h3-1-6" id="h3-1-6" class="i">+                val key = param.arg&lt;Key&lt;*&gt;&gt;(0)
+</a><a href="#h3-1-7" id="h3-1-7" class="i">+                if (key == CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES) {
+</a><a href="#h3-1-8" id="h3-1-8" class="i">+                    val fpsRanges = param.getResult() as? Array&lt;*&gt; ?: return@hook
+</a><a href="#h3-1-9" id="h3-1-9" class="i">+                    fpsRanges.forEach {
+</a><a href="#h3-1-10" id="h3-1-10" class="i">+                        val range = it as? Range&lt;*&gt; ?: return@forEach
+</a><a href="#h3-1-11" id="h3-1-11" class="i">+                        range.setObjectField(&quot;mUpper&quot;, customFrameRate)
+</a><a href="#h3-1-12" id="h3-1-12" class="i">+                        range.setObjectField(&quot;mLower&quot;, customFrameRate)
+</a><a href="#h3-1-13" id="h3-1-13" class="i">+                    }
+</a><a href="#h3-1-14" id="h3-1-14" class="i">+                }
+</a><a href="#h3-1-15" id="h3-1-15" class="i">+            }
+</a><a href="#h3-1-16" id="h3-1-16" class="i">+        }
+</a><a href="#h3-1-17" id="h3-1-17" class="i">+
+</a>         context.mappings.getMappedClass(&quot;ScCameraSettings&quot;).hookConstructor(HookStage.BEFORE) { param -&gt;
+             val previewResolution = ScSize(param.argNullable(2))
+             val captureResolution = ScSize(param.argNullable(3))
+</pre>
+</div>
+</body>
+</html>

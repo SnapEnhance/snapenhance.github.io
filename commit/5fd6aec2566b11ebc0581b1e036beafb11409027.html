@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>refactor: event bus priority - message logger &amp; e2ee optimization - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/5fd6aec2566b11ebc0581b1e036beafb11409027.html">5fd6aec2566b11ebc0581b1e036beafb11409027</a>
+<b>parent</b> <a href="../commit/bc015d5d6057ff2425ca0ff9798c46edf1352fb3.html">bc015d5d6057ff2425ca0ff9798c46edf1352fb3</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun,  1 Oct 2023 02:06:05 +0200
+
+refactor: event bus priority
+- message logger &amp; e2ee optimization
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt</a></td><td> | </td><td class="num">22</td><td><span class="i">++++++++++</span><span class="d">------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventDispatcher.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">+++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/event/events/impl/BuildMessageEvent.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">+++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/util/EvictingMap.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/data/SnapEnums.kt</a></td><td> | </td><td class="num">25</td><td><span class="i">++++++++++++++</span><span class="d">-----------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/EndToEndEncryption.kt</a></td><td> | </td><td class="num">56</td><td><span class="i">++++++++++++++++++++++++++++++++</span><span class="d">------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt</a></td><td> | </td><td class="num">90</td><td><span class="i">+++++++++++++++++++++++++++++++++++++</span><span class="d">------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/SnapToChatMedia.kt</a></td><td> | </td><td class="num">13</td><td><span class="i">+++++</span><span class="d">--------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/UnlimitedSnapViewTime.kt</a></td><td> | </td><td class="num">36</td><td><span class="i">+++++++++++++++++</span><span class="d">-------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/ChatActionMenu.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/FriendFeedInfoMenu.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+</table></pre><pre>11 files changed, 146 insertions(+), 124 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -15,18 +15,19 @@ interface IListener&lt;T&gt; {
+</a> class EventBus(
+     val context: ModContext
+ ) {
+<a href="#h0-0-3" id="h0-0-3" class="d">-    private val subscribers = mutableMapOf&lt;KClass&lt;out Event&gt;, MutableList&lt;IListener&lt;out Event&gt;&gt;&gt;()
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+    private val subscribers = mutableMapOf&lt;KClass&lt;out Event&gt;, MutableMap&lt;Int, IListener&lt;out Event&gt;&gt;&gt;()
+</a> 
+<a href="#h0-0-6" id="h0-0-6" class="d">-    fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;, listener: IListener&lt;T&gt;) {
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+    fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;, listener: IListener&lt;T&gt;, priority: Int? = null) {
+</a>         if (!subscribers.containsKey(event)) {
+<a href="#h0-0-9" id="h0-0-9" class="d">-            subscribers[event] = mutableListOf()
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+            subscribers[event] = sortedMapOf()
+</a>         }
+<a href="#h0-0-12" id="h0-0-12" class="d">-        subscribers[event]!!.add(listener)
+</a><a href="#h0-0-13" id="h0-0-13" class="i">+        val lastSubscriber = subscribers[event]?.keys?.lastOrNull() ?: 0
+</a><a href="#h0-0-14" id="h0-0-14" class="i">+        subscribers[event]?.put(priority ?: (lastSubscriber + 1), listener)
+</a>     }
+ 
+<a href="#h0-0-17" id="h0-0-17" class="d">-    inline fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;, crossinline listener: (T) -&gt; Unit) = subscribe(event, { true }, listener)
+</a><a href="#h0-0-18" id="h0-0-18" class="i">+    inline fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;, priority: Int? = null, crossinline listener: (T) -&gt; Unit) = subscribe(event, { true }, priority, listener)
+</a> 
+<a href="#h0-0-20" id="h0-0-20" class="d">-    inline fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;, crossinline filter: (T) -&gt; Boolean, crossinline listener: (T) -&gt; Unit): () -&gt; Unit {
+</a><a href="#h0-0-21" id="h0-0-21" class="i">+    inline fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;,  crossinline filter: (T) -&gt; Boolean, priority: Int? = null, crossinline listener: (T) -&gt; Unit): () -&gt; Unit {
+</a>         val obj = object : IListener&lt;T&gt; {
+             override fun handle(event: T) {
+                 if (!filter(event)) return
+<a href="#h0-1" id="h0-1" class="h">@@ -37,15 +38,12 @@ class EventBus(
+</a>                 }
+             }
+         }
+<a href="#h0-1-3" id="h0-1-3" class="d">-        subscribe(event, obj)
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+        subscribe(event, obj, priority)
+</a>         return { unsubscribe(event, obj) }
+     }
+ 
+     fun &lt;T : Event&gt; unsubscribe(event: KClass&lt;T&gt;, listener: IListener&lt;T&gt;) {
+<a href="#h0-1-9" id="h0-1-9" class="d">-        if (!subscribers.containsKey(event)) {
+</a><a href="#h0-1-10" id="h0-1-10" class="d">-            return
+</a><a href="#h0-1-11" id="h0-1-11" class="d">-        }
+</a><a href="#h0-1-12" id="h0-1-12" class="d">-        subscribers[event]!!.remove(listener)
+</a><a href="#h0-1-13" id="h0-1-13" class="i">+        subscribers[event]?.values?.remove(listener)
+</a>     }
+ 
+     fun &lt;T : Event&gt; post(event: T, afterBlock: T.() -&gt; Unit = {}): T? {
+<a href="#h0-2" id="h0-2" class="h">@@ -55,7 +53,7 @@ class EventBus(
+</a> 
+         event.context = context
+ 
+<a href="#h0-2-3" id="h0-2-3" class="d">-        subscribers[event::class]?.toTypedArray()?.forEach { listener -&gt;
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+        subscribers[event::class]?.toSortedMap()?.forEach { (_, listener) -&gt;
+</a>             @Suppress(&quot;UNCHECKED_CAST&quot;)
+             runCatching {
+                 (listener as IListener&lt;T&gt;).handle(event)
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventDispatcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventDispatcher.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventDispatcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventDispatcher.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -9,6 +9,7 @@ import me.rhunk.snapenhance.core.event.events.impl.*
+</a> import me.rhunk.snapenhance.core.util.ktx.getObjectField
+ import me.rhunk.snapenhance.core.util.ktx.setObjectField
+ import me.rhunk.snapenhance.core.util.snap.SnapWidgetBroadcastReceiverHelper
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.data.wrapper.impl.Message
+</a> import me.rhunk.snapenhance.data.wrapper.impl.MessageContent
+ import me.rhunk.snapenhance.data.wrapper.impl.MessageDestinations
+ import me.rhunk.snapenhance.data.wrapper.impl.SnapUUID
+<a href="#h1-1" id="h1-1" class="h">@@ -143,6 +144,14 @@ class EventDispatcher(
+</a>             }
+         }
+ 
+<a href="#h1-1-3" id="h1-1-3" class="i">+        context.classCache.message.hookConstructor(HookStage.AFTER) { param -&gt;
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+            context.event.post(
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+                BuildMessageEvent(
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+                    message = Message(param.thisObject())
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+                )
+</a><a href="#h1-1-8" id="h1-1-8" class="i">+            )
+</a><a href="#h1-1-9" id="h1-1-9" class="i">+        }
+</a><a href="#h1-1-10" id="h1-1-10" class="i">+
+</a>         hookViewBinder()
+     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/events/impl/BuildMessageEvent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/events/impl/BuildMessageEvent.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/events/impl/BuildMessageEvent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/events/impl/BuildMessageEvent.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -0,0 +1,8 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="i">+package me.rhunk.snapenhance.core.event.events.impl
+</a><a href="#h2-0-1" id="h2-0-1" class="i">+
+</a><a href="#h2-0-2" id="h2-0-2" class="i">+import me.rhunk.snapenhance.core.event.Event
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.data.wrapper.impl.Message
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+class BuildMessageEvent(
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+    val message: Message
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+): Event()</a><a href="#h2-0-8" id="h2-0-8" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/EvictingMap.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/EvictingMap.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/EvictingMap.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/EvictingMap.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -0,0 +1,5 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="i">+package me.rhunk.snapenhance.core.util
+</a><a href="#h3-0-1" id="h3-0-1" class="i">+
+</a><a href="#h3-0-2" id="h3-0-2" class="i">+class EvictingMap&lt;K, V&gt;(private val maxSize: Int) : LinkedHashMap&lt;K, V&gt;(maxSize, 0.75f, true) {
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+    override fun removeEldestEntry(eldest: MutableMap.MutableEntry&lt;K, V&gt;) = size &gt; maxSize
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+}</a><a href="#h3-0-5" id="h3-0-5" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/data/SnapEnums.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/data/SnapEnums.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/data/SnapEnums.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/data/SnapEnums.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -66,17 +66,20 @@ enum class ContentType(val id: Int) {
+</a>             return values().firstOrNull { it.id == i } ?: UNKNOWN
+         }
+ 
+<a href="#h4-0-3" id="h4-0-3" class="d">-        fun fromMessageContainer(protoReader: ProtoReader?): ContentType {
+</a><a href="#h4-0-4" id="h4-0-4" class="d">-            if (protoReader == null) return UNKNOWN
+</a><a href="#h4-0-5" id="h4-0-5" class="d">-            return when {
+</a><a href="#h4-0-6" id="h4-0-6" class="d">-                protoReader.containsPath(2) -&gt; CHAT
+</a><a href="#h4-0-7" id="h4-0-7" class="d">-                protoReader.containsPath(11) -&gt; SNAP
+</a><a href="#h4-0-8" id="h4-0-8" class="d">-                protoReader.containsPath(6) -&gt; NOTE
+</a><a href="#h4-0-9" id="h4-0-9" class="d">-                protoReader.containsPath(3) -&gt; EXTERNAL_MEDIA
+</a><a href="#h4-0-10" id="h4-0-10" class="d">-                protoReader.containsPath(4) -&gt; STICKER
+</a><a href="#h4-0-11" id="h4-0-11" class="d">-                protoReader.containsPath(5) -&gt; SHARE
+</a><a href="#h4-0-12" id="h4-0-12" class="d">-                protoReader.containsPath(7) -&gt; EXTERNAL_MEDIA// story replies
+</a><a href="#h4-0-13" id="h4-0-13" class="d">-                else -&gt; UNKNOWN
+</a><a href="#h4-0-14" id="h4-0-14" class="i">+        fun fromMessageContainer(protoReader: ProtoReader?): ContentType? {
+</a><a href="#h4-0-15" id="h4-0-15" class="i">+            if (protoReader == null) return null
+</a><a href="#h4-0-16" id="h4-0-16" class="i">+            return protoReader.run {
+</a><a href="#h4-0-17" id="h4-0-17" class="i">+                when {
+</a><a href="#h4-0-18" id="h4-0-18" class="i">+                    contains(8) -&gt; STATUS
+</a><a href="#h4-0-19" id="h4-0-19" class="i">+                    contains(2) -&gt; CHAT
+</a><a href="#h4-0-20" id="h4-0-20" class="i">+                    contains(11) -&gt; SNAP
+</a><a href="#h4-0-21" id="h4-0-21" class="i">+                    contains(6) -&gt; NOTE
+</a><a href="#h4-0-22" id="h4-0-22" class="i">+                    contains(3) -&gt; EXTERNAL_MEDIA
+</a><a href="#h4-0-23" id="h4-0-23" class="i">+                    contains(4) -&gt; STICKER
+</a><a href="#h4-0-24" id="h4-0-24" class="i">+                    contains(5) -&gt; SHARE
+</a><a href="#h4-0-25" id="h4-0-25" class="i">+                    contains(7) -&gt; EXTERNAL_MEDIA // story replies
+</a><a href="#h4-0-26" id="h4-0-26" class="i">+                    else -&gt; null
+</a><a href="#h4-0-27" id="h4-0-27" class="i">+                }
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/EndToEndEncryption.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/EndToEndEncryption.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/EndToEndEncryption.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/EndToEndEncryption.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -3,7 +3,6 @@ package me.rhunk.snapenhance.features.impl.experiments
+</a> import android.annotation.SuppressLint
+ import android.graphics.Canvas
+ import android.graphics.Paint
+<a href="#h5-0-3" id="h5-0-3" class="d">-import android.graphics.Rect
+</a> import android.graphics.drawable.ShapeDrawable
+ import android.graphics.drawable.shapes.Shape
+ import android.view.View
+<a href="#h5-1" id="h5-1" class="h">@@ -14,23 +13,22 @@ import android.widget.Button
+</a> import android.widget.TextView
+ import me.rhunk.snapenhance.core.event.events.impl.AddViewEvent
+ import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+<a href="#h5-1-3" id="h5-1-3" class="i">+import me.rhunk.snapenhance.core.event.events.impl.BuildMessageEvent
+</a> import me.rhunk.snapenhance.core.event.events.impl.SendMessageWithContentEvent
+ import me.rhunk.snapenhance.core.event.events.impl.UnaryCallEvent
+ import me.rhunk.snapenhance.core.messaging.MessagingRuleType
+ import me.rhunk.snapenhance.core.messaging.RuleState
+<a href="#h5-1-8" id="h5-1-8" class="i">+import me.rhunk.snapenhance.core.util.EvictingMap
+</a> import me.rhunk.snapenhance.core.util.ktx.getObjectField
+ import me.rhunk.snapenhance.core.util.protobuf.ProtoEditor
+ import me.rhunk.snapenhance.core.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.core.util.protobuf.ProtoWriter
+ import me.rhunk.snapenhance.data.ContentType
+<a href="#h5-1-14" id="h5-1-14" class="d">-import me.rhunk.snapenhance.data.wrapper.impl.Message
+</a> import me.rhunk.snapenhance.data.wrapper.impl.MessageContent
+ import me.rhunk.snapenhance.data.wrapper.impl.SnapUUID
+ import me.rhunk.snapenhance.features.FeatureLoadParams
+ import me.rhunk.snapenhance.features.MessagingRuleFeature
+ import me.rhunk.snapenhance.features.impl.Messaging
+<a href="#h5-1-20" id="h5-1-20" class="d">-import me.rhunk.snapenhance.hook.HookStage
+</a><a href="#h5-1-21" id="h5-1-21" class="d">-import me.rhunk.snapenhance.hook.hookConstructor
+</a> import me.rhunk.snapenhance.ui.ViewAppearanceHelper
+ import me.rhunk.snapenhance.ui.addForegroundDrawable
+ import me.rhunk.snapenhance.ui.removeForegroundDrawable
+<a href="#h5-2" id="h5-2" class="h">@@ -51,6 +49,8 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>         const val ENCRYPTED_MESSAGE_ID = 3
+     }
+ 
+<a href="#h5-2-3" id="h5-2-3" class="i">+    private val decryptedMessageCache = EvictingMap&lt;Long, Pair&lt;ContentType, ByteArray&gt;&gt;(100)
+</a><a href="#h5-2-4" id="h5-2-4" class="i">+
+</a>     private val pkRequests = mutableMapOf&lt;Long, ByteArray&gt;()
+     private val secretResponses = mutableMapOf&lt;Long, ByteArray&gt;()
+     private val encryptedMessages = mutableListOf&lt;Long&gt;()
+<a href="#h5-3" id="h5-3" class="h">@@ -258,17 +258,8 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>         }
+     }
+ 
+<a href="#h5-3-3" id="h5-3-3" class="d">-    private fun fixContentType(contentType: ContentType, message: ProtoReader): ContentType {
+</a><a href="#h5-3-4" id="h5-3-4" class="d">-        return when {
+</a><a href="#h5-3-5" id="h5-3-5" class="d">-            contentType == ContentType.EXTERNAL_MEDIA &amp;&amp; message.containsPath(11) -&gt; {
+</a><a href="#h5-3-6" id="h5-3-6" class="d">-                ContentType.SNAP
+</a><a href="#h5-3-7" id="h5-3-7" class="d">-            }
+</a><a href="#h5-3-8" id="h5-3-8" class="d">-            contentType == ContentType.SHARE &amp;&amp; message.containsPath(2) -&gt; {
+</a><a href="#h5-3-9" id="h5-3-9" class="d">-                ContentType.CHAT
+</a><a href="#h5-3-10" id="h5-3-10" class="d">-            }
+</a><a href="#h5-3-11" id="h5-3-11" class="d">-            else -&gt; contentType
+</a><a href="#h5-3-12" id="h5-3-12" class="d">-        }
+</a><a href="#h5-3-13" id="h5-3-13" class="d">-    }
+</a><a href="#h5-3-14" id="h5-3-14" class="i">+    private fun fixContentType(contentType: ContentType?, message: ProtoReader)
+</a><a href="#h5-3-15" id="h5-3-15" class="i">+        = ContentType.fromMessageContainer(message) ?: contentType
+</a> 
+     private fun hashParticipantId(participantId: String, salt: ByteArray): ByteArray {
+         return MessageDigest.getInstance(&quot;SHA-256&quot;).apply {
+<a href="#h5-4" id="h5-4" class="h">@@ -278,7 +269,21 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>     }
+ 
+     private fun messageHook(conversationId: String, messageId: Long, senderId: String, messageContent: MessageContent) {
+<a href="#h5-4-3" id="h5-4-3" class="i">+        if (messageContent.contentType != ContentType.STATUS &amp;&amp; decryptedMessageCache.containsKey(messageId)) {
+</a><a href="#h5-4-4" id="h5-4-4" class="i">+            val (contentType, buffer) = decryptedMessageCache[messageId]!!
+</a><a href="#h5-4-5" id="h5-4-5" class="i">+            messageContent.contentType = contentType
+</a><a href="#h5-4-6" id="h5-4-6" class="i">+            messageContent.content = buffer
+</a><a href="#h5-4-7" id="h5-4-7" class="i">+            return
+</a><a href="#h5-4-8" id="h5-4-8" class="i">+        }
+</a><a href="#h5-4-9" id="h5-4-9" class="i">+
+</a>         val reader = ProtoReader(messageContent.content)
+<a href="#h5-4-11" id="h5-4-11" class="i">+        messageContent.contentType = fixContentType(messageContent.contentType!!, reader)
+</a><a href="#h5-4-12" id="h5-4-12" class="i">+
+</a><a href="#h5-4-13" id="h5-4-13" class="i">+        fun setMessageContent(buffer: ByteArray) {
+</a><a href="#h5-4-14" id="h5-4-14" class="i">+            messageContent.content = buffer
+</a><a href="#h5-4-15" id="h5-4-15" class="i">+            messageContent.contentType = fixContentType(messageContent.contentType, ProtoReader(buffer))
+</a><a href="#h5-4-16" id="h5-4-16" class="i">+            decryptedMessageCache[messageId] = messageContent.contentType!! to buffer
+</a><a href="#h5-4-17" id="h5-4-17" class="i">+        }
+</a> 
+         fun replaceMessageText(text: String) {
+             messageContent.content = ProtoWriter().apply {
+<a href="#h5-5" id="h5-5" class="h">@@ -306,14 +311,18 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>                         if (isMe) {
+                             if (conversationParticipants.isEmpty()) return@eachBuffer
+                             val participantId = conversationParticipants.firstOrNull { participantIdHash.contentEquals(hashParticipantId(it, iv)) } ?: return@eachBuffer
+<a href="#h5-5-3" id="h5-5-3" class="d">-                            messageContent.content = e2eeInterface.decryptMessage(participantId, ciphertext, iv)
+</a><a href="#h5-5-4" id="h5-5-4" class="i">+                            setMessageContent(
+</a><a href="#h5-5-5" id="h5-5-5" class="i">+                                e2eeInterface.decryptMessage(participantId, ciphertext, iv)
+</a><a href="#h5-5-6" id="h5-5-6" class="i">+                            )
+</a>                             encryptedMessages.add(messageId)
+                             return@eachBuffer
+                         }
+ 
+                         if (!participantIdHash.contentEquals(hashParticipantId(context.database.myUserId, iv))) return@eachBuffer
+ 
+<a href="#h5-5-13" id="h5-5-13" class="d">-                        messageContent.content = e2eeInterface.decryptMessage(senderId, ciphertext, iv)
+</a><a href="#h5-5-14" id="h5-5-14" class="i">+                        setMessageContent(
+</a><a href="#h5-5-15" id="h5-5-15" class="i">+                            e2eeInterface.decryptMessage(senderId, ciphertext, iv)
+</a><a href="#h5-5-16" id="h5-5-16" class="i">+                        )
+</a>                         encryptedMessages.add(messageId)
+                     }
+                 }.onFailure {
+<a href="#h5-6" id="h5-6" class="h">@@ -414,7 +423,10 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>             }
+ 
+             event.buffer = ProtoEditor(event.buffer).apply {
+<a href="#h5-6-3" id="h5-6-3" class="d">-                val contentType = fixContentType(ContentType.fromId(messageReader.getVarInt(2)?.toInt() ?: -1), messageReader.followPath(4) ?: return@apply)
+</a><a href="#h5-6-4" id="h5-6-4" class="i">+                val contentType = fixContentType(
+</a><a href="#h5-6-5" id="h5-6-5" class="i">+                    ContentType.fromId(messageReader.getVarInt(2)?.toInt() ?: -1),
+</a><a href="#h5-6-6" id="h5-6-6" class="i">+                    messageReader.followPath(4) ?: return@apply
+</a><a href="#h5-6-7" id="h5-6-7" class="i">+                ) ?: return@apply
+</a>                 val messageContent = messageReader.getByteArray(4) ?: return@apply
+ 
+                 runCatching {
+<a href="#h5-7" id="h5-7" class="h">@@ -460,8 +472,8 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>     override fun init() {
+         if (!isEnabled) return
+ 
+<a href="#h5-7-3" id="h5-7-3" class="d">-        context.classCache.message.hookConstructor(HookStage.AFTER) { param -&gt;
+</a><a href="#h5-7-4" id="h5-7-4" class="d">-            val message = Message(param.thisObject())
+</a><a href="#h5-7-5" id="h5-7-5" class="i">+        context.event.subscribe(BuildMessageEvent::class, priority = 0) { event -&gt;
+</a><a href="#h5-7-6" id="h5-7-6" class="i">+            val message = event.message
+</a>             val conversationId = message.messageDescriptor.conversationId.toString()
+             messageHook(
+                 conversationId = conversationId,
+<a href="#h5-8" id="h5-8" class="h">@@ -470,10 +482,6 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>                 messageContent = message.messageContent
+             )
+ 
+<a href="#h5-8-3" id="h5-8-3" class="d">-            message.messageContent.contentType?.also {
+</a><a href="#h5-8-4" id="h5-8-4" class="d">-                message.messageContent.contentType = fixContentType(it, ProtoReader(message.messageContent.content))
+</a><a href="#h5-8-5" id="h5-8-5" class="d">-            }
+</a><a href="#h5-8-6" id="h5-8-6" class="d">-
+</a>             message.messageContent.instanceNonNull()
+                 .getObjectField(&quot;mQuotedMessage&quot;)
+                 ?.getObjectField(&quot;mContent&quot;)
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -8,14 +8,13 @@ import android.os.DeadObjectException
+</a> import com.google.gson.JsonObject
+ import com.google.gson.JsonParser
+ import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+<a href="#h6-0-3" id="h6-0-3" class="i">+import me.rhunk.snapenhance.core.event.events.impl.BuildMessageEvent
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+import me.rhunk.snapenhance.core.util.EvictingMap
+</a> import me.rhunk.snapenhance.core.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.data.ContentType
+ import me.rhunk.snapenhance.data.MessageState
+<a href="#h6-0-8" id="h6-0-8" class="d">-import me.rhunk.snapenhance.data.wrapper.impl.Message
+</a> import me.rhunk.snapenhance.features.Feature
+ import me.rhunk.snapenhance.features.FeatureLoadParams
+<a href="#h6-0-11" id="h6-0-11" class="d">-import me.rhunk.snapenhance.hook.HookStage
+</a><a href="#h6-0-12" id="h6-0-12" class="d">-import me.rhunk.snapenhance.hook.Hooker
+</a> import me.rhunk.snapenhance.ui.addForegroundDrawable
+ import me.rhunk.snapenhance.ui.removeForegroundDrawable
+ import java.util.concurrent.Executors
+<a href="#h6-1" id="h6-1" class="h">@@ -48,7 +47,7 @@ class MessageLogger : Feature(&quot;MessageLogger&quot;,
+</a> 
+     private val cachedIdLinks = mutableMapOf&lt;Long, Long&gt;() // client id -&gt; server id
+     private val fetchedMessages = mutableListOf&lt;Long&gt;() // list of unique message ids
+<a href="#h6-1-3" id="h6-1-3" class="d">-    private val deletedMessageCache = mutableMapOf&lt;Long, JsonObject&gt;() // unique message id -&gt; message json object
+</a><a href="#h6-1-4" id="h6-1-4" class="i">+    private val deletedMessageCache = EvictingMap&lt;Long, JsonObject&gt;(200) // unique message id -&gt; message json object
+</a> 
+     fun isMessageDeleted(conversationId: String, clientMessageId: Long)
+         = makeUniqueIdentifier(conversationId, clientMessageId)?.let { deletedMessageCache.containsKey(it) } ?: false
+<a href="#h6-2" id="h6-2" class="h">@@ -105,62 +104,57 @@ class MessageLogger : Feature(&quot;MessageLogger&quot;,
+</a>         }.also { context.log.verbose(&quot;Loaded ${fetchedMessages.size} cached messages in $it&quot;) }
+     }
+ 
+<a href="#h6-2-3" id="h6-2-3" class="d">-    private fun processSnapMessage(messageInstance: Any) {
+</a><a href="#h6-2-4" id="h6-2-4" class="d">-        val message = Message(messageInstance)
+</a><a href="#h6-2-5" id="h6-2-5" class="i">+    override fun init() {
+</a><a href="#h6-2-6" id="h6-2-6" class="i">+        context.event.subscribe(BuildMessageEvent::class, { isEnabled }, priority = 1) { event -&gt;
+</a><a href="#h6-2-7" id="h6-2-7" class="i">+            val messageInstance = event.message.instanceNonNull()
+</a><a href="#h6-2-8" id="h6-2-8" class="i">+            if (event.message.messageState != MessageState.COMMITTED) return@subscribe
+</a> 
+<a href="#h6-2-10" id="h6-2-10" class="d">-        if (message.messageState != MessageState.COMMITTED) return
+</a><a href="#h6-2-11" id="h6-2-11" class="i">+            cachedIdLinks[event.message.messageDescriptor.messageId] = event.message.orderKey
+</a><a href="#h6-2-12" id="h6-2-12" class="i">+            val conversationId = event.message.messageDescriptor.conversationId.toString()
+</a><a href="#h6-2-13" id="h6-2-13" class="i">+            //exclude messages sent by me
+</a><a href="#h6-2-14" id="h6-2-14" class="i">+            if (event.message.senderId.toString() == context.database.myUserId) return@subscribe
+</a> 
+<a href="#h6-2-16" id="h6-2-16" class="d">-        cachedIdLinks[message.messageDescriptor.messageId] = message.orderKey
+</a><a href="#h6-2-17" id="h6-2-17" class="d">-        val conversationId = message.messageDescriptor.conversationId.toString()
+</a><a href="#h6-2-18" id="h6-2-18" class="d">-        //exclude messages sent by me
+</a><a href="#h6-2-19" id="h6-2-19" class="d">-        if (message.senderId.toString() == context.database.myUserId) return
+</a><a href="#h6-2-20" id="h6-2-20" class="i">+            val uniqueMessageIdentifier = computeMessageIdentifier(conversationId, event.message.orderKey)
+</a> 
+<a href="#h6-2-22" id="h6-2-22" class="d">-        val uniqueMessageIdentifier = computeMessageIdentifier(conversationId, message.orderKey)
+</a><a href="#h6-2-23" id="h6-2-23" class="i">+            if (event.message.messageContent.contentType != ContentType.STATUS) {
+</a><a href="#h6-2-24" id="h6-2-24" class="i">+                if (fetchedMessages.contains(uniqueMessageIdentifier)) return@subscribe
+</a><a href="#h6-2-25" id="h6-2-25" class="i">+                fetchedMessages.add(uniqueMessageIdentifier)
+</a> 
+<a href="#h6-2-27" id="h6-2-27" class="d">-        if (message.messageContent.contentType != ContentType.STATUS) {
+</a><a href="#h6-2-28" id="h6-2-28" class="d">-            if (fetchedMessages.contains(uniqueMessageIdentifier)) return
+</a><a href="#h6-2-29" id="h6-2-29" class="d">-            fetchedMessages.add(uniqueMessageIdentifier)
+</a><a href="#h6-2-30" id="h6-2-30" class="i">+                threadPool.execute {
+</a><a href="#h6-2-31" id="h6-2-31" class="i">+                    try {
+</a><a href="#h6-2-32" id="h6-2-32" class="i">+                        messageLoggerInterface.addMessage(conversationId, uniqueMessageIdentifier, context.gson.toJson(messageInstance).toByteArray(Charsets.UTF_8))
+</a><a href="#h6-2-33" id="h6-2-33" class="i">+                    } catch (ignored: DeadObjectException) {}
+</a><a href="#h6-2-34" id="h6-2-34" class="i">+                }
+</a> 
+<a href="#h6-2-36" id="h6-2-36" class="d">-            threadPool.execute {
+</a><a href="#h6-2-37" id="h6-2-37" class="d">-                try {
+</a><a href="#h6-2-38" id="h6-2-38" class="d">-                    messageLoggerInterface.addMessage(conversationId, uniqueMessageIdentifier, context.gson.toJson(messageInstance).toByteArray(Charsets.UTF_8))
+</a><a href="#h6-2-39" id="h6-2-39" class="d">-                } catch (ignored: DeadObjectException) {}
+</a><a href="#h6-2-40" id="h6-2-40" class="i">+                return@subscribe
+</a>             }
+ 
+<a href="#h6-2-43" id="h6-2-43" class="d">-            return
+</a><a href="#h6-2-44" id="h6-2-44" class="d">-        }
+</a><a href="#h6-2-45" id="h6-2-45" class="d">-
+</a><a href="#h6-2-46" id="h6-2-46" class="d">-        //query the deleted message
+</a><a href="#h6-2-47" id="h6-2-47" class="d">-        val deletedMessageObject: JsonObject = if (deletedMessageCache.containsKey(uniqueMessageIdentifier))
+</a><a href="#h6-2-48" id="h6-2-48" class="d">-            deletedMessageCache[uniqueMessageIdentifier]
+</a><a href="#h6-2-49" id="h6-2-49" class="d">-        else {
+</a><a href="#h6-2-50" id="h6-2-50" class="d">-            messageLoggerInterface.getMessage(conversationId, uniqueMessageIdentifier)?.let {
+</a><a href="#h6-2-51" id="h6-2-51" class="d">-                JsonParser.parseString(it.toString(Charsets.UTF_8)).asJsonObject
+</a><a href="#h6-2-52" id="h6-2-52" class="d">-            }
+</a><a href="#h6-2-53" id="h6-2-53" class="d">-        } ?: return
+</a><a href="#h6-2-54" id="h6-2-54" class="i">+            //query the deleted message
+</a><a href="#h6-2-55" id="h6-2-55" class="i">+            val deletedMessageObject: JsonObject = if (deletedMessageCache.containsKey(uniqueMessageIdentifier))
+</a><a href="#h6-2-56" id="h6-2-56" class="i">+                deletedMessageCache[uniqueMessageIdentifier]
+</a><a href="#h6-2-57" id="h6-2-57" class="i">+            else {
+</a><a href="#h6-2-58" id="h6-2-58" class="i">+                messageLoggerInterface.getMessage(conversationId, uniqueMessageIdentifier)?.let {
+</a><a href="#h6-2-59" id="h6-2-59" class="i">+                    JsonParser.parseString(it.toString(Charsets.UTF_8)).asJsonObject
+</a><a href="#h6-2-60" id="h6-2-60" class="i">+                }
+</a><a href="#h6-2-61" id="h6-2-61" class="i">+            } ?: return@subscribe
+</a> 
+<a href="#h6-2-63" id="h6-2-63" class="d">-        val messageJsonObject = deletedMessageObject.asJsonObject
+</a><a href="#h6-2-64" id="h6-2-64" class="i">+            val messageJsonObject = deletedMessageObject.asJsonObject
+</a> 
+<a href="#h6-2-66" id="h6-2-66" class="d">-        //if the message is a snap make it playable
+</a><a href="#h6-2-67" id="h6-2-67" class="d">-        if (messageJsonObject[&quot;mMessageContent&quot;]?.asJsonObject?.get(&quot;mContentType&quot;)?.asString == &quot;SNAP&quot;) {
+</a><a href="#h6-2-68" id="h6-2-68" class="d">-            messageJsonObject[&quot;mMetadata&quot;].asJsonObject.addProperty(&quot;mPlayableSnapState&quot;, &quot;PLAYABLE&quot;)
+</a><a href="#h6-2-69" id="h6-2-69" class="d">-        }
+</a><a href="#h6-2-70" id="h6-2-70" class="d">-
+</a><a href="#h6-2-71" id="h6-2-71" class="d">-        //serialize all properties of messageJsonObject and put in the message object
+</a><a href="#h6-2-72" id="h6-2-72" class="d">-        messageInstance.javaClass.declaredFields.forEach { field -&gt;
+</a><a href="#h6-2-73" id="h6-2-73" class="d">-            field.isAccessible = true
+</a><a href="#h6-2-74" id="h6-2-74" class="d">-            if (field.name == &quot;mDescriptor&quot;) return@forEach // prevent the client message id from being overwritten
+</a><a href="#h6-2-75" id="h6-2-75" class="d">-            messageJsonObject[field.name]?.let { fieldValue -&gt;
+</a><a href="#h6-2-76" id="h6-2-76" class="d">-                field.set(messageInstance, context.gson.fromJson(fieldValue, field.type))
+</a><a href="#h6-2-77" id="h6-2-77" class="i">+            //if the message is a snap make it playable
+</a><a href="#h6-2-78" id="h6-2-78" class="i">+            if (messageJsonObject[&quot;mMessageContent&quot;]?.asJsonObject?.get(&quot;mContentType&quot;)?.asString == &quot;SNAP&quot;) {
+</a><a href="#h6-2-79" id="h6-2-79" class="i">+                messageJsonObject[&quot;mMetadata&quot;].asJsonObject.addProperty(&quot;mPlayableSnapState&quot;, &quot;PLAYABLE&quot;)
+</a>             }
+<a href="#h6-2-81" id="h6-2-81" class="d">-        }
+</a> 
+<a href="#h6-2-83" id="h6-2-83" class="d">-        deletedMessageCache[uniqueMessageIdentifier] = deletedMessageObject
+</a><a href="#h6-2-84" id="h6-2-84" class="d">-    }
+</a><a href="#h6-2-85" id="h6-2-85" class="i">+            //serialize all properties of messageJsonObject and put in the message object
+</a><a href="#h6-2-86" id="h6-2-86" class="i">+            messageInstance.javaClass.declaredFields.forEach { field -&gt;
+</a><a href="#h6-2-87" id="h6-2-87" class="i">+                field.isAccessible = true
+</a><a href="#h6-2-88" id="h6-2-88" class="i">+                if (field.name == &quot;mDescriptor&quot;) return@forEach // prevent the client message id from being overwritten
+</a><a href="#h6-2-89" id="h6-2-89" class="i">+                messageJsonObject[field.name]?.let { fieldValue -&gt;
+</a><a href="#h6-2-90" id="h6-2-90" class="i">+                    field.set(messageInstance, context.gson.fromJson(fieldValue, field.type))
+</a><a href="#h6-2-91" id="h6-2-91" class="i">+                }
+</a><a href="#h6-2-92" id="h6-2-92" class="i">+            }
+</a> 
+<a href="#h6-2-94" id="h6-2-94" class="d">-    override fun init() {
+</a><a href="#h6-2-95" id="h6-2-95" class="d">-        Hooker.hookConstructor(context.classCache.message, HookStage.AFTER, { isEnabled }) { param -&gt;
+</a><a href="#h6-2-96" id="h6-2-96" class="d">-            processSnapMessage(param.thisObject())
+</a><a href="#h6-2-97" id="h6-2-97" class="i">+            deletedMessageCache[uniqueMessageIdentifier] = deletedMessageObject
+</a>         }
+     }
+ 
+<b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/SnapToChatMedia.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/SnapToChatMedia.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/SnapToChatMedia.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/SnapToChatMedia.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -1,24 +1,21 @@
+</a> package me.rhunk.snapenhance.features.impl.spying
+ 
+<a href="#h7-0-2" id="h7-0-2" class="i">+import me.rhunk.snapenhance.core.event.events.impl.BuildMessageEvent
+</a> import me.rhunk.snapenhance.core.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.core.util.protobuf.ProtoWriter
+ import me.rhunk.snapenhance.data.ContentType
+<a href="#h7-0-6" id="h7-0-6" class="d">-import me.rhunk.snapenhance.data.wrapper.impl.Message
+</a> import me.rhunk.snapenhance.features.Feature
+ import me.rhunk.snapenhance.features.FeatureLoadParams
+<a href="#h7-0-9" id="h7-0-9" class="d">-import me.rhunk.snapenhance.hook.HookStage
+</a><a href="#h7-0-10" id="h7-0-10" class="d">-import me.rhunk.snapenhance.hook.hookConstructor
+</a> 
+ class SnapToChatMedia : Feature(&quot;SnapToChatMedia&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+     override fun onActivityCreate() {
+         if (!context.config.messaging.snapToChatMedia.get()) return
+<a href="#h7-0-15" id="h7-0-15" class="d">-        context.classCache.message.hookConstructor(HookStage.AFTER) { param -&gt;
+</a><a href="#h7-0-16" id="h7-0-16" class="d">-            val message = Message(param.thisObject())
+</a> 
+<a href="#h7-0-18" id="h7-0-18" class="d">-            if (message.messageContent.contentType != ContentType.SNAP) return@hookConstructor
+</a><a href="#h7-0-19" id="h7-0-19" class="i">+        context.event.subscribe(BuildMessageEvent::class, priority = 100) { event -&gt;
+</a><a href="#h7-0-20" id="h7-0-20" class="i">+            if (event.message.messageContent.contentType != ContentType.SNAP) return@subscribe
+</a> 
+<a href="#h7-0-22" id="h7-0-22" class="d">-            val snapMessageContent = ProtoReader(message.messageContent.content).followPath(11)?.getBuffer() ?: return@hookConstructor
+</a><a href="#h7-0-23" id="h7-0-23" class="d">-            message.messageContent.content = ProtoWriter().apply {
+</a><a href="#h7-0-24" id="h7-0-24" class="i">+            val snapMessageContent = ProtoReader(event.message.messageContent.content).followPath(11)?.getBuffer() ?: return@subscribe
+</a><a href="#h7-0-25" id="h7-0-25" class="i">+            event.message.messageContent.content = ProtoWriter().apply {
+</a>                 from(3) {
+                     addBuffer(3, snapMessageContent)
+                 }
+<b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/UnlimitedSnapViewTime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/UnlimitedSnapViewTime.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/UnlimitedSnapViewTime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/UnlimitedSnapViewTime.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -1,34 +1,32 @@
+</a> package me.rhunk.snapenhance.features.impl.tweaks
+ 
+<a href="#h8-0-2" id="h8-0-2" class="i">+import me.rhunk.snapenhance.core.event.events.impl.BuildMessageEvent
+</a> import me.rhunk.snapenhance.core.util.protobuf.ProtoEditor
+ import me.rhunk.snapenhance.core.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.data.ContentType
+ import me.rhunk.snapenhance.data.MessageState
+<a href="#h8-0-7" id="h8-0-7" class="d">-import me.rhunk.snapenhance.data.wrapper.impl.Message
+</a> import me.rhunk.snapenhance.features.Feature
+ import me.rhunk.snapenhance.features.FeatureLoadParams
+<a href="#h8-0-10" id="h8-0-10" class="d">-import me.rhunk.snapenhance.hook.HookStage
+</a><a href="#h8-0-11" id="h8-0-11" class="d">-import me.rhunk.snapenhance.hook.hookConstructor
+</a> 
+ class UnlimitedSnapViewTime :
+<a href="#h8-0-14" id="h8-0-14" class="d">-    Feature(&quot;UnlimitedSnapViewTime&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+</a><a href="#h8-0-15" id="h8-0-15" class="d">-    override fun onActivityCreate() {
+</a><a href="#h8-0-16" id="h8-0-16" class="i">+    Feature(&quot;UnlimitedSnapViewTime&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_ASYNC) {
+</a><a href="#h8-0-17" id="h8-0-17" class="i">+    override fun asyncOnActivityCreate() {
+</a>         val state by context.config.messaging.unlimitedSnapViewTime
+<a href="#h8-0-19" id="h8-0-19" class="d">-        context.classCache.message.hookConstructor(HookStage.AFTER, { state }) { param -&gt;
+</a><a href="#h8-0-20" id="h8-0-20" class="d">-            val message = Message(param.thisObject())
+</a><a href="#h8-0-21" id="h8-0-21" class="d">-            if (message.messageState != MessageState.COMMITTED) return@hookConstructor
+</a><a href="#h8-0-22" id="h8-0-22" class="d">-            if (message.messageContent.contentType != ContentType.SNAP) return@hookConstructor
+</a> 
+<a href="#h8-0-24" id="h8-0-24" class="d">-            with(message.messageContent) {
+</a><a href="#h8-0-25" id="h8-0-25" class="d">-                val mediaAttributes = ProtoReader(this.content).followPath(11, 5, 2) ?: return@hookConstructor
+</a><a href="#h8-0-26" id="h8-0-26" class="d">-                if (mediaAttributes.contains(6)) return@hookConstructor
+</a><a href="#h8-0-27" id="h8-0-27" class="d">-                this.content = ProtoEditor(this.content).apply {
+</a><a href="#h8-0-28" id="h8-0-28" class="d">-                    edit(11, 5, 2) {
+</a><a href="#h8-0-29" id="h8-0-29" class="d">-                        remove(8)
+</a><a href="#h8-0-30" id="h8-0-30" class="d">-                        addBuffer(6, byteArrayOf())
+</a><a href="#h8-0-31" id="h8-0-31" class="d">-                    }
+</a><a href="#h8-0-32" id="h8-0-32" class="d">-                }.toByteArray()
+</a><a href="#h8-0-33" id="h8-0-33" class="d">-            }
+</a><a href="#h8-0-34" id="h8-0-34" class="i">+        context.event.subscribe(BuildMessageEvent::class, { state }, priority = 101) { event -&gt;
+</a><a href="#h8-0-35" id="h8-0-35" class="i">+            if (event.message.messageState != MessageState.COMMITTED) return@subscribe
+</a><a href="#h8-0-36" id="h8-0-36" class="i">+            if (event.message.messageContent.contentType != ContentType.SNAP) return@subscribe
+</a><a href="#h8-0-37" id="h8-0-37" class="i">+
+</a><a href="#h8-0-38" id="h8-0-38" class="i">+            val messageContent = event.message.messageContent
+</a><a href="#h8-0-39" id="h8-0-39" class="i">+
+</a><a href="#h8-0-40" id="h8-0-40" class="i">+            val mediaAttributes = ProtoReader(messageContent.content).followPath(11, 5, 2) ?: return@subscribe
+</a><a href="#h8-0-41" id="h8-0-41" class="i">+            if (mediaAttributes.contains(6)) return@subscribe
+</a><a href="#h8-0-42" id="h8-0-42" class="i">+            messageContent.content = ProtoEditor(messageContent.content).apply {
+</a><a href="#h8-0-43" id="h8-0-43" class="i">+                edit(11, 5, 2) {
+</a><a href="#h8-0-44" id="h8-0-44" class="i">+                    remove(8)
+</a><a href="#h8-0-45" id="h8-0-45" class="i">+                    addBuffer(6, byteArrayOf())
+</a><a href="#h8-0-46" id="h8-0-46" class="i">+                }
+</a><a href="#h8-0-47" id="h8-0-47" class="i">+            }.toByteArray()
+</a>         }
+     }
+ }
+<b>diff --git a/<a id="h9" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/ChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/ChatActionMenu.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/ChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/ChatActionMenu.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -189,7 +189,7 @@ class ChatActionMenu : AbstractMenu() {
+</a>                                 append(&quot;arroyo_content_type: ${ContentType.fromId(arroyoMessage.contentType)} (${arroyoMessage.contentType})\n&quot;)
+                                 append(&quot;parsed_content_type: ${ContentType.fromMessageContainer(
+                                     ProtoReader(arroyoMessage.messageContent!!).followPath(4, 4)
+<a href="#h9-0-3" id="h9-0-3" class="d">-                                ).let { &quot;$it (${it.id})&quot; }}\n&quot;)
+</a><a href="#h9-0-4" id="h9-0-4" class="i">+                                ).let { &quot;$it (${it?.id})&quot; }}\n&quot;)
+</a>                                 append(&quot;creation_timestamp: ${arroyoMessage.creationTimestamp} (${Instant.ofEpochMilli(arroyoMessage.creationTimestamp)})\n&quot;)
+                                 append(&quot;read_timestamp: ${arroyoMessage.readTimestamp} (${Instant.ofEpochMilli(arroyoMessage.readTimestamp)})\n&quot;)
+                                 append(&quot;is_messagelogger_deleted: ${messageLogger.isMessageDeleted(arroyoMessage.clientConversationId!!, arroyoMessage.clientMessageId.toLong())}\n&quot;)
+<b>diff --git a/<a id="h10" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/FriendFeedInfoMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/FriendFeedInfoMenu.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/FriendFeedInfoMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/FriendFeedInfoMenu.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -122,7 +122,7 @@ class FriendFeedInfoMenu : AbstractMenu() {
+</a>                 messageLogger.takeIf { it.isEnabled }?.getMessageProto(conversationId, message.clientMessageId.toLong()) ?: ProtoReader(message.messageContent ?: return@forEach).followPath(4, 4)
+             ) ?: return@forEach
+ 
+<a href="#h10-0-3" id="h10-0-3" class="d">-            val contentType = ContentType.fromMessageContainer(protoReader)
+</a><a href="#h10-0-4" id="h10-0-4" class="i">+            val contentType = ContentType.fromMessageContainer(protoReader) ?: ContentType.fromId(message.contentType)
+</a>             var messageString = if (contentType == ContentType.CHAT) {
+                 protoReader.getString(2, 1) ?: return@forEach
+             } else {
+</pre>
+</div>
+</body>
+</html>

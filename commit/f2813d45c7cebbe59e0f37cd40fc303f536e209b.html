@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core/downloader): better duplicate handling - fix runOnUIThread - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/f2813d45c7cebbe59e0f37cd40fc303f536e209b.html">f2813d45c7cebbe59e0f37cd40fc303f536e209b</a>
+<b>parent</b> <a href="../commit/3fbe5ef121190e2bd39b849c46cdf6ca91db8dc8.html">3fbe5ef121190e2bd39b849c46cdf6ca91db8dc8</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun,  8 Oct 2023 00:35:57 +0200
+
+fix(core/downloader): better duplicate handling
+- fix runOnUIThread
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">++++++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/util/export/MessageExporter.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">+++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/MessageDecoder.kt</a></td><td> | </td><td class="num">17</td><td><span class="i">+++++++++++</span><span class="d">------</span></td></tr>
+</table></pre><pre>4 files changed, 28 insertions(+), 14 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -67,6 +67,10 @@ class ModContext {
+</a>     }
+ 
+     fun runOnUiThread(runnable: () -&gt; Unit) {
+<a href="#h0-0-3" id="h0-0-3" class="i">+        if (Looper.myLooper() == Looper.getMainLooper()) {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+            runnable()
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+            return
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+        }
+</a>         Handler(Looper.getMainLooper()).post {
+             runCatching(runnable).onFailure {
+                 Logger.xposedLog(&quot;UI thread runnable failed&quot;, it)
+<a href="#h0-1" id="h0-1" class="h">@@ -86,11 +90,15 @@ class ModContext {
+</a>     }
+ 
+     fun shortToast(message: Any?) {
+<a href="#h0-1-3" id="h0-1-3" class="d">-        Toast.makeText(androidContext, message.toString(), Toast.LENGTH_SHORT).show()
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+        runOnUiThread {
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+            Toast.makeText(androidContext, message.toString(), Toast.LENGTH_SHORT).show()
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+        }
+</a>     }
+ 
+     fun longToast(message: Any?) {
+<a href="#h0-1-10" id="h0-1-10" class="d">-        Toast.makeText(androidContext, message.toString(), Toast.LENGTH_LONG).show()
+</a><a href="#h0-1-11" id="h0-1-11" class="i">+        runOnUiThread {
+</a><a href="#h0-1-12" id="h0-1-12" class="i">+            Toast.makeText(androidContext, message.toString(), Toast.LENGTH_LONG).show()
+</a><a href="#h0-1-13" id="h0-1-13" class="i">+        }
+</a>     }
+ 
+     fun softRestartApp(saveSettings: Boolean = false) {
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/export/MessageExporter.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/export/MessageExporter.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/export/MessageExporter.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/export/MessageExporter.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -119,7 +119,7 @@ class MessageExporter(
+</a>             }.forEach { message -&gt;
+                 threadPool.execute {
+                     MessageDecoder.decode(message.messageContent).forEach decode@{ attachment -&gt;
+<a href="#h1-0-3" id="h1-0-3" class="d">-                        val protoMediaReference = Base64.UrlSafe.decode(attachment.mediaKey ?: return@decode)
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+                        val protoMediaReference = Base64.UrlSafe.decode(attachment.mediaUrlKey ?: return@decode)
+</a> 
+                         runCatching {
+                             RemoteMediaResolver.downloadBoltMedia(protoMediaReference, decryptionCallback = {
+<a href="#h1-1" id="h1-1" class="h">@@ -291,7 +291,7 @@ class MessageExporter(
+</a>                                 if (attachments.type == AttachmentType.STICKER) //TODO: implement stickers
+                                     return@attachments
+                                 add(JsonObject().apply {
+<a href="#h1-1-3" id="h1-1-3" class="d">-                                    addProperty(&quot;key&quot;, attachments.mediaKey?.replace(&quot;=&quot;, &quot;&quot;))
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+                                    addProperty(&quot;key&quot;, attachments.mediaUrlKey?.replace(&quot;=&quot;, &quot;&quot;))
+</a>                                     addProperty(&quot;type&quot;, attachments.type.toString())
+                                     add(&quot;encryption&quot;, attachments.attachmentInfo?.encryption?.let { encryption -&gt;
+                                         JsonObject().apply {
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -289,9 +289,10 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a> 
+             val author = context.database.getFriendInfo(senderId) ?: return
+             val authorUsername = author.usernameForSorting!!
+<a href="#h2-0-3" id="h2-0-3" class="i">+            val mediaId = paramMap[&quot;MEDIA_ID&quot;]?.toString()?.split(&quot;-&quot;)?.getOrNull(1) ?: &quot;&quot;
+</a> 
+             downloadOperaMedia(provideDownloadManagerClient(
+<a href="#h2-0-6" id="h2-0-6" class="d">-                mediaIdentifier = &quot;$conversationId$senderId${conversationMessage.serverMessageId}&quot;,
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+                mediaIdentifier = &quot;$conversationId$senderId${conversationMessage.serverMessageId}$mediaId&quot;,
+</a>                 mediaAuthor = authorUsername,
+                 downloadSource = MediaDownloadSource.CHAT_MEDIA,
+                 friendInfo = author
+<a href="#h2-1" id="h2-1" class="h">@@ -533,12 +534,12 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>         attachments.forEach { attachment -&gt;
+             runCatching {
+                 provideDownloadManagerClient(
+<a href="#h2-1-3" id="h2-1-3" class="d">-                    mediaIdentifier = &quot;${message.clientConversationId}${message.senderId}${message.serverMessageId}${attachment.attachmentInfo?.encryption?.iv}&quot;,
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+                    mediaIdentifier = &quot;${message.clientConversationId}${message.senderId}${message.serverMessageId}${attachment.mediaUniqueId}&quot;,
+</a>                     downloadSource = MediaDownloadSource.CHAT_MEDIA,
+                     mediaAuthor = authorName,
+                     friendInfo = friendInfo
+                 ).downloadSingleMedia(
+<a href="#h2-1-9" id="h2-1-9" class="d">-                    mediaData = attachment.mediaKey!!,
+</a><a href="#h2-1-10" id="h2-1-10" class="i">+                    mediaData = attachment.mediaUrlKey!!,
+</a>                     mediaType = DownloadMediaType.PROTO_MEDIA,
+                     encryption = attachment.attachmentInfo?.encryption,
+                     attachmentType = attachment.type
+<a href="#h2-2" id="h2-2" class="h">@@ -614,7 +615,7 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>             val firstAttachment = decodedAttachments.first()
+ 
+             val previewCoroutine = async {
+<a href="#h2-2-3" id="h2-2-3" class="d">-                val downloadedMedia = RemoteMediaResolver.downloadBoltMedia(Base64.decode(firstAttachment.mediaKey!!), decryptionCallback = {
+</a><a href="#h2-2-4" id="h2-2-4" class="i">+                val downloadedMedia = RemoteMediaResolver.downloadBoltMedia(Base64.decode(firstAttachment.mediaUrlKey!!), decryptionCallback = {
+</a>                     firstAttachment.attachmentInfo?.encryption?.decryptInputStream(it) ?: it
+                 }) ?: return@async null
+ 
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/MessageDecoder.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/MessageDecoder.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/MessageDecoder.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/decoder/MessageDecoder.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -10,17 +10,22 @@ import kotlin.io.encoding.Base64
+</a> import kotlin.io.encoding.ExperimentalEncodingApi
+ 
+ data class DecodedAttachment(
+<a href="#h3-0-3" id="h3-0-3" class="d">-    val mediaKey: String?,
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+    val mediaUrlKey: String?,
+</a>     val type: AttachmentType,
+     val attachmentInfo: AttachmentInfo?
+<a href="#h3-0-7" id="h3-0-7" class="d">-)
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+) {
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+    @OptIn(ExperimentalEncodingApi::class)
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+    val mediaUniqueId: String? by lazy {
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+        runCatching { Base64.UrlSafe.decode(mediaUrlKey.toString()) }.getOrNull()?.let { ProtoReader(it).getString(2, 2) }
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+    }
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+}
+</a> 
+ @OptIn(ExperimentalEncodingApi::class)
+ object MessageDecoder {
+     private val gson = GsonBuilder().create()
+ 
+     private fun decodeAttachment(protoReader: ProtoReader): AttachmentInfo? {
+<a href="#h3-0-20" id="h3-0-20" class="d">-        val mediaInfo =  protoReader.followPath(1, 1) ?: return null
+</a><a href="#h3-0-21" id="h3-0-21" class="i">+        val mediaInfo = protoReader.followPath(1, 1) ?: return null
+</a> 
+         return AttachmentInfo(
+             encryption = run {
+<a href="#h3-1" id="h3-1" class="h">@@ -94,7 +99,7 @@ object MessageDecoder {
+</a>         fun decodeMedia(type: AttachmentType, protoReader: ProtoReader) {
+             decodedAttachment.add(
+                 DecodedAttachment(
+<a href="#h3-1-3" id="h3-1-3" class="d">-                    mediaKey = mediaReferences.getOrNull(mediaKeyIndex++),
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+                    mediaUrlKey = mediaReferences.getOrNull(mediaKeyIndex++),
+</a>                     type = type,
+                     attachmentInfo = decodeAttachment(protoReader) ?: return
+                 )
+<a href="#h3-2" id="h3-2" class="h">@@ -110,7 +115,7 @@ object MessageDecoder {
+</a>             protoReader.followPath(1) {
+                 decodedAttachment.add(
+                     DecodedAttachment(
+<a href="#h3-2-3" id="h3-2-3" class="d">-                        mediaKey = null,
+</a><a href="#h3-2-4" id="h3-2-4" class="i">+                        mediaUrlKey = null,
+</a>                         type = AttachmentType.STICKER,
+                         attachmentInfo = BitmojiSticker(
+                             reference = getString(2) ?: return@followPath
+<a href="#h3-3" id="h3-3" class="h">@@ -149,7 +154,7 @@ object MessageDecoder {
+</a> 
+                 decodedAttachment.add(
+                     DecodedAttachment(
+<a href="#h3-3-3" id="h3-3-3" class="d">-                        mediaKey = mediaReferences.getOrNull(mediaKeyIndex++),
+</a><a href="#h3-3-4" id="h3-3-4" class="i">+                        mediaUrlKey = mediaReferences.getOrNull(mediaKeyIndex++),
+</a>                         type = AttachmentType.NOTE,
+                         attachmentInfo = audioNote
+                     )
+</pre>
+</div>
+</body>
+</html>

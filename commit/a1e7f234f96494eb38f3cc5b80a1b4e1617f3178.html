@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(auto_updater): cpu arch deprecated method - remove unused import - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/a1e7f234f96494eb38f3cc5b80a1b4e1617f3178.html">a1e7f234f96494eb38f3cc5b80a1b4e1617f3178</a>
+<b>parent</b> <a href="../commit/0bfb75d00cd4e82760810f356a2aee330f9806aa.html">0bfb75d00cd4e82760810f356a2aee330f9806aa</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Mon,  7 Aug 2023 00:58:36 +0200
+
+fix(auto_updater): cpu arch deprecated method
+- remove unused import
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/AutoUpdater.kt</a></td><td> | </td><td class="num">14</td><td><span class="i">+++++</span><span class="d">---------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/SettingsMenu.kt</a></td><td> | </td><td class="num">16</td><td><span class="i">+</span><span class="d">---------------</span></td></tr>
+</table></pre><pre>2 files changed, 6 insertions(+), 24 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/AutoUpdater.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/AutoUpdater.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/AutoUpdater.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/AutoUpdater.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -7,6 +7,7 @@ import android.content.Context
+</a> import android.content.Intent
+ import android.content.IntentFilter
+ import android.net.Uri
+<a href="#h0-0-3" id="h0-0-3" class="i">+import android.os.Build
+</a> import android.os.Environment
+ import com.google.gson.JsonParser
+ import me.rhunk.snapenhance.Logger
+<a href="#h0-1" id="h0-1" class="h">@@ -41,11 +42,6 @@ class AutoUpdater : Feature(&quot;AutoUpdater&quot;, loadParams = FeatureLoadParams.ACTIVI
+</a>         }
+     }
+ 
+<a href="#h0-1-3" id="h0-1-3" class="d">-    @Suppress(&quot;DEPRECATION&quot;)
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-    private fun getCPUArchitecture(): String {
+</a><a href="#h0-1-5" id="h0-1-5" class="d">-        return Build.CPU_ABI
+</a><a href="#h0-1-6" id="h0-1-6" class="d">-    }
+</a><a href="#h0-1-7" id="h0-1-7" class="d">-
+</a>     @SuppressLint(&quot;UnspecifiedRegisterReceiverFlag&quot;)
+     fun checkForUpdates(): String? {
+         val endpoint = Request.Builder().url(&quot;https://api.github.com/repos/rhunk/SnapEnhance/releases&quot;).build()
+<a href="#h0-2" id="h0-2" class="h">@@ -61,10 +57,10 @@ class AutoUpdater : Feature(&quot;AutoUpdater&quot;, loadParams = FeatureLoadParams.ACTIVI
+</a>         val latestVersion = latestRelease.getAsJsonPrimitive(&quot;tag_name&quot;).asString
+         if (latestVersion.removePrefix(&quot;v&quot;) == BuildConfig.VERSION_NAME) return null
+ 
+<a href="#h0-2-3" id="h0-2-3" class="d">-        val architectureName = when (getCPUArchitecture()) {
+</a><a href="#h0-2-4" id="h0-2-4" class="d">-            &quot;armeabi-v7a&quot;, &quot;armeabi&quot; -&gt; &quot;armv7&quot;
+</a><a href="#h0-2-5" id="h0-2-5" class="d">-            &quot;arm64-v8a&quot; -&gt; &quot;armv8&quot;
+</a><a href="#h0-2-6" id="h0-2-6" class="d">-            else -&gt; { throw Throwable(&quot;Failed getting architecture&quot;) }
+</a><a href="#h0-2-7" id="h0-2-7" class="i">+        val architectureName = Build.SUPPORTED_ABIS.let {
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+            if (it.contains(&quot;arm64-v8a&quot;)) return@let &quot;armv8&quot;
+</a><a href="#h0-2-9" id="h0-2-9" class="i">+            if (it.contains(&quot;armeabi-v7a&quot;) || it.contains(&quot;armeabi&quot;)) return@let &quot;armv7&quot;
+</a><a href="#h0-2-10" id="h0-2-10" class="i">+            throw Throwable(&quot;Failed getting architecture&quot;)
+</a>         }
+ 
+         val releaseContentBody = latestRelease.getAsJsonPrimitive(&quot;body&quot;).asString
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/SettingsMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/SettingsMenu.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/SettingsMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/SettingsMenu.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,24 +1,10 @@
+</a> package me.rhunk.snapenhance.ui.menu.impl
+ 
+ import android.annotation.SuppressLint
+<a href="#h1-0-3" id="h1-0-3" class="d">-import android.app.AlertDialog
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-import android.graphics.Color
+</a><a href="#h1-0-5" id="h1-0-5" class="d">-import android.graphics.Typeface
+</a><a href="#h1-0-6" id="h1-0-6" class="d">-import android.text.InputType
+</a> import android.view.View
+ import android.widget.Button
+<a href="#h1-0-9" id="h1-0-9" class="d">-import android.widget.EditText
+</a><a href="#h1-0-10" id="h1-0-10" class="d">-import android.widget.LinearLayout
+</a><a href="#h1-0-11" id="h1-0-11" class="d">-import android.widget.Switch
+</a><a href="#h1-0-12" id="h1-0-12" class="d">-import android.widget.TextView
+</a><a href="#h1-0-13" id="h1-0-13" class="d">-import me.rhunk.snapenhance.config.ConfigProperty
+</a><a href="#h1-0-14" id="h1-0-14" class="d">-import me.rhunk.snapenhance.config.impl.ConfigIntegerValue
+</a><a href="#h1-0-15" id="h1-0-15" class="d">-import me.rhunk.snapenhance.config.impl.ConfigStateListValue
+</a><a href="#h1-0-16" id="h1-0-16" class="d">-import me.rhunk.snapenhance.config.impl.ConfigStateSelection
+</a><a href="#h1-0-17" id="h1-0-17" class="d">-import me.rhunk.snapenhance.config.impl.ConfigStateValue
+</a><a href="#h1-0-18" id="h1-0-18" class="d">-import me.rhunk.snapenhance.config.impl.ConfigStringValue
+</a><a href="#h1-0-19" id="h1-0-19" class="d">-import me.rhunk.snapenhance.ui.menu.AbstractMenu
+</a> import me.rhunk.snapenhance.ui.ViewAppearanceHelper
+<a href="#h1-0-21" id="h1-0-21" class="i">+import me.rhunk.snapenhance.ui.menu.AbstractMenu
+</a> 
+ class SettingsMenu : AbstractMenu() {
+     //TODO: quick settings
+</pre>
+</div>
+</body>
+</html>

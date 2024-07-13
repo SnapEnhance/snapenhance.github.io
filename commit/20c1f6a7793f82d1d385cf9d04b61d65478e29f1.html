@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>perf: message logger (#50) - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/20c1f6a7793f82d1d385cf9d04b61d65478e29f1.html">20c1f6a7793f82d1d385cf9d04b61d65478e29f1</a>
+<b>parent</b> <a href="../commit/0b80489a1d068cf576ee84bea073dfa1e144432b.html">0b80489a1d068cf576ee84bea073dfa1e144432b</a>
+<b>Author:</b> auth &lt;<a href="mailto:64337177+authorisation@users.noreply.github.com">64337177+authorisation@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri,  9 Jun 2023 03:19:40 +0200
+
+perf: message logger (#50)
+
+* pref: message logger cache
+
+---------
+
+Co-authored-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/bridge/AbstractBridgeClient.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/bridge/MessageLoggerWrapper.kt</a></td><td> | </td><td class="num">10</td><td><span class="i">++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/RootBridgeClient.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/ServiceBridgeClient.kt</a></td><td> | </td><td class="num">66</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++</span><span class="d">-------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/BridgeMessageType.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h5">app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/messagelogger/MessageLoggerListResult.kt</a></td><td> | </td><td class="num">19</td><td><span class="i">+++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/messagelogger/MessageLoggerRequest.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">+++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">app/src/main/kotlin/me/rhunk/snapenhance/bridge/service/BridgeService.kt</a></td><td> | </td><td class="num">15</td><td><span class="i">++++++++++</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">app/src/main/kotlin/me/rhunk/snapenhance/database/DatabaseAccess.kt</a></td><td> | </td><td class="num">19</td><td><span class="i">+++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt</a></td><td> | </td><td class="num">149</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-------------------------------</span></td></tr>
+</table></pre><pre>10 files changed, 209 insertions(+), 93 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/AbstractBridgeClient.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/AbstractBridgeClient.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/AbstractBridgeClient.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/AbstractBridgeClient.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -68,6 +68,14 @@ abstract class AbstractBridgeClient {
+</a>     /**
+      * Get the content of a logged message from the database
+      *
+<a href="#h0-0-3" id="h0-0-3" class="i">+     * @param conversationId the ID of the conversation
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+     * @return the content of the message
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+     */
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+    abstract fun getLoggedMessageIds(conversationId: String, limit: Int): List&lt;Long&gt;
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+    /**
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+     * Get the content of a logged message from the database
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+     *
+</a>      * @param id the ID of the message logger message
+      * @return the content of the message
+      */
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/MessageLoggerWrapper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/MessageLoggerWrapper.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/MessageLoggerWrapper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/MessageLoggerWrapper.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -46,6 +46,16 @@ class MessageLoggerWrapper(
+</a>         return Pair(state, message)
+     }
+ 
+<a href="#h1-0-3" id="h1-0-3" class="i">+    fun getMessageIds(conversationId: String, limit: Int): List&lt;Long&gt; {
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+        val cursor = database.rawQuery(&quot;SELECT message_id FROM messages WHERE conversation_id = ? ORDER BY message_id DESC LIMIT ?&quot;, arrayOf(conversationId, limit.toString()))
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+        val messageIds = mutableListOf&lt;Long&gt;()
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+        while (cursor.moveToNext()) {
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+            messageIds.add(cursor.getLong(0))
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+        }
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+        cursor.close()
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+        return messageIds
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+    }
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+
+</a>     fun clearMessages() {
+         database.execSQL(&quot;DELETE FROM messages&quot;)
+     }
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/RootBridgeClient.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/RootBridgeClient.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/RootBridgeClient.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/RootBridgeClient.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -65,6 +65,10 @@ class RootBridgeClient : AbstractBridgeClient() {
+</a>         return true
+     }
+ 
+<a href="#h2-0-3" id="h2-0-3" class="i">+    override fun getLoggedMessageIds(conversationId: String, limit: Int): List&lt;Long&gt; {
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+        return messageLoggerWrapper.getMessageIds(conversationId, limit)
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+    }
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+
+</a>     override fun getMessageLoggerMessage(conversationId: String, id: Long): ByteArray? {
+         val (state, messageData) = messageLoggerWrapper.getMessage(conversationId, id)
+         if (state) {
+<b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/ServiceBridgeClient.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/ServiceBridgeClient.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/ServiceBridgeClient.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/ServiceBridgeClient.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -13,6 +13,8 @@ import android.os.HandlerThread
+</a> import android.os.IBinder
+ import android.os.Message
+ import android.os.Messenger
+<a href="#h3-0-3" id="h3-0-3" class="i">+import kotlinx.coroutines.runBlocking
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import kotlinx.coroutines.suspendCancellableCoroutine
+</a> import me.rhunk.snapenhance.BuildConfig
+ import me.rhunk.snapenhance.Logger.xposedLog
+ import me.rhunk.snapenhance.bridge.AbstractBridgeClient
+<a href="#h3-1" id="h3-1" class="h">@@ -25,11 +27,13 @@ import me.rhunk.snapenhance.bridge.common.impl.file.FileAccessRequest
+</a> import me.rhunk.snapenhance.bridge.common.impl.file.FileAccessResult
+ import me.rhunk.snapenhance.bridge.common.impl.locale.LocaleRequest
+ import me.rhunk.snapenhance.bridge.common.impl.locale.LocaleResult
+<a href="#h3-1-3" id="h3-1-3" class="i">+import me.rhunk.snapenhance.bridge.common.impl.messagelogger.MessageLoggerListResult
+</a> import me.rhunk.snapenhance.bridge.common.impl.messagelogger.MessageLoggerRequest
+ import me.rhunk.snapenhance.bridge.common.impl.messagelogger.MessageLoggerResult
+ import me.rhunk.snapenhance.bridge.service.BridgeService
+ import java.util.concurrent.CompletableFuture
+ import java.util.concurrent.Executors
+<a href="#h3-1-9" id="h3-1-9" class="i">+import kotlin.coroutines.resume
+</a> import kotlin.reflect.KClass
+ import kotlin.system.exitProcess
+ 
+<a href="#h3-2" id="h3-2" class="h">@@ -59,23 +63,20 @@ class ServiceBridgeClient: AbstractBridgeClient(), ServiceConnection {
+</a>     }
+ 
+     private fun handleResponseMessage(
+<a href="#h3-2-3" id="h3-2-3" class="d">-        msg: Message,
+</a><a href="#h3-2-4" id="h3-2-4" class="d">-        future: CompletableFuture&lt;BridgeMessage&gt;
+</a><a href="#h3-2-5" id="h3-2-5" class="d">-    ) {
+</a><a href="#h3-2-6" id="h3-2-6" class="i">+        msg: Message
+</a><a href="#h3-2-7" id="h3-2-7" class="i">+    ): BridgeMessage {
+</a>         val message: BridgeMessage = when (BridgeMessageType.fromValue(msg.what)) {
+             BridgeMessageType.FILE_ACCESS_RESULT -&gt; FileAccessResult()
+             BridgeMessageType.DOWNLOAD_CONTENT_RESULT -&gt; DownloadContentResult()
+             BridgeMessageType.MESSAGE_LOGGER_RESULT -&gt; MessageLoggerResult()
+<a href="#h3-2-12" id="h3-2-12" class="i">+            BridgeMessageType.MESSAGE_LOGGER_LIST_RESULT -&gt; MessageLoggerListResult()
+</a>             BridgeMessageType.LOCALE_RESULT -&gt; LocaleResult()
+<a href="#h3-2-14" id="h3-2-14" class="d">-            else -&gt; {
+</a><a href="#h3-2-15" id="h3-2-15" class="d">-                future.completeExceptionally(IllegalStateException(&quot;Unknown message type: ${msg.what}&quot;))
+</a><a href="#h3-2-16" id="h3-2-16" class="d">-                return
+</a><a href="#h3-2-17" id="h3-2-17" class="d">-            }
+</a><a href="#h3-2-18" id="h3-2-18" class="i">+            else -&gt; throw IllegalStateException(&quot;Unknown message type: ${msg.what}&quot;)
+</a>         }
+ 
+         with(message) {
+             read(msg.data)
+<a href="#h3-2-23" id="h3-2-23" class="d">-            future.complete(this)
+</a><a href="#h3-2-24" id="h3-2-24" class="i">+            return this
+</a>         }
+     }
+ 
+<a href="#h3-3" id="h3-3" class="h">@@ -84,26 +85,31 @@ class ServiceBridgeClient: AbstractBridgeClient(), ServiceConnection {
+</a>         messageType: BridgeMessageType,
+         message: BridgeMessage,
+         resultType: KClass&lt;T&gt;? = null
+<a href="#h3-3-3" id="h3-3-3" class="d">-    ): T {
+</a><a href="#h3-3-4" id="h3-3-4" class="d">-        val future = CompletableFuture&lt;BridgeMessage&gt;()
+</a><a href="#h3-3-5" id="h3-3-5" class="i">+    ) = runBlocking {
+</a><a href="#h3-3-6" id="h3-3-6" class="i">+        suspendCancellableCoroutine { cancelableContinuation -&gt;
+</a><a href="#h3-3-7" id="h3-3-7" class="i">+            val replyMessenger = Messenger(object : Handler(handlerThread.looper) {
+</a><a href="#h3-3-8" id="h3-3-8" class="i">+                override fun handleMessage(msg: Message) {
+</a><a href="#h3-3-9" id="h3-3-9" class="i">+                    if (cancelableContinuation.isCancelled) return
+</a><a href="#h3-3-10" id="h3-3-10" class="i">+                    runCatching {
+</a><a href="#h3-3-11" id="h3-3-11" class="i">+                        cancelableContinuation.resume(handleResponseMessage(msg) as T)
+</a><a href="#h3-3-12" id="h3-3-12" class="i">+                    }.onFailure {
+</a><a href="#h3-3-13" id="h3-3-13" class="i">+                        cancelableContinuation.cancel(it)
+</a><a href="#h3-3-14" id="h3-3-14" class="i">+                    }
+</a><a href="#h3-3-15" id="h3-3-15" class="i">+                }
+</a><a href="#h3-3-16" id="h3-3-16" class="i">+            })
+</a> 
+<a href="#h3-3-18" id="h3-3-18" class="d">-        val replyMessenger = Messenger(object : Handler(handlerThread.looper) {
+</a><a href="#h3-3-19" id="h3-3-19" class="d">-            override fun handleMessage(msg: Message) {
+</a><a href="#h3-3-20" id="h3-3-20" class="d">-                handleResponseMessage(msg, future)
+</a><a href="#h3-3-21" id="h3-3-21" class="d">-            }
+</a><a href="#h3-3-22" id="h3-3-22" class="d">-        })
+</a><a href="#h3-3-23" id="h3-3-23" class="d">-
+</a><a href="#h3-3-24" id="h3-3-24" class="d">-        runCatching {
+</a><a href="#h3-3-25" id="h3-3-25" class="d">-            with(Message.obtain()) {
+</a><a href="#h3-3-26" id="h3-3-26" class="d">-                what = messageType.value
+</a><a href="#h3-3-27" id="h3-3-27" class="d">-                replyTo = replyMessenger
+</a><a href="#h3-3-28" id="h3-3-28" class="d">-                data = Bundle()
+</a><a href="#h3-3-29" id="h3-3-29" class="d">-                message.write(data)
+</a><a href="#h3-3-30" id="h3-3-30" class="d">-                messenger.send(this)
+</a><a href="#h3-3-31" id="h3-3-31" class="i">+            runCatching {
+</a><a href="#h3-3-32" id="h3-3-32" class="i">+                with(Message.obtain()) {
+</a><a href="#h3-3-33" id="h3-3-33" class="i">+                    what = messageType.value
+</a><a href="#h3-3-34" id="h3-3-34" class="i">+                    replyTo = replyMessenger
+</a><a href="#h3-3-35" id="h3-3-35" class="i">+                    data = Bundle()
+</a><a href="#h3-3-36" id="h3-3-36" class="i">+                    message.write(data)
+</a><a href="#h3-3-37" id="h3-3-37" class="i">+                    messenger.send(this)
+</a><a href="#h3-3-38" id="h3-3-38" class="i">+                }
+</a><a href="#h3-3-39" id="h3-3-39" class="i">+            }.onFailure {
+</a><a href="#h3-3-40" id="h3-3-40" class="i">+                cancelableContinuation.cancel(it)
+</a>             }
+         }
+<a href="#h3-3-43" id="h3-3-43" class="d">-
+</a><a href="#h3-3-44" id="h3-3-44" class="d">-        return future.get() as T
+</a>     }
+ 
+     override fun createAndReadFile(
+<a href="#h3-4" id="h3-4" class="h">@@ -177,6 +183,16 @@ class ServiceBridgeClient: AbstractBridgeClient(), ServiceConnection {
+</a>         }
+     }
+ 
+<a href="#h3-4-3" id="h3-4-3" class="i">+    override fun getLoggedMessageIds(conversationId: String, limit: Int): List&lt;Long&gt; {
+</a><a href="#h3-4-4" id="h3-4-4" class="i">+        sendMessage(
+</a><a href="#h3-4-5" id="h3-4-5" class="i">+            BridgeMessageType.MESSAGE_LOGGER_REQUEST,
+</a><a href="#h3-4-6" id="h3-4-6" class="i">+            MessageLoggerRequest(MessageLoggerRequest.Action.LIST_IDS, conversationId, limit.toLong()),
+</a><a href="#h3-4-7" id="h3-4-7" class="i">+            MessageLoggerListResult::class
+</a><a href="#h3-4-8" id="h3-4-8" class="i">+        ).run {
+</a><a href="#h3-4-9" id="h3-4-9" class="i">+            return messages!!
+</a><a href="#h3-4-10" id="h3-4-10" class="i">+        }
+</a><a href="#h3-4-11" id="h3-4-11" class="i">+    }
+</a><a href="#h3-4-12" id="h3-4-12" class="i">+
+</a>     override fun getMessageLoggerMessage(conversationId: String, id: Long): ByteArray? {
+         sendMessage(
+             BridgeMessageType.MESSAGE_LOGGER_REQUEST,
+<b>diff --git a/<a id="h4" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/BridgeMessageType.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/BridgeMessageType.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/BridgeMessageType.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/BridgeMessageType.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -12,7 +12,8 @@ enum class BridgeMessageType(
+</a>     LOCALE_REQUEST(4),
+     LOCALE_RESULT(5),
+     MESSAGE_LOGGER_REQUEST(6),
+<a href="#h4-0-3" id="h4-0-3" class="d">-    MESSAGE_LOGGER_RESULT(7);
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+    MESSAGE_LOGGER_RESULT(7),
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+    MESSAGE_LOGGER_LIST_RESULT(8);
+</a> 
+     companion object {
+         fun fromValue(value: Int): BridgeMessageType {
+<b>diff --git a/<a id="h5" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/messagelogger/MessageLoggerListResult.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/messagelogger/MessageLoggerListResult.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/messagelogger/MessageLoggerListResult.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/messagelogger/MessageLoggerListResult.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -0,0 +1,18 @@
+</a><a href="#h5-0-0" id="h5-0-0" class="i">+package me.rhunk.snapenhance.bridge.common.impl.messagelogger
+</a><a href="#h5-0-1" id="h5-0-1" class="i">+
+</a><a href="#h5-0-2" id="h5-0-2" class="i">+import android.os.Bundle
+</a><a href="#h5-0-3" id="h5-0-3" class="i">+import me.rhunk.snapenhance.bridge.common.BridgeMessage
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+
+</a><a href="#h5-0-5" id="h5-0-5" class="i">+
+</a><a href="#h5-0-6" id="h5-0-6" class="i">+class MessageLoggerListResult(
+</a><a href="#h5-0-7" id="h5-0-7" class="i">+    var messages: List&lt;Long&gt;? = null
+</a><a href="#h5-0-8" id="h5-0-8" class="i">+) : BridgeMessage() {
+</a><a href="#h5-0-9" id="h5-0-9" class="i">+
+</a><a href="#h5-0-10" id="h5-0-10" class="i">+    override fun write(bundle: Bundle) {
+</a><a href="#h5-0-11" id="h5-0-11" class="i">+        bundle.putLongArray(&quot;messages&quot;, messages!!.map { it }.toLongArray())
+</a><a href="#h5-0-12" id="h5-0-12" class="i">+    }
+</a><a href="#h5-0-13" id="h5-0-13" class="i">+
+</a><a href="#h5-0-14" id="h5-0-14" class="i">+    override fun read(bundle: Bundle) {
+</a><a href="#h5-0-15" id="h5-0-15" class="i">+        messages = bundle.getLongArray(&quot;messages&quot;)?.toList() ?: emptyList()
+</a><a href="#h5-0-16" id="h5-0-16" class="i">+    }
+</a><a href="#h5-0-17" id="h5-0-17" class="i">+}</a><a href="#h5-0-18" id="h5-0-18" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h6" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/messagelogger/MessageLoggerRequest.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/messagelogger/MessageLoggerRequest.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/messagelogger/MessageLoggerRequest.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/messagelogger/MessageLoggerRequest.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -6,21 +6,21 @@ import me.rhunk.snapenhance.bridge.common.BridgeMessage
+</a> class MessageLoggerRequest(
+     var action: Action? = null,
+     var conversationId: String? = null,
+<a href="#h6-0-3" id="h6-0-3" class="d">-    var messageId: Long? = null,
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+    var index: Long? = null,
+</a>     var message: ByteArray? = null
+ ) : BridgeMessage(){
+ 
+     override fun write(bundle: Bundle) {
+         bundle.putString(&quot;action&quot;, action!!.name)
+         bundle.putString(&quot;conversationId&quot;, conversationId)
+<a href="#h6-0-11" id="h6-0-11" class="d">-        bundle.putLong(&quot;messageId&quot;, messageId ?: 0)
+</a><a href="#h6-0-12" id="h6-0-12" class="i">+        bundle.putLong(&quot;messageId&quot;, index ?: 0)
+</a>         bundle.putByteArray(&quot;message&quot;, message)
+     }
+ 
+     override fun read(bundle: Bundle) {
+         action = Action.valueOf(bundle.getString(&quot;action&quot;)!!)
+         conversationId = bundle.getString(&quot;conversationId&quot;)
+<a href="#h6-0-19" id="h6-0-19" class="d">-        messageId = bundle.getLong(&quot;messageId&quot;)
+</a><a href="#h6-0-20" id="h6-0-20" class="i">+        index = bundle.getLong(&quot;messageId&quot;)
+</a>         message = bundle.getByteArray(&quot;message&quot;)
+     }
+ 
+<a href="#h6-1" id="h6-1" class="h">@@ -28,6 +28,7 @@ class MessageLoggerRequest(
+</a>         ADD,
+         GET,
+         CLEAR,
+<a href="#h6-1-3" id="h6-1-3" class="d">-        DELETE
+</a><a href="#h6-1-4" id="h6-1-4" class="i">+        DELETE,
+</a><a href="#h6-1-5" id="h6-1-5" class="i">+        LIST_IDS
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h7" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/service/BridgeService.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/service/BridgeService.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/service/BridgeService.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/service/BridgeService.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -17,6 +17,7 @@ import me.rhunk.snapenhance.bridge.common.impl.file.FileAccessRequest
+</a> import me.rhunk.snapenhance.bridge.common.impl.file.FileAccessResult
+ import me.rhunk.snapenhance.bridge.common.impl.locale.LocaleRequest
+ import me.rhunk.snapenhance.bridge.common.impl.locale.LocaleResult
+<a href="#h7-0-3" id="h7-0-3" class="i">+import me.rhunk.snapenhance.bridge.common.impl.messagelogger.MessageLoggerListResult
+</a> import me.rhunk.snapenhance.bridge.common.impl.messagelogger.MessageLoggerRequest
+ import me.rhunk.snapenhance.bridge.common.impl.messagelogger.MessageLoggerResult
+ import java.io.File
+<a href="#h7-1" id="h7-1" class="h">@@ -82,7 +83,7 @@ class BridgeService : Service() {
+</a>     private fun handleMessageLoggerRequest(msg: MessageLoggerRequest, reply: (Message) -&gt; Unit) {
+         when (msg.action) {
+             MessageLoggerRequest.Action.ADD  -&gt; {
+<a href="#h7-1-3" id="h7-1-3" class="d">-                val isSuccess = messageLoggerWrapper.addMessage(msg.conversationId!!, msg.messageId!!, msg.message!!)
+</a><a href="#h7-1-4" id="h7-1-4" class="i">+                val isSuccess = messageLoggerWrapper.addMessage(msg.conversationId!!, msg.index!!, msg.message!!)
+</a>                 reply(MessageLoggerResult(isSuccess).toMessage(BridgeMessageType.MESSAGE_LOGGER_RESULT.value))
+                 return
+             }
+<a href="#h7-2" id="h7-2" class="h">@@ -90,12 +91,17 @@ class BridgeService : Service() {
+</a>                 messageLoggerWrapper.clearMessages()
+             }
+             MessageLoggerRequest.Action.DELETE -&gt; {
+<a href="#h7-2-3" id="h7-2-3" class="d">-                messageLoggerWrapper.deleteMessage(msg.conversationId!!, msg.messageId!!)
+</a><a href="#h7-2-4" id="h7-2-4" class="i">+                messageLoggerWrapper.deleteMessage(msg.conversationId!!, msg.index!!)
+</a>             }
+             MessageLoggerRequest.Action.GET -&gt; {
+<a href="#h7-2-7" id="h7-2-7" class="d">-                val (state, messageData) = messageLoggerWrapper.getMessage(msg.conversationId!!, msg.messageId!!)
+</a><a href="#h7-2-8" id="h7-2-8" class="i">+                val (state, messageData) = messageLoggerWrapper.getMessage(msg.conversationId!!, msg.index!!)
+</a>                 reply(MessageLoggerResult(state, messageData).toMessage(BridgeMessageType.MESSAGE_LOGGER_RESULT.value))
+             }
+<a href="#h7-2-11" id="h7-2-11" class="i">+            MessageLoggerRequest.Action.LIST_IDS -&gt; {
+</a><a href="#h7-2-12" id="h7-2-12" class="i">+                val messageIds = messageLoggerWrapper.getMessageIds(msg.conversationId!!, msg.index!!.toInt())
+</a><a href="#h7-2-13" id="h7-2-13" class="i">+                reply(MessageLoggerListResult(messageIds).toMessage(BridgeMessageType.MESSAGE_LOGGER_LIST_RESULT.value))
+</a><a href="#h7-2-14" id="h7-2-14" class="i">+                return
+</a><a href="#h7-2-15" id="h7-2-15" class="i">+            }
+</a>             else -&gt; {
+                 Logger.log(Exception(&quot;Unknown message logger action: ${msg.action}&quot;))
+             }
+<a href="#h7-3" id="h7-3" class="h">@@ -109,8 +115,7 @@ class BridgeService : Service() {
+</a>         val compatibleLocale = resources.assets.list(&quot;lang&quot;)?.find { it.startsWith(deviceLocale) }?.substring(0, 5) ?: &quot;en_US&quot;
+ 
+         resources.assets.open(&quot;lang/$compatibleLocale.json&quot;).use { inputStream -&gt;
+<a href="#h7-3-3" id="h7-3-3" class="d">-            val json = inputStream.bufferedReader().use { it.readText() }
+</a><a href="#h7-3-4" id="h7-3-4" class="d">-            reply(LocaleResult(compatibleLocale, json.toByteArray(Charsets.UTF_8)).toMessage(BridgeMessageType.LOCALE_RESULT.value))
+</a><a href="#h7-3-5" id="h7-3-5" class="i">+            reply(LocaleResult(compatibleLocale, inputStream.readBytes()).toMessage(BridgeMessageType.LOCALE_RESULT.value))
+</a>         }
+     }
+ 
+<b>diff --git a/<a id="h8" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/database/DatabaseAccess.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/database/DatabaseAccess.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/database/DatabaseAccess.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/database/DatabaseAccess.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -110,6 +110,25 @@ class DatabaseAccess(private val context: ModContext) : Manager {
+</a>         }
+     }
+ 
+<a href="#h8-0-3" id="h8-0-3" class="i">+    fun getFriendFeed(limit: Int): List&lt;FriendFeedInfo&gt; {
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+        return safeDatabaseOperation(openMain()) { database -&gt;
+</a><a href="#h8-0-5" id="h8-0-5" class="i">+            val cursor = database.rawQuery(
+</a><a href="#h8-0-6" id="h8-0-6" class="i">+                &quot;SELECT * FROM FriendsFeedView ORDER BY _id LIMIT ?&quot;,
+</a><a href="#h8-0-7" id="h8-0-7" class="i">+                arrayOf(limit.toString())
+</a><a href="#h8-0-8" id="h8-0-8" class="i">+            )
+</a><a href="#h8-0-9" id="h8-0-9" class="i">+            val list = mutableListOf&lt;FriendFeedInfo&gt;()
+</a><a href="#h8-0-10" id="h8-0-10" class="i">+            while (cursor.moveToNext()) {
+</a><a href="#h8-0-11" id="h8-0-11" class="i">+                val friendFeedInfo = FriendFeedInfo()
+</a><a href="#h8-0-12" id="h8-0-12" class="i">+                try {
+</a><a href="#h8-0-13" id="h8-0-13" class="i">+                    friendFeedInfo.write(cursor)
+</a><a href="#h8-0-14" id="h8-0-14" class="i">+                } catch (_: Throwable) {}
+</a><a href="#h8-0-15" id="h8-0-15" class="i">+                list.add(friendFeedInfo)
+</a><a href="#h8-0-16" id="h8-0-16" class="i">+            }
+</a><a href="#h8-0-17" id="h8-0-17" class="i">+            cursor.close()
+</a><a href="#h8-0-18" id="h8-0-18" class="i">+            list
+</a><a href="#h8-0-19" id="h8-0-19" class="i">+        } ?: emptyList()
+</a><a href="#h8-0-20" id="h8-0-20" class="i">+    }
+</a><a href="#h8-0-21" id="h8-0-21" class="i">+
+</a>     fun getConversationMessageFromId(clientMessageId: Long): ConversationMessage? {
+         return safeDatabaseOperation(openArroyo()) {
+             readDatabaseObject(
+<b>diff --git a/<a id="h9" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -1,6 +1,8 @@
+</a> package me.rhunk.snapenhance.features.impl.spying
+ 
+<a href="#h9-0-2" id="h9-0-2" class="i">+import com.google.gson.JsonObject
+</a> import com.google.gson.JsonParser
+<a href="#h9-0-4" id="h9-0-4" class="i">+import me.rhunk.snapenhance.Logger
+</a> import me.rhunk.snapenhance.config.ConfigProperty
+ import me.rhunk.snapenhance.data.ContentType
+ import me.rhunk.snapenhance.data.MessageState
+<a href="#h9-1" id="h9-1" class="h">@@ -9,83 +11,114 @@ import me.rhunk.snapenhance.features.Feature
+</a> import me.rhunk.snapenhance.features.FeatureLoadParams
+ import me.rhunk.snapenhance.hook.HookStage
+ import me.rhunk.snapenhance.hook.Hooker
+<a href="#h9-1-3" id="h9-1-3" class="i">+import kotlin.time.ExperimentalTime
+</a><a href="#h9-1-4" id="h9-1-4" class="i">+import kotlin.time.measureTime
+</a><a href="#h9-1-5" id="h9-1-5" class="i">+
+</a><a href="#h9-1-6" id="h9-1-6" class="i">+class MessageLogger : Feature(&quot;MessageLogger&quot;,
+</a><a href="#h9-1-7" id="h9-1-7" class="i">+    loadParams = FeatureLoadParams.INIT_SYNC or
+</a><a href="#h9-1-8" id="h9-1-8" class="i">+        FeatureLoadParams.ACTIVITY_CREATE_ASYNC
+</a><a href="#h9-1-9" id="h9-1-9" class="i">+) {
+</a><a href="#h9-1-10" id="h9-1-10" class="i">+    companion object {
+</a><a href="#h9-1-11" id="h9-1-11" class="i">+        const val PREFETCH_MESSAGE_COUNT = 20
+</a><a href="#h9-1-12" id="h9-1-12" class="i">+        const val PREFETCH_FEED_COUNT = 20
+</a><a href="#h9-1-13" id="h9-1-13" class="i">+    }
+</a><a href="#h9-1-14" id="h9-1-14" class="i">+
+</a><a href="#h9-1-15" id="h9-1-15" class="i">+    //two level of cache to avoid querying the database
+</a><a href="#h9-1-16" id="h9-1-16" class="i">+    private val fetchedMessages = mutableListOf&lt;Long&gt;()
+</a><a href="#h9-1-17" id="h9-1-17" class="i">+    private val deletedMessageCache = mutableMapOf&lt;Long, JsonObject&gt;()
+</a> 
+<a href="#h9-1-19" id="h9-1-19" class="d">-class MessageLogger : Feature(&quot;MessageLogger&quot;, loadParams = FeatureLoadParams.INIT_SYNC or FeatureLoadParams.ACTIVITY_CREATE_ASYNC) {
+</a><a href="#h9-1-20" id="h9-1-20" class="d">-    private val messageCache = mutableMapOf&lt;Long, String&gt;()
+</a><a href="#h9-1-21" id="h9-1-21" class="d">-    private val removedMessages = linkedSetOf&lt;Long&gt;()
+</a>     private val myUserId by lazy { context.database.getMyUserId() }
+ 
+<a href="#h9-1-24" id="h9-1-24" class="d">-    fun isMessageRemoved(messageId: Long) = removedMessages.contains(messageId)
+</a><a href="#h9-1-25" id="h9-1-25" class="i">+    fun isMessageRemoved(messageId: Long) = deletedMessageCache.containsKey(messageId)
+</a> 
+     fun deleteMessage(conversationId: String, messageId: Long) {
+<a href="#h9-1-28" id="h9-1-28" class="d">-        messageCache.remove(messageId)
+</a><a href="#h9-1-29" id="h9-1-29" class="i">+        fetchedMessages.remove(messageId)
+</a><a href="#h9-1-30" id="h9-1-30" class="i">+        deletedMessageCache.remove(messageId)
+</a>         context.bridgeClient.deleteMessageLoggerMessage(conversationId, messageId)
+     }
+ 
+<a href="#h9-1-34" id="h9-1-34" class="i">+    @OptIn(ExperimentalTime::class)
+</a>     override fun asyncOnActivityCreate() {
+<a href="#h9-1-36" id="h9-1-36" class="i">+        ConfigProperty.MESSAGE_LOGGER.valueContainer.addPropertyChangeListener {
+</a><a href="#h9-1-37" id="h9-1-37" class="i">+            context.config.writeConfig()
+</a><a href="#h9-1-38" id="h9-1-38" class="i">+            context.softRestartApp()
+</a><a href="#h9-1-39" id="h9-1-39" class="i">+        }
+</a><a href="#h9-1-40" id="h9-1-40" class="i">+
+</a>         if (!context.database.hasArroyo()) {
+<a href="#h9-1-42" id="h9-1-42" class="d">-            context.bridgeClient.clearMessageLogger()
+</a><a href="#h9-1-43" id="h9-1-43" class="i">+            return
+</a>         }
+<a href="#h9-1-45" id="h9-1-45" class="i">+
+</a><a href="#h9-1-46" id="h9-1-46" class="i">+        measureTime {
+</a><a href="#h9-1-47" id="h9-1-47" class="i">+            context.database.getFriendFeed(PREFETCH_FEED_COUNT).forEach { friendFeedInfo -&gt;
+</a><a href="#h9-1-48" id="h9-1-48" class="i">+                fetchedMessages.addAll(context.bridgeClient.getLoggedMessageIds(friendFeedInfo.key!!, PREFETCH_MESSAGE_COUNT))
+</a><a href="#h9-1-49" id="h9-1-49" class="i">+            }
+</a><a href="#h9-1-50" id="h9-1-50" class="i">+        }.also { Logger.debug(&quot;Loaded ${fetchedMessages.size} cached messages in $it&quot;) }
+</a>     }
+ 
+<a href="#h9-1-53" id="h9-1-53" class="d">-    //FIXME: message disappears when the conversation is set to delete on view
+</a><a href="#h9-1-54" id="h9-1-54" class="d">-    override fun init() {
+</a><a href="#h9-1-55" id="h9-1-55" class="d">-        Hooker.hookConstructor(context.classCache.message, HookStage.AFTER, {
+</a><a href="#h9-1-56" id="h9-1-56" class="d">-            context.config.bool(ConfigProperty.MESSAGE_LOGGER)
+</a><a href="#h9-1-57" id="h9-1-57" class="d">-        }) {
+</a><a href="#h9-1-58" id="h9-1-58" class="d">-            val message = Message(it.thisObject())
+</a><a href="#h9-1-59" id="h9-1-59" class="d">-            val messageId = message.messageDescriptor.messageId
+</a><a href="#h9-1-60" id="h9-1-60" class="d">-            val contentType = message.messageContent.contentType
+</a><a href="#h9-1-61" id="h9-1-61" class="d">-            val conversationId = message.messageDescriptor.conversationId.toString()
+</a><a href="#h9-1-62" id="h9-1-62" class="d">-            val messageState = message.messageState
+</a><a href="#h9-1-63" id="h9-1-63" class="d">-
+</a><a href="#h9-1-64" id="h9-1-64" class="d">-            if (messageState != MessageState.COMMITTED) return@hookConstructor
+</a><a href="#h9-1-65" id="h9-1-65" class="d">-
+</a><a href="#h9-1-66" id="h9-1-66" class="d">-            if (contentType == ContentType.STATUS) {
+</a><a href="#h9-1-67" id="h9-1-67" class="d">-                //query the deleted message
+</a><a href="#h9-1-68" id="h9-1-68" class="d">-                val deletedMessage: String = if (messageCache.containsKey(messageId)) messageCache[messageId] else {
+</a><a href="#h9-1-69" id="h9-1-69" class="d">-                    context.bridgeClient.getMessageLoggerMessage(conversationId, messageId)?.toString(Charsets.UTF_8)
+</a><a href="#h9-1-70" id="h9-1-70" class="d">-                } ?: return@hookConstructor
+</a><a href="#h9-1-71" id="h9-1-71" class="d">-
+</a><a href="#h9-1-72" id="h9-1-72" class="d">-                val messageJsonObject = JsonParser.parseString(deletedMessage).asJsonObject
+</a><a href="#h9-1-73" id="h9-1-73" class="d">-
+</a><a href="#h9-1-74" id="h9-1-74" class="d">-                //if the message is a snap make it playable
+</a><a href="#h9-1-75" id="h9-1-75" class="d">-                if (messageJsonObject[&quot;mMessageContent&quot;]?.asJsonObject?.get(&quot;mContentType&quot;)?.asString == &quot;SNAP&quot;) {
+</a><a href="#h9-1-76" id="h9-1-76" class="d">-                    messageJsonObject[&quot;mMetadata&quot;].asJsonObject.addProperty(&quot;mPlayableSnapState&quot;, &quot;PLAYABLE&quot;)
+</a><a href="#h9-1-77" id="h9-1-77" class="d">-                }
+</a><a href="#h9-1-78" id="h9-1-78" class="i">+    private fun processSnapMessage(messageInstance: Any) {
+</a><a href="#h9-1-79" id="h9-1-79" class="i">+        val message = Message(messageInstance)
+</a> 
+<a href="#h9-1-81" id="h9-1-81" class="d">-                //serialize all properties of messageJsonObject and put in the message object
+</a><a href="#h9-1-82" id="h9-1-82" class="d">-                message.instanceNonNull().javaClass.declaredFields.forEach { field -&gt;
+</a><a href="#h9-1-83" id="h9-1-83" class="d">-                    field.isAccessible = true
+</a><a href="#h9-1-84" id="h9-1-84" class="d">-                    val fieldName = field.name
+</a><a href="#h9-1-85" id="h9-1-85" class="d">-                    val fieldValue = messageJsonObject[fieldName]
+</a><a href="#h9-1-86" id="h9-1-86" class="d">-                    if (fieldValue != null) {
+</a><a href="#h9-1-87" id="h9-1-87" class="d">-                        field.set(message.instanceNonNull(), context.gson.fromJson(fieldValue, field.type))
+</a><a href="#h9-1-88" id="h9-1-88" class="d">-                    }
+</a><a href="#h9-1-89" id="h9-1-89" class="d">-                }
+</a><a href="#h9-1-90" id="h9-1-90" class="i">+        if (message.messageState != MessageState.COMMITTED) return
+</a><a href="#h9-1-91" id="h9-1-91" class="i">+
+</a><a href="#h9-1-92" id="h9-1-92" class="i">+        //exclude messages sent by me
+</a><a href="#h9-1-93" id="h9-1-93" class="i">+        if (message.senderId.toString() == myUserId) return
+</a> 
+<a href="#h9-1-95" id="h9-1-95" class="d">-                //set the message state to PREPARING for visibility
+</a><a href="#h9-1-96" id="h9-1-96" class="d">-                if (message.messageContent.contentType != ContentType.SNAP &amp;&amp; message.messageContent.contentType != ContentType.EXTERNAL_MEDIA) {
+</a><a href="#h9-1-97" id="h9-1-97" class="d">-                    message.messageState = MessageState.PREPARING
+</a><a href="#h9-1-98" id="h9-1-98" class="i">+        val messageId = message.messageDescriptor.messageId
+</a><a href="#h9-1-99" id="h9-1-99" class="i">+        val conversationId = message.messageDescriptor.conversationId.toString()
+</a><a href="#h9-1-100" id="h9-1-100" class="i">+
+</a><a href="#h9-1-101" id="h9-1-101" class="i">+        if (message.messageContent.contentType != ContentType.STATUS) {
+</a><a href="#h9-1-102" id="h9-1-102" class="i">+            if (fetchedMessages.contains(messageId)) return
+</a><a href="#h9-1-103" id="h9-1-103" class="i">+            fetchedMessages.add(messageId)
+</a><a href="#h9-1-104" id="h9-1-104" class="i">+
+</a><a href="#h9-1-105" id="h9-1-105" class="i">+            context.executeAsync {
+</a><a href="#h9-1-106" id="h9-1-106" class="i">+                context.bridgeClient.getMessageLoggerMessage(conversationId, messageId)?.let {
+</a><a href="#h9-1-107" id="h9-1-107" class="i">+                    return@executeAsync
+</a>                 }
+<a href="#h9-1-109" id="h9-1-109" class="d">-                removedMessages.add(messageId)
+</a><a href="#h9-1-110" id="h9-1-110" class="d">-                return@hookConstructor
+</a><a href="#h9-1-111" id="h9-1-111" class="i">+                context.bridgeClient.addMessageLoggerMessage(conversationId, messageId, context.gson.toJson(messageInstance).toByteArray(Charsets.UTF_8))
+</a>             }
+ 
+<a href="#h9-1-114" id="h9-1-114" class="d">-            //exclude messages sent by me
+</a><a href="#h9-1-115" id="h9-1-115" class="d">-            if (message.senderId.toString() == myUserId) return@hookConstructor
+</a><a href="#h9-1-116" id="h9-1-116" class="d">-
+</a><a href="#h9-1-117" id="h9-1-117" class="d">-            if (!messageCache.containsKey(messageId)) {
+</a><a href="#h9-1-118" id="h9-1-118" class="d">-                context.executeAsync {
+</a><a href="#h9-1-119" id="h9-1-119" class="d">-                    val storedMessage = context.bridgeClient.getMessageLoggerMessage(conversationId, messageId)?.toString(Charsets.UTF_8)
+</a><a href="#h9-1-120" id="h9-1-120" class="d">-                    if (storedMessage == null) {
+</a><a href="#h9-1-121" id="h9-1-121" class="d">-                        messageCache[messageId] = context.gson.toJson(message.instanceNonNull())
+</a><a href="#h9-1-122" id="h9-1-122" class="d">-                        context.bridgeClient.addMessageLoggerMessage(conversationId, messageId, messageCache[messageId]!!.toByteArray(Charsets.UTF_8))
+</a><a href="#h9-1-123" id="h9-1-123" class="d">-                        return@executeAsync
+</a><a href="#h9-1-124" id="h9-1-124" class="d">-                    }
+</a><a href="#h9-1-125" id="h9-1-125" class="d">-                    messageCache[messageId] = storedMessage
+</a><a href="#h9-1-126" id="h9-1-126" class="d">-                }
+</a><a href="#h9-1-127" id="h9-1-127" class="i">+            return
+</a><a href="#h9-1-128" id="h9-1-128" class="i">+        }
+</a><a href="#h9-1-129" id="h9-1-129" class="i">+
+</a><a href="#h9-1-130" id="h9-1-130" class="i">+        //query the deleted message
+</a><a href="#h9-1-131" id="h9-1-131" class="i">+        val deletedMessageObject: JsonObject = if (deletedMessageCache.containsKey(messageId))
+</a><a href="#h9-1-132" id="h9-1-132" class="i">+            deletedMessageCache[messageId]
+</a><a href="#h9-1-133" id="h9-1-133" class="i">+        else {
+</a><a href="#h9-1-134" id="h9-1-134" class="i">+            context.bridgeClient.getMessageLoggerMessage(conversationId, messageId)?.let {
+</a><a href="#h9-1-135" id="h9-1-135" class="i">+                JsonParser.parseString(it.toString(Charsets.UTF_8)).asJsonObject
+</a><a href="#h9-1-136" id="h9-1-136" class="i">+            }
+</a><a href="#h9-1-137" id="h9-1-137" class="i">+        } ?: return
+</a><a href="#h9-1-138" id="h9-1-138" class="i">+
+</a><a href="#h9-1-139" id="h9-1-139" class="i">+        val messageJsonObject = deletedMessageObject.asJsonObject
+</a><a href="#h9-1-140" id="h9-1-140" class="i">+
+</a><a href="#h9-1-141" id="h9-1-141" class="i">+        //if the message is a snap make it playable
+</a><a href="#h9-1-142" id="h9-1-142" class="i">+        if (messageJsonObject[&quot;mMessageContent&quot;]?.asJsonObject?.get(&quot;mContentType&quot;)?.asString == &quot;SNAP&quot;) {
+</a><a href="#h9-1-143" id="h9-1-143" class="i">+            messageJsonObject[&quot;mMetadata&quot;].asJsonObject.addProperty(&quot;mPlayableSnapState&quot;, &quot;PLAYABLE&quot;)
+</a><a href="#h9-1-144" id="h9-1-144" class="i">+        }
+</a><a href="#h9-1-145" id="h9-1-145" class="i">+
+</a><a href="#h9-1-146" id="h9-1-146" class="i">+        //serialize all properties of messageJsonObject and put in the message object
+</a><a href="#h9-1-147" id="h9-1-147" class="i">+        messageInstance.javaClass.declaredFields.forEach { field -&gt;
+</a><a href="#h9-1-148" id="h9-1-148" class="i">+            field.isAccessible = true
+</a><a href="#h9-1-149" id="h9-1-149" class="i">+            messageJsonObject[field.name]?.let { fieldValue -&gt;
+</a><a href="#h9-1-150" id="h9-1-150" class="i">+                field.set(messageInstance, context.gson.fromJson(fieldValue, field.type))
+</a><a href="#h9-1-151" id="h9-1-151" class="i">+            }
+</a><a href="#h9-1-152" id="h9-1-152" class="i">+        }
+</a><a href="#h9-1-153" id="h9-1-153" class="i">+
+</a><a href="#h9-1-154" id="h9-1-154" class="i">+        //set the message state to PREPARING for visibility
+</a><a href="#h9-1-155" id="h9-1-155" class="i">+        with(message.messageContent.contentType) {
+</a><a href="#h9-1-156" id="h9-1-156" class="i">+            if (this != ContentType.SNAP &amp;&amp; this != ContentType.EXTERNAL_MEDIA) {
+</a><a href="#h9-1-157" id="h9-1-157" class="i">+                message.messageState = MessageState.PREPARING
+</a>             }
+         }
+<a href="#h9-1-160" id="h9-1-160" class="i">+
+</a><a href="#h9-1-161" id="h9-1-161" class="i">+        deletedMessageCache[messageId] = deletedMessageObject
+</a><a href="#h9-1-162" id="h9-1-162" class="i">+    }
+</a><a href="#h9-1-163" id="h9-1-163" class="i">+
+</a><a href="#h9-1-164" id="h9-1-164" class="i">+    override fun init() {
+</a><a href="#h9-1-165" id="h9-1-165" class="i">+        Hooker.hookConstructor(context.classCache.message, HookStage.AFTER, {
+</a><a href="#h9-1-166" id="h9-1-166" class="i">+            context.config.bool(ConfigProperty.MESSAGE_LOGGER)
+</a><a href="#h9-1-167" id="h9-1-167" class="i">+        }) { param -&gt;
+</a><a href="#h9-1-168" id="h9-1-168" class="i">+            processSnapMessage(param.thisObject())
+</a><a href="#h9-1-169" id="h9-1-169" class="i">+        }
+</a>     }
+ } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

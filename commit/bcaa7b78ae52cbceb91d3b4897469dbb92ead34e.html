@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: gallery media send override - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/bcaa7b78ae52cbceb91d3b4897469dbb92ead34e.html">bcaa7b78ae52cbceb91d3b4897469dbb92ead34e</a>
+<b>parent</b> <a href="../commit/e4ebb324fbaa8da2d29c383cbbcb75e7290e051a.html">e4ebb324fbaa8da2d29c383cbbcb75e7290e051a</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 27 May 2023 23:03:29 +0200
+
+feat: gallery media send override
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt</a></td><td> | </td><td class="num">11</td><td><span class="i">+++++++</span><span class="d">----</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/ExternalMediaAsSnap.kt</a></td><td> | </td><td class="num">48</td><td><span class="i"></span><span class="d">------------------------------------------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/GalleryMediaSendOverride.kt</a></td><td> | </td><td class="num">73</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+</table></pre><pre>5 files changed, 83 insertions(+), 55 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/assets/lang/en_US.json.html">app/src/main/assets/lang/en_US.json</a> b/<a href="../file/app/src/main/assets/lang/en_US.json.html">app/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -38,7 +38,7 @@
+</a>         &quot;hide_typing_notification&quot;: &quot;Hide Typing Notification&quot;,
+         &quot;menu_slot_id&quot;: &quot;Friend Menu Slot ID&quot;,
+         &quot;message_preview_length&quot;: &quot;Message Preview Length&quot;,
+<a href="#h0-0-3" id="h0-0-3" class="d">-        &quot;external_media_as_snap&quot;: &quot;External Media As Snap&quot;,
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        &quot;gallery_media_send_override&quot;: &quot;Gallery Media Send Override&quot;,
+</a>         &quot;auto_save&quot;: &quot;Auto Save&quot;,
+         &quot;anti_auto_save&quot;: &quot;Anti Auto Save Button&quot;,
+         &quot;snapchat_plus&quot;: &quot;Snapchat Plus&quot;,
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -134,11 +134,14 @@ enum class ConfigProperty(
+</a>         ConfigIntegerValue(20)
+     ),
+ 
+<a href="#h1-0-3" id="h1-0-3" class="d">-    EXTERNAL_MEDIA_AS_SNAP(
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-        &quot;property.external_media_as_snap&quot;,
+</a><a href="#h1-0-5" id="h1-0-5" class="d">-        &quot;description.external_media_as_snap&quot;,
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+    GALLERY_MEDIA_SEND_OVERRIDE(
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+        &quot;property.gallery_media_send_override&quot;,
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+        &quot;description.gallery_media_send_override&quot;,
+</a>         ConfigCategory.EXTRAS,
+<a href="#h1-0-10" id="h1-0-10" class="d">-        ConfigStateValue(false)
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+        ConfigStateSelection(
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+            listOf(&quot;OFF&quot;, &quot;NOTE&quot;, &quot;SNAP&quot;),
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+            &quot;OFF&quot;
+</a><a href="#h1-0-14" id="h1-0-14" class="i">+        )
+</a>     ),
+     AUTO_SAVE(&quot;property.auto_save&quot;, &quot;description.auto_save&quot;, ConfigCategory.EXTRAS, ConfigStateValue(false)),
+     ANTI_AUTO_SAVE(&quot;property.anti_auto_save&quot;, &quot;description.anti_auto_save&quot;, ConfigCategory.EXTRAS, ConfigStateValue(false)),
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/ExternalMediaAsSnap.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/ExternalMediaAsSnap.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/ExternalMediaAsSnap.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/ExternalMediaAsSnap.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,47 +0,0 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="d">-package me.rhunk.snapenhance.features.impl.extras
+</a><a href="#h2-0-1" id="h2-0-1" class="d">-
+</a><a href="#h2-0-2" id="h2-0-2" class="d">-import me.rhunk.snapenhance.config.ConfigProperty
+</a><a href="#h2-0-3" id="h2-0-3" class="d">-import me.rhunk.snapenhance.data.ContentType
+</a><a href="#h2-0-4" id="h2-0-4" class="d">-import me.rhunk.snapenhance.data.wrapper.impl.MessageContent
+</a><a href="#h2-0-5" id="h2-0-5" class="d">-import me.rhunk.snapenhance.features.Feature
+</a><a href="#h2-0-6" id="h2-0-6" class="d">-import me.rhunk.snapenhance.features.FeatureLoadParams
+</a><a href="#h2-0-7" id="h2-0-7" class="d">-import me.rhunk.snapenhance.hook.HookStage
+</a><a href="#h2-0-8" id="h2-0-8" class="d">-import me.rhunk.snapenhance.hook.Hooker
+</a><a href="#h2-0-9" id="h2-0-9" class="d">-import me.rhunk.snapenhance.util.protobuf.ProtoReader
+</a><a href="#h2-0-10" id="h2-0-10" class="d">-import me.rhunk.snapenhance.util.protobuf.ProtoWriter
+</a><a href="#h2-0-11" id="h2-0-11" class="d">-
+</a><a href="#h2-0-12" id="h2-0-12" class="d">-class ExternalMediaAsSnap : Feature(&quot;External Media As Snap&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+</a><a href="#h2-0-13" id="h2-0-13" class="d">-    private val redSnapProto: ByteArray by lazy {
+</a><a href="#h2-0-14" id="h2-0-14" class="d">-        ProtoWriter().apply {
+</a><a href="#h2-0-15" id="h2-0-15" class="d">-            write(11, 5) {
+</a><a href="#h2-0-16" id="h2-0-16" class="d">-                write(1) {
+</a><a href="#h2-0-17" id="h2-0-17" class="d">-                    write(1) {
+</a><a href="#h2-0-18" id="h2-0-18" class="d">-                        writeConstant(2, 0)
+</a><a href="#h2-0-19" id="h2-0-19" class="d">-                        writeConstant(12, 0)
+</a><a href="#h2-0-20" id="h2-0-20" class="d">-                        writeConstant(15, 0)
+</a><a href="#h2-0-21" id="h2-0-21" class="d">-                    }
+</a><a href="#h2-0-22" id="h2-0-22" class="d">-                    writeConstant(6, 0)
+</a><a href="#h2-0-23" id="h2-0-23" class="d">-                }
+</a><a href="#h2-0-24" id="h2-0-24" class="d">-                write(2) {
+</a><a href="#h2-0-25" id="h2-0-25" class="d">-                    writeConstant(5, 0)
+</a><a href="#h2-0-26" id="h2-0-26" class="d">-                    writeBuffer(6, byteArrayOf())
+</a><a href="#h2-0-27" id="h2-0-27" class="d">-                }
+</a><a href="#h2-0-28" id="h2-0-28" class="d">-            }
+</a><a href="#h2-0-29" id="h2-0-29" class="d">-        }.toByteArray()
+</a><a href="#h2-0-30" id="h2-0-30" class="d">-    }
+</a><a href="#h2-0-31" id="h2-0-31" class="d">-
+</a><a href="#h2-0-32" id="h2-0-32" class="d">-    override fun init() {
+</a><a href="#h2-0-33" id="h2-0-33" class="d">-        Hooker.hook(context.classCache.conversationManager, &quot;sendMessageWithContent&quot;, HookStage.BEFORE, {
+</a><a href="#h2-0-34" id="h2-0-34" class="d">-            context.config.bool(ConfigProperty.EXTERNAL_MEDIA_AS_SNAP)
+</a><a href="#h2-0-35" id="h2-0-35" class="d">-        }) { param -&gt;
+</a><a href="#h2-0-36" id="h2-0-36" class="d">-            val localMessageContent = MessageContent(param.arg(1))
+</a><a href="#h2-0-37" id="h2-0-37" class="d">-
+</a><a href="#h2-0-38" id="h2-0-38" class="d">-            if (localMessageContent.contentType != ContentType.EXTERNAL_MEDIA) return@hook
+</a><a href="#h2-0-39" id="h2-0-39" class="d">-            //story replies
+</a><a href="#h2-0-40" id="h2-0-40" class="d">-            if (ProtoReader(localMessageContent.content).exists(7)) return@hook
+</a><a href="#h2-0-41" id="h2-0-41" class="d">-
+</a><a href="#h2-0-42" id="h2-0-42" class="d">-            localMessageContent.contentType = ContentType.SNAP
+</a><a href="#h2-0-43" id="h2-0-43" class="d">-            localMessageContent.content = redSnapProto
+</a><a href="#h2-0-44" id="h2-0-44" class="d">-        }
+</a><a href="#h2-0-45" id="h2-0-45" class="d">-    }
+</a><a href="#h2-0-46" id="h2-0-46" class="d">-}</a><a href="#h2-0-47" id="h2-0-47" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/GalleryMediaSendOverride.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/GalleryMediaSendOverride.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/GalleryMediaSendOverride.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/GalleryMediaSendOverride.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -0,0 +1,72 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="i">+package me.rhunk.snapenhance.features.impl.extras
+</a><a href="#h3-0-1" id="h3-0-1" class="i">+
+</a><a href="#h3-0-2" id="h3-0-2" class="i">+import me.rhunk.snapenhance.Logger
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+import me.rhunk.snapenhance.config.ConfigProperty
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import me.rhunk.snapenhance.data.ContentType
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+import me.rhunk.snapenhance.data.wrapper.impl.MessageContent
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+import me.rhunk.snapenhance.features.Feature
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+import me.rhunk.snapenhance.features.FeatureLoadParams
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+import me.rhunk.snapenhance.hook.HookStage
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+import me.rhunk.snapenhance.hook.Hooker
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+import me.rhunk.snapenhance.util.protobuf.ProtoReader
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+import me.rhunk.snapenhance.util.protobuf.ProtoWriter
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+class GalleryMediaSendOverride : Feature(&quot;Gallery Media Send Override&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+</a><a href="#h3-0-14" id="h3-0-14" class="i">+    private val redSnapProto: ByteArray by lazy {
+</a><a href="#h3-0-15" id="h3-0-15" class="i">+        ProtoWriter().apply {
+</a><a href="#h3-0-16" id="h3-0-16" class="i">+            write(11, 5) {
+</a><a href="#h3-0-17" id="h3-0-17" class="i">+                write(1) {
+</a><a href="#h3-0-18" id="h3-0-18" class="i">+                    write(1) {
+</a><a href="#h3-0-19" id="h3-0-19" class="i">+                        writeConstant(2, 0)
+</a><a href="#h3-0-20" id="h3-0-20" class="i">+                        writeConstant(12, 0)
+</a><a href="#h3-0-21" id="h3-0-21" class="i">+                        writeConstant(15, 0)
+</a><a href="#h3-0-22" id="h3-0-22" class="i">+                    }
+</a><a href="#h3-0-23" id="h3-0-23" class="i">+                    writeConstant(6, 0)
+</a><a href="#h3-0-24" id="h3-0-24" class="i">+                }
+</a><a href="#h3-0-25" id="h3-0-25" class="i">+                write(2) {
+</a><a href="#h3-0-26" id="h3-0-26" class="i">+                    writeConstant(5, 0)
+</a><a href="#h3-0-27" id="h3-0-27" class="i">+                    writeBuffer(6, byteArrayOf())
+</a><a href="#h3-0-28" id="h3-0-28" class="i">+                }
+</a><a href="#h3-0-29" id="h3-0-29" class="i">+            }
+</a><a href="#h3-0-30" id="h3-0-30" class="i">+        }.toByteArray()
+</a><a href="#h3-0-31" id="h3-0-31" class="i">+    }
+</a><a href="#h3-0-32" id="h3-0-32" class="i">+
+</a><a href="#h3-0-33" id="h3-0-33" class="i">+    private val audioNoteProto: (Int) -&gt; ByteArray = { duration -&gt;
+</a><a href="#h3-0-34" id="h3-0-34" class="i">+        ProtoWriter().apply {
+</a><a href="#h3-0-35" id="h3-0-35" class="i">+            write(6, 1) {
+</a><a href="#h3-0-36" id="h3-0-36" class="i">+                write(1) {
+</a><a href="#h3-0-37" id="h3-0-37" class="i">+                    writeConstant(2, 4)
+</a><a href="#h3-0-38" id="h3-0-38" class="i">+                    write(5) {
+</a><a href="#h3-0-39" id="h3-0-39" class="i">+                        writeConstant(1, 0)
+</a><a href="#h3-0-40" id="h3-0-40" class="i">+                        writeConstant(2, 0)
+</a><a href="#h3-0-41" id="h3-0-41" class="i">+                    }
+</a><a href="#h3-0-42" id="h3-0-42" class="i">+                    writeConstant(7, 0)
+</a><a href="#h3-0-43" id="h3-0-43" class="i">+                    writeConstant(13, duration)
+</a><a href="#h3-0-44" id="h3-0-44" class="i">+                }
+</a><a href="#h3-0-45" id="h3-0-45" class="i">+            }
+</a><a href="#h3-0-46" id="h3-0-46" class="i">+        }.toByteArray()
+</a><a href="#h3-0-47" id="h3-0-47" class="i">+    }
+</a><a href="#h3-0-48" id="h3-0-48" class="i">+
+</a><a href="#h3-0-49" id="h3-0-49" class="i">+    override fun init() {
+</a><a href="#h3-0-50" id="h3-0-50" class="i">+        Hooker.hook(context.classCache.conversationManager, &quot;sendMessageWithContent&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h3-0-51" id="h3-0-51" class="i">+            val localMessageContent = MessageContent(param.arg(1))
+</a><a href="#h3-0-52" id="h3-0-52" class="i">+
+</a><a href="#h3-0-53" id="h3-0-53" class="i">+            if (localMessageContent.contentType != ContentType.EXTERNAL_MEDIA) return@hook
+</a><a href="#h3-0-54" id="h3-0-54" class="i">+            //story replies
+</a><a href="#h3-0-55" id="h3-0-55" class="i">+            val messageProtoReader = ProtoReader(localMessageContent.content)
+</a><a href="#h3-0-56" id="h3-0-56" class="i">+            if (messageProtoReader.exists(7)) return@hook
+</a><a href="#h3-0-57" id="h3-0-57" class="i">+
+</a><a href="#h3-0-58" id="h3-0-58" class="i">+            when (context.config.state(ConfigProperty.GALLERY_MEDIA_SEND_OVERRIDE)) {
+</a><a href="#h3-0-59" id="h3-0-59" class="i">+                &quot;SNAP&quot; -&gt; {
+</a><a href="#h3-0-60" id="h3-0-60" class="i">+                    localMessageContent.contentType = ContentType.SNAP
+</a><a href="#h3-0-61" id="h3-0-61" class="i">+                    localMessageContent.content = redSnapProto
+</a><a href="#h3-0-62" id="h3-0-62" class="i">+                }
+</a><a href="#h3-0-63" id="h3-0-63" class="i">+                &quot;NOTE&quot; -&gt; {
+</a><a href="#h3-0-64" id="h3-0-64" class="i">+                    localMessageContent.contentType = ContentType.NOTE
+</a><a href="#h3-0-65" id="h3-0-65" class="i">+                    val mediaDuration = messageProtoReader.getInt(3, 3, 5, 1, 1, 15) ?: 0
+</a><a href="#h3-0-66" id="h3-0-66" class="i">+                    localMessageContent.content = audioNoteProto(mediaDuration)
+</a><a href="#h3-0-67" id="h3-0-67" class="i">+                }
+</a><a href="#h3-0-68" id="h3-0-68" class="i">+            }
+</a><a href="#h3-0-69" id="h3-0-69" class="i">+        }
+</a><a href="#h3-0-70" id="h3-0-70" class="i">+    }
+</a><a href="#h3-0-71" id="h3-0-71" class="i">+}</a><a href="#h3-0-72" id="h3-0-72" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h4" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -12,7 +12,7 @@ import me.rhunk.snapenhance.features.impl.downloader.MediaDownloader
+</a> import me.rhunk.snapenhance.features.impl.extras.AntiAutoSave
+ import me.rhunk.snapenhance.features.impl.extras.AutoSave
+ import me.rhunk.snapenhance.features.impl.extras.DisableVideoLengthRestriction
+<a href="#h4-0-3" id="h4-0-3" class="d">-import me.rhunk.snapenhance.features.impl.extras.ExternalMediaAsSnap
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+import me.rhunk.snapenhance.features.impl.extras.GalleryMediaSendOverride
+</a> import me.rhunk.snapenhance.features.impl.extras.MediaQualityLevelOverride
+ import me.rhunk.snapenhance.features.impl.extras.Notifications
+ import me.rhunk.snapenhance.features.impl.extras.SnapchatPlus
+<a href="#h4-1" id="h4-1" class="h">@@ -66,7 +66,7 @@ class FeatureManager(private val context: ModContext) : Manager {
+</a>         register(UITweaks::class)
+         register(ConfigEnumKeys::class)
+         register(AntiAutoDownload::class)
+<a href="#h4-1-3" id="h4-1-3" class="d">-        register(ExternalMediaAsSnap::class)
+</a><a href="#h4-1-4" id="h4-1-4" class="i">+        register(GalleryMediaSendOverride::class)
+</a>         register(AntiAutoSave::class)
+         register(UnlimitedSnapViewTime::class)
+         register(DisableVideoLengthRestriction::class)
+</pre>
+</div>
+</body>
+</html>

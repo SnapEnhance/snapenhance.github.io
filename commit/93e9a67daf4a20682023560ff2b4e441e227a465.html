@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: override video playback rate - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/93e9a67daf4a20682023560ff2b4e441e227a465.html">93e9a67daf4a20682023560ff2b4e441e227a465</a>
+<b>parent</b> <a href="../commit/60ee3680a484a1de4fc305a6ce64834c6dde3ed4.html">60ee3680a484a1de4fc305a6ce64834c6dde3ed4</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 14 Feb 2024 17:40:55 +0100
+
+feat: override video playback rate
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">8</td><td><span class="i">++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/OperaViewerParamsOverride.kt</a></td><td> | </td><td class="num">43</td><td><span class="i">+++++++++++++++++++++++++++++</span><span class="d">--------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/OperaContextActionMenu.kt</a></td><td> | </td><td class="num">55</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/OperaViewerParamsMapper.kt</a></td><td> | </td><td class="num">32</td><td><span class="i">+++++++++++++++++++++++</span><span class="d">---------</span></td></tr>
+</table></pre><pre>5 files changed, 117 insertions(+), 23 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -522,6 +522,14 @@
+</a>                         &quot;name&quot;: &quot;Bypass Video Length Restrictions&quot;,
+                         &quot;description&quot;: &quot;Single: sends a single video\nSplit: split videos after editing&quot;
+                     },
+<a href="#h0-0-3" id="h0-0-3" class="i">+                    &quot;default_video_playback_rate&quot;: {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                        &quot;name&quot;: &quot;Default Video Playback Rate&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+                        &quot;description&quot;: &quot;Sets the default speed for the playback of videos\nValue must be between 0.1 and 4.0&quot;
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                    },
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+                    &quot;video_playback_rate_slider&quot;: {
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+                        &quot;name&quot;: &quot;Video Playback Rate Slider&quot;,
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+                        &quot;description&quot;: &quot;Adds a slider in opera context menu to change the video playback rate\nNote: Changes only apply to subsequent videos&quot;
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+                    },
+</a>                     &quot;disable_google_play_dialogs&quot;: {
+                         &quot;name&quot;: &quot;Disable Google Play Services Dialogs&quot;,
+                         &quot;description&quot;: &quot;Prevent Google Play Services availability dialogs from being shown&quot;
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -33,6 +33,8 @@ class Global : ConfigContainer() {
+</a>     val spotlightCommentsUsername = boolean(&quot;spotlight_comments_username&quot;) { requireRestart() }
+     val bypassVideoLengthRestriction = unique(&quot;bypass_video_length_restriction&quot;, &quot;split&quot;, &quot;single&quot;) { addNotices(
+         FeatureNotice.BAN_RISK); requireRestart(); nativeHooks() }
+<a href="#h1-0-3" id="h1-0-3" class="i">+    val defaultVideoPlaybackRate = float(&quot;default_video_playback_rate&quot;, 1.0F) { requireRestart(); inputCheck = { (it.toFloatOrNull() ?: 1.0F) in 0.1F..4.0F} }
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    val videoPlaybackRateSlider = boolean(&quot;video_playback_rate_slider&quot;) { requireRestart() }
+</a>     val disableGooglePlayDialogs = boolean(&quot;disable_google_play_dialogs&quot;) { requireRestart() }
+     val forceUploadSourceQuality = boolean(&quot;force_upload_source_quality&quot;) { requireRestart() }
+     val disableSnapSplitting = boolean(&quot;disable_snap_splitting&quot;) { addNotices(FeatureNotice.INTERNAL_BEHAVIOR) }
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/OperaViewerParamsOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/OperaViewerParamsOverride.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/OperaViewerParamsOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/OperaViewerParamsOverride.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -7,6 +7,8 @@ import me.rhunk.snapenhance.core.util.hook.hook
+</a> import me.rhunk.snapenhance.mapper.impl.OperaViewerParamsMapper
+ 
+ class OperaViewerParamsOverride : Feature(&quot;OperaViewerParamsOverride&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+<a href="#h2-0-3" id="h2-0-3" class="i">+    var currentPlaybackRate = 1.0F
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+
+</a>     data class OverrideKey(
+         val name: String,
+         val defaultValue: Any?
+<a href="#h2-1" id="h2-1" class="h">@@ -24,6 +26,12 @@ class OperaViewerParamsOverride : Feature(&quot;OperaViewerParamsOverride&quot;, loadParam
+</a>             overrideMap[key] = Override(filter, value)
+         }
+ 
+<a href="#h2-1-3" id="h2-1-3" class="i">+        currentPlaybackRate = context.config.global.defaultVideoPlaybackRate.getNullable()?.takeIf { it &gt; 0 } ?: 1.0F
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+        if (context.config.global.videoPlaybackRateSlider.get() || currentPlaybackRate != 1.0F) {
+</a><a href="#h2-1-6" id="h2-1-6" class="i">+            overrideParam(&quot;video_playback_rate&quot;, { currentPlaybackRate != 1.0F }, { _, _ -&gt; currentPlaybackRate.toDouble() })
+</a><a href="#h2-1-7" id="h2-1-7" class="i">+        }
+</a><a href="#h2-1-8" id="h2-1-8" class="i">+
+</a>         if (context.config.messaging.loopMediaPlayback.get()) {
+             //https://github.com/rodit/SnapMod/blob/master/app/src/main/java/xyz/rodit/snapmod/features/opera/SnapDurationModifier.kt
+             overrideParam(&quot;auto_advance_mode&quot;, { true }, { key, _ -&gt; key.defaultValue })
+<a href="#h2-2" id="h2-2" class="h">@@ -37,29 +45,36 @@ class OperaViewerParamsOverride : Feature(&quot;OperaViewerParamsOverride&quot;, loadParam
+</a>         }
+ 
+         context.mappings.useMapper(OperaViewerParamsMapper::class) {
+<a href="#h2-2-3" id="h2-2-3" class="d">-            classReference.get()?.hook(putMethod.get()!!, HookStage.BEFORE) { param -&gt;
+</a><a href="#h2-2-4" id="h2-2-4" class="d">-                val key = param.argNullable&lt;Any&gt;(0)?.let {  key -&gt;
+</a><a href="#h2-2-5" id="h2-2-5" class="d">-                    val fields = key::class.java.fields
+</a><a href="#h2-2-6" id="h2-2-6" class="d">-                    OverrideKey(
+</a><a href="#h2-2-7" id="h2-2-7" class="d">-                        name = fields.firstOrNull {
+</a><a href="#h2-2-8" id="h2-2-8" class="d">-                            it.type == String::class.java
+</a><a href="#h2-2-9" id="h2-2-9" class="d">-                        }?.get(key)?.toString() ?: return@hook,
+</a><a href="#h2-2-10" id="h2-2-10" class="d">-                        defaultValue = fields.firstOrNull {
+</a><a href="#h2-2-11" id="h2-2-11" class="d">-                            it.type == Object::class.java
+</a><a href="#h2-2-12" id="h2-2-12" class="d">-                        }?.get(key)
+</a><a href="#h2-2-13" id="h2-2-13" class="d">-                    )
+</a><a href="#h2-2-14" id="h2-2-14" class="d">-                } ?: return@hook
+</a><a href="#h2-2-15" id="h2-2-15" class="d">-                val value = param.argNullable&lt;Any&gt;(1) ?: return@hook
+</a><a href="#h2-2-16" id="h2-2-16" class="i">+            fun overrideParamResult(paramKey: Any, value: Any?): Any? {
+</a><a href="#h2-2-17" id="h2-2-17" class="i">+                val fields = paramKey::class.java.fields
+</a><a href="#h2-2-18" id="h2-2-18" class="i">+                val key = OverrideKey(
+</a><a href="#h2-2-19" id="h2-2-19" class="i">+                    name = fields.firstOrNull {
+</a><a href="#h2-2-20" id="h2-2-20" class="i">+                        it.type == String::class.java
+</a><a href="#h2-2-21" id="h2-2-21" class="i">+                    }?.get(paramKey)?.toString() ?: return value,
+</a><a href="#h2-2-22" id="h2-2-22" class="i">+                    defaultValue = fields.firstOrNull {
+</a><a href="#h2-2-23" id="h2-2-23" class="i">+                        it.type == Object::class.java
+</a><a href="#h2-2-24" id="h2-2-24" class="i">+                    }?.get(paramKey)
+</a><a href="#h2-2-25" id="h2-2-25" class="i">+                )
+</a> 
+                 overrideMap[key.name]?.let { override -&gt;
+                     if (override.filter(value)) {
+                         runCatching {
+<a href="#h2-2-30" id="h2-2-30" class="d">-                            param.setArg(1, override.value(key, value))
+</a><a href="#h2-2-31" id="h2-2-31" class="i">+                            return override.value(key, value)
+</a>                         }.onFailure {
+                             context.log.error(&quot;Failed to override param $key&quot;, it)
+                         }
+                     }
+                 }
+<a href="#h2-2-37" id="h2-2-37" class="i">+
+</a><a href="#h2-2-38" id="h2-2-38" class="i">+                return value
+</a><a href="#h2-2-39" id="h2-2-39" class="i">+            }
+</a><a href="#h2-2-40" id="h2-2-40" class="i">+
+</a><a href="#h2-2-41" id="h2-2-41" class="i">+            classReference.get()?.hook(getMethod.get()!!, HookStage.AFTER) { param -&gt;
+</a><a href="#h2-2-42" id="h2-2-42" class="i">+                param.setResult(overrideParamResult(param.arg(0), param.getResult()))
+</a><a href="#h2-2-43" id="h2-2-43" class="i">+            }
+</a><a href="#h2-2-44" id="h2-2-44" class="i">+
+</a><a href="#h2-2-45" id="h2-2-45" class="i">+            classReference.get()?.hook(getOrDefaultMethod.get()!!, HookStage.AFTER) { param -&gt;
+</a><a href="#h2-2-46" id="h2-2-46" class="i">+                param.setResult(overrideParamResult(param.arg(0), param.getResult()))
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/OperaContextActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/OperaContextActionMenu.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/OperaContextActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/OperaContextActionMenu.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -8,11 +8,27 @@ import android.widget.Button
+</a> import android.widget.LinearLayout
+ import android.widget.ScrollView
+ import android.widget.TextView
+<a href="#h3-0-3" id="h3-0-3" class="i">+import androidx.compose.foundation.layout.Column
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import androidx.compose.foundation.layout.fillMaxWidth
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+import androidx.compose.foundation.layout.padding
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+import androidx.compose.material3.Slider
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+import androidx.compose.material3.Text
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+import androidx.compose.runtime.getValue
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+import androidx.compose.runtime.mutableFloatStateOf
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+import androidx.compose.runtime.remember
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+import androidx.compose.runtime.setValue
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+import androidx.compose.ui.Modifier
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+import androidx.compose.ui.graphics.Color
+</a><a href="#h3-0-14" id="h3-0-14" class="i">+import androidx.compose.ui.text.style.TextAlign
+</a><a href="#h3-0-15" id="h3-0-15" class="i">+import androidx.compose.ui.unit.dp
+</a><a href="#h3-0-16" id="h3-0-16" class="i">+import me.rhunk.snapenhance.common.ui.createComposeView
+</a><a href="#h3-0-17" id="h3-0-17" class="i">+import me.rhunk.snapenhance.core.features.impl.OperaViewerParamsOverride
+</a> import me.rhunk.snapenhance.core.features.impl.downloader.MediaDownloader
+ import me.rhunk.snapenhance.core.ui.applyTheme
+ import me.rhunk.snapenhance.core.ui.menu.AbstractMenu
+ import me.rhunk.snapenhance.core.ui.triggerCloseTouchEvent
+ import me.rhunk.snapenhance.core.util.ktx.getId
+<a href="#h3-0-23" id="h3-0-23" class="i">+import me.rhunk.snapenhance.core.util.ktx.getIdentifier
+</a> import me.rhunk.snapenhance.core.util.ktx.vibrateLongPress
+ import me.rhunk.snapenhance.core.wrapper.impl.ScSize
+ import java.text.DateFormat
+<a href="#h3-1" id="h3-1" class="h">@@ -129,6 +145,45 @@ class OperaContextActionMenu : AbstractMenu() {
+</a>                 }
+             }
+ 
+<a href="#h3-1-3" id="h3-1-3" class="i">+            if (context.config.global.videoPlaybackRateSlider.get()) {
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+                val operaViewerParamsOverride = context.feature(OperaViewerParamsOverride::class)
+</a><a href="#h3-1-5" id="h3-1-5" class="i">+
+</a><a href="#h3-1-6" id="h3-1-6" class="i">+                linearLayout.addView(createComposeView(view.context) {
+</a><a href="#h3-1-7" id="h3-1-7" class="i">+                    Column(
+</a><a href="#h3-1-8" id="h3-1-8" class="i">+                        modifier = Modifier
+</a><a href="#h3-1-9" id="h3-1-9" class="i">+                            .fillMaxWidth()
+</a><a href="#h3-1-10" id="h3-1-10" class="i">+                            .padding(10.dp)
+</a><a href="#h3-1-11" id="h3-1-11" class="i">+                    ) {
+</a><a href="#h3-1-12" id="h3-1-12" class="i">+                        var value by remember { mutableFloatStateOf(operaViewerParamsOverride.currentPlaybackRate) }
+</a><a href="#h3-1-13" id="h3-1-13" class="i">+                        Slider(
+</a><a href="#h3-1-14" id="h3-1-14" class="i">+                            value = value,
+</a><a href="#h3-1-15" id="h3-1-15" class="i">+                            onValueChange = {
+</a><a href="#h3-1-16" id="h3-1-16" class="i">+                                value = it
+</a><a href="#h3-1-17" id="h3-1-17" class="i">+                                operaViewerParamsOverride.currentPlaybackRate = it
+</a><a href="#h3-1-18" id="h3-1-18" class="i">+                            },
+</a><a href="#h3-1-19" id="h3-1-19" class="i">+                            valueRange = 0.1F..4.0F,
+</a><a href="#h3-1-20" id="h3-1-20" class="i">+                            steps = 0,
+</a><a href="#h3-1-21" id="h3-1-21" class="i">+                            modifier = Modifier.fillMaxWidth()
+</a><a href="#h3-1-22" id="h3-1-22" class="i">+                        )
+</a><a href="#h3-1-23" id="h3-1-23" class="i">+                        Text(
+</a><a href="#h3-1-24" id="h3-1-24" class="i">+                            text = &quot;x&quot; + value.toString().take(4),
+</a><a href="#h3-1-25" id="h3-1-25" class="i">+                            color = remember {
+</a><a href="#h3-1-26" id="h3-1-26" class="i">+                                view.context.theme.obtainStyledAttributes(
+</a><a href="#h3-1-27" id="h3-1-27" class="i">+                                    intArrayOf(view.context.resources.getIdentifier(&quot;sigColorTextPrimary&quot;, &quot;attr&quot;))
+</a><a href="#h3-1-28" id="h3-1-28" class="i">+                                ).getColor(0, 0).let { Color(it) }
+</a><a href="#h3-1-29" id="h3-1-29" class="i">+                            },
+</a><a href="#h3-1-30" id="h3-1-30" class="i">+                            textAlign = TextAlign.Center,
+</a><a href="#h3-1-31" id="h3-1-31" class="i">+                            modifier = Modifier.fillMaxWidth()
+</a><a href="#h3-1-32" id="h3-1-32" class="i">+                        )
+</a><a href="#h3-1-33" id="h3-1-33" class="i">+                    }
+</a><a href="#h3-1-34" id="h3-1-34" class="i">+                }.apply {
+</a><a href="#h3-1-35" id="h3-1-35" class="i">+                    layoutParams = ViewGroup.LayoutParams(
+</a><a href="#h3-1-36" id="h3-1-36" class="i">+                        ViewGroup.LayoutParams.MATCH_PARENT,
+</a><a href="#h3-1-37" id="h3-1-37" class="i">+                        ViewGroup.LayoutParams.WRAP_CONTENT
+</a><a href="#h3-1-38" id="h3-1-38" class="i">+                    )
+</a><a href="#h3-1-39" id="h3-1-39" class="i">+                })
+</a><a href="#h3-1-40" id="h3-1-40" class="i">+            }
+</a><a href="#h3-1-41" id="h3-1-41" class="i">+
+</a>             if (context.config.downloader.downloadContextMenu.get()) {
+                 linearLayout.addView(Button(view.context).apply {
+                     text = translation[&quot;download&quot;]
+<b>diff --git a/<a id="h4" href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/OperaViewerParamsMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/OperaViewerParamsMapper.kt</a> b/<a href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/OperaViewerParamsMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/OperaViewerParamsMapper.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -1,5 +1,6 @@
+</a> package me.rhunk.snapenhance.mapper.impl
+ 
+<a href="#h4-0-2" id="h4-0-2" class="i">+import com.android.tools.smali.dexlib2.iface.Method
+</a> import me.rhunk.snapenhance.mapper.AbstractClassMapper
+ import me.rhunk.snapenhance.mapper.ext.findConstString
+ import me.rhunk.snapenhance.mapper.ext.getClassName
+<a href="#h4-1" id="h4-1" class="h">@@ -8,7 +9,14 @@ import com.android.tools.smali.dexlib2.iface.reference.MethodReference
+</a> 
+ class OperaViewerParamsMapper : AbstractClassMapper(&quot;OperaViewerParams&quot;) {
+     val classReference = classReference(&quot;class&quot;)
+<a href="#h4-1-3" id="h4-1-3" class="d">-    val putMethod = string(&quot;putMethod&quot;)
+</a><a href="#h4-1-4" id="h4-1-4" class="i">+    val getMethod = string(&quot;getMethod&quot;)
+</a><a href="#h4-1-5" id="h4-1-5" class="i">+    val getOrDefaultMethod = string(&quot;getOrDefaultMethod&quot;)
+</a><a href="#h4-1-6" id="h4-1-6" class="i">+
+</a><a href="#h4-1-7" id="h4-1-7" class="i">+    private fun Method.hasHashMapReference(methodName: String) = implementation?.instructions?.any {
+</a><a href="#h4-1-8" id="h4-1-8" class="i">+        val instruction = it as? Instruction35c ?: return@any false
+</a><a href="#h4-1-9" id="h4-1-9" class="i">+        val reference = instruction.reference as? MethodReference ?: return@any false
+</a><a href="#h4-1-10" id="h4-1-10" class="i">+        reference.name == methodName &amp;&amp; reference.definingClass == &quot;Ljava/util/concurrent/ConcurrentHashMap;&quot;
+</a><a href="#h4-1-11" id="h4-1-11" class="i">+    } == true
+</a> 
+     init {
+         mapper {
+<a href="#h4-2" id="h4-2" class="h">@@ -16,17 +24,23 @@ class OperaViewerParamsMapper : AbstractClassMapper(&quot;OperaViewerParams&quot;) {
+</a>                 classDef.fields.firstOrNull { it.type == &quot;Ljava/util/concurrent/ConcurrentHashMap;&quot; } ?: continue
+                 if (classDef.methods.firstOrNull { it.name == &quot;toString&quot; }?.implementation?.findConstString(&quot;Params&quot;) != true) continue
+ 
+<a href="#h4-2-3" id="h4-2-3" class="d">-                val putDexMethod = classDef.methods.firstOrNull { method -&gt;
+</a><a href="#h4-2-4" id="h4-2-4" class="d">-                    method.implementation?.instructions?.any {
+</a><a href="#h4-2-5" id="h4-2-5" class="d">-                        val instruction = it as? Instruction35c ?: return@any false
+</a><a href="#h4-2-6" id="h4-2-6" class="d">-                        val reference = instruction.reference as? MethodReference ?: return@any false
+</a><a href="#h4-2-7" id="h4-2-7" class="d">-                        reference.name == &quot;put&quot; &amp;&amp; reference.definingClass == &quot;Ljava/util/concurrent/ConcurrentHashMap;&quot;
+</a><a href="#h4-2-8" id="h4-2-8" class="d">-                    } == true
+</a><a href="#h4-2-9" id="h4-2-9" class="i">+                val getOrDefaultDexMethod = classDef.methods.firstOrNull { method -&gt;
+</a><a href="#h4-2-10" id="h4-2-10" class="i">+                    method.returnType == &quot;Ljava/lang/Object;&quot; &amp;&amp;
+</a><a href="#h4-2-11" id="h4-2-11" class="i">+                    method.parameters.size == 2 &amp;&amp;
+</a><a href="#h4-2-12" id="h4-2-12" class="i">+                    method.parameterTypes[1] == &quot;Ljava/lang/Object;&quot; &amp;&amp;
+</a><a href="#h4-2-13" id="h4-2-13" class="i">+                    method.hasHashMapReference(&quot;get&quot;)
+</a>                 } ?: return@mapper
+ 
+<a href="#h4-2-16" id="h4-2-16" class="d">-                classReference.set(classDef.getClassName())
+</a><a href="#h4-2-17" id="h4-2-17" class="d">-                putMethod.set(putDexMethod.name)
+</a><a href="#h4-2-18" id="h4-2-18" class="i">+                val getDexMethod = classDef.methods.firstOrNull { method -&gt;
+</a><a href="#h4-2-19" id="h4-2-19" class="i">+                    method.returnType == &quot;Ljava/lang/Object;&quot; &amp;&amp;
+</a><a href="#h4-2-20" id="h4-2-20" class="i">+                    method.parameters.size == 1 &amp;&amp;
+</a><a href="#h4-2-21" id="h4-2-21" class="i">+                    method.parameterTypes[0] == getOrDefaultDexMethod.parameterTypes[0] &amp;&amp;
+</a><a href="#h4-2-22" id="h4-2-22" class="i">+                    method.hasHashMapReference(&quot;get&quot;)
+</a><a href="#h4-2-23" id="h4-2-23" class="i">+                } ?: return@mapper
+</a> 
+<a href="#h4-2-25" id="h4-2-25" class="i">+                getMethod.set(getDexMethod.name)
+</a><a href="#h4-2-26" id="h4-2-26" class="i">+                getOrDefaultMethod.set(getOrDefaultDexMethod.name)
+</a><a href="#h4-2-27" id="h4-2-27" class="i">+                classReference.set(classDef.getClassName())
+</a>                 return@mapper
+             }
+         }
+</pre>
+</div>
+</body>
+</html>

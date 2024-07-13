@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(ui): script list - add module state - add onSnapActivity and onManagerActivity test functions - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/6e0e6d33395d13bb006800f8e8e5ee16eedcdda3.html">6e0e6d33395d13bb006800f8e8e5ee16eedcdda3</a>
+<b>parent</b> <a href="../commit/08614ef4542d9d02d53e2bec2572c4b04ab86d6e.html">08614ef4542d9d02d53e2bec2572c4b04ab86d6e</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 16 Sep 2023 23:34:28 +0200
+
+feat(ui): script list
+- add module state
+- add onSnapActivity and onManagerActivity test functions
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a></td><td> | </td><td class="num">78</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-----------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></td><td> | </td><td class="num">57</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++</span><span class="d">---------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/MainActivity.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Section.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">+++</span><span class="d">-</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h4">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a></td><td> | </td><td class="num">92</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/scripting/JSModule.kt</a></td><td> | </td><td class="num">77</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-----------------------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptKtx.kt</a></td><td> | </td><td class="num">44</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptRuntime.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">+++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+</table></pre><pre>11 files changed, 314 insertions(+), 60 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -11,6 +11,7 @@ import me.rhunk.snapenhance.core.util.SQLiteDatabaseHelper
+</a> import me.rhunk.snapenhance.core.util.ktx.getInteger
+ import me.rhunk.snapenhance.core.util.ktx.getLongOrNull
+ import me.rhunk.snapenhance.core.util.ktx.getStringOrNull
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.scripting.type.ModuleInfo
+</a> import java.util.concurrent.Executors
+ 
+ 
+<a href="#h0-1" id="h0-1" class="h">@@ -60,17 +61,12 @@ class ModDatabase(
+</a>                 &quot;expirationTimestamp BIGINT&quot;,
+                 &quot;length INTEGER&quot;
+             ),
+<a href="#h0-1-3" id="h0-1-3" class="d">-            &quot;analytics_config&quot; to listOf(
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-                &quot;userId VARCHAR PRIMARY KEY&quot;,
+</a><a href="#h0-1-5" id="h0-1-5" class="d">-                &quot;modes VARCHAR&quot;
+</a><a href="#h0-1-6" id="h0-1-6" class="d">-            ),
+</a><a href="#h0-1-7" id="h0-1-7" class="d">-            &quot;analytics&quot; to listOf(
+</a><a href="#h0-1-8" id="h0-1-8" class="d">-                &quot;hash VARCHAR PRIMARY KEY&quot;,
+</a><a href="#h0-1-9" id="h0-1-9" class="d">-                &quot;userId VARCHAR&quot;,
+</a><a href="#h0-1-10" id="h0-1-10" class="d">-                &quot;conversationId VARCHAR&quot;,
+</a><a href="#h0-1-11" id="h0-1-11" class="d">-                &quot;timestamp BIGINT&quot;,
+</a><a href="#h0-1-12" id="h0-1-12" class="d">-                &quot;eventName VARCHAR&quot;,
+</a><a href="#h0-1-13" id="h0-1-13" class="d">-                &quot;eventData VARCHAR&quot;
+</a><a href="#h0-1-14" id="h0-1-14" class="i">+            &quot;scripts&quot; to listOf(
+</a><a href="#h0-1-15" id="h0-1-15" class="i">+                &quot;name VARCHAR PRIMARY KEY&quot;,
+</a><a href="#h0-1-16" id="h0-1-16" class="i">+                &quot;version VARCHAR NOT NULL&quot;,
+</a><a href="#h0-1-17" id="h0-1-17" class="i">+                &quot;description VARCHAR&quot;,
+</a><a href="#h0-1-18" id="h0-1-18" class="i">+                &quot;author VARCHAR NOT NULL&quot;,
+</a><a href="#h0-1-19" id="h0-1-19" class="i">+                &quot;enabled BOOLEAN&quot;
+</a>             )
+         ))
+     }
+<a href="#h0-2" id="h0-2" class="h">@@ -251,4 +247,64 @@ class ModDatabase(
+</a>             ruleIds
+         }
+     }
+<a href="#h0-2-3" id="h0-2-3" class="i">+
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+    fun getScripts(): List&lt;ModuleInfo&gt; {
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+        return database.rawQuery(&quot;SELECT * FROM scripts&quot;, null).use { cursor -&gt;
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+            val scripts = mutableListOf&lt;ModuleInfo&gt;()
+</a><a href="#h0-2-7" id="h0-2-7" class="i">+            while (cursor.moveToNext()) {
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+                scripts.add(
+</a><a href="#h0-2-9" id="h0-2-9" class="i">+                    ModuleInfo(
+</a><a href="#h0-2-10" id="h0-2-10" class="i">+                        name = cursor.getStringOrNull(&quot;name&quot;)!!,
+</a><a href="#h0-2-11" id="h0-2-11" class="i">+                        version = cursor.getStringOrNull(&quot;version&quot;)!!,
+</a><a href="#h0-2-12" id="h0-2-12" class="i">+                        description = cursor.getStringOrNull(&quot;description&quot;),
+</a><a href="#h0-2-13" id="h0-2-13" class="i">+                        author = cursor.getStringOrNull(&quot;author&quot;),
+</a><a href="#h0-2-14" id="h0-2-14" class="i">+                        grantPermissions = null
+</a><a href="#h0-2-15" id="h0-2-15" class="i">+                    )
+</a><a href="#h0-2-16" id="h0-2-16" class="i">+                )
+</a><a href="#h0-2-17" id="h0-2-17" class="i">+            }
+</a><a href="#h0-2-18" id="h0-2-18" class="i">+            scripts
+</a><a href="#h0-2-19" id="h0-2-19" class="i">+        }
+</a><a href="#h0-2-20" id="h0-2-20" class="i">+    }
+</a><a href="#h0-2-21" id="h0-2-21" class="i">+
+</a><a href="#h0-2-22" id="h0-2-22" class="i">+    fun setScriptEnabled(name: String, enabled: Boolean) {
+</a><a href="#h0-2-23" id="h0-2-23" class="i">+        executeAsync {
+</a><a href="#h0-2-24" id="h0-2-24" class="i">+            database.execSQL(&quot;UPDATE scripts SET enabled = ? WHERE name = ?&quot;, arrayOf(
+</a><a href="#h0-2-25" id="h0-2-25" class="i">+                if (enabled) 1 else 0,
+</a><a href="#h0-2-26" id="h0-2-26" class="i">+                name
+</a><a href="#h0-2-27" id="h0-2-27" class="i">+            ))
+</a><a href="#h0-2-28" id="h0-2-28" class="i">+        }
+</a><a href="#h0-2-29" id="h0-2-29" class="i">+    }
+</a><a href="#h0-2-30" id="h0-2-30" class="i">+
+</a><a href="#h0-2-31" id="h0-2-31" class="i">+    fun isScriptEnabled(name: String): Boolean {
+</a><a href="#h0-2-32" id="h0-2-32" class="i">+        return database.rawQuery(&quot;SELECT enabled FROM scripts WHERE name = ?&quot;, arrayOf(name)).use { cursor -&gt;
+</a><a href="#h0-2-33" id="h0-2-33" class="i">+            if (!cursor.moveToFirst()) return@use false
+</a><a href="#h0-2-34" id="h0-2-34" class="i">+            cursor.getInteger(&quot;enabled&quot;) == 1
+</a><a href="#h0-2-35" id="h0-2-35" class="i">+        }
+</a><a href="#h0-2-36" id="h0-2-36" class="i">+    }
+</a><a href="#h0-2-37" id="h0-2-37" class="i">+
+</a><a href="#h0-2-38" id="h0-2-38" class="i">+    fun syncScripts(availableScripts: List&lt;ModuleInfo&gt;) {
+</a><a href="#h0-2-39" id="h0-2-39" class="i">+        executeAsync {
+</a><a href="#h0-2-40" id="h0-2-40" class="i">+            val enabledScripts = getScripts()
+</a><a href="#h0-2-41" id="h0-2-41" class="i">+            val enabledScriptPaths = enabledScripts.map { it.name }
+</a><a href="#h0-2-42" id="h0-2-42" class="i">+            val availableScriptPaths = availableScripts.map { it.name }
+</a><a href="#h0-2-43" id="h0-2-43" class="i">+
+</a><a href="#h0-2-44" id="h0-2-44" class="i">+            enabledScripts.forEach { script -&gt;
+</a><a href="#h0-2-45" id="h0-2-45" class="i">+                if (!availableScriptPaths.contains(script.name)) {
+</a><a href="#h0-2-46" id="h0-2-46" class="i">+                    database.execSQL(&quot;DELETE FROM scripts WHERE name = ?&quot;, arrayOf(script.name))
+</a><a href="#h0-2-47" id="h0-2-47" class="i">+                }
+</a><a href="#h0-2-48" id="h0-2-48" class="i">+            }
+</a><a href="#h0-2-49" id="h0-2-49" class="i">+
+</a><a href="#h0-2-50" id="h0-2-50" class="i">+            availableScripts.forEach { script -&gt;
+</a><a href="#h0-2-51" id="h0-2-51" class="i">+                if (!enabledScriptPaths.contains(script.name)) {
+</a><a href="#h0-2-52" id="h0-2-52" class="i">+                    database.execSQL(&quot;INSERT OR REPLACE INTO scripts (name, version, description, author, enabled) VALUES (?, ?, ?, ?, ?)&quot;, arrayOf(
+</a><a href="#h0-2-53" id="h0-2-53" class="i">+                        script.name,
+</a><a href="#h0-2-54" id="h0-2-54" class="i">+                        script.version,
+</a><a href="#h0-2-55" id="h0-2-55" class="i">+                        script.description,
+</a><a href="#h0-2-56" id="h0-2-56" class="i">+                        script.author,
+</a><a href="#h0-2-57" id="h0-2-57" class="i">+                        0
+</a><a href="#h0-2-58" id="h0-2-58" class="i">+                    ))
+</a><a href="#h0-2-59" id="h0-2-59" class="i">+                }
+</a><a href="#h0-2-60" id="h0-2-60" class="i">+            }
+</a><a href="#h0-2-61" id="h0-2-61" class="i">+        }
+</a><a href="#h0-2-62" id="h0-2-62" class="i">+    }
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -5,36 +5,63 @@ import androidx.documentfile.provider.DocumentFile
+</a> import me.rhunk.snapenhance.RemoteSideContext
+ import me.rhunk.snapenhance.bridge.scripting.IScripting
+ import me.rhunk.snapenhance.bridge.scripting.ReloadListener
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.scripting.type.ModuleInfo
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import java.io.InputStream
+</a> 
+ class RemoteScriptManager(
+     private val context: RemoteSideContext,
+ ) : IScripting.Stub() {
+<a href="#h1-0-9" id="h1-0-9" class="d">-    private val scriptRuntime = ScriptRuntime(context.log)
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+    val runtime = ScriptRuntime(context.log)
+</a> 
+     private fun getScriptFolder()
+         = DocumentFile.fromTreeUri(context.androidContext, Uri.parse(context.config.root.scripting.moduleFolder.get()))
+<a href="#h1-0-14" id="h1-0-14" class="d">-    private fun hasHotReload() = context.config.root.scripting.hotReload.get()
+</a><a href="#h1-0-15" id="h1-0-15" class="d">-
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+    //private fun hasHotReload() = context.config.root.scripting.hotReload.get()
+</a>     private val reloadListeners = mutableListOf&lt;ReloadListener&gt;()
+ 
+<a href="#h1-0-19" id="h1-0-19" class="i">+    private val cachedModuleInfo = mutableMapOf&lt;String, ModuleInfo&gt;()
+</a><a href="#h1-0-20" id="h1-0-20" class="i">+
+</a><a href="#h1-0-21" id="h1-0-21" class="i">+    fun sync() {
+</a><a href="#h1-0-22" id="h1-0-22" class="i">+        getScriptFileNames().forEach { name -&gt;
+</a><a href="#h1-0-23" id="h1-0-23" class="i">+            runCatching {
+</a><a href="#h1-0-24" id="h1-0-24" class="i">+                getScriptInputStream(name) { stream -&gt;
+</a><a href="#h1-0-25" id="h1-0-25" class="i">+                    runtime.getModuleInfo(stream!!).also { info -&gt;
+</a><a href="#h1-0-26" id="h1-0-26" class="i">+                        cachedModuleInfo[name] = info
+</a><a href="#h1-0-27" id="h1-0-27" class="i">+                    }
+</a><a href="#h1-0-28" id="h1-0-28" class="i">+                }
+</a><a href="#h1-0-29" id="h1-0-29" class="i">+            }.onFailure {
+</a><a href="#h1-0-30" id="h1-0-30" class="i">+                context.log.error(&quot;Failed to load module info for $name&quot;, it)
+</a><a href="#h1-0-31" id="h1-0-31" class="i">+            }
+</a><a href="#h1-0-32" id="h1-0-32" class="i">+        }
+</a><a href="#h1-0-33" id="h1-0-33" class="i">+
+</a><a href="#h1-0-34" id="h1-0-34" class="i">+        context.modDatabase.syncScripts(cachedModuleInfo.values.toList())
+</a><a href="#h1-0-35" id="h1-0-35" class="i">+    }
+</a><a href="#h1-0-36" id="h1-0-36" class="i">+
+</a>     fun init() {
+<a href="#h1-0-38" id="h1-0-38" class="d">-        enabledScriptPaths.forEach { path -&gt;
+</a><a href="#h1-0-39" id="h1-0-39" class="d">-            val content = getScriptContent(path)
+</a><a href="#h1-0-40" id="h1-0-40" class="d">-            scriptRuntime.load(path, content)
+</a><a href="#h1-0-41" id="h1-0-41" class="i">+        sync()
+</a><a href="#h1-0-42" id="h1-0-42" class="i">+
+</a><a href="#h1-0-43" id="h1-0-43" class="i">+        enabledScripts.forEach { path -&gt;
+</a><a href="#h1-0-44" id="h1-0-44" class="i">+            val content = getScriptContent(path) ?: return@forEach
+</a><a href="#h1-0-45" id="h1-0-45" class="i">+            runtime.load(path, content)
+</a>         }
+     }
+ 
+<a href="#h1-0-49" id="h1-0-49" class="d">-    override fun getEnabledScriptPaths(): List&lt;String&gt; {
+</a><a href="#h1-0-50" id="h1-0-50" class="d">-        val folder = getScriptFolder() ?: return emptyList()
+</a><a href="#h1-0-51" id="h1-0-51" class="d">-        return folder.listFiles().filter { it.name?.endsWith(&quot;.js&quot;) ?: false }.map { it.name!! }
+</a><a href="#h1-0-52" id="h1-0-52" class="i">+    private fun &lt;R&gt; getScriptInputStream(name: String, callback: (InputStream?) -&gt; R): R {
+</a><a href="#h1-0-53" id="h1-0-53" class="i">+        val file = getScriptFolder()?.findFile(name) ?: return callback(null)
+</a><a href="#h1-0-54" id="h1-0-54" class="i">+        return context.androidContext.contentResolver.openInputStream(file.uri)?.use(callback) ?: callback(null)
+</a><a href="#h1-0-55" id="h1-0-55" class="i">+    }
+</a><a href="#h1-0-56" id="h1-0-56" class="i">+
+</a><a href="#h1-0-57" id="h1-0-57" class="i">+    private fun getScriptFileNames(): List&lt;String&gt; {
+</a><a href="#h1-0-58" id="h1-0-58" class="i">+        return (getScriptFolder() ?: return emptyList()).listFiles().filter { it.name?.endsWith(&quot;.js&quot;) ?: false }.map { it.name!! }
+</a><a href="#h1-0-59" id="h1-0-59" class="i">+    }
+</a><a href="#h1-0-60" id="h1-0-60" class="i">+
+</a><a href="#h1-0-61" id="h1-0-61" class="i">+    override fun getEnabledScripts(): List&lt;String&gt; {
+</a><a href="#h1-0-62" id="h1-0-62" class="i">+        return getScriptFileNames().filter {
+</a><a href="#h1-0-63" id="h1-0-63" class="i">+            context.modDatabase.isScriptEnabled(cachedModuleInfo[it]?.name ?: return@filter false)
+</a><a href="#h1-0-64" id="h1-0-64" class="i">+        }
+</a>     }
+ 
+<a href="#h1-0-67" id="h1-0-67" class="d">-    override fun getScriptContent(path: String): String {
+</a><a href="#h1-0-68" id="h1-0-68" class="d">-        val folder = getScriptFolder() ?: return &quot;&quot;
+</a><a href="#h1-0-69" id="h1-0-69" class="d">-        val file = folder.findFile(path) ?: return &quot;&quot;
+</a><a href="#h1-0-70" id="h1-0-70" class="d">-        return context.androidContext.contentResolver.openInputStream(file.uri)?.use {
+</a><a href="#h1-0-71" id="h1-0-71" class="d">-            it.readBytes().toString(Charsets.UTF_8)
+</a><a href="#h1-0-72" id="h1-0-72" class="d">-        } ?: &quot;&quot;
+</a><a href="#h1-0-73" id="h1-0-73" class="i">+    override fun getScriptContent(name: String): String? {
+</a><a href="#h1-0-74" id="h1-0-74" class="i">+        return getScriptInputStream(name) { it?.bufferedReader()?.readText() }
+</a>     }
+ 
+     override fun registerReloadListener(listener: ReloadListener) {
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/MainActivity.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/MainActivity.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/MainActivity.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/MainActivity.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -46,6 +46,10 @@ class MainActivity : ComponentActivity() {
+</a>             checkForRequirements()
+         }
+ 
+<a href="#h2-0-3" id="h2-0-3" class="i">+        managerContext.scriptManager.runtime.eachModule {
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+            callOnManagerLoad(this@MainActivity)
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+        }
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+
+</a>         sections = EnumSection.values().toList().associateWith {
+             it.section.constructors.first().call()
+         }.onEach { (section, instance) -&gt;
+<b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Section.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Section.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Section.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Section.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -17,6 +17,7 @@ import me.rhunk.snapenhance.ui.manager.sections.NotImplemented
+</a> import me.rhunk.snapenhance.ui.manager.sections.downloads.DownloadsSection
+ import me.rhunk.snapenhance.ui.manager.sections.features.FeaturesSection
+ import me.rhunk.snapenhance.ui.manager.sections.home.HomeSection
+<a href="#h3-0-3" id="h3-0-3" class="i">+import me.rhunk.snapenhance.ui.manager.sections.scripting.ScriptsSection
+</a> import me.rhunk.snapenhance.ui.manager.sections.social.SocialSection
+ import kotlin.reflect.KClass
+ 
+<a href="#h3-1" id="h3-1" class="h">@@ -47,7 +48,8 @@ enum class EnumSection(
+</a>     ),
+     SCRIPTS(
+         route = &quot;scripts&quot;,
+<a href="#h3-1-3" id="h3-1-3" class="d">-        icon = Icons.Filled.DataObject
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+        icon = Icons.Filled.DataObject,
+</a><a href="#h3-1-5" id="h3-1-5" class="i">+        section = ScriptsSection::class
+</a>     );
+ 
+     companion object {
+<b>diff --git a/<a id="h4" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -0,0 +1,91 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="i">+package me.rhunk.snapenhance.ui.manager.sections.scripting
+</a><a href="#h4-0-1" id="h4-0-1" class="i">+
+</a><a href="#h4-0-2" id="h4-0-2" class="i">+import androidx.compose.foundation.layout.Column
+</a><a href="#h4-0-3" id="h4-0-3" class="i">+import androidx.compose.foundation.layout.Row
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+import androidx.compose.foundation.layout.fillMaxWidth
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+import androidx.compose.foundation.layout.padding
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+import androidx.compose.foundation.lazy.LazyColumn
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+import androidx.compose.material3.Card
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+import androidx.compose.material3.CardDefaults
+</a><a href="#h4-0-9" id="h4-0-9" class="i">+import androidx.compose.material3.MaterialTheme
+</a><a href="#h4-0-10" id="h4-0-10" class="i">+import androidx.compose.material3.Switch
+</a><a href="#h4-0-11" id="h4-0-11" class="i">+import androidx.compose.material3.Text
+</a><a href="#h4-0-12" id="h4-0-12" class="i">+import androidx.compose.runtime.Composable
+</a><a href="#h4-0-13" id="h4-0-13" class="i">+import androidx.compose.runtime.getValue
+</a><a href="#h4-0-14" id="h4-0-14" class="i">+import androidx.compose.runtime.mutableStateOf
+</a><a href="#h4-0-15" id="h4-0-15" class="i">+import androidx.compose.runtime.remember
+</a><a href="#h4-0-16" id="h4-0-16" class="i">+import androidx.compose.runtime.setValue
+</a><a href="#h4-0-17" id="h4-0-17" class="i">+import androidx.compose.ui.Alignment
+</a><a href="#h4-0-18" id="h4-0-18" class="i">+import androidx.compose.ui.Modifier
+</a><a href="#h4-0-19" id="h4-0-19" class="i">+import androidx.compose.ui.unit.dp
+</a><a href="#h4-0-20" id="h4-0-20" class="i">+import androidx.compose.ui.unit.sp
+</a><a href="#h4-0-21" id="h4-0-21" class="i">+import me.rhunk.snapenhance.scripting.type.ModuleInfo
+</a><a href="#h4-0-22" id="h4-0-22" class="i">+import me.rhunk.snapenhance.ui.manager.Section
+</a><a href="#h4-0-23" id="h4-0-23" class="i">+
+</a><a href="#h4-0-24" id="h4-0-24" class="i">+class ScriptsSection : Section() {
+</a><a href="#h4-0-25" id="h4-0-25" class="i">+    @Composable
+</a><a href="#h4-0-26" id="h4-0-26" class="i">+    fun ModuleItem(script: ModuleInfo) {
+</a><a href="#h4-0-27" id="h4-0-27" class="i">+        var enabled by remember {
+</a><a href="#h4-0-28" id="h4-0-28" class="i">+            mutableStateOf(context.modDatabase.isScriptEnabled(script.name))
+</a><a href="#h4-0-29" id="h4-0-29" class="i">+        }
+</a><a href="#h4-0-30" id="h4-0-30" class="i">+
+</a><a href="#h4-0-31" id="h4-0-31" class="i">+        Card(
+</a><a href="#h4-0-32" id="h4-0-32" class="i">+            modifier = Modifier
+</a><a href="#h4-0-33" id="h4-0-33" class="i">+                .fillMaxWidth()
+</a><a href="#h4-0-34" id="h4-0-34" class="i">+                .padding(8.dp),
+</a><a href="#h4-0-35" id="h4-0-35" class="i">+            elevation = CardDefaults.cardElevation()
+</a><a href="#h4-0-36" id="h4-0-36" class="i">+        ) {
+</a><a href="#h4-0-37" id="h4-0-37" class="i">+            Row(
+</a><a href="#h4-0-38" id="h4-0-38" class="i">+                modifier = Modifier
+</a><a href="#h4-0-39" id="h4-0-39" class="i">+                    .fillMaxWidth()
+</a><a href="#h4-0-40" id="h4-0-40" class="i">+                    .padding(8.dp),
+</a><a href="#h4-0-41" id="h4-0-41" class="i">+                verticalAlignment = Alignment.CenterVertically
+</a><a href="#h4-0-42" id="h4-0-42" class="i">+            ) {
+</a><a href="#h4-0-43" id="h4-0-43" class="i">+                Column(
+</a><a href="#h4-0-44" id="h4-0-44" class="i">+                    modifier = Modifier
+</a><a href="#h4-0-45" id="h4-0-45" class="i">+                        .weight(1f)
+</a><a href="#h4-0-46" id="h4-0-46" class="i">+                        .padding(end = 8.dp)
+</a><a href="#h4-0-47" id="h4-0-47" class="i">+                ) {
+</a><a href="#h4-0-48" id="h4-0-48" class="i">+                    Text(
+</a><a href="#h4-0-49" id="h4-0-49" class="i">+                        text = script.name,
+</a><a href="#h4-0-50" id="h4-0-50" class="i">+                        fontSize = 20.sp,
+</a><a href="#h4-0-51" id="h4-0-51" class="i">+                    )
+</a><a href="#h4-0-52" id="h4-0-52" class="i">+                    Text(
+</a><a href="#h4-0-53" id="h4-0-53" class="i">+                        text = script.description ?: &quot;No description&quot;,
+</a><a href="#h4-0-54" id="h4-0-54" class="i">+                        fontSize = 14.sp,
+</a><a href="#h4-0-55" id="h4-0-55" class="i">+                    )
+</a><a href="#h4-0-56" id="h4-0-56" class="i">+                }
+</a><a href="#h4-0-57" id="h4-0-57" class="i">+                Switch(
+</a><a href="#h4-0-58" id="h4-0-58" class="i">+                    checked = enabled,
+</a><a href="#h4-0-59" id="h4-0-59" class="i">+                    onCheckedChange = {
+</a><a href="#h4-0-60" id="h4-0-60" class="i">+                        context.modDatabase.setScriptEnabled(script.name, it)
+</a><a href="#h4-0-61" id="h4-0-61" class="i">+                        enabled = it
+</a><a href="#h4-0-62" id="h4-0-62" class="i">+                    }
+</a><a href="#h4-0-63" id="h4-0-63" class="i">+                )
+</a><a href="#h4-0-64" id="h4-0-64" class="i">+            }
+</a><a href="#h4-0-65" id="h4-0-65" class="i">+        }
+</a><a href="#h4-0-66" id="h4-0-66" class="i">+    }
+</a><a href="#h4-0-67" id="h4-0-67" class="i">+
+</a><a href="#h4-0-68" id="h4-0-68" class="i">+
+</a><a href="#h4-0-69" id="h4-0-69" class="i">+    @Composable
+</a><a href="#h4-0-70" id="h4-0-70" class="i">+    override fun Content() {
+</a><a href="#h4-0-71" id="h4-0-71" class="i">+        val scriptModules = remember {
+</a><a href="#h4-0-72" id="h4-0-72" class="i">+            context.modDatabase.getScripts()
+</a><a href="#h4-0-73" id="h4-0-73" class="i">+        }
+</a><a href="#h4-0-74" id="h4-0-74" class="i">+
+</a><a href="#h4-0-75" id="h4-0-75" class="i">+        LazyColumn {
+</a><a href="#h4-0-76" id="h4-0-76" class="i">+            item {
+</a><a href="#h4-0-77" id="h4-0-77" class="i">+                if (scriptModules.isEmpty()) {
+</a><a href="#h4-0-78" id="h4-0-78" class="i">+                    Text(
+</a><a href="#h4-0-79" id="h4-0-79" class="i">+                        text = &quot;No scripts found&quot;,
+</a><a href="#h4-0-80" id="h4-0-80" class="i">+                        style = MaterialTheme.typography.bodySmall,
+</a><a href="#h4-0-81" id="h4-0-81" class="i">+                        modifier = Modifier.padding(8.dp)
+</a><a href="#h4-0-82" id="h4-0-82" class="i">+                    )
+</a><a href="#h4-0-83" id="h4-0-83" class="i">+                }
+</a><a href="#h4-0-84" id="h4-0-84" class="i">+            }
+</a><a href="#h4-0-85" id="h4-0-85" class="i">+            items(scriptModules.size) { index -&gt;
+</a><a href="#h4-0-86" id="h4-0-86" class="i">+                ModuleItem(scriptModules[index])
+</a><a href="#h4-0-87" id="h4-0-87" class="i">+            }
+</a><a href="#h4-0-88" id="h4-0-88" class="i">+        }
+</a><a href="#h4-0-89" id="h4-0-89" class="i">+    }
+</a><a href="#h4-0-90" id="h4-0-90" class="i">+}</a><a href="#h4-0-91" id="h4-0-91" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h5" href="../file/core/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl.html">core/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl</a> b/<a href="../file/core/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl.html">core/src/main/aidl/me/rhunk/snapenhance/bridge/scripting/IScripting.aidl</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -3,9 +3,9 @@ package me.rhunk.snapenhance.bridge.scripting;
+</a> import me.rhunk.snapenhance.bridge.scripting.ReloadListener;
+ 
+ interface IScripting {
+<a href="#h5-0-3" id="h5-0-3" class="d">-    List&lt;String&gt; getEnabledScriptPaths();
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+    List&lt;String&gt; getEnabledScripts();
+</a> 
+<a href="#h5-0-6" id="h5-0-6" class="d">-    String getScriptContent(String path);
+</a><a href="#h5-0-7" id="h5-0-7" class="i">+    @nullable String getScriptContent(String path);
+</a> 
+     void registerReloadListener(ReloadListener listener);
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -122,7 +122,7 @@ class SnapEnhance {
+</a>                         }
+                     })
+ 
+<a href="#h6-0-3" id="h6-0-3" class="d">-                    enabledScriptPaths.forEach { path -&gt;
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+                    enabledScripts.forEach { path -&gt;
+</a>                         runCatching {
+                             scriptRuntime.load(path, getScriptContent(path))
+                         }.onFailure {
+<a href="#h6-1" id="h6-1" class="h">@@ -143,6 +143,7 @@ class SnapEnhance {
+</a>             with(appContext) {
+                 features.onActivityCreate()
+                 actionManager.init()
+<a href="#h6-1-3" id="h6-1-3" class="i">+                scriptRuntime.eachModule { callOnSnapActivity(mainActivity!!) }
+</a>             }
+         }.also { time -&gt;
+             appContext.log.verbose(&quot;onActivityCreate took $time&quot;)
+<b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/scripting/JSModule.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/scripting/JSModule.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/scripting/JSModule.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/scripting/JSModule.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -1,53 +1,72 @@
+</a> package me.rhunk.snapenhance.scripting
+ 
+<a href="#h7-0-2" id="h7-0-2" class="i">+import android.app.Activity
+</a> import me.rhunk.snapenhance.core.logger.AbstractLogger
+ import me.rhunk.snapenhance.scripting.type.ModuleInfo
+<a href="#h7-0-5" id="h7-0-5" class="d">-import org.mozilla.javascript.Context
+</a><a href="#h7-0-6" id="h7-0-6" class="d">-import org.mozilla.javascript.FunctionObject
+</a> import org.mozilla.javascript.ScriptableObject
+<a href="#h7-0-8" id="h7-0-8" class="i">+import org.mozilla.javascript.Undefined
+</a> 
+ class JSModule(
+     val moduleInfo: ModuleInfo,
+     val content: String,
+ ) {
+     lateinit var logger: AbstractLogger
+<a href="#h7-0-15" id="h7-0-15" class="d">-    private lateinit var scope: ScriptableObject
+</a><a href="#h7-0-16" id="h7-0-16" class="d">-
+</a><a href="#h7-0-17" id="h7-0-17" class="d">-    companion object {
+</a><a href="#h7-0-18" id="h7-0-18" class="d">-        @JvmStatic
+</a><a href="#h7-0-19" id="h7-0-19" class="d">-        fun logDebug(message: String) {
+</a><a href="#h7-0-20" id="h7-0-20" class="d">-            println(message)
+</a><a href="#h7-0-21" id="h7-0-21" class="d">-        }
+</a><a href="#h7-0-22" id="h7-0-22" class="d">-    }
+</a><a href="#h7-0-23" id="h7-0-23" class="i">+    private lateinit var moduleObject: ScriptableObject
+</a> 
+     fun load() {
+<a href="#h7-0-26" id="h7-0-26" class="d">-        val context = Context.enter()
+</a><a href="#h7-0-27" id="h7-0-27" class="d">-        context.optimizationLevel = -1
+</a><a href="#h7-0-28" id="h7-0-28" class="d">-        scope = context.initSafeStandardObjects()
+</a><a href="#h7-0-29" id="h7-0-29" class="d">-        scope.putConst(&quot;module&quot;, scope, moduleInfo)
+</a><a href="#h7-0-30" id="h7-0-30" class="i">+        contextScope {
+</a><a href="#h7-0-31" id="h7-0-31" class="i">+            moduleObject = initSafeStandardObjects()
+</a><a href="#h7-0-32" id="h7-0-32" class="i">+            moduleObject.putConst(&quot;module&quot;, moduleObject, buildScriptableObject {
+</a><a href="#h7-0-33" id="h7-0-33" class="i">+                putConst(&quot;info&quot;, this, buildScriptableObject {
+</a><a href="#h7-0-34" id="h7-0-34" class="i">+                    putConst(&quot;name&quot;, this, moduleInfo.name)
+</a><a href="#h7-0-35" id="h7-0-35" class="i">+                    putConst(&quot;version&quot;, this, moduleInfo.version)
+</a><a href="#h7-0-36" id="h7-0-36" class="i">+                    putConst(&quot;description&quot;, this, moduleInfo.description)
+</a><a href="#h7-0-37" id="h7-0-37" class="i">+                    putConst(&quot;author&quot;, this, moduleInfo.author)
+</a><a href="#h7-0-38" id="h7-0-38" class="i">+                    putConst(&quot;minSnapchatVersion&quot;, this, moduleInfo.minSnapchatVersion)
+</a><a href="#h7-0-39" id="h7-0-39" class="i">+                    putConst(&quot;minSEVersion&quot;, this, moduleInfo.minSEVersion)
+</a><a href="#h7-0-40" id="h7-0-40" class="i">+                    putConst(&quot;grantPermissions&quot;, this, moduleInfo.grantPermissions)
+</a><a href="#h7-0-41" id="h7-0-41" class="i">+                })
+</a><a href="#h7-0-42" id="h7-0-42" class="i">+            })
+</a> 
+<a href="#h7-0-44" id="h7-0-44" class="d">-        scope.putConst(&quot;logDebug&quot;, scope,
+</a><a href="#h7-0-45" id="h7-0-45" class="d">-            FunctionObject(&quot;logDebug&quot;, JSModule::class.java.getDeclaredMethod(&quot;logDebug&quot;, String::class.java), scope)
+</a><a href="#h7-0-46" id="h7-0-46" class="d">-        )
+</a><a href="#h7-0-47" id="h7-0-47" class="i">+            moduleObject.putFunction(&quot;logInfo&quot;) { args -&gt;
+</a><a href="#h7-0-48" id="h7-0-48" class="i">+                logger.info(args?.getOrNull(0)?.toString() ?: &quot;null&quot;)
+</a><a href="#h7-0-49" id="h7-0-49" class="i">+                Undefined.instance
+</a><a href="#h7-0-50" id="h7-0-50" class="i">+            }
+</a> 
+<a href="#h7-0-52" id="h7-0-52" class="d">-        context.evaluateString(scope, content, moduleInfo.name, 1, null)
+</a><a href="#h7-0-53" id="h7-0-53" class="i">+            evaluateString(moduleObject, content, moduleInfo.name, 1, null)
+</a><a href="#h7-0-54" id="h7-0-54" class="i">+        }
+</a>     }
+ 
+     fun unload() {
+<a href="#h7-0-58" id="h7-0-58" class="d">-        val context = Context.enter()
+</a><a href="#h7-0-59" id="h7-0-59" class="d">-        context.evaluateString(scope, &quot;if (typeof module.onUnload === &#39;function&#39;) module.onUnload();&quot;, &quot;onUnload&quot;, 1, null)
+</a><a href="#h7-0-60" id="h7-0-60" class="d">-        Context.exit()
+</a><a href="#h7-0-61" id="h7-0-61" class="i">+        contextScope {
+</a><a href="#h7-0-62" id="h7-0-62" class="i">+            moduleObject.scriptable(&quot;module&quot;)?.function(&quot;onUnload&quot;)?.call(
+</a><a href="#h7-0-63" id="h7-0-63" class="i">+                this,
+</a><a href="#h7-0-64" id="h7-0-64" class="i">+                moduleObject,
+</a><a href="#h7-0-65" id="h7-0-65" class="i">+                moduleObject,
+</a><a href="#h7-0-66" id="h7-0-66" class="i">+                null
+</a><a href="#h7-0-67" id="h7-0-67" class="i">+            )
+</a><a href="#h7-0-68" id="h7-0-68" class="i">+        }
+</a>     }
+ 
+<a href="#h7-0-71" id="h7-0-71" class="d">-    fun callOnCoreLoad() {
+</a><a href="#h7-0-72" id="h7-0-72" class="d">-        val context = Context.enter()
+</a><a href="#h7-0-73" id="h7-0-73" class="d">-        context.evaluateString(scope, &quot;if (typeof module.onCoreLoad === &#39;function&#39;) module.onCoreLoad();&quot;, &quot;onCoreLoad&quot;, 1, null)
+</a><a href="#h7-0-74" id="h7-0-74" class="d">-        Context.exit()
+</a><a href="#h7-0-75" id="h7-0-75" class="i">+    fun callOnSnapActivity(activity: Activity) {
+</a><a href="#h7-0-76" id="h7-0-76" class="i">+        contextScope {
+</a><a href="#h7-0-77" id="h7-0-77" class="i">+            moduleObject.scriptable(&quot;module&quot;)?.function(&quot;onSnapActivity&quot;)?.call(
+</a><a href="#h7-0-78" id="h7-0-78" class="i">+                this,
+</a><a href="#h7-0-79" id="h7-0-79" class="i">+                moduleObject,
+</a><a href="#h7-0-80" id="h7-0-80" class="i">+                moduleObject,
+</a><a href="#h7-0-81" id="h7-0-81" class="i">+                arrayOf(activity)
+</a><a href="#h7-0-82" id="h7-0-82" class="i">+            )
+</a><a href="#h7-0-83" id="h7-0-83" class="i">+        }
+</a>     }
+ 
+<a href="#h7-0-86" id="h7-0-86" class="d">-    fun callOnManagerLoad() {
+</a><a href="#h7-0-87" id="h7-0-87" class="d">-        val context = Context.enter()
+</a><a href="#h7-0-88" id="h7-0-88" class="d">-        context.evaluateString(scope, &quot;if (typeof module.onManagerLoad === &#39;function&#39;) module.onManagerLoad();&quot;, &quot;onManagerLoad&quot;, 1, null)
+</a><a href="#h7-0-89" id="h7-0-89" class="d">-        Context.exit()
+</a><a href="#h7-0-90" id="h7-0-90" class="i">+    fun callOnManagerLoad(activity: Activity) {
+</a><a href="#h7-0-91" id="h7-0-91" class="i">+        contextScope {
+</a><a href="#h7-0-92" id="h7-0-92" class="i">+            moduleObject.scriptable(&quot;module&quot;)?.function(&quot;onManagerActivity&quot;)?.call(
+</a><a href="#h7-0-93" id="h7-0-93" class="i">+                this,
+</a><a href="#h7-0-94" id="h7-0-94" class="i">+                moduleObject,
+</a><a href="#h7-0-95" id="h7-0-95" class="i">+                moduleObject,
+</a><a href="#h7-0-96" id="h7-0-96" class="i">+                arrayOf(activity)
+</a><a href="#h7-0-97" id="h7-0-97" class="i">+            )
+</a><a href="#h7-0-98" id="h7-0-98" class="i">+        }
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptKtx.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptKtx.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptKtx.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptKtx.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -0,0 +1,43 @@
+</a><a href="#h8-0-0" id="h8-0-0" class="i">+package me.rhunk.snapenhance.scripting
+</a><a href="#h8-0-1" id="h8-0-1" class="i">+
+</a><a href="#h8-0-2" id="h8-0-2" class="i">+import org.mozilla.javascript.Context
+</a><a href="#h8-0-3" id="h8-0-3" class="i">+import org.mozilla.javascript.Function
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+import org.mozilla.javascript.Scriptable
+</a><a href="#h8-0-5" id="h8-0-5" class="i">+import org.mozilla.javascript.ScriptableObject
+</a><a href="#h8-0-6" id="h8-0-6" class="i">+
+</a><a href="#h8-0-7" id="h8-0-7" class="i">+fun contextScope(f: Context.() -&gt; Unit) {
+</a><a href="#h8-0-8" id="h8-0-8" class="i">+    val context = Context.enter()
+</a><a href="#h8-0-9" id="h8-0-9" class="i">+    context.optimizationLevel = -1
+</a><a href="#h8-0-10" id="h8-0-10" class="i">+    try {
+</a><a href="#h8-0-11" id="h8-0-11" class="i">+        context.f()
+</a><a href="#h8-0-12" id="h8-0-12" class="i">+    } finally {
+</a><a href="#h8-0-13" id="h8-0-13" class="i">+        Context.exit()
+</a><a href="#h8-0-14" id="h8-0-14" class="i">+    }
+</a><a href="#h8-0-15" id="h8-0-15" class="i">+}
+</a><a href="#h8-0-16" id="h8-0-16" class="i">+
+</a><a href="#h8-0-17" id="h8-0-17" class="i">+fun Scriptable.scriptable(name: String): Scriptable? {
+</a><a href="#h8-0-18" id="h8-0-18" class="i">+    return this.get(name, this) as? Scriptable
+</a><a href="#h8-0-19" id="h8-0-19" class="i">+}
+</a><a href="#h8-0-20" id="h8-0-20" class="i">+
+</a><a href="#h8-0-21" id="h8-0-21" class="i">+fun Scriptable.function(name: String): Function? {
+</a><a href="#h8-0-22" id="h8-0-22" class="i">+    return this.get(name, this) as? Function
+</a><a href="#h8-0-23" id="h8-0-23" class="i">+}
+</a><a href="#h8-0-24" id="h8-0-24" class="i">+
+</a><a href="#h8-0-25" id="h8-0-25" class="i">+fun ScriptableObject.putFunction(name: String, proxy: Scriptable.(Array&lt;out Any&gt;?) -&gt; Any) {
+</a><a href="#h8-0-26" id="h8-0-26" class="i">+    this.putConst(name, this, object: org.mozilla.javascript.BaseFunction() {
+</a><a href="#h8-0-27" id="h8-0-27" class="i">+        override fun call(
+</a><a href="#h8-0-28" id="h8-0-28" class="i">+            cx: Context?,
+</a><a href="#h8-0-29" id="h8-0-29" class="i">+            scope: Scriptable,
+</a><a href="#h8-0-30" id="h8-0-30" class="i">+            thisObj: Scriptable,
+</a><a href="#h8-0-31" id="h8-0-31" class="i">+            args: Array&lt;out Any&gt;?
+</a><a href="#h8-0-32" id="h8-0-32" class="i">+        ): Any {
+</a><a href="#h8-0-33" id="h8-0-33" class="i">+            return thisObj.proxy(args)
+</a><a href="#h8-0-34" id="h8-0-34" class="i">+        }
+</a><a href="#h8-0-35" id="h8-0-35" class="i">+    })
+</a><a href="#h8-0-36" id="h8-0-36" class="i">+}
+</a><a href="#h8-0-37" id="h8-0-37" class="i">+
+</a><a href="#h8-0-38" id="h8-0-38" class="i">+fun buildScriptableObject(name: String? = &quot;ScriptableObject&quot;, f: ScriptableObject.() -&gt; Unit): ScriptableObject {
+</a><a href="#h8-0-39" id="h8-0-39" class="i">+    return object: ScriptableObject() {
+</a><a href="#h8-0-40" id="h8-0-40" class="i">+        override fun getClassName() = name
+</a><a href="#h8-0-41" id="h8-0-41" class="i">+    }.apply(f)
+</a><a href="#h8-0-42" id="h8-0-42" class="i">+}</a><a href="#h8-0-43" id="h8-0-43" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h9" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptRuntime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptRuntime.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptRuntime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptRuntime.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -4,12 +4,17 @@ import me.rhunk.snapenhance.core.logger.AbstractLogger
+</a> import me.rhunk.snapenhance.scripting.type.ModuleInfo
+ import java.io.BufferedReader
+ import java.io.ByteArrayInputStream
+<a href="#h9-0-3" id="h9-0-3" class="i">+import java.io.InputStream
+</a> 
+ class ScriptRuntime(
+     private val logger: AbstractLogger,
+ ) {
+     private val modules = mutableMapOf&lt;String, JSModule&gt;()
+ 
+<a href="#h9-0-10" id="h9-0-10" class="i">+    fun eachModule(f: JSModule.() -&gt; Unit) {
+</a><a href="#h9-0-11" id="h9-0-11" class="i">+        modules.values.forEach(f)
+</a><a href="#h9-0-12" id="h9-0-12" class="i">+    }
+</a><a href="#h9-0-13" id="h9-0-13" class="i">+
+</a>     private fun readModuleInfo(reader: BufferedReader): ModuleInfo {
+         val header = reader.readLine()
+         if (!header.startsWith(&quot;// ==SE_module==&quot;)) {
+<a href="#h9-1" id="h9-1" class="h">@@ -40,6 +45,10 @@ class ScriptRuntime(
+</a>         )
+     }
+ 
+<a href="#h9-1-3" id="h9-1-3" class="i">+    fun getModuleInfo(inputStream: InputStream): ModuleInfo {
+</a><a href="#h9-1-4" id="h9-1-4" class="i">+        return readModuleInfo(inputStream.bufferedReader())
+</a><a href="#h9-1-5" id="h9-1-5" class="i">+    }
+</a><a href="#h9-1-6" id="h9-1-6" class="i">+
+</a>     fun reload(path: String, content: String) {
+         unload(path)
+         load(path, content)
+<b>diff --git a/<a id="h10" href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a> b/<a href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -15,7 +15,7 @@ class NativeLib {
+</a>             init(classloader)
+             initialized = true
+         }.onFailure {
+<a href="#h10-0-3" id="h10-0-3" class="d">-            Log.e(&quot;SnapEnhance&quot;, &quot;NativeLib init failed&quot;, it)
+</a><a href="#h10-0-4" id="h10-0-4" class="i">+            Log.e(&quot;SnapEnhance&quot;, &quot;NativeLib init failed&quot;)
+</a>         }
+     }
+ 
+</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: add friend source spoof - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/dded6acff08dc925213bb7ab80a172d52da462e6.html">dded6acff08dc925213bb7ab80a172d52da462e6</a>
+<b>parent</b> <a href="../commit/c791fbbd005f1ec1acece35a6434ae3695d58290.html">c791fbbd005f1ec1acece35a6434ae3695d58290</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu, 31 Aug 2023 15:42:24 +0200
+
+feat: add friend source spoof
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">11</td><td><span class="i">+++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/wrapper/MappingsWrapper.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">+++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Experimental.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">+++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">+++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/features/Feature.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/AddFriendSourceSpoof.kt</a></td><td> | </td><td class="num">56</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">++++</span><span class="d">--</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h7">mapper/src/main/kotlin/me/rhunk/snapmapper/impl/FriendRelationshipChangerMapper.kt</a></td><td> | </td><td class="num">28</td><td><span class="i">++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">mapper/src/test/kotlin/me/rhunk/snapenhance/mapper/tests/TestMappings.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+</table></pre><pre>9 files changed, 114 insertions(+), 4 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a> b/<a href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -366,6 +366,10 @@
+</a>                     &quot;no_friend_score_delay&quot;: {
+                         &quot;name&quot;: &quot;No Friend Score Delay&quot;,
+                         &quot;description&quot;: &quot;Removes the delay when viewing a friends score&quot;
+<a href="#h0-0-3" id="h0-0-3" class="i">+                    },
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                    &quot;add_friend_source_spoof&quot;: {
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+                        &quot;name&quot;: &quot;Add Friend Source Spoof&quot;,
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                        &quot;description&quot;: &quot;Spoofs the source of a friend request&quot;
+</a>                     }
+                 }
+             }
+<a href="#h0-1" id="h0-1" class="h">@@ -461,6 +465,13 @@
+</a>                 &quot;ngs_community_icon_container&quot;: &quot;Community / Stories&quot;,
+                 &quot;ngs_spotlight_icon_container&quot;: &quot;Spotlight&quot;,
+                 &quot;ngs_search_icon_container&quot;: &quot;Search&quot;
+<a href="#h0-1-3" id="h0-1-3" class="i">+            },
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+            &quot;add_friend_source_spoof&quot;: {
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+                &quot;added_by_username&quot;: &quot;By Username&quot;,
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+                &quot;added_by_mention&quot;: &quot;By Mention&quot;,
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+                &quot;added_by_group_chat&quot;: &quot;By Group Chat&quot;,
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+                &quot;added_by_qr_code&quot;: &quot;By QR Code&quot;,
+</a><a href="#h0-1-9" id="h0-1-9" class="i">+                &quot;added_by_community&quot;: &quot;By Community&quot;
+</a>             }
+         }
+     },
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/wrapper/MappingsWrapper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/wrapper/MappingsWrapper.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/wrapper/MappingsWrapper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/wrapper/MappingsWrapper.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -14,6 +14,7 @@ import me.rhunk.snapmapper.impl.CallbackMapper
+</a> import me.rhunk.snapmapper.impl.CompositeConfigurationProviderMapper
+ import me.rhunk.snapmapper.impl.DefaultMediaItemMapper
+ import me.rhunk.snapmapper.impl.EnumMapper
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapmapper.impl.FriendRelationshipChangerMapper
+</a> import me.rhunk.snapmapper.impl.FriendsFeedEventDispatcherMapper
+ import me.rhunk.snapmapper.impl.MediaQualityLevelProviderMapper
+ import me.rhunk.snapmapper.impl.OperaPageViewControllerMapper
+<a href="#h1-1" id="h1-1" class="h">@@ -41,7 +42,8 @@ class MappingsWrapper : FileLoaderWrapper(BridgeFileType.MAPPINGS, &quot;{}&quot;.toByteAr
+</a>             StoryBoostStateMapper::class,
+             FriendsFeedEventDispatcherMapper::class,
+             CompositeConfigurationProviderMapper::class,
+<a href="#h1-1-3" id="h1-1-3" class="d">-            ScoreUpdateMapper::class
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+            ScoreUpdateMapper::class,
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+            FriendRelationshipChangerMapper::class,
+</a>         )
+     }
+ 
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Experimental.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Experimental.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Experimental.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Experimental.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -12,4 +12,11 @@ class Experimental : ConfigContainer() {
+</a>     val meoPasscodeBypass = boolean(&quot;meo_passcode_bypass&quot;)
+     val unlimitedMultiSnap = boolean(&quot;unlimited_multi_snap&quot;) { addNotices(FeatureNotice.MAY_BAN)}
+     val noFriendScoreDelay = boolean(&quot;no_friend_score_delay&quot;)
+<a href="#h2-0-3" id="h2-0-3" class="i">+    val addFriendSourceSpoof = unique(&quot;add_friend_source_spoof&quot;,
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+        &quot;added_by_username&quot;,
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+        &quot;added_by_mention&quot;,
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+        &quot;added_by_group_chat&quot;,
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+        &quot;added_by_qr_code&quot;,
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+        &quot;added_by_community&quot;,
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+    ) { addNotices(FeatureNotice.MAY_BAN) }
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -49,6 +49,9 @@ class DatabaseAccess(private val context: ModContext) : Manager {
+</a>         query: (SQLiteDatabase) -&gt; T?
+     ): T? {
+         synchronized(databaseLock) {
+<a href="#h3-0-3" id="h3-0-3" class="i">+            if (!database.isOpen) {
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+                return null
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+            }
+</a>             return runCatching {
+                 query(database)
+             }.onFailure {
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/Feature.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/Feature.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/Feature.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/Feature.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -3,7 +3,7 @@ package me.rhunk.snapenhance.features
+</a> import me.rhunk.snapenhance.ModContext
+ 
+ abstract class Feature(
+<a href="#h4-0-3" id="h4-0-3" class="d">-    val nameKey: String,
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+    val featureKey: String,
+</a>     val loadParams: Int = FeatureLoadParams.INIT_SYNC
+ ) {
+     lateinit var context: ModContext
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/AddFriendSourceSpoof.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/AddFriendSourceSpoof.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/AddFriendSourceSpoof.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/AddFriendSourceSpoof.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -0,0 +1,55 @@
+</a><a href="#h5-0-0" id="h5-0-0" class="i">+package me.rhunk.snapenhance.features.impl.experiments
+</a><a href="#h5-0-1" id="h5-0-1" class="i">+
+</a><a href="#h5-0-2" id="h5-0-2" class="i">+import me.rhunk.snapenhance.features.Feature
+</a><a href="#h5-0-3" id="h5-0-3" class="i">+import me.rhunk.snapenhance.features.FeatureLoadParams
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+import me.rhunk.snapenhance.hook.HookStage
+</a><a href="#h5-0-5" id="h5-0-5" class="i">+import me.rhunk.snapenhance.hook.hook
+</a><a href="#h5-0-6" id="h5-0-6" class="i">+
+</a><a href="#h5-0-7" id="h5-0-7" class="i">+class AddFriendSourceSpoof : Feature(&quot;AddFriendSourceSpoof&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_ASYNC) {
+</a><a href="#h5-0-8" id="h5-0-8" class="i">+    override fun asyncOnActivityCreate() {
+</a><a href="#h5-0-9" id="h5-0-9" class="i">+        val friendRelationshipChangerMapping = context.mappings.getMappedMap(&quot;FriendRelationshipChanger&quot;)
+</a><a href="#h5-0-10" id="h5-0-10" class="i">+
+</a><a href="#h5-0-11" id="h5-0-11" class="i">+        findClass(friendRelationshipChangerMapping[&quot;class&quot;].toString())
+</a><a href="#h5-0-12" id="h5-0-12" class="i">+            .hook(friendRelationshipChangerMapping[&quot;addFriendMethod&quot;].toString(), HookStage.BEFORE) { param -&gt;
+</a><a href="#h5-0-13" id="h5-0-13" class="i">+            val spoofedSource = context.config.experimental.addFriendSourceSpoof.getNullable() ?: return@hook
+</a><a href="#h5-0-14" id="h5-0-14" class="i">+
+</a><a href="#h5-0-15" id="h5-0-15" class="i">+            context.log.verbose(&quot;addFriendMethod: ${param.args().toList()}&quot;, featureKey)
+</a><a href="#h5-0-16" id="h5-0-16" class="i">+
+</a><a href="#h5-0-17" id="h5-0-17" class="i">+            fun setEnum(index: Int, value: String) {
+</a><a href="#h5-0-18" id="h5-0-18" class="i">+                val enumData = param.arg&lt;Any&gt;(index)
+</a><a href="#h5-0-19" id="h5-0-19" class="i">+                enumData::class.java.enumConstants.first { it.toString() == value }.let {
+</a><a href="#h5-0-20" id="h5-0-20" class="i">+                    param.setArg(index, it)
+</a><a href="#h5-0-21" id="h5-0-21" class="i">+                }
+</a><a href="#h5-0-22" id="h5-0-22" class="i">+            }
+</a><a href="#h5-0-23" id="h5-0-23" class="i">+
+</a><a href="#h5-0-24" id="h5-0-24" class="i">+            when (spoofedSource) {
+</a><a href="#h5-0-25" id="h5-0-25" class="i">+                &quot;added_by_group_chat&quot; -&gt; {
+</a><a href="#h5-0-26" id="h5-0-26" class="i">+                    setEnum(1, &quot;PROFILE&quot;)
+</a><a href="#h5-0-27" id="h5-0-27" class="i">+                    setEnum(2, &quot;GROUP_PROFILE&quot;)
+</a><a href="#h5-0-28" id="h5-0-28" class="i">+                    setEnum(3, &quot;ADDED_BY_GROUP_CHAT&quot;)
+</a><a href="#h5-0-29" id="h5-0-29" class="i">+                }
+</a><a href="#h5-0-30" id="h5-0-30" class="i">+                &quot;added_by_username&quot; -&gt; {
+</a><a href="#h5-0-31" id="h5-0-31" class="i">+                    setEnum(1, &quot;SEARCH&quot;)
+</a><a href="#h5-0-32" id="h5-0-32" class="i">+                    setEnum(2, &quot;SEARCH&quot;)
+</a><a href="#h5-0-33" id="h5-0-33" class="i">+                    setEnum(3, &quot;ADDED_BY_USERNAME&quot;)
+</a><a href="#h5-0-34" id="h5-0-34" class="i">+                }
+</a><a href="#h5-0-35" id="h5-0-35" class="i">+                &quot;added_by_qr_code&quot; -&gt; {
+</a><a href="#h5-0-36" id="h5-0-36" class="i">+                    setEnum(1, &quot;PROFILE&quot;)
+</a><a href="#h5-0-37" id="h5-0-37" class="i">+                    setEnum(2, &quot;PROFILE&quot;)
+</a><a href="#h5-0-38" id="h5-0-38" class="i">+                    setEnum(3, &quot;ADDED_BY_QR_CODE&quot;)
+</a><a href="#h5-0-39" id="h5-0-39" class="i">+                }
+</a><a href="#h5-0-40" id="h5-0-40" class="i">+                &quot;added_by_mention&quot; -&gt; {
+</a><a href="#h5-0-41" id="h5-0-41" class="i">+                    setEnum(1, &quot;CONTEXT_CARDS&quot;)
+</a><a href="#h5-0-42" id="h5-0-42" class="i">+                    setEnum(2, &quot;CONTEXT_CARD&quot;)
+</a><a href="#h5-0-43" id="h5-0-43" class="i">+                    setEnum(3, &quot;ADDED_BY_MENTION&quot;)
+</a><a href="#h5-0-44" id="h5-0-44" class="i">+                }
+</a><a href="#h5-0-45" id="h5-0-45" class="i">+                &quot;added_by_community&quot; -&gt; {
+</a><a href="#h5-0-46" id="h5-0-46" class="i">+                    setEnum(1, &quot;PROFILE&quot;)
+</a><a href="#h5-0-47" id="h5-0-47" class="i">+                    setEnum(2, &quot;PROFILE&quot;)
+</a><a href="#h5-0-48" id="h5-0-48" class="i">+                    setEnum(3, &quot;ADDED_BY_COMMUNITY&quot;)
+</a><a href="#h5-0-49" id="h5-0-49" class="i">+                }
+</a><a href="#h5-0-50" id="h5-0-50" class="i">+                else -&gt; return@hook
+</a><a href="#h5-0-51" id="h5-0-51" class="i">+            }
+</a><a href="#h5-0-52" id="h5-0-52" class="i">+        }
+</a><a href="#h5-0-53" id="h5-0-53" class="i">+    }
+</a><a href="#h5-0-54" id="h5-0-54" class="i">+}</a><a href="#h5-0-55" id="h5-0-55" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -9,6 +9,7 @@ import me.rhunk.snapenhance.features.impl.ConfigurationOverride
+</a> import me.rhunk.snapenhance.features.impl.Messaging
+ import me.rhunk.snapenhance.features.impl.downloader.MediaDownloader
+ import me.rhunk.snapenhance.features.impl.downloader.ProfilePictureDownloader
+<a href="#h6-0-3" id="h6-0-3" class="i">+import me.rhunk.snapenhance.features.impl.experiments.AddFriendSourceSpoof
+</a> import me.rhunk.snapenhance.features.impl.experiments.AmoledDarkMode
+ import me.rhunk.snapenhance.features.impl.experiments.AppPasscode
+ import me.rhunk.snapenhance.features.impl.experiments.DeviceSpooferHook
+<a href="#h6-1" id="h6-1" class="h">@@ -93,6 +94,7 @@ class FeatureManager(private val context: ModContext) : Manager {
+</a>         register(GooglePlayServicesDialogs::class)
+         register(NoFriendScoreDelay::class)
+         register(ProfilePictureDownloader::class)
+<a href="#h6-1-3" id="h6-1-3" class="i">+        register(AddFriendSourceSpoof::class)
+</a> 
+         initializeFeatures()
+     }
+<a href="#h6-2" id="h6-2" class="h">@@ -103,8 +105,8 @@ class FeatureManager(private val context: ModContext) : Manager {
+</a>                 runCatching {
+                     action(feature)
+                 }.onFailure {
+<a href="#h6-2-3" id="h6-2-3" class="d">-                    Logger.xposedLog(&quot;Failed to init feature ${feature.nameKey}&quot;, it)
+</a><a href="#h6-2-4" id="h6-2-4" class="d">-                    context.longToast(&quot;Failed to init feature ${feature.nameKey}&quot;)
+</a><a href="#h6-2-5" id="h6-2-5" class="i">+                    context.log.error(&quot;Failed to init feature ${feature.featureKey}&quot;, it)
+</a><a href="#h6-2-6" id="h6-2-6" class="i">+                    context.longToast(&quot;Failed to load feature ${feature.featureKey}! Check logcat for more details.&quot;)
+</a>                 }
+             }
+             if (!isAsync) {
+<b>diff --git a/<a id="h7" href="../file/mapper/src/main/kotlin/me/rhunk/snapmapper/impl/FriendRelationshipChangerMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapmapper/impl/FriendRelationshipChangerMapper.kt</a> b/<a href="../file/mapper/src/main/kotlin/me/rhunk/snapmapper/impl/FriendRelationshipChangerMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapmapper/impl/FriendRelationshipChangerMapper.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -0,0 +1,27 @@
+</a><a href="#h7-0-0" id="h7-0-0" class="i">+package me.rhunk.snapmapper.impl
+</a><a href="#h7-0-1" id="h7-0-1" class="i">+
+</a><a href="#h7-0-2" id="h7-0-2" class="i">+import me.rhunk.snapmapper.AbstractClassMapper
+</a><a href="#h7-0-3" id="h7-0-3" class="i">+import me.rhunk.snapmapper.MapperContext
+</a><a href="#h7-0-4" id="h7-0-4" class="i">+import me.rhunk.snapmapper.ext.findConstString
+</a><a href="#h7-0-5" id="h7-0-5" class="i">+import me.rhunk.snapmapper.ext.getClassName
+</a><a href="#h7-0-6" id="h7-0-6" class="i">+import me.rhunk.snapmapper.ext.isEnum
+</a><a href="#h7-0-7" id="h7-0-7" class="i">+
+</a><a href="#h7-0-8" id="h7-0-8" class="i">+class FriendRelationshipChangerMapper : AbstractClassMapper() {
+</a><a href="#h7-0-9" id="h7-0-9" class="i">+    override fun run(context: MapperContext) {
+</a><a href="#h7-0-10" id="h7-0-10" class="i">+        for (classDef in context.classes) {
+</a><a href="#h7-0-11" id="h7-0-11" class="i">+            classDef.methods.firstOrNull { it.name == &quot;&lt;init&gt;&quot; }?.implementation?.findConstString(&quot;FriendRelationshipChangerImpl&quot;)?.takeIf { it } ?: continue
+</a><a href="#h7-0-12" id="h7-0-12" class="i">+            val addFriendMethod = classDef.methods.first {
+</a><a href="#h7-0-13" id="h7-0-13" class="i">+                it.parameterTypes.size &gt; 4 &amp;&amp;
+</a><a href="#h7-0-14" id="h7-0-14" class="i">+                context.getClass(it.parameterTypes[1])?.isEnum() == true &amp;&amp;
+</a><a href="#h7-0-15" id="h7-0-15" class="i">+                context.getClass(it.parameterTypes[2])?.isEnum() == true &amp;&amp;
+</a><a href="#h7-0-16" id="h7-0-16" class="i">+                context.getClass(it.parameterTypes[3])?.isEnum() == true &amp;&amp;
+</a><a href="#h7-0-17" id="h7-0-17" class="i">+                it.parameters[4].type == &quot;Ljava/lang/String;&quot;
+</a><a href="#h7-0-18" id="h7-0-18" class="i">+            }
+</a><a href="#h7-0-19" id="h7-0-19" class="i">+
+</a><a href="#h7-0-20" id="h7-0-20" class="i">+            context.addMapping(&quot;FriendRelationshipChanger&quot;,
+</a><a href="#h7-0-21" id="h7-0-21" class="i">+                &quot;class&quot; to classDef.getClassName(),
+</a><a href="#h7-0-22" id="h7-0-22" class="i">+                &quot;addFriendMethod&quot; to addFriendMethod.name
+</a><a href="#h7-0-23" id="h7-0-23" class="i">+            )
+</a><a href="#h7-0-24" id="h7-0-24" class="i">+        }
+</a><a href="#h7-0-25" id="h7-0-25" class="i">+    }
+</a><a href="#h7-0-26" id="h7-0-26" class="i">+}</a><a href="#h7-0-27" id="h7-0-27" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h8" href="../file/mapper/src/test/kotlin/me/rhunk/snapenhance/mapper/tests/TestMappings.kt.html">mapper/src/test/kotlin/me/rhunk/snapenhance/mapper/tests/TestMappings.kt</a> b/<a href="../file/mapper/src/test/kotlin/me/rhunk/snapenhance/mapper/tests/TestMappings.kt.html">mapper/src/test/kotlin/me/rhunk/snapenhance/mapper/tests/TestMappings.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -24,6 +24,7 @@ class TestMappings {
+</a>             FriendsFeedEventDispatcherMapper::class,
+             CompositeConfigurationProviderMapper::class,
+             ScoreUpdateMapper::class,
+<a href="#h8-0-3" id="h8-0-3" class="i">+            FriendRelationshipChangerMapper::class,
+</a>         )
+ 
+         val gson = GsonBuilder().setPrettyPrinting().create()
+</pre>
+</div>
+</body>
+</html>

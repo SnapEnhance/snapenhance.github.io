@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix: settings overlay - fix back gesture - fix bar color - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/35418a9735fc5c372c006aaa2471367460ba00f0.html">35418a9735fc5c372c006aaa2471367460ba00f0</a>
+<b>parent</b> <a href="../commit/b1f73042404af2205106789965bb59888a3871ce.html">b1f73042404af2205106789965bb59888a3871ce</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Mon, 25 Sep 2023 22:20:51 +0200
+
+fix: settings overlay
+- fix back gesture
+- fix bar color
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/overlay/SettingsOverlay.kt</a></td><td> | </td><td class="num">16</td><td><span class="i">+++++++++</span><span class="d">-------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/AndroidDialogCustom.kt</a></td><td> | </td><td class="num">15</td><td><span class="i">+++++++++</span><span class="d">------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/res/values/styles.xml</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+</table></pre><pre>3 files changed, 20 insertions(+), 13 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/overlay/SettingsOverlay.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/overlay/SettingsOverlay.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/overlay/SettingsOverlay.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/overlay/SettingsOverlay.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -2,7 +2,6 @@ package me.rhunk.snapenhance.ui.overlay
+</a> 
+ import android.app.Dialog
+ import android.content.Intent
+<a href="#h0-0-3" id="h0-0-3" class="d">-import android.graphics.Color
+</a> import android.graphics.drawable.ColorDrawable
+ import android.net.Uri
+ import android.provider.Settings
+<a href="#h0-1" id="h0-1" class="h">@@ -19,6 +18,7 @@ import androidx.compose.runtime.remember
+</a> import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.draw.clip
+<a href="#h0-1-3" id="h0-1-3" class="i">+import androidx.compose.ui.graphics.Color
+</a> import androidx.compose.ui.unit.dp
+ import androidx.navigation.compose.rememberNavController
+ import com.arthenica.ffmpegkit.Packages.getPackageName
+<a href="#h0-2" id="h0-2" class="h">@@ -34,7 +34,7 @@ class SettingsOverlay(
+</a>     private val context: RemoteSideContext
+ ) {
+     private lateinit var dialog: Dialog
+<a href="#h0-2-3" id="h0-2-3" class="d">-    private lateinit var dismissCallback: () -&gt; Boolean
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+    private var dismissCallback: (() -&gt; Boolean)? = null
+</a> 
+     private fun checkForPermissions(): Boolean {
+         if (!Settings.canDrawOverlays(context.androidContext)) {
+<a href="#h0-3" id="h0-3" class="h">@@ -52,7 +52,7 @@ class SettingsOverlay(
+</a>         val navHostController = rememberNavController()
+ 
+         LaunchedEffect(Unit) {
+<a href="#h0-3-3" id="h0-3-3" class="d">-            dismissCallback = { !navHostController.popBackStack() }
+</a><a href="#h0-3-4" id="h0-3-4" class="i">+            dismissCallback = { navHostController.popBackStack() }
+</a>         }
+ 
+         val navigation = remember {
+<a href="#h0-4" id="h0-4" class="h">@@ -81,7 +81,7 @@ class SettingsOverlay(
+</a> 
+     fun close() {
+         if (!::dialog.isInitialized || !dialog.isShowing) return
+<a href="#h0-4-3" id="h0-4-3" class="d">-
+</a><a href="#h0-4-4" id="h0-4-4" class="i">+        dismissCallback = null
+</a>         context.androidContext.mainExecutor.execute {
+             dialog.dismiss()
+         }
+<a href="#h0-5" id="h0-5" class="h">@@ -99,13 +99,15 @@ class SettingsOverlay(
+</a>         context.androidContext.mainExecutor.execute {
+             dialog = object: Dialog(context.androidContext, R.style.FullscreenOverlayDialog) {
+                 override fun dismiss() {
+<a href="#h0-5-3" id="h0-5-3" class="d">-                    if (!::dismissCallback.isInitialized || !dismissCallback()) return
+</a><a href="#h0-5-4" id="h0-5-4" class="i">+                    dismissCallback?.also {
+</a><a href="#h0-5-5" id="h0-5-5" class="i">+                        if (it()) return
+</a><a href="#h0-5-6" id="h0-5-6" class="i">+                    }
+</a>                     super.dismiss()
+                     this@SettingsOverlay.context.config.writeConfig()
+                 }
+             }
+             dialog.window?.apply {
+<a href="#h0-5-12" id="h0-5-12" class="d">-                setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+</a><a href="#h0-5-13" id="h0-5-13" class="i">+                setBackgroundDrawable(ColorDrawable(Color.Transparent.value.toInt()))
+</a>                 setLayout(
+                     WindowManager.LayoutParams.MATCH_PARENT,
+                     WindowManager.LayoutParams.MATCH_PARENT,
+<a href="#h0-6" id="h0-6" class="h">@@ -120,7 +122,7 @@ class SettingsOverlay(
+</a>                         Column(
+                             modifier = Modifier
+                                 .fillMaxSize()
+<a href="#h0-6-3" id="h0-6-3" class="d">-                                .padding(10.dp)
+</a><a href="#h0-6-4" id="h0-6-4" class="i">+                                .padding(start = 15.dp, end = 15.dp, top = 25.dp, bottom = 25.dp)
+</a>                                 .clip(shape = MaterialTheme.shapes.large),
+                             horizontalAlignment = Alignment.CenterHorizontally,
+                             verticalArrangement = Arrangement.Center
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/util/AndroidDialogCustom.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/AndroidDialogCustom.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/util/AndroidDialogCustom.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/AndroidDialogCustom.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,9 +1,12 @@
+</a> package me.rhunk.snapenhance.ui.util
+ 
+ 
+<a href="#h1-0-3" id="h1-0-3" class="i">+import android.annotation.SuppressLint
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import android.app.Activity
+</a> import android.content.Context
+ import android.graphics.Outline
+ import android.os.Build
+<a href="#h1-0-8" id="h1-0-8" class="i">+import android.provider.Settings
+</a> import android.view.*
+ import androidx.activity.ComponentDialog
+ import androidx.activity.addCallback
+<a href="#h1-1" id="h1-1" class="h">@@ -13,11 +16,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
+</a> import androidx.compose.ui.Modifier
+ import androidx.compose.ui.R
+ import androidx.compose.ui.layout.Layout
+<a href="#h1-1-3" id="h1-1-3" class="d">-import androidx.compose.ui.platform.AbstractComposeView
+</a><a href="#h1-1-4" id="h1-1-4" class="d">-import androidx.compose.ui.platform.LocalDensity
+</a><a href="#h1-1-5" id="h1-1-5" class="d">-import androidx.compose.ui.platform.LocalLayoutDirection
+</a><a href="#h1-1-6" id="h1-1-6" class="d">-import androidx.compose.ui.platform.LocalView
+</a><a href="#h1-1-7" id="h1-1-7" class="d">-import androidx.compose.ui.platform.ViewRootForInspector
+</a><a href="#h1-1-8" id="h1-1-8" class="i">+import androidx.compose.ui.platform.*
+</a> import androidx.compose.ui.semantics.dialog
+ import androidx.compose.ui.semantics.semantics
+ import androidx.compose.ui.unit.Density
+<a href="#h1-2" id="h1-2" class="h">@@ -83,6 +82,7 @@ fun Dialog(
+</a>     properties: DialogProperties = DialogProperties(),
+     content: @Composable () -&gt; Unit
+ ) {
+<a href="#h1-2-3" id="h1-2-3" class="i">+    val context = LocalContext.current
+</a>     val view = LocalView.current
+     val density = LocalDensity.current
+     val layoutDirection = LocalLayoutDirection.current
+<a href="#h1-3" id="h1-3" class="h">@@ -112,7 +112,9 @@ fun Dialog(
+</a> 
+     DisposableEffect(dialog) {
+         // Set the dialog&#39;s window type to TYPE_APPLICATION_OVERLAY so it&#39;s compatible with compose overlays
+<a href="#h1-3-3" id="h1-3-3" class="d">-        dialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
+</a><a href="#h1-3-4" id="h1-3-4" class="i">+        if (Settings.canDrawOverlays(view.context) &amp;&amp; context !is Activity) {
+</a><a href="#h1-3-5" id="h1-3-5" class="i">+            dialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
+</a><a href="#h1-3-6" id="h1-3-6" class="i">+        }
+</a>         dialog.show()
+ 
+         onDispose {
+<a href="#h1-4" id="h1-4" class="h">@@ -181,6 +183,7 @@ private class DialogLayout(
+</a>     }
+ }
+ 
+<a href="#h1-4-3" id="h1-4-3" class="i">+@SuppressLint(&quot;PrivateResource&quot;)
+</a> private class DialogWrapper(
+     private var onDismissRequest: () -&gt; Unit,
+     private var properties: DialogProperties,
+<b>diff --git a/<a id="h2" href="../file/app/src/main/res/values/styles.xml.html">app/src/main/res/values/styles.xml</a> b/<a href="../file/app/src/main/res/values/styles.xml.html">app/src/main/res/values/styles.xml</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -10,5 +10,7 @@
+</a>         &lt;item name=&quot;android:windowSoftInputMode&quot;&gt;stateUnspecified|adjustPan&lt;/item&gt;
+         &lt;item name=&quot;android:windowActionBar&quot;&gt;false&lt;/item&gt;
+         &lt;item name=&quot;android:windowActionModeOverlay&quot;&gt;true&lt;/item&gt;
+<a href="#h2-0-3" id="h2-0-3" class="i">+        &lt;item name=&quot;android:navigationBarColor&quot;&gt;@android:color/transparent&lt;/item&gt;
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+        &lt;item name=&quot;android:statusBarColor&quot;&gt;@android:color/transparent&lt;/item&gt;
+</a>     &lt;/style&gt;
+ &lt;/resources&gt;
+</pre>
+</div>
+</body>
+</html>

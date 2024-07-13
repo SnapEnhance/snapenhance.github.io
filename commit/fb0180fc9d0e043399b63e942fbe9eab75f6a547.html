@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(app/messaging_preview): conversation manager - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/fb0180fc9d0e043399b63e942fbe9eab75f6a547.html">fb0180fc9d0e043399b63e942fbe9eab75f6a547</a>
+<b>parent</b> <a href="../commit/4e3b393ea15163158c66fb2db896ca9b87a59622.html">4e3b393ea15163158c66fb2db896ca9b87a59622</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 27 Oct 2023 16:16:47 +0200
+
+fix(app/messaging_preview): conversation manager
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/MessagingPreview.kt</a></td><td> | </td><td class="num">20</td><td><span class="i">++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/aidl/me/rhunk/snapenhance/bridge/snapclient/MessagingBridge.aidl</a></td><td> | </td><td class="num">5</td><td><span class="i">+++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h2">common/src/main/aidl/me/rhunk/snapenhance/bridge/snapclient/SessionStartListener.aidl</a></td><td> | </td><td class="num">6</td><td><span class="i">++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">common/src/main/kotlin/me/rhunk/snapenhance/common/ReceiversConfig.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a></td><td> | </td><td class="num">19</td><td><span class="i">++++++++++++</span><span class="d">-------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt</a></td><td> | </td><td class="num">15</td><td><span class="i">+++++++++</span><span class="d">------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/CoreMessagingBridge.kt</a></td><td> | </td><td class="num">13</td><td><span class="i">+++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>10 files changed, 69 insertions(+), 20 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/MessagingPreview.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/MessagingPreview.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/MessagingPreview.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/MessagingPreview.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,5 +1,6 @@
+</a> package me.rhunk.snapenhance.ui.manager.sections.social
+ 
+<a href="#h0-0-2" id="h0-0-2" class="i">+import android.content.Intent
+</a> import androidx.compose.foundation.background
+ import androidx.compose.foundation.border
+ import androidx.compose.foundation.gestures.detectTapGestures
+<a href="#h0-1" id="h0-1" class="h">@@ -25,7 +26,10 @@ import androidx.compose.ui.unit.dp
+</a> import kotlinx.coroutines.*
+ import me.rhunk.snapenhance.RemoteSideContext
+ import me.rhunk.snapenhance.bridge.snapclient.MessagingBridge
+<a href="#h0-1-3" id="h0-1-3" class="i">+import me.rhunk.snapenhance.bridge.snapclient.SessionStartListener
+</a> import me.rhunk.snapenhance.bridge.snapclient.types.Message
+<a href="#h0-1-5" id="h0-1-5" class="i">+import me.rhunk.snapenhance.common.Constants
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+import me.rhunk.snapenhance.common.ReceiversConfig
+</a> import me.rhunk.snapenhance.common.data.ContentType
+ import me.rhunk.snapenhance.common.data.SocialScope
+ import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+<a href="#h0-2" id="h0-2" class="h">@@ -421,6 +425,22 @@ class MessagingPreview(
+</a>             context.longToast(&quot;Failed to fetch conversation id&quot;)
+             return
+         }
+<a href="#h0-2-3" id="h0-2-3" class="i">+        if (!messagingBridge.isSessionStarted) {
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+            context.androidContext.packageManager.getLaunchIntentForPackage(
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+                Constants.SNAPCHAT_PACKAGE_NAME
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+            )?.let {
+</a><a href="#h0-2-7" id="h0-2-7" class="i">+                val mainIntent = Intent.makeRestartActivityTask(it.component).apply {
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+                    putExtra(ReceiversConfig.MESSAGING_PREVIEW_EXTRA, true)
+</a><a href="#h0-2-9" id="h0-2-9" class="i">+                }
+</a><a href="#h0-2-10" id="h0-2-10" class="i">+                context.androidContext.startActivity(mainIntent)
+</a><a href="#h0-2-11" id="h0-2-11" class="i">+            }
+</a><a href="#h0-2-12" id="h0-2-12" class="i">+            messagingBridge.registerSessionStartListener(object: SessionStartListener.Stub() {
+</a><a href="#h0-2-13" id="h0-2-13" class="i">+                override fun onConnected() {
+</a><a href="#h0-2-14" id="h0-2-14" class="i">+                    fetchNewMessages()
+</a><a href="#h0-2-15" id="h0-2-15" class="i">+                }
+</a><a href="#h0-2-16" id="h0-2-16" class="i">+            })
+</a><a href="#h0-2-17" id="h0-2-17" class="i">+            return
+</a><a href="#h0-2-18" id="h0-2-18" class="i">+        }
+</a>         fetchNewMessages()
+     }
+ 
+<b>diff --git a/<a id="h1" href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/snapclient/MessagingBridge.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/snapclient/MessagingBridge.aidl</a> b/<a href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/snapclient/MessagingBridge.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/snapclient/MessagingBridge.aidl</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -2,8 +2,13 @@ package me.rhunk.snapenhance.bridge.snapclient;
+</a> 
+ import java.util.List;
+ import me.rhunk.snapenhance.bridge.snapclient.types.Message;
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.bridge.snapclient.SessionStartListener;
+</a> 
+ interface MessagingBridge {
+<a href="#h1-0-6" id="h1-0-6" class="i">+    boolean isSessionStarted();
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+    void registerSessionStartListener(in SessionStartListener listener);
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+
+</a>     String getMyUserId();
+ 
+     @nullable Message fetchMessage(String conversationId, String clientMessageId);
+<b>diff --git a/<a id="h2" href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/snapclient/SessionStartListener.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/snapclient/SessionStartListener.aidl</a> b/<a href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/snapclient/SessionStartListener.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/snapclient/SessionStartListener.aidl</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -0,0 +1,5 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="i">+package me.rhunk.snapenhance.bridge.snapclient;
+</a><a href="#h2-0-1" id="h2-0-1" class="i">+
+</a><a href="#h2-0-2" id="h2-0-2" class="i">+oneway interface SessionStartListener {
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+    void onConnected();
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+}</a><a href="#h2-0-5" id="h2-0-5" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h3" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/ReceiversConfig.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/ReceiversConfig.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/ReceiversConfig.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/ReceiversConfig.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -4,4 +4,5 @@ object ReceiversConfig {
+</a>     const val BRIDGE_SYNC_ACTION = BuildConfig.APPLICATION_ID + &quot;.core.bridge.SYNC&quot;
+     const val DOWNLOAD_REQUEST_EXTRA = &quot;request&quot;
+     const val DOWNLOAD_METADATA_EXTRA = &quot;metadata&quot;
+<a href="#h3-0-3" id="h3-0-3" class="i">+    const val MESSAGING_PREVIEW_EXTRA = &quot;messaging_preview&quot;
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -118,7 +118,6 @@ class SnapEnhance {
+</a>                     logCritical(null, throwable)
+                 }
+             }
+<a href="#h4-0-3" id="h4-0-3" class="d">-            bridgeClient.registerMessagingBridge(messagingBridge)
+</a> 
+             reloadConfig()
+             actionManager.init()
+<a href="#h4-1" id="h4-1" class="h">@@ -136,6 +135,7 @@ class SnapEnhance {
+</a>             eventDispatcher.init()
+             //if mappings aren&#39;t loaded, we can&#39;t initialize features
+             if (!mappings.isMappingsLoaded()) return
+<a href="#h4-1-3" id="h4-1-3" class="i">+            bridgeClient.registerMessagingBridge(messagingBridge)
+</a>             features.init()
+             scriptRuntime.connect(bridgeClient.getScriptingInterface())
+             syncRemote()
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -30,10 +30,6 @@ class ExportChatMessages : AbstractAction() {
+</a>         context.classCache.conversationManager.methods.first { it.name == &quot;fetchConversationWithMessagesPaginated&quot; }
+     }
+ 
+<a href="#h5-0-3" id="h5-0-3" class="d">-    private val conversationManagerInstance by lazy {
+</a><a href="#h5-0-4" id="h5-0-4" class="d">-        context.feature(Messaging::class).conversationManager
+</a><a href="#h5-0-5" id="h5-0-5" class="d">-    }
+</a><a href="#h5-0-6" id="h5-0-6" class="d">-
+</a>     private val dialogLogs = mutableListOf&lt;String&gt;()
+     private var currentActionDialog: AlertDialog? = null
+ 
+<a href="#h5-1" id="h5-1" class="h">@@ -165,7 +161,7 @@ class ExportChatMessages : AbstractAction() {
+</a>             }.build()
+ 
+         fetchConversationWithMessagesPaginatedMethod.invoke(
+<a href="#h5-1-3" id="h5-1-3" class="d">-            conversationManagerInstance,
+</a><a href="#h5-1-4" id="h5-1-4" class="i">+            context.feature(Messaging::class).conversationManager,
+</a>             SnapUUID.fromString(conversationId).instanceNonNull(),
+             lastMessageId,
+             amount,
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -58,13 +58,18 @@ class DatabaseAccess(
+</a>             if (database != null &amp;&amp; database.isOpen) return database
+         }
+ 
+<a href="#h6-0-3" id="h6-0-3" class="d">-        return SQLiteDatabase.openDatabase(
+</a><a href="#h6-0-4" id="h6-0-4" class="d">-            context.androidContext.getDatabasePath(fileName).absolutePath,
+</a><a href="#h6-0-5" id="h6-0-5" class="d">-            null,
+</a><a href="#h6-0-6" id="h6-0-6" class="d">-            SQLiteDatabase.OPEN_READONLY
+</a><a href="#h6-0-7" id="h6-0-7" class="d">-        )?.also {
+</a><a href="#h6-0-8" id="h6-0-8" class="d">-            databaseWeakMap[fileName] = WeakReference(it)
+</a><a href="#h6-0-9" id="h6-0-9" class="d">-        } ?: throw IllegalStateException(&quot;Failed to open database $fileName&quot;)
+</a><a href="#h6-0-10" id="h6-0-10" class="i">+        return runCatching {
+</a><a href="#h6-0-11" id="h6-0-11" class="i">+            SQLiteDatabase.openDatabase(
+</a><a href="#h6-0-12" id="h6-0-12" class="i">+                context.androidContext.getDatabasePath(fileName).absolutePath,
+</a><a href="#h6-0-13" id="h6-0-13" class="i">+                null,
+</a><a href="#h6-0-14" id="h6-0-14" class="i">+                SQLiteDatabase.OPEN_READONLY
+</a><a href="#h6-0-15" id="h6-0-15" class="i">+            )?.also {
+</a><a href="#h6-0-16" id="h6-0-16" class="i">+                databaseWeakMap[fileName] = WeakReference(it)
+</a><a href="#h6-0-17" id="h6-0-17" class="i">+            }
+</a><a href="#h6-0-18" id="h6-0-18" class="i">+        }.onFailure {
+</a><a href="#h6-0-19" id="h6-0-19" class="i">+            context.log.error(&quot;Failed to open database $fileName, restarting!&quot;, it)
+</a><a href="#h6-0-20" id="h6-0-20" class="i">+            context.softRestartApp()
+</a><a href="#h6-0-21" id="h6-0-21" class="i">+        }.getOrNull() ?: throw IllegalStateException(&quot;Failed to open database $fileName&quot;)
+</a>     }
+ 
+     private fun openMain() = openLocalDatabase(&quot;main.db&quot;)
+<b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -1,5 +1,6 @@
+</a> package me.rhunk.snapenhance.core.features.impl.messaging
+ 
+<a href="#h7-0-2" id="h7-0-2" class="i">+import me.rhunk.snapenhance.common.ReceiversConfig
+</a> import me.rhunk.snapenhance.core.event.events.impl.OnSnapInteractionEvent
+ import me.rhunk.snapenhance.core.features.Feature
+ import me.rhunk.snapenhance.core.features.FeatureLoadParams
+<a href="#h7-1" id="h7-1" class="h">@@ -12,10 +13,8 @@ import me.rhunk.snapenhance.core.wrapper.impl.SnapUUID
+</a> 
+ class Messaging : Feature(&quot;Messaging&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC or FeatureLoadParams.INIT_ASYNC or FeatureLoadParams.INIT_SYNC) {
+     private var _conversationManager: Any? = null
+<a href="#h7-1-3" id="h7-1-3" class="d">-    val conversationManager: Any
+</a><a href="#h7-1-4" id="h7-1-4" class="d">-        get() = _conversationManager ?: throw IllegalStateException(&quot;ConversationManager is not initialized&quot;).also {
+</a><a href="#h7-1-5" id="h7-1-5" class="d">-            context.longToast(&quot;Failed to get conversation manager. Please restart Snapchat&quot;)
+</a><a href="#h7-1-6" id="h7-1-6" class="d">-        }
+</a><a href="#h7-1-7" id="h7-1-7" class="i">+    val conversationManager: Any?
+</a><a href="#h7-1-8" id="h7-1-8" class="i">+        get() = _conversationManager
+</a> 
+     var openedConversationUUID: SnapUUID? = null
+         private set
+<a href="#h7-2" id="h7-2" class="h">@@ -28,8 +27,12 @@ class Messaging : Feature(&quot;Messaging&quot;, loadParams = FeatureLoadParams.ACTIVITY_C
+</a>         private set
+ 
+     override fun init() {
+<a href="#h7-2-3" id="h7-2-3" class="d">-        Hooker.hookConstructor(context.classCache.conversationManager, HookStage.BEFORE) {
+</a><a href="#h7-2-4" id="h7-2-4" class="d">-            _conversationManager = it.thisObject()
+</a><a href="#h7-2-5" id="h7-2-5" class="i">+        Hooker.hookConstructor(context.classCache.conversationManager, HookStage.BEFORE) { param -&gt;
+</a><a href="#h7-2-6" id="h7-2-6" class="i">+            _conversationManager = param.thisObject()
+</a><a href="#h7-2-7" id="h7-2-7" class="i">+            context.messagingBridge.triggerSessionStart()
+</a><a href="#h7-2-8" id="h7-2-8" class="i">+            context.mainActivity?.takeIf { it.intent.getBooleanExtra(ReceiversConfig.MESSAGING_PREVIEW_EXTRA,false) }?.run {
+</a><a href="#h7-2-9" id="h7-2-9" class="i">+                finishAndRemoveTask()
+</a><a href="#h7-2-10" id="h7-2-10" class="i">+            }
+</a>         }
+     }
+ 
+<b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -315,7 +315,7 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>                     notificationType.contains(it)
+                 }) return@hook
+ 
+<a href="#h8-0-3" id="h8-0-3" class="d">-            val conversationManager: Any = context.feature(Messaging::class).conversationManager
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+            val conversationManager: Any = context.feature(Messaging::class).conversationManager ?: return@hook
+</a> 
+             synchronized(notificationDataQueue) {
+                 notificationDataQueue[messageId.toLong()] = notificationData
+<b>diff --git a/<a id="h9" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/CoreMessagingBridge.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/CoreMessagingBridge.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/CoreMessagingBridge.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/CoreMessagingBridge.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -3,6 +3,7 @@ package me.rhunk.snapenhance.core.messaging
+</a> import kotlinx.coroutines.runBlocking
+ import kotlinx.coroutines.suspendCancellableCoroutine
+ import me.rhunk.snapenhance.bridge.snapclient.MessagingBridge
+<a href="#h9-0-3" id="h9-0-3" class="i">+import me.rhunk.snapenhance.bridge.snapclient.SessionStartListener
+</a> import me.rhunk.snapenhance.bridge.snapclient.types.Message
+ import me.rhunk.snapenhance.core.ModContext
+ import me.rhunk.snapenhance.core.features.impl.downloader.decoder.MessageDecoder
+<a href="#h9-1" id="h9-1" class="h">@@ -28,6 +29,18 @@ class CoreMessagingBridge(
+</a>     private val context: ModContext
+ ) : MessagingBridge.Stub() {
+     private val conversationManager get() = context.feature(Messaging::class).conversationManager
+<a href="#h9-1-3" id="h9-1-3" class="i">+    private var sessionStartListener: SessionStartListener? = null
+</a><a href="#h9-1-4" id="h9-1-4" class="i">+
+</a><a href="#h9-1-5" id="h9-1-5" class="i">+    fun triggerSessionStart() {
+</a><a href="#h9-1-6" id="h9-1-6" class="i">+        sessionStartListener?.onConnected()
+</a><a href="#h9-1-7" id="h9-1-7" class="i">+        sessionStartListener = null
+</a><a href="#h9-1-8" id="h9-1-8" class="i">+    }
+</a><a href="#h9-1-9" id="h9-1-9" class="i">+
+</a><a href="#h9-1-10" id="h9-1-10" class="i">+    override fun isSessionStarted() = conversationManager != null
+</a><a href="#h9-1-11" id="h9-1-11" class="i">+    override fun registerSessionStartListener(listener: SessionStartListener) {
+</a><a href="#h9-1-12" id="h9-1-12" class="i">+        sessionStartListener = listener
+</a><a href="#h9-1-13" id="h9-1-13" class="i">+    }
+</a><a href="#h9-1-14" id="h9-1-14" class="i">+
+</a>     override fun getMyUserId() = context.database.myUserId
+ 
+     override fun fetchMessage(conversationId: String, clientMessageId: String): Message? {
+</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(app): crash notification - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/420c02af64080a403a0f08ac5dbaaea84784f746.html">420c02af64080a403a0f08ac5dbaaea84784f746</a>
+<b>parent</b> <a href="../commit/9973da1021908ff61322f90e59398fd65f7dd7ce.html">9973da1021908ff61322f90e59398fd65f7dd7ce</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 29 May 2024 14:04:55 +0200
+
+feat(app): crash notification
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/logger/AbstractLogger.kt</a></td><td> | </td><td class="num">22</td><td><span class="i">++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>2 files changed, 24 insertions(+), 0 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -27,6 +27,7 @@ import me.rhunk.snapenhance.common.bridge.wrapper.LocaleWrapper
+</a> import me.rhunk.snapenhance.common.bridge.wrapper.LoggerWrapper
+ import me.rhunk.snapenhance.common.bridge.wrapper.MappingsWrapper
+ import me.rhunk.snapenhance.common.config.ModConfig
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.common.logger.fatalCrash
+</a> import me.rhunk.snapenhance.common.util.getPurgeTime
+ import me.rhunk.snapenhance.e2ee.E2EEImplementation
+ import me.rhunk.snapenhance.scripting.RemoteScriptManager
+<a href="#h0-1" id="h0-1" class="h">@@ -129,6 +130,7 @@ class RemoteSideContext(
+</a>             }
+         }.onFailure {
+             log.error(&quot;Failed to load RemoteSideContext&quot;, it)
+<a href="#h0-1-3" id="h0-1-3" class="i">+            androidContext.fatalCrash(it)
+</a>         }
+ 
+         scriptManager.runtime.eachModule {
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/logger/AbstractLogger.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/logger/AbstractLogger.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/logger/AbstractLogger.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/logger/AbstractLogger.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,6 +1,11 @@
+</a> package me.rhunk.snapenhance.common.logger
+ 
+<a href="#h1-0-2" id="h1-0-2" class="i">+import android.app.Notification
+</a><a href="#h1-0-3" id="h1-0-3" class="i">+import android.app.NotificationChannel
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import android.app.NotificationManager
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+import android.content.Context
+</a> import android.util.Log
+<a href="#h1-0-7" id="h1-0-7" class="i">+import kotlin.system.exitProcess
+</a> 
+ abstract class AbstractLogger(
+     logChannel: LogChannel,
+<a href="#h1-1" id="h1-1" class="h">@@ -35,4 +40,21 @@ abstract class AbstractLogger(
+</a>     open fun warn(message: Any?, tag: String = TAG) {}
+ 
+     open fun assert(message: Any?, tag: String = TAG) {}
+<a href="#h1-1-3" id="h1-1-3" class="i">+}
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+fun Context.fatalCrash(throwable: Throwable) {
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+    getSystemService(NotificationManager::class.java).apply {
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+        createNotificationChannel(
+</a><a href="#h1-1-8" id="h1-1-8" class="i">+            NotificationChannel(&quot;default&quot;, &quot;Default&quot;, NotificationManager.IMPORTANCE_HIGH)
+</a><a href="#h1-1-9" id="h1-1-9" class="i">+        )
+</a><a href="#h1-1-10" id="h1-1-10" class="i">+        notify(
+</a><a href="#h1-1-11" id="h1-1-11" class="i">+            0,
+</a><a href="#h1-1-12" id="h1-1-12" class="i">+            Notification.Builder(this@fatalCrash, &quot;default&quot;)
+</a><a href="#h1-1-13" id="h1-1-13" class="i">+                .setContentTitle(&quot;Failed to load SnapEnhance&quot;)
+</a><a href="#h1-1-14" id="h1-1-14" class="i">+                .setStyle(Notification.BigTextStyle().bigText(throwable.message + &quot;\n&quot; + throwable.stackTraceToString()))
+</a><a href="#h1-1-15" id="h1-1-15" class="i">+                .setSmallIcon(android.R.drawable.stat_notify_error)
+</a><a href="#h1-1-16" id="h1-1-16" class="i">+                .build()
+</a><a href="#h1-1-17" id="h1-1-17" class="i">+        )
+</a><a href="#h1-1-18" id="h1-1-18" class="i">+    }
+</a><a href="#h1-1-19" id="h1-1-19" class="i">+    exitProcess(1)
+</a> } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

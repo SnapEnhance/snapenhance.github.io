@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(sc_plus): mapping update - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/017dd912f67b306c1b83b64320f21011a83e03ec.html">017dd912f67b306c1b83b64320f21011a83e03ec</a>
+<b>parent</b> <a href="../commit/adc237e0d393266044a5d6841a06efb8d3d17a56.html">adc237e0d393266044a5d6841a06efb8d3d17a56</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 24 May 2023 23:33:03 +0200
+
+fix(sc_plus): mapping update
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/build.gradle</a></td><td> | </td><td class="num">4</td><td><span class="i">+++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/SnapchatPlus.kt</a></td><td> | </td><td class="num">26</td><td><span class="i">++++++++++++++++</span><span class="d">----------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/PlusSubscriptionMapper.kt</a></td><td> | </td><td class="num">22</td><td><span class="i">++++++++++++++++</span><span class="d">------</span></td></tr>
+</table></pre><pre>3 files changed, 35 insertions(+), 17 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/build.gradle.html">app/build.gradle</a> b/<a href="../file/app/build.gradle.html">app/build.gradle</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -137,7 +137,9 @@ afterEvaluate {
+</a> }
+ 
+ dependencies {
+<a href="#h0-0-3" id="h0-0-3" class="d">-    implementation &#39;org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.1&#39;
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+    implementation &#39;org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4&#39;
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+    implementation &#39;org.jetbrains.kotlin:kotlin-reflect:1.8.10&#39;
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+
+</a>     compileOnly files(&#39;libs/LSPosed-api-1.0-SNAPSHOT.jar&#39;)
+     implementation &#39;com.google.code.gson:gson:2.10.1&#39;
+     implementation &#39;com.arthenica:ffmpeg-kit-full-gpl:5.1.LTS&#39;
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/SnapchatPlus.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/SnapchatPlus.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/SnapchatPlus.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/SnapchatPlus.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -10,19 +10,25 @@ class SnapchatPlus: Feature(&quot;SnapchatPlus&quot;, loadParams = FeatureLoadParams.ACTIV
+</a>     override fun asyncOnActivityCreate() {
+         if (!context.config.bool(ConfigProperty.SNAPCHAT_PLUS)) return
+ 
+<a href="#h1-0-3" id="h1-0-3" class="d">-        Hooker.hookConstructor(context.mappings.getMappedClass(&quot;SubscriptionInfoClass&quot;), HookStage.BEFORE) { param -&gt;
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+        val subscriptionInfoMembers = context.mappings.getMappedMap(&quot;SubscriptionInfoClassMembers&quot;)
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+        Hooker.hookConstructor(context.mappings.getMappedClass(&quot;SubscriptionInfoClass&quot;), HookStage.AFTER) { param -&gt;
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+            val getField = { key: String -&gt;  param.thisObject&lt;Any&gt;().javaClass.declaredFields.first {it.name == (subscriptionInfoMembers[key] as String)}.also { it.isAccessible = true }}
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+            val subscriptionStatusField = getField(&quot;status&quot;)
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+            val isSubscribedField = getField(&quot;isSubscribed&quot;)
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+            val startTimeMsField = getField(&quot;startTimeMs&quot;)
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+            val expireTimeMsField = getField(&quot;expireTimeMs&quot;)
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+
+</a>             //check if the user is already premium
+<a href="#h1-0-15" id="h1-0-15" class="d">-            if (param.arg(0) as Int == 2) {
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+            if ((subscriptionStatusField[param.thisObject()] as Double).toInt() == 2) {
+</a>                 return@hookConstructor
+             }
+<a href="#h1-0-19" id="h1-0-19" class="d">-            //subscription info tier
+</a><a href="#h1-0-20" id="h1-0-20" class="d">-            param.setArg(0, 2)
+</a><a href="#h1-0-21" id="h1-0-21" class="d">-            //subscription status
+</a><a href="#h1-0-22" id="h1-0-22" class="d">-            param.setArg(1, 2)
+</a><a href="#h1-0-23" id="h1-0-23" class="d">-            //subscription time
+</a><a href="#h1-0-24" id="h1-0-24" class="d">-            param.setArg(2, System.currentTimeMillis() - 7776000000L)
+</a><a href="#h1-0-25" id="h1-0-25" class="d">-            //expiration time
+</a><a href="#h1-0-26" id="h1-0-26" class="d">-            param.setArg(3, System.currentTimeMillis() + 15552000000L)
+</a><a href="#h1-0-27" id="h1-0-27" class="i">+
+</a><a href="#h1-0-28" id="h1-0-28" class="i">+            isSubscribedField.set(param.thisObject(), true)
+</a><a href="#h1-0-29" id="h1-0-29" class="i">+            startTimeMsField.set(param.thisObject(), (System.currentTimeMillis() - 7776000000L).toDouble())
+</a><a href="#h1-0-30" id="h1-0-30" class="i">+            expireTimeMsField.set(param.thisObject(), (System.currentTimeMillis() + 15552000000L).toDouble())
+</a><a href="#h1-0-31" id="h1-0-31" class="i">+            subscriptionStatusField.set(param.thisObject(), 2.toDouble())
+</a>         }
+     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/PlusSubscriptionMapper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/PlusSubscriptionMapper.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/PlusSubscriptionMapper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/PlusSubscriptionMapper.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -13,18 +13,28 @@ class PlusSubscriptionMapper : Mapper() {
+</a>     ) {
+         //find a method that contains annotations with isSubscribed
+         val loadSubscriptionMethod = context.classCache.composerLocalSubscriptionStore.declaredMethods.first { method: Method -&gt;
+<a href="#h2-0-3" id="h2-0-3" class="d">-                val returnType = method.returnType
+</a><a href="#h2-0-4" id="h2-0-4" class="d">-                returnType.declaredFields.any { field: Field -&gt;
+</a><a href="#h2-0-5" id="h2-0-5" class="d">-                    field.declaredAnnotations.any { annotation: Annotation -&gt;
+</a><a href="#h2-0-6" id="h2-0-6" class="d">-                        annotation.toString().contains(&quot;isSubscribed&quot;)
+</a><a href="#h2-0-7" id="h2-0-7" class="d">-                    }
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+            val returnType = method.returnType
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+            returnType.declaredFields.any { field: Field -&gt;
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+                field.declaredAnnotations.any { annotation: Annotation -&gt;
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+                    annotation.toString().contains(&quot;isSubscribed&quot;)
+</a>                 }
+             }
+<a href="#h2-0-14" id="h2-0-14" class="i">+        }
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+        /*
+</a>         //get the first param of the method which is the PlusSubscriptionState class
+         val plusSubscriptionStateClass = loadSubscriptionMethod.parameterTypes[0]
+         //get the first param of the constructor of PlusSubscriptionState which is the SubscriptionInfo class
+         val subscriptionInfoClass = plusSubscriptionStateClass.constructors[0].parameterTypes[0]
+<a href="#h2-0-20" id="h2-0-20" class="i">+        */
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+        mappings[&quot;SubscriptionInfoClass&quot;] = loadSubscriptionMethod.returnType.name
+</a> 
+<a href="#h2-0-23" id="h2-0-23" class="d">-        mappings[&quot;SubscriptionInfoClass&quot;] = subscriptionInfoClass.name
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+        val members = mutableMapOf&lt;String, Any&gt;()
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+        loadSubscriptionMethod.returnType.declaredFields.forEach { field -&gt;
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+            val serializedNameAnnotation = field.declaredAnnotations.first()
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+            val propertyName = serializedNameAnnotation.annotationClass.members.first { it.name == &quot;name&quot; }.call(serializedNameAnnotation) as String
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+            members[propertyName] = field.name
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+        }
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+        mappings[&quot;SubscriptionInfoClassMembers&quot;] = members
+</a>     }
+ } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

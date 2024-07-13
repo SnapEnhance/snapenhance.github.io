@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PullRefreshIndicatorTransform.kt - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../../../../../../../../../../../logo.png"/>
+<link rel="alternate icon" href="../../../../../../../../../../../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../../../../../../../../../../../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../../../../../../../../../../../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../../../../../../../../../../../"><img src="../../../../../../../../../../../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../../../../../../../../../../../about.html">About</a> | <a href="../../../../../../../../../../../log.html">Log</a> | <a href="../../../../../../../../../../../files.html">Files</a> | <a href="../../../../../../../../../../../refs.html">Refs</a> | <a href="../../../../../../../../../../../file/.gitmodules.html">Submodules</a> | <a href="../../../../../../../../../../../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<p> PullRefreshIndicatorTransform.kt (3059B) - <a href="../../../../../../../../../../../raw/app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefreshIndicatorTransform.kt">raw</a></p><hr/><pre id="blob">
+<a href="#l1" class="line" id="l1">      1</a> /*
+<a href="#l2" class="line" id="l2">      2</a>  * Copyright 2022 The Android Open Source Project
+<a href="#l3" class="line" id="l3">      3</a>  *
+<a href="#l4" class="line" id="l4">      4</a>  * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+<a href="#l5" class="line" id="l5">      5</a>  * you may not use this file except in compliance with the License.
+<a href="#l6" class="line" id="l6">      6</a>  * You may obtain a copy of the License at
+<a href="#l7" class="line" id="l7">      7</a>  *
+<a href="#l8" class="line" id="l8">      8</a>  *      http://www.apache.org/licenses/LICENSE-2.0
+<a href="#l9" class="line" id="l9">      9</a>  *
+<a href="#l10" class="line" id="l10">     10</a>  * Unless required by applicable law or agreed to in writing, software
+<a href="#l11" class="line" id="l11">     11</a>  * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+<a href="#l12" class="line" id="l12">     12</a>  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+<a href="#l13" class="line" id="l13">     13</a>  * See the License for the specific language governing permissions and
+<a href="#l14" class="line" id="l14">     14</a>  * limitations under the License.
+<a href="#l15" class="line" id="l15">     15</a>  */
+<a href="#l16" class="line" id="l16">     16</a> 
+<a href="#l17" class="line" id="l17">     17</a> package me.rhunk.snapenhance.ui.util.pullrefresh
+<a href="#l18" class="line" id="l18">     18</a> 
+<a href="#l19" class="line" id="l19">     19</a> import androidx.compose.animation.core.LinearOutSlowInEasing
+<a href="#l20" class="line" id="l20">     20</a> import androidx.compose.ui.Modifier
+<a href="#l21" class="line" id="l21">     21</a> import androidx.compose.ui.draw.drawWithContent
+<a href="#l22" class="line" id="l22">     22</a> import androidx.compose.ui.graphics.drawscope.clipRect
+<a href="#l23" class="line" id="l23">     23</a> import androidx.compose.ui.graphics.graphicsLayer
+<a href="#l24" class="line" id="l24">     24</a> import androidx.compose.ui.platform.debugInspectorInfo
+<a href="#l25" class="line" id="l25">     25</a> import androidx.compose.ui.platform.inspectable
+<a href="#l26" class="line" id="l26">     26</a> 
+<a href="#l27" class="line" id="l27">     27</a> /**
+<a href="#l28" class="line" id="l28">     28</a>  * A modifier for translating the position and scaling the size of a pull-to-refresh indicator
+<a href="#l29" class="line" id="l29">     29</a>  * based on the given [PullRefreshState].
+<a href="#l30" class="line" id="l30">     30</a>  *
+<a href="#l31" class="line" id="l31">     31</a>  * @sample androidx.compose.material.samples.PullRefreshIndicatorTransformSample
+<a href="#l32" class="line" id="l32">     32</a>  *
+<a href="#l33" class="line" id="l33">     33</a>  * @param state The [PullRefreshState] which determines the position of the indicator.
+<a href="#l34" class="line" id="l34">     34</a>  * @param scale A boolean controlling whether the indicator&#39;s size scales with pull progress or not.
+<a href="#l35" class="line" id="l35">     35</a>  */
+<a href="#l36" class="line" id="l36">     36</a> // TODO: Consider whether the state parameter should be replaced with lambdas.
+<a href="#l37" class="line" id="l37">     37</a> fun Modifier.pullRefreshIndicatorTransform(
+<a href="#l38" class="line" id="l38">     38</a>     state: PullRefreshState,
+<a href="#l39" class="line" id="l39">     39</a>     scale: Boolean = false,
+<a href="#l40" class="line" id="l40">     40</a> ) = inspectable(
+<a href="#l41" class="line" id="l41">     41</a>     inspectorInfo = debugInspectorInfo {
+<a href="#l42" class="line" id="l42">     42</a>         name = &quot;pullRefreshIndicatorTransform&quot;
+<a href="#l43" class="line" id="l43">     43</a>         properties[&quot;state&quot;] = state
+<a href="#l44" class="line" id="l44">     44</a>         properties[&quot;scale&quot;] = scale
+<a href="#l45" class="line" id="l45">     45</a>     },
+<a href="#l46" class="line" id="l46">     46</a> ) {
+<a href="#l47" class="line" id="l47">     47</a>     Modifier
+<a href="#l48" class="line" id="l48">     48</a>         // Essentially we only want to clip the at the top, so the indicator will not appear when
+<a href="#l49" class="line" id="l49">     49</a>         // the position is 0. It is preferable to clip the indicator as opposed to the layout that
+<a href="#l50" class="line" id="l50">     50</a>         // contains the indicator, as this would also end up clipping shadows drawn by items in a
+<a href="#l51" class="line" id="l51">     51</a>         // list for example - so we leave the clipping to the scrolling container. We use MAX_VALUE
+<a href="#l52" class="line" id="l52">     52</a>         // for the other dimensions to allow for more room for elevation / arbitrary indicators - we
+<a href="#l53" class="line" id="l53">     53</a>         // only ever really want to clip at the top edge.
+<a href="#l54" class="line" id="l54">     54</a>         .drawWithContent {
+<a href="#l55" class="line" id="l55">     55</a>             clipRect(
+<a href="#l56" class="line" id="l56">     56</a>                 top = 0f,
+<a href="#l57" class="line" id="l57">     57</a>                 left = -Float.MAX_VALUE,
+<a href="#l58" class="line" id="l58">     58</a>                 right = Float.MAX_VALUE,
+<a href="#l59" class="line" id="l59">     59</a>                 bottom = Float.MAX_VALUE,
+<a href="#l60" class="line" id="l60">     60</a>             ) {
+<a href="#l61" class="line" id="l61">     61</a>                 this@drawWithContent.drawContent()
+<a href="#l62" class="line" id="l62">     62</a>             }
+<a href="#l63" class="line" id="l63">     63</a>         }
+<a href="#l64" class="line" id="l64">     64</a>         .graphicsLayer {
+<a href="#l65" class="line" id="l65">     65</a>             translationY = state.position - size.height
+<a href="#l66" class="line" id="l66">     66</a> 
+<a href="#l67" class="line" id="l67">     67</a>             if (scale &amp;&amp; !state.refreshing) {
+<a href="#l68" class="line" id="l68">     68</a>                 val scaleFraction = LinearOutSlowInEasing
+<a href="#l69" class="line" id="l69">     69</a>                     .transform(state.position / state.threshold)
+<a href="#l70" class="line" id="l70">     70</a>                     .coerceIn(0f, 1f)
+<a href="#l71" class="line" id="l71">     71</a>                 scaleX = scaleFraction
+<a href="#l72" class="line" id="l72">     72</a>                 scaleY = scaleFraction
+<a href="#l73" class="line" id="l73">     73</a>             }
+<a href="#l74" class="line" id="l74">     74</a>         }
+<a href="#l75" class="line" id="l75">     75</a> }
+</pre>
+</div>
+</body>
+</html>

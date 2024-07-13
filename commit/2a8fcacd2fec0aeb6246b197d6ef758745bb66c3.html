@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(core/ui): conversation toolbox - add scripting support - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/2a8fcacd2fec0aeb6246b197d6ef758745bb66c3.html">2a8fcacd2fec0aeb6246b197d6ef758745bb66c3</a>
+<b>parent</b> <a href="../commit/90d76c6412e994f1b0c7cfafe89270d0ededa7be.html">90d76c6412e994f1b0c7cfafe89270d0ededa7be</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 27 Dec 2023 17:39:46 +0100
+
+feat(core/ui): conversation toolbox
+- add scripting support
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/e2ee/E2EEImplementation.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/EnumScriptInterface.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt</a></td><td> | </td><td class="num">93</td><td><span class="i">+++++++++++++++++++++++++++++++++++</span><span class="d">--------------------------------------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/ConversationToolbox.kt</a></td><td> | </td><td class="num">172</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+</table></pre><pre>5 files changed, 217 insertions(+), 54 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/e2ee/E2EEImplementation.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/e2ee/E2EEImplementation.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/e2ee/E2EEImplementation.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/e2ee/E2EEImplementation.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -62,7 +62,7 @@ class E2EEImplementation (
+</a> 
+     override fun acceptPairingRequest(friendId: String, publicKey: ByteArray): ByteArray? {
+         val kemGen = KyberKEMGenerator(secureRandom)
+<a href="#h0-0-3" id="h0-0-3" class="d">-        val encapsulatedSecret =  runCatching {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        val encapsulatedSecret = runCatching {
+</a>             kemGen.generateEncapsulated(
+                 KyberPublicKeyParameters(
+                     kyberDefaultParameters,
+<a href="#h0-1" id="h0-1" class="h">@@ -164,7 +164,7 @@ class E2EEImplementation (
+</a>             cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(encryptionKey, &quot;AES&quot;), IvParameterSpec(iv))
+             cipher.doFinal(message)
+         }.onFailure {
+<a href="#h0-1-3" id="h0-1-3" class="d">-            context.log.error(&quot;Failed to decrypt message from $friendId&quot;, it)
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+            context.log.warn(&quot;Failed to decrypt message for $friendId&quot;)
+</a>             return null
+         }.getOrNull()
+     }
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/EnumScriptInterface.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/EnumScriptInterface.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/EnumScriptInterface.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/EnumScriptInterface.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -8,4 +8,5 @@ enum class EnumScriptInterface(
+</a> ) {
+     SETTINGS(&quot;settings&quot;, BindingSide.MANAGER),
+     FRIEND_FEED_CONTEXT_MENU(&quot;friendFeedContextMenu&quot;, BindingSide.CORE),
+<a href="#h1-0-3" id="h1-0-3" class="i">+    CONVERSATION_TOOLBOX(&quot;conversationToolbox&quot;, BindingSide.CORE),
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -7,10 +7,14 @@ import android.graphics.drawable.ShapeDrawable
+</a> import android.graphics.drawable.shapes.Shape
+ import android.view.View
+ import android.view.ViewGroup
+<a href="#h2-0-3" id="h2-0-3" class="d">-import android.view.ViewGroup.LayoutParams
+</a><a href="#h2-0-4" id="h2-0-4" class="d">-import android.view.ViewGroup.MarginLayoutParams
+</a> import android.widget.Button
+<a href="#h2-0-6" id="h2-0-6" class="d">-import android.widget.TextView
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+import androidx.compose.foundation.layout.Spacer
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+import androidx.compose.foundation.layout.height
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+import androidx.compose.material3.Button
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+import androidx.compose.material3.Text
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+import androidx.compose.runtime.remember
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+import androidx.compose.ui.Modifier
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+import androidx.compose.ui.unit.dp
+</a> import me.rhunk.snapenhance.common.data.ContentType
+ import me.rhunk.snapenhance.common.data.MessageState
+ import me.rhunk.snapenhance.common.data.MessagingRuleType
+<a href="#h2-1" id="h2-1" class="h">@@ -18,14 +22,13 @@ import me.rhunk.snapenhance.common.data.RuleState
+</a> import me.rhunk.snapenhance.common.util.protobuf.ProtoEditor
+ import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.common.util.protobuf.ProtoWriter
+<a href="#h2-1-3" id="h2-1-3" class="d">-import me.rhunk.snapenhance.core.event.events.impl.AddViewEvent
+</a> import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+ import me.rhunk.snapenhance.core.event.events.impl.BuildMessageEvent
+ import me.rhunk.snapenhance.core.event.events.impl.NativeUnaryCallEvent
+ import me.rhunk.snapenhance.core.event.events.impl.SendMessageWithContentEvent
+ import me.rhunk.snapenhance.core.features.FeatureLoadParams
+ import me.rhunk.snapenhance.core.features.MessagingRuleFeature
+<a href="#h2-1-10" id="h2-1-10" class="d">-import me.rhunk.snapenhance.core.features.impl.messaging.Messaging
+</a><a href="#h2-1-11" id="h2-1-11" class="i">+import me.rhunk.snapenhance.core.features.impl.ui.ConversationToolbox
+</a> import me.rhunk.snapenhance.core.ui.ViewAppearanceHelper
+ import me.rhunk.snapenhance.core.ui.addForegroundDrawable
+ import me.rhunk.snapenhance.core.ui.removeForegroundDrawable
+<a href="#h2-2" id="h2-2" class="h">@@ -157,56 +160,34 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>         }
+     }
+ 
+<a href="#h2-2-3" id="h2-2-3" class="d">-    private fun openManagementPopup() {
+</a><a href="#h2-2-4" id="h2-2-4" class="d">-        val conversationId = context.feature(Messaging::class).openedConversationUUID?.toString() ?: return
+</a><a href="#h2-2-5" id="h2-2-5" class="d">-        val friendId = context.database.getDMOtherParticipant(conversationId)
+</a><a href="#h2-2-6" id="h2-2-6" class="d">-
+</a><a href="#h2-2-7" id="h2-2-7" class="d">-        if (friendId == null) {
+</a><a href="#h2-2-8" id="h2-2-8" class="d">-            context.shortToast(&quot;This menu is only available in direct messages.&quot;)
+</a><a href="#h2-2-9" id="h2-2-9" class="d">-            return
+</a><a href="#h2-2-10" id="h2-2-10" class="d">-        }
+</a><a href="#h2-2-11" id="h2-2-11" class="d">-
+</a><a href="#h2-2-12" id="h2-2-12" class="d">-        val actions = listOf(
+</a><a href="#h2-2-13" id="h2-2-13" class="d">-            &quot;Initiate a new shared secret&quot;,
+</a><a href="#h2-2-14" id="h2-2-14" class="d">-            &quot;Show shared key fingerprint&quot;
+</a><a href="#h2-2-15" id="h2-2-15" class="d">-        )
+</a><a href="#h2-2-16" id="h2-2-16" class="d">-
+</a><a href="#h2-2-17" id="h2-2-17" class="d">-        ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity!!).apply {
+</a><a href="#h2-2-18" id="h2-2-18" class="d">-            setTitle(&quot;End-to-end encryption&quot;)
+</a><a href="#h2-2-19" id="h2-2-19" class="d">-            setItems(actions.toTypedArray()) { _, which -&gt;
+</a><a href="#h2-2-20" id="h2-2-20" class="d">-                when (which) {
+</a><a href="#h2-2-21" id="h2-2-21" class="d">-                    0 -&gt; {
+</a><a href="#h2-2-22" id="h2-2-22" class="d">-                        warnKeyOverwrite(friendId) {
+</a><a href="#h2-2-23" id="h2-2-23" class="d">-                            askForKeys(conversationId)
+</a><a href="#h2-2-24" id="h2-2-24" class="d">-                        }
+</a><a href="#h2-2-25" id="h2-2-25" class="d">-                    }
+</a><a href="#h2-2-26" id="h2-2-26" class="d">-                    1 -&gt; {
+</a><a href="#h2-2-27" id="h2-2-27" class="d">-                        val fingerprint = e2eeInterface.getSecretFingerprint(friendId)
+</a><a href="#h2-2-28" id="h2-2-28" class="d">-                        ViewAppearanceHelper.newAlertDialogBuilder(context).apply {
+</a><a href="#h2-2-29" id="h2-2-29" class="d">-                            setTitle(&quot;End-to-end encryption&quot;)
+</a><a href="#h2-2-30" id="h2-2-30" class="d">-                            setMessage(&quot;Your fingerprint is:\n\n$fingerprint\n\nMake sure to check if it matches your friend&#39;s fingerprint!&quot;)
+</a><a href="#h2-2-31" id="h2-2-31" class="d">-                            setPositiveButton(&quot;OK&quot;) { _, _ -&gt; }
+</a><a href="#h2-2-32" id="h2-2-32" class="d">-                        }.show()
+</a><a href="#h2-2-33" id="h2-2-33" class="d">-                    }
+</a><a href="#h2-2-34" id="h2-2-34" class="d">-                }
+</a><a href="#h2-2-35" id="h2-2-35" class="d">-            }
+</a><a href="#h2-2-36" id="h2-2-36" class="d">-            setPositiveButton(&quot;OK&quot;) { _, _ -&gt; }
+</a><a href="#h2-2-37" id="h2-2-37" class="d">-        }.show()
+</a><a href="#h2-2-38" id="h2-2-38" class="d">-    }
+</a><a href="#h2-2-39" id="h2-2-39" class="d">-
+</a>     @SuppressLint(&quot;SetTextI18n&quot;, &quot;DiscouragedApi&quot;)
+     override fun onActivityCreate() {
+         if (!isEnabled) return
+<a href="#h2-2-43" id="h2-2-43" class="d">-        // add button to input bar
+</a><a href="#h2-2-44" id="h2-2-44" class="d">-        context.event.subscribe(AddViewEvent::class) { param -&gt;
+</a><a href="#h2-2-45" id="h2-2-45" class="d">-            if (param.view.toString().contains(&quot;default_input_bar&quot;)) {
+</a><a href="#h2-2-46" id="h2-2-46" class="d">-                (param.view as ViewGroup).addView(TextView(param.view.context).apply {
+</a><a href="#h2-2-47" id="h2-2-47" class="d">-                    layoutParams = MarginLayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT)
+</a><a href="#h2-2-48" id="h2-2-48" class="d">-                    setOnClickListener { openManagementPopup() }
+</a><a href="#h2-2-49" id="h2-2-49" class="d">-                    setPadding(20, 20, 20, 20)
+</a><a href="#h2-2-50" id="h2-2-50" class="d">-                    textSize = 23f
+</a><a href="#h2-2-51" id="h2-2-51" class="d">-                    text = &quot;\uD83D\uDD12&quot;
+</a><a href="#h2-2-52" id="h2-2-52" class="d">-                })
+</a><a href="#h2-2-53" id="h2-2-53" class="i">+
+</a><a href="#h2-2-54" id="h2-2-54" class="i">+        context.feature(ConversationToolbox::class).addComposable(&quot;End-to-end Encryption&quot;, filter = {
+</a><a href="#h2-2-55" id="h2-2-55" class="i">+            context.database.getDMOtherParticipant(it) != null
+</a><a href="#h2-2-56" id="h2-2-56" class="i">+        }) { dialog, conversationId -&gt;
+</a><a href="#h2-2-57" id="h2-2-57" class="i">+            val friendId = remember {
+</a><a href="#h2-2-58" id="h2-2-58" class="i">+                context.database.getDMOtherParticipant(conversationId)
+</a><a href="#h2-2-59" id="h2-2-59" class="i">+            } ?: return@addComposable
+</a><a href="#h2-2-60" id="h2-2-60" class="i">+            val fingerprint = remember {
+</a><a href="#h2-2-61" id="h2-2-61" class="i">+                runCatching {
+</a><a href="#h2-2-62" id="h2-2-62" class="i">+                    e2eeInterface.getSecretFingerprint(friendId)
+</a><a href="#h2-2-63" id="h2-2-63" class="i">+                }.getOrNull()
+</a><a href="#h2-2-64" id="h2-2-64" class="i">+            }
+</a><a href="#h2-2-65" id="h2-2-65" class="i">+            if (fingerprint != null) {
+</a><a href="#h2-2-66" id="h2-2-66" class="i">+                Text(&quot;Your fingerprint is:\n\n$fingerprint\n\nMake sure to check if it matches your friend&#39;s fingerprint!&quot;)
+</a><a href="#h2-2-67" id="h2-2-67" class="i">+            } else {
+</a><a href="#h2-2-68" id="h2-2-68" class="i">+                Text(&quot;You don&#39;t have a shared secret with this friend yet. Click below to initiate a new one.&quot;)
+</a><a href="#h2-2-69" id="h2-2-69" class="i">+            }
+</a><a href="#h2-2-70" id="h2-2-70" class="i">+            Spacer(modifier = Modifier.height(10.dp))
+</a><a href="#h2-2-71" id="h2-2-71" class="i">+            Button(onClick = {
+</a><a href="#h2-2-72" id="h2-2-72" class="i">+                dialog.dismiss()
+</a><a href="#h2-2-73" id="h2-2-73" class="i">+                warnKeyOverwrite(friendId) {
+</a><a href="#h2-2-74" id="h2-2-74" class="i">+                    askForKeys(conversationId)
+</a><a href="#h2-2-75" id="h2-2-75" class="i">+                }
+</a><a href="#h2-2-76" id="h2-2-76" class="i">+            }) {
+</a><a href="#h2-2-77" id="h2-2-77" class="i">+                Text(&quot;Initiate new shared secret&quot;)
+</a>             }
+         }
+ 
+<a href="#h2-3" id="h2-3" class="h">@@ -245,6 +226,10 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>                     viewGroup.addView(Button(context.mainActivity!!).apply {
+                         text = &quot;Accept secret&quot;
+                         tag = receiveSecretTag
+<a href="#h2-3-3" id="h2-3-3" class="i">+                        layoutParams = ViewGroup.LayoutParams(
+</a><a href="#h2-3-4" id="h2-3-4" class="i">+                            ViewGroup.LayoutParams.MATCH_PARENT,
+</a><a href="#h2-3-5" id="h2-3-5" class="i">+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+</a><a href="#h2-3-6" id="h2-3-6" class="i">+                        )
+</a>                         setOnClickListener {
+                             handleSecretResponse(conversationId, secret)
+                         }
+<a href="#h2-4" id="h2-4" class="h">@@ -255,6 +240,10 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>                     viewGroup.addView(Button(context.mainActivity!!).apply {
+                         text = &quot;Receive public key&quot;
+                         tag = receivePublicKeyTag
+<a href="#h2-4-3" id="h2-4-3" class="i">+                        layoutParams = ViewGroup.LayoutParams(
+</a><a href="#h2-4-4" id="h2-4-4" class="i">+                            ViewGroup.LayoutParams.MATCH_PARENT,
+</a><a href="#h2-4-5" id="h2-4-5" class="i">+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+</a><a href="#h2-4-6" id="h2-4-6" class="i">+                        )
+</a>                         setOnClickListener {
+                             handlePublicKeyRequest(conversationId, publicKey)
+                         }
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/ConversationToolbox.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/ConversationToolbox.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/ConversationToolbox.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/ConversationToolbox.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -0,0 +1,171 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="i">+package me.rhunk.snapenhance.core.features.impl.ui
+</a><a href="#h3-0-1" id="h3-0-1" class="i">+
+</a><a href="#h3-0-2" id="h3-0-2" class="i">+import android.annotation.SuppressLint
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+import android.app.AlertDialog
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import android.view.Gravity
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+import android.view.ViewGroup
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+import android.widget.FrameLayout
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+import android.widget.LinearLayout
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+import android.widget.TextView
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+import androidx.compose.foundation.Image
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+import androidx.compose.foundation.clickable
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+import androidx.compose.foundation.layout.*
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+import androidx.compose.foundation.rememberScrollState
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+import androidx.compose.foundation.verticalScroll
+</a><a href="#h3-0-14" id="h3-0-14" class="i">+import androidx.compose.material.icons.Icons
+</a><a href="#h3-0-15" id="h3-0-15" class="i">+import androidx.compose.material.icons.filled.KeyboardArrowDown
+</a><a href="#h3-0-16" id="h3-0-16" class="i">+import androidx.compose.material.icons.filled.KeyboardArrowUp
+</a><a href="#h3-0-17" id="h3-0-17" class="i">+import androidx.compose.material3.Card
+</a><a href="#h3-0-18" id="h3-0-18" class="i">+import androidx.compose.material3.MaterialTheme
+</a><a href="#h3-0-19" id="h3-0-19" class="i">+import androidx.compose.material3.Text
+</a><a href="#h3-0-20" id="h3-0-20" class="i">+import androidx.compose.runtime.*
+</a><a href="#h3-0-21" id="h3-0-21" class="i">+import androidx.compose.ui.Alignment
+</a><a href="#h3-0-22" id="h3-0-22" class="i">+import androidx.compose.ui.Modifier
+</a><a href="#h3-0-23" id="h3-0-23" class="i">+import androidx.compose.ui.graphics.ColorFilter
+</a><a href="#h3-0-24" id="h3-0-24" class="i">+import androidx.compose.ui.platform.LocalConfiguration
+</a><a href="#h3-0-25" id="h3-0-25" class="i">+import androidx.compose.ui.text.font.FontStyle
+</a><a href="#h3-0-26" id="h3-0-26" class="i">+import androidx.compose.ui.text.style.TextAlign
+</a><a href="#h3-0-27" id="h3-0-27" class="i">+import androidx.compose.ui.unit.dp
+</a><a href="#h3-0-28" id="h3-0-28" class="i">+import androidx.compose.ui.unit.sp
+</a><a href="#h3-0-29" id="h3-0-29" class="i">+import androidx.compose.ui.unit.times
+</a><a href="#h3-0-30" id="h3-0-30" class="i">+import me.rhunk.snapenhance.common.scripting.ui.EnumScriptInterface
+</a><a href="#h3-0-31" id="h3-0-31" class="i">+import me.rhunk.snapenhance.common.scripting.ui.InterfaceManager
+</a><a href="#h3-0-32" id="h3-0-32" class="i">+import me.rhunk.snapenhance.common.scripting.ui.ScriptInterface
+</a><a href="#h3-0-33" id="h3-0-33" class="i">+import me.rhunk.snapenhance.common.ui.createComposeAlertDialog
+</a><a href="#h3-0-34" id="h3-0-34" class="i">+import me.rhunk.snapenhance.core.event.events.impl.AddViewEvent
+</a><a href="#h3-0-35" id="h3-0-35" class="i">+import me.rhunk.snapenhance.core.features.Feature
+</a><a href="#h3-0-36" id="h3-0-36" class="i">+import me.rhunk.snapenhance.core.features.FeatureLoadParams
+</a><a href="#h3-0-37" id="h3-0-37" class="i">+import me.rhunk.snapenhance.core.features.impl.messaging.Messaging
+</a><a href="#h3-0-38" id="h3-0-38" class="i">+import me.rhunk.snapenhance.core.util.ktx.getId
+</a><a href="#h3-0-39" id="h3-0-39" class="i">+
+</a><a href="#h3-0-40" id="h3-0-40" class="i">+
+</a><a href="#h3-0-41" id="h3-0-41" class="i">+data class ComposableMenu(
+</a><a href="#h3-0-42" id="h3-0-42" class="i">+    val title: String,
+</a><a href="#h3-0-43" id="h3-0-43" class="i">+    val filter: (conversationId: String) -&gt; Boolean,
+</a><a href="#h3-0-44" id="h3-0-44" class="i">+    val composable: @Composable (alertDialog: AlertDialog, conversationId: String) -&gt; Unit,
+</a><a href="#h3-0-45" id="h3-0-45" class="i">+)
+</a><a href="#h3-0-46" id="h3-0-46" class="i">+
+</a><a href="#h3-0-47" id="h3-0-47" class="i">+class ConversationToolbox : Feature(&quot;Conversation Toolbox&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+</a><a href="#h3-0-48" id="h3-0-48" class="i">+    private val composableList = mutableListOf&lt;ComposableMenu&gt;()
+</a><a href="#h3-0-49" id="h3-0-49" class="i">+    private val expandedComposableCache = mutableStateMapOf&lt;String, Boolean&gt;()
+</a><a href="#h3-0-50" id="h3-0-50" class="i">+
+</a><a href="#h3-0-51" id="h3-0-51" class="i">+    fun addComposable(title: String, filter: (conversationId: String) -&gt; Boolean = { true }, composable: @Composable (alertDialog: AlertDialog, conversationId: String) -&gt; Unit) {
+</a><a href="#h3-0-52" id="h3-0-52" class="i">+        composableList.add(
+</a><a href="#h3-0-53" id="h3-0-53" class="i">+            ComposableMenu(title, filter, composable)
+</a><a href="#h3-0-54" id="h3-0-54" class="i">+        )
+</a><a href="#h3-0-55" id="h3-0-55" class="i">+    }
+</a><a href="#h3-0-56" id="h3-0-56" class="i">+
+</a><a href="#h3-0-57" id="h3-0-57" class="i">+    @SuppressLint(&quot;SetTextI18n&quot;)
+</a><a href="#h3-0-58" id="h3-0-58" class="i">+    override fun onActivityCreate() {
+</a><a href="#h3-0-59" id="h3-0-59" class="i">+        val defaultInputBarId = context.resources.getId(&quot;default_input_bar&quot;)
+</a><a href="#h3-0-60" id="h3-0-60" class="i">+
+</a><a href="#h3-0-61" id="h3-0-61" class="i">+        context.event.subscribe(AddViewEvent::class) { event -&gt;
+</a><a href="#h3-0-62" id="h3-0-62" class="i">+            if (event.view.id != defaultInputBarId) return@subscribe
+</a><a href="#h3-0-63" id="h3-0-63" class="i">+            if (composableList.isEmpty()) return@subscribe
+</a><a href="#h3-0-64" id="h3-0-64" class="i">+
+</a><a href="#h3-0-65" id="h3-0-65" class="i">+            (event.view as ViewGroup).addView(FrameLayout(event.view.context).apply {
+</a><a href="#h3-0-66" id="h3-0-66" class="i">+                layoutParams = LinearLayout.LayoutParams(
+</a><a href="#h3-0-67" id="h3-0-67" class="i">+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+</a><a href="#h3-0-68" id="h3-0-68" class="i">+                    (52 * context.resources.displayMetrics.density).toInt(),
+</a><a href="#h3-0-69" id="h3-0-69" class="i">+                ).apply {
+</a><a href="#h3-0-70" id="h3-0-70" class="i">+                    gravity = Gravity.BOTTOM
+</a><a href="#h3-0-71" id="h3-0-71" class="i">+                }
+</a><a href="#h3-0-72" id="h3-0-72" class="i">+                setPadding(25, 0, 25, 0)
+</a><a href="#h3-0-73" id="h3-0-73" class="i">+
+</a><a href="#h3-0-74" id="h3-0-74" class="i">+                addView(TextView(event.view.context).apply {
+</a><a href="#h3-0-75" id="h3-0-75" class="i">+                    layoutParams = FrameLayout.LayoutParams(
+</a><a href="#h3-0-76" id="h3-0-76" class="i">+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+</a><a href="#h3-0-77" id="h3-0-77" class="i">+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+</a><a href="#h3-0-78" id="h3-0-78" class="i">+                    ).apply {
+</a><a href="#h3-0-79" id="h3-0-79" class="i">+                        gravity = Gravity.CENTER_VERTICAL
+</a><a href="#h3-0-80" id="h3-0-80" class="i">+                    }
+</a><a href="#h3-0-81" id="h3-0-81" class="i">+                    setOnClickListener {
+</a><a href="#h3-0-82" id="h3-0-82" class="i">+                        openToolbox()
+</a><a href="#h3-0-83" id="h3-0-83" class="i">+                    }
+</a><a href="#h3-0-84" id="h3-0-84" class="i">+                    textSize = 21f
+</a><a href="#h3-0-85" id="h3-0-85" class="i">+                    text = &quot;\uD83E\uDDF0&quot;
+</a><a href="#h3-0-86" id="h3-0-86" class="i">+                })
+</a><a href="#h3-0-87" id="h3-0-87" class="i">+            })
+</a><a href="#h3-0-88" id="h3-0-88" class="i">+        }
+</a><a href="#h3-0-89" id="h3-0-89" class="i">+
+</a><a href="#h3-0-90" id="h3-0-90" class="i">+        context.scriptRuntime.eachModule {
+</a><a href="#h3-0-91" id="h3-0-91" class="i">+            val interfaceManager = getBinding(InterfaceManager::class)?.takeIf {
+</a><a href="#h3-0-92" id="h3-0-92" class="i">+                it.hasInterface(EnumScriptInterface.CONVERSATION_TOOLBOX)
+</a><a href="#h3-0-93" id="h3-0-93" class="i">+            } ?: return@eachModule
+</a><a href="#h3-0-94" id="h3-0-94" class="i">+            addComposable(&quot;\uD83D\uDCDC ${moduleInfo.displayName}&quot;) { alertDialog, conversationId -&gt;
+</a><a href="#h3-0-95" id="h3-0-95" class="i">+                ScriptInterface(remember {
+</a><a href="#h3-0-96" id="h3-0-96" class="i">+                    interfaceManager.buildInterface(EnumScriptInterface.CONVERSATION_TOOLBOX, mapOf(
+</a><a href="#h3-0-97" id="h3-0-97" class="i">+                        &quot;alertDialog&quot; to alertDialog,
+</a><a href="#h3-0-98" id="h3-0-98" class="i">+                        &quot;conversationId&quot; to conversationId,
+</a><a href="#h3-0-99" id="h3-0-99" class="i">+                    ))
+</a><a href="#h3-0-100" id="h3-0-100" class="i">+                } ?: return@addComposable)
+</a><a href="#h3-0-101" id="h3-0-101" class="i">+            }
+</a><a href="#h3-0-102" id="h3-0-102" class="i">+        }
+</a><a href="#h3-0-103" id="h3-0-103" class="i">+    }
+</a><a href="#h3-0-104" id="h3-0-104" class="i">+
+</a><a href="#h3-0-105" id="h3-0-105" class="i">+    private fun openToolbox() {
+</a><a href="#h3-0-106" id="h3-0-106" class="i">+        val openedConversationId = context.feature(Messaging::class).openedConversationUUID?.toString() ?: run {
+</a><a href="#h3-0-107" id="h3-0-107" class="i">+            context.shortToast(&quot;You must open a conversation first&quot;)
+</a><a href="#h3-0-108" id="h3-0-108" class="i">+            return
+</a><a href="#h3-0-109" id="h3-0-109" class="i">+        }
+</a><a href="#h3-0-110" id="h3-0-110" class="i">+
+</a><a href="#h3-0-111" id="h3-0-111" class="i">+        createComposeAlertDialog(context.mainActivity!!) { alertDialog -&gt;
+</a><a href="#h3-0-112" id="h3-0-112" class="i">+            Column(
+</a><a href="#h3-0-113" id="h3-0-113" class="i">+                modifier = Modifier
+</a><a href="#h3-0-114" id="h3-0-114" class="i">+                    .fillMaxWidth()
+</a><a href="#h3-0-115" id="h3-0-115" class="i">+                    .heightIn(
+</a><a href="#h3-0-116" id="h3-0-116" class="i">+                        min = 100.dp,
+</a><a href="#h3-0-117" id="h3-0-117" class="i">+                        max = LocalConfiguration.current.screenHeightDp * 0.8f.dp
+</a><a href="#h3-0-118" id="h3-0-118" class="i">+                    )
+</a><a href="#h3-0-119" id="h3-0-119" class="i">+                    .verticalScroll(rememberScrollState())
+</a><a href="#h3-0-120" id="h3-0-120" class="i">+            ) {
+</a><a href="#h3-0-121" id="h3-0-121" class="i">+                Text(&quot;Conversation Toolbox&quot;, fontSize = 20.sp, modifier = Modifier
+</a><a href="#h3-0-122" id="h3-0-122" class="i">+                    .fillMaxWidth()
+</a><a href="#h3-0-123" id="h3-0-123" class="i">+                    .padding(10.dp), textAlign = TextAlign.Center)
+</a><a href="#h3-0-124" id="h3-0-124" class="i">+                Spacer(modifier = Modifier.height(10.dp))
+</a><a href="#h3-0-125" id="h3-0-125" class="i">+
+</a><a href="#h3-0-126" id="h3-0-126" class="i">+                composableList.reversed().forEach { (title, filter, composable) -&gt;
+</a><a href="#h3-0-127" id="h3-0-127" class="i">+                    if (!filter(openedConversationId)) return@forEach
+</a><a href="#h3-0-128" id="h3-0-128" class="i">+                    Card(
+</a><a href="#h3-0-129" id="h3-0-129" class="i">+                        modifier = Modifier
+</a><a href="#h3-0-130" id="h3-0-130" class="i">+                            .fillMaxWidth()
+</a><a href="#h3-0-131" id="h3-0-131" class="i">+                            .padding(5.dp),
+</a><a href="#h3-0-132" id="h3-0-132" class="i">+                        shape = MaterialTheme.shapes.medium
+</a><a href="#h3-0-133" id="h3-0-133" class="i">+                    ) {
+</a><a href="#h3-0-134" id="h3-0-134" class="i">+                        Row(
+</a><a href="#h3-0-135" id="h3-0-135" class="i">+                            modifier = Modifier
+</a><a href="#h3-0-136" id="h3-0-136" class="i">+                                .clickable {
+</a><a href="#h3-0-137" id="h3-0-137" class="i">+                                    expandedComposableCache[title] = !(expandedComposableCache[title] ?: false)
+</a><a href="#h3-0-138" id="h3-0-138" class="i">+                                }
+</a><a href="#h3-0-139" id="h3-0-139" class="i">+                                .fillMaxWidth()
+</a><a href="#h3-0-140" id="h3-0-140" class="i">+                                .padding(10.dp),
+</a><a href="#h3-0-141" id="h3-0-141" class="i">+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+</a><a href="#h3-0-142" id="h3-0-142" class="i">+                            verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h3-0-143" id="h3-0-143" class="i">+                        ) {
+</a><a href="#h3-0-144" id="h3-0-144" class="i">+                            Image(
+</a><a href="#h3-0-145" id="h3-0-145" class="i">+                                imageVector = if (expandedComposableCache[title] == true) Icons.Filled.KeyboardArrowDown else Icons.Filled.KeyboardArrowUp,
+</a><a href="#h3-0-146" id="h3-0-146" class="i">+                                contentDescription = null,
+</a><a href="#h3-0-147" id="h3-0-147" class="i">+                                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
+</a><a href="#h3-0-148" id="h3-0-148" class="i">+                            )
+</a><a href="#h3-0-149" id="h3-0-149" class="i">+                            Text(title, fontSize = 16.sp, fontStyle = FontStyle.Italic)
+</a><a href="#h3-0-150" id="h3-0-150" class="i">+                        }
+</a><a href="#h3-0-151" id="h3-0-151" class="i">+                        if (expandedComposableCache[title] == true) {
+</a><a href="#h3-0-152" id="h3-0-152" class="i">+                            Column(
+</a><a href="#h3-0-153" id="h3-0-153" class="i">+                                modifier = Modifier
+</a><a href="#h3-0-154" id="h3-0-154" class="i">+                                    .fillMaxWidth()
+</a><a href="#h3-0-155" id="h3-0-155" class="i">+                                    .padding(10.dp)
+</a><a href="#h3-0-156" id="h3-0-156" class="i">+                            ) {
+</a><a href="#h3-0-157" id="h3-0-157" class="i">+                                runCatching {
+</a><a href="#h3-0-158" id="h3-0-158" class="i">+                                    composable(alertDialog, openedConversationId)
+</a><a href="#h3-0-159" id="h3-0-159" class="i">+                                }.onFailure { throwable -&gt;
+</a><a href="#h3-0-160" id="h3-0-160" class="i">+                                    Text(&quot;Failed to load composable: ${throwable.message}&quot;)
+</a><a href="#h3-0-161" id="h3-0-161" class="i">+                                    context.log.error(&quot;Failed to load composable: ${throwable.message}&quot;, throwable)
+</a><a href="#h3-0-162" id="h3-0-162" class="i">+                                }
+</a><a href="#h3-0-163" id="h3-0-163" class="i">+                            }
+</a><a href="#h3-0-164" id="h3-0-164" class="i">+                        }
+</a><a href="#h3-0-165" id="h3-0-165" class="i">+                    }
+</a><a href="#h3-0-166" id="h3-0-166" class="i">+                }
+</a><a href="#h3-0-167" id="h3-0-167" class="i">+            }
+</a><a href="#h3-0-168" id="h3-0-168" class="i">+        }.show()
+</a><a href="#h3-0-169" id="h3-0-169" class="i">+    }
+</a><a href="#h3-0-170" id="h3-0-170" class="i">+}</a><a href="#h3-0-171" id="h3-0-171" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -118,6 +118,7 @@ class FeatureManager(
+</a>             EditTextOverride::class,
+             PreventForcedLogout::class,
+             SuspendLocationUpdates::class,
+<a href="#h4-0-3" id="h4-0-3" class="i">+            ConversationToolbox::class,
+</a>         )
+ 
+         initializeFeatures()
+</pre>
+</div>
+</body>
+</html>

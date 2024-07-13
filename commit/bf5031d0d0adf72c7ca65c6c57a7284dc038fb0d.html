@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(native): native grpc unaryCall hook - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/bf5031d0d0adf72c7ca65c6c57a7284dc038fb0d.html">bf5031d0d0adf72c7ca65c6c57a7284dc038fb0d</a>
+<b>parent</b> <a href="../commit/84a4f87fb1cc7498d92e9a468272fd80f5393f44.html">84a4f87fb1cc7498d92e9a468272fd80f5393f44</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 27 Aug 2023 21:09:48 +0200
+
+feat(native): native grpc unaryCall hook
+
+<b>Diffstat:</b>
+<table><tr><td class="A">A</td><td><a href="#h0">native/jni/src/grpc.h</a></td><td> | </td><td class="num">16</td><td><span class="i">++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">native/jni/src/library.cpp</a></td><td> | </td><td class="num">97</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">native/jni/src/util.h</a></td><td> | </td><td class="num">51</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++</span><span class="d">----------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a></td><td> | </td><td class="num">18</td><td><span class="i">++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h4">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeRequestData.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>5 files changed, 173 insertions(+), 17 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/native/jni/src/grpc.h.html">native/jni/src/grpc.h</a> b/<a href="../file/native/jni/src/grpc.h.html">native/jni/src/grpc.h</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -0,0 +1,16 @@
+</a><a href="#h0-0-0" id="h0-0-0" class="i">+#pragma once
+</a><a href="#h0-0-1" id="h0-0-1" class="i">+
+</a><a href="#h0-0-2" id="h0-0-2" class="i">+namespace grpc {
+</a><a href="#h0-0-3" id="h0-0-3" class="i">+    typedef struct {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        void* ref_counter;
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+        size_t length;
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+        uint8_t* data;
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+    } ref_counted_slice_byte_buffer;
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+    typedef struct {
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+        void* reserved;
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+        void* type;
+</a><a href="#h0-0-12" id="h0-0-12" class="i">+        void* compression;
+</a><a href="#h0-0-13" id="h0-0-13" class="i">+        ref_counted_slice_byte_buffer *slice_buffer;
+</a><a href="#h0-0-14" id="h0-0-14" class="i">+    } grpc_byte_buffer;
+</a><a href="#h0-0-15" id="h0-0-15" class="i">+}
+</a><b>diff --git a/<a id="h1" href="../file/native/jni/src/library.cpp.html">native/jni/src/library.cpp</a> b/<a href="../file/native/jni/src/library.cpp.html">native/jni/src/library.cpp</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -7,8 +7,10 @@
+</a> #include &quot;logger.h&quot;
+ #include &quot;config.h&quot;
+ #include &quot;util.h&quot;
+<a href="#h1-0-3" id="h1-0-3" class="i">+#include &quot;grpc.h&quot;
+</a> 
+ static native_config_t *native_config;
+<a href="#h1-0-6" id="h1-0-6" class="i">+static JavaVM *java_vm;
+</a> 
+ static auto fstat_original = (int (*)(int, struct stat *)) nullptr;
+ static int fstat_hook(int fd, struct stat *buf) {
+<a href="#h1-1" id="h1-1" class="h">@@ -20,13 +22,15 @@ static int fstat_hook(int fd, struct stat *buf) {
+</a>     auto fileName = std::string(name);
+ 
+     //prevent blizzardv2 metrics
+<a href="#h1-1-3" id="h1-1-3" class="d">-    if (native_config-&gt;disable_metrics &amp;&amp; fileName.find(&quot;files/blizzardv2/queues&quot;) != std::string::npos) {
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+    if (native_config-&gt;disable_metrics &amp;&amp;
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+        fileName.find(&quot;files/blizzardv2/queues&quot;) != std::string::npos) {
+</a>         unlink(name);
+         return -1;
+     }
+ 
+     //prevent bitmoji to load
+<a href="#h1-1-11" id="h1-1-11" class="d">-    if (native_config-&gt;disable_bitmoji &amp;&amp; fileName.find(&quot;com.snap.file_manager_4_SCContent&quot;) != std::string::npos) {
+</a><a href="#h1-1-12" id="h1-1-12" class="i">+    if (native_config-&gt;disable_bitmoji &amp;&amp;
+</a><a href="#h1-1-13" id="h1-1-13" class="i">+        fileName.find(&quot;com.snap.file_manager_4_SCContent&quot;) != std::string::npos) {
+</a>         return -1;
+     }
+ 
+<a href="#h1-2" id="h1-2" class="h">@@ -34,12 +38,86 @@ static int fstat_hook(int fd, struct stat *buf) {
+</a> }
+ 
+ 
+<a href="#h1-2-3" id="h1-2-3" class="i">+static jobject native_lib_object;
+</a><a href="#h1-2-4" id="h1-2-4" class="i">+static jmethodID native_lib_on_unary_call_method;
+</a><a href="#h1-2-5" id="h1-2-5" class="i">+
+</a><a href="#h1-2-6" id="h1-2-6" class="i">+static auto unaryCall_original = (void *(*)(void *, const char *, grpc::grpc_byte_buffer **, void *,
+</a><a href="#h1-2-7" id="h1-2-7" class="i">+                                            void *, void *)) nullptr;
+</a><a href="#h1-2-8" id="h1-2-8" class="i">+
+</a><a href="#h1-2-9" id="h1-2-9" class="i">+static void *
+</a><a href="#h1-2-10" id="h1-2-10" class="i">+unaryCall_hook(void *unk1, const char *uri, grpc::grpc_byte_buffer **buffer_ptr, void *unk4,
+</a><a href="#h1-2-11" id="h1-2-11" class="i">+               void *unk5, void *unk6) {
+</a><a href="#h1-2-12" id="h1-2-12" class="i">+    auto slice_buffer = (*buffer_ptr)-&gt;slice_buffer;
+</a><a href="#h1-2-13" id="h1-2-13" class="i">+    // request without reference counter can be hooked using xposed ig
+</a><a href="#h1-2-14" id="h1-2-14" class="i">+    if (slice_buffer-&gt;ref_counter == nullptr) {
+</a><a href="#h1-2-15" id="h1-2-15" class="i">+        return unaryCall_original(unk1, uri, buffer_ptr, unk4, unk5, unk6);
+</a><a href="#h1-2-16" id="h1-2-16" class="i">+    }
+</a><a href="#h1-2-17" id="h1-2-17" class="i">+
+</a><a href="#h1-2-18" id="h1-2-18" class="i">+    auto env = (JNIEnv *) nullptr;
+</a><a href="#h1-2-19" id="h1-2-19" class="i">+    java_vm-&gt;GetEnv((void **) &amp;env, JNI_VERSION_1_6);
+</a><a href="#h1-2-20" id="h1-2-20" class="i">+
+</a><a href="#h1-2-21" id="h1-2-21" class="i">+    auto jni_buffer_array = env-&gt;NewByteArray(slice_buffer-&gt;length);
+</a><a href="#h1-2-22" id="h1-2-22" class="i">+    env-&gt;SetByteArrayRegion(jni_buffer_array, 0, slice_buffer-&gt;length,
+</a><a href="#h1-2-23" id="h1-2-23" class="i">+                            (jbyte *) slice_buffer-&gt;data);
+</a><a href="#h1-2-24" id="h1-2-24" class="i">+
+</a><a href="#h1-2-25" id="h1-2-25" class="i">+    auto native_request_data_object = env-&gt;CallObjectMethod(native_lib_object,
+</a><a href="#h1-2-26" id="h1-2-26" class="i">+                                                            native_lib_on_unary_call_method,
+</a><a href="#h1-2-27" id="h1-2-27" class="i">+                                                            env-&gt;NewStringUTF(uri),
+</a><a href="#h1-2-28" id="h1-2-28" class="i">+                                                            jni_buffer_array);
+</a><a href="#h1-2-29" id="h1-2-29" class="i">+
+</a><a href="#h1-2-30" id="h1-2-30" class="i">+    if (native_request_data_object != nullptr) {
+</a><a href="#h1-2-31" id="h1-2-31" class="i">+        auto native_request_data_class = env-&gt;GetObjectClass(native_request_data_object);
+</a><a href="#h1-2-32" id="h1-2-32" class="i">+        auto is_canceled = env-&gt;GetBooleanField(native_request_data_object,
+</a><a href="#h1-2-33" id="h1-2-33" class="i">+                                                env-&gt;GetFieldID(native_request_data_class,
+</a><a href="#h1-2-34" id="h1-2-34" class="i">+                                                                &quot;canceled&quot;, &quot;Z&quot;));
+</a><a href="#h1-2-35" id="h1-2-35" class="i">+
+</a><a href="#h1-2-36" id="h1-2-36" class="i">+        if (is_canceled) {
+</a><a href="#h1-2-37" id="h1-2-37" class="i">+            return nullptr;
+</a><a href="#h1-2-38" id="h1-2-38" class="i">+        }
+</a><a href="#h1-2-39" id="h1-2-39" class="i">+
+</a><a href="#h1-2-40" id="h1-2-40" class="i">+        auto new_buffer = env-&gt;GetObjectField(native_request_data_object,
+</a><a href="#h1-2-41" id="h1-2-41" class="i">+                                              env-&gt;GetFieldID(native_request_data_class, &quot;buffer&quot;,
+</a><a href="#h1-2-42" id="h1-2-42" class="i">+                                                              &quot;[B&quot;));
+</a><a href="#h1-2-43" id="h1-2-43" class="i">+        auto new_buffer_length = env-&gt;GetArrayLength((jbyteArray) new_buffer);
+</a><a href="#h1-2-44" id="h1-2-44" class="i">+        auto new_buffer_data = env-&gt;GetByteArrayElements((jbyteArray) new_buffer, nullptr);
+</a><a href="#h1-2-45" id="h1-2-45" class="i">+
+</a><a href="#h1-2-46" id="h1-2-46" class="i">+        //we need to allocate a new ref_counter struct and copy the old ref_counter and the new_buffer to it
+</a><a href="#h1-2-47" id="h1-2-47" class="i">+        const auto ref_counter_struct_size =
+</a><a href="#h1-2-48" id="h1-2-48" class="i">+                (uintptr_t) slice_buffer-&gt;data - (uintptr_t) slice_buffer-&gt;ref_counter;
+</a><a href="#h1-2-49" id="h1-2-49" class="i">+
+</a><a href="#h1-2-50" id="h1-2-50" class="i">+        auto new_ref_counter = (void *) malloc(ref_counter_struct_size + new_buffer_length);
+</a><a href="#h1-2-51" id="h1-2-51" class="i">+        //copy the old ref_counter and the native_request_data_object
+</a><a href="#h1-2-52" id="h1-2-52" class="i">+        memcpy(new_ref_counter, slice_buffer-&gt;ref_counter, ref_counter_struct_size);
+</a><a href="#h1-2-53" id="h1-2-53" class="i">+        memcpy((void *) ((uintptr_t) new_ref_counter + ref_counter_struct_size), new_buffer_data,
+</a><a href="#h1-2-54" id="h1-2-54" class="i">+               new_buffer_length);
+</a><a href="#h1-2-55" id="h1-2-55" class="i">+
+</a><a href="#h1-2-56" id="h1-2-56" class="i">+        //free the old ref_counter
+</a><a href="#h1-2-57" id="h1-2-57" class="i">+        free((void *) slice_buffer-&gt;ref_counter);
+</a><a href="#h1-2-58" id="h1-2-58" class="i">+
+</a><a href="#h1-2-59" id="h1-2-59" class="i">+        //update the slice_buffer
+</a><a href="#h1-2-60" id="h1-2-60" class="i">+        slice_buffer-&gt;ref_counter = new_ref_counter;
+</a><a href="#h1-2-61" id="h1-2-61" class="i">+        slice_buffer-&gt;length = new_buffer_length;
+</a><a href="#h1-2-62" id="h1-2-62" class="i">+        slice_buffer-&gt;data = (uint8_t *) ((uintptr_t) new_ref_counter + ref_counter_struct_size);
+</a><a href="#h1-2-63" id="h1-2-63" class="i">+
+</a><a href="#h1-2-64" id="h1-2-64" class="i">+        env-&gt;ReleaseByteArrayElements((jbyteArray) native_request_data_object, new_buffer_data, 0);
+</a><a href="#h1-2-65" id="h1-2-65" class="i">+    }
+</a><a href="#h1-2-66" id="h1-2-66" class="i">+
+</a><a href="#h1-2-67" id="h1-2-67" class="i">+    return unaryCall_original(unk1, uri, buffer_ptr, unk4, unk5, unk6);
+</a><a href="#h1-2-68" id="h1-2-68" class="i">+}
+</a><a href="#h1-2-69" id="h1-2-69" class="i">+
+</a><a href="#h1-2-70" id="h1-2-70" class="i">+
+</a> extern &quot;C&quot; JNIEXPORT void JNICALL
+ init(JNIEnv *env, jobject clazz, jobject classloader) {
+     LOGD(&quot;initializing native&quot;);
+     // config
+     native_config = new native_config_t;
+ 
+<a href="#h1-2-77" id="h1-2-77" class="i">+    // native lib object
+</a><a href="#h1-2-78" id="h1-2-78" class="i">+    native_lib_object = env-&gt;NewGlobalRef(clazz);
+</a><a href="#h1-2-79" id="h1-2-79" class="i">+    native_lib_on_unary_call_method = env-&gt;GetMethodID(env-&gt;GetObjectClass(clazz),
+</a><a href="#h1-2-80" id="h1-2-80" class="i">+                                                       &quot;onNativeUnaryCall&quot;,
+</a><a href="#h1-2-81" id="h1-2-81" class="i">+                                                       &quot;(Ljava/lang/String;[B)Lme/rhunk/snapenhance/nativelib/NativeRequestData;&quot;);
+</a><a href="#h1-2-82" id="h1-2-82" class="i">+
+</a>     // load libclient.so
+     util::load_library(env, classloader, &quot;client&quot;);
+     auto client_module = util::get_module(&quot;libclient.so&quot;);
+<a href="#h1-3" id="h1-3" class="h">@@ -53,15 +131,18 @@ init(JNIEnv *env, jobject clazz, jobject classloader) {
+</a>     // hooks
+     DobbyHook((void *) DobbySymbolResolver(&quot;libc.so&quot;, &quot;fstat&quot;), (void *) fstat_hook,
+               (void **) &amp;fstat_original);
+<a href="#h1-3-3" id="h1-3-3" class="i">+    //signature might change in the future (unstable for now)
+</a><a href="#h1-3-4" id="h1-3-4" class="i">+    DobbyHook((void *) util::find_signature(client_module.base, client_module.size,
+</a><a href="#h1-3-5" id="h1-3-5" class="i">+                                            &quot;FD 7B BA A9 FC 6F 01 A9 FA 67 02 A9 F8 5F 03 A9 F6 57 04 A9 F4 4F 05 A9 FD 03 00 91 FF 43 13 D1&quot;),
+</a><a href="#h1-3-6" id="h1-3-6" class="i">+              (void *) unaryCall_hook,
+</a><a href="#h1-3-7" id="h1-3-7" class="i">+              (void **) &amp;unaryCall_original);
+</a> 
+     LOGD(&quot;native initialized&quot;);
+ }
+ 
+<a href="#h1-3-12" id="h1-3-12" class="d">-
+</a><a href="#h1-3-13" id="h1-3-13" class="d">-extern &quot;C&quot; JNIEXPORT void JNICALL
+</a><a href="#h1-3-14" id="h1-3-14" class="d">-loadConfig(JNIEnv *env, jobject clazz, jobject config_object) {
+</a><a href="#h1-3-15" id="h1-3-15" class="i">+void JNICALL load_config(JNIEnv *env, jobject clazz, jobject config_object) {
+</a>     auto native_config_clazz = env-&gt;GetObjectClass(config_object);
+<a href="#h1-3-17" id="h1-3-17" class="d">-    #define GET_CONFIG_BOOL(name) env-&gt;GetBooleanField(config_object, env-&gt;GetFieldID(native_config_clazz, name, &quot;Z&quot;))
+</a><a href="#h1-3-18" id="h1-3-18" class="i">+#define GET_CONFIG_BOOL(name) env-&gt;GetBooleanField(config_object, env-&gt;GetFieldID(native_config_clazz, name, &quot;Z&quot;))
+</a> 
+     native_config-&gt;disable_bitmoji = GET_CONFIG_BOOL(&quot;disableBitmoji&quot;);
+     native_config-&gt;disable_metrics = GET_CONFIG_BOOL(&quot;disableMetrics&quot;);
+<a href="#h1-4" id="h1-4" class="h">@@ -72,13 +153,15 @@ loadConfig(JNIEnv *env, jobject clazz, jobject config_object) {
+</a> //jni onload
+ extern &quot;C&quot; JNIEXPORT jint JNICALL
+ JNI_OnLoad(JavaVM *vm, void *reserved) {
+<a href="#h1-4-3" id="h1-4-3" class="i">+    java_vm = vm;
+</a>     // register native methods
+     JNIEnv *env = nullptr;
+     vm-&gt;GetEnv((void **) &amp;env, JNI_VERSION_1_6);
+ 
+     auto methods = std::vector&lt;JNINativeMethod&gt;();
+     methods.push_back({&quot;init&quot;, &quot;(Ljava/lang/ClassLoader;)V&quot;, (void *) init});
+<a href="#h1-4-10" id="h1-4-10" class="d">-    methods.push_back({&quot;loadConfig&quot;, &quot;(Lme/rhunk/snapenhance/nativelib/NativeConfig;)V&quot;, (void *) loadConfig});
+</a><a href="#h1-4-11" id="h1-4-11" class="i">+    methods.push_back({&quot;loadConfig&quot;, &quot;(Lme/rhunk/snapenhance/nativelib/NativeConfig;)V&quot;,
+</a><a href="#h1-4-12" id="h1-4-12" class="i">+                       (void *) load_config});
+</a> 
+     env-&gt;RegisterNatives(
+             env-&gt;FindClass(&quot;me/rhunk/snapenhance/nativelib/NativeLib&quot;),
+<b>diff --git a/<a id="h2" href="../file/native/jni/src/util.h.html">native/jni/src/util.h</a> b/<a href="../file/native/jni/src/util.h.html">native/jni/src/util.h</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,4 +1,5 @@
+</a> #pragma once
+<a href="#h2-0-1" id="h2-0-1" class="i">+
+</a> #include &lt;unistd.h&gt;
+ #include &lt;dlfcn.h&gt;
+ #include &lt;elf.h&gt;
+<a href="#h2-1" id="h2-1" class="h">@@ -9,8 +10,8 @@ namespace util {
+</a>         size_t size;
+     } ModuleInfo;
+ 
+<a href="#h2-1-3" id="h2-1-3" class="d">-    static void hexDump(void* ptr, uint8_t line_length, uint32_t lines) {
+</a><a href="#h2-1-4" id="h2-1-4" class="d">-        auto* p = (unsigned char*)ptr;
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+    static void hexDump(void *ptr, uint8_t line_length, uint32_t lines) {
+</a><a href="#h2-1-6" id="h2-1-6" class="i">+        auto *p = (unsigned char *) ptr;
+</a>         for (uint8_t i = 0; i &lt; lines; i++) {
+             std::string line;
+             for (uint8_t j = 0; j &lt; line_length; j++) {
+<a href="#h2-2" id="h2-2" class="h">@@ -23,12 +24,11 @@ namespace util {
+</a>         }
+     }
+ 
+<a href="#h2-2-3" id="h2-2-3" class="d">-    static ModuleInfo get_module(const char*  libname)
+</a><a href="#h2-2-4" id="h2-2-4" class="d">-    {
+</a><a href="#h2-2-5" id="h2-2-5" class="i">+    static ModuleInfo get_module(const char *libname) {
+</a>         char path[256];
+         char buff[256];
+         int len_libname = strlen(libname);
+<a href="#h2-2-9" id="h2-2-9" class="d">-        FILE* file;
+</a><a href="#h2-2-10" id="h2-2-10" class="i">+        FILE *file;
+</a>         uintptr_t addr = 0;
+         size_t size = 0;
+ 
+<a href="#h2-3" id="h2-3" class="h">@@ -38,8 +38,8 @@ namespace util {
+</a>             return {0, 0};
+ 
+         while (fgets(buff, sizeof buff, file) != NULL) {
+<a href="#h2-3-3" id="h2-3-3" class="d">-            int  len = strlen(buff);
+</a><a href="#h2-3-4" id="h2-3-4" class="d">-            if (len &gt; 0 &amp;&amp; buff[len-1] == &#39;\n&#39;) {
+</a><a href="#h2-3-5" id="h2-3-5" class="i">+            int len = strlen(buff);
+</a><a href="#h2-3-6" id="h2-3-6" class="i">+            if (len &gt; 0 &amp;&amp; buff[len - 1] == &#39;\n&#39;) {
+</a>                 buff[--len] = &#39;\0&#39;;
+             }
+             if (len &lt;= len_libname || memcmp(buff + len - len_libname, libname, len_libname)) {
+<a href="#h2-4" id="h2-4" class="h">@@ -63,11 +63,42 @@ namespace util {
+</a>         return {addr, size};
+     }
+ 
+<a href="#h2-4-3" id="h2-4-3" class="d">-    void load_library(JNIEnv* env, jobject classLoader, const char* libName) {
+</a><a href="#h2-4-4" id="h2-4-4" class="i">+    void load_library(JNIEnv *env, jobject classLoader, const char *libName) {
+</a>         auto runtimeClass = env-&gt;FindClass(&quot;java/lang/Runtime&quot;);
+<a href="#h2-4-6" id="h2-4-6" class="d">-        auto getRuntimeMethod = env-&gt;GetStaticMethodID(runtimeClass, &quot;getRuntime&quot;, &quot;()Ljava/lang/Runtime;&quot;);
+</a><a href="#h2-4-7" id="h2-4-7" class="i">+        auto getRuntimeMethod = env-&gt;GetStaticMethodID(runtimeClass, &quot;getRuntime&quot;,
+</a><a href="#h2-4-8" id="h2-4-8" class="i">+                                                       &quot;()Ljava/lang/Runtime;&quot;);
+</a>         auto runtime = env-&gt;CallStaticObjectMethod(runtimeClass, getRuntimeMethod);
+<a href="#h2-4-10" id="h2-4-10" class="d">-        auto loadLibraryMethod = env-&gt;GetMethodID(runtimeClass, &quot;loadLibrary0&quot;, &quot;(Ljava/lang/ClassLoader;Ljava/lang/String;)V&quot;);
+</a><a href="#h2-4-11" id="h2-4-11" class="i">+        auto loadLibraryMethod = env-&gt;GetMethodID(runtimeClass, &quot;loadLibrary0&quot;,
+</a><a href="#h2-4-12" id="h2-4-12" class="i">+                                                  &quot;(Ljava/lang/ClassLoader;Ljava/lang/String;)V&quot;);
+</a>         env-&gt;CallVoidMethod(runtime, loadLibraryMethod, classLoader, env-&gt;NewStringUTF(libName));
+     }
+<a href="#h2-4-15" id="h2-4-15" class="i">+
+</a><a href="#h2-4-16" id="h2-4-16" class="i">+    uintptr_t find_signature(uintptr_t module_base, uintptr_t size, const std::string &amp;pattern) {
+</a><a href="#h2-4-17" id="h2-4-17" class="i">+        std::vector&lt;char&gt; bytes;
+</a><a href="#h2-4-18" id="h2-4-18" class="i">+        std::vector&lt;char&gt; mask;
+</a><a href="#h2-4-19" id="h2-4-19" class="i">+        for (size_t i = 0; i &lt; pattern.size(); i += 3) {
+</a><a href="#h2-4-20" id="h2-4-20" class="i">+            if (pattern[i] == &#39;?&#39;) {
+</a><a href="#h2-4-21" id="h2-4-21" class="i">+                bytes.push_back(0);
+</a><a href="#h2-4-22" id="h2-4-22" class="i">+                mask.push_back(&#39;?&#39;);
+</a><a href="#h2-4-23" id="h2-4-23" class="i">+            } else {
+</a><a href="#h2-4-24" id="h2-4-24" class="i">+                bytes.push_back(std::stoi(pattern.substr(i, 2), nullptr, 16));
+</a><a href="#h2-4-25" id="h2-4-25" class="i">+                mask.push_back(&#39;x&#39;);
+</a><a href="#h2-4-26" id="h2-4-26" class="i">+            }
+</a><a href="#h2-4-27" id="h2-4-27" class="i">+        }
+</a><a href="#h2-4-28" id="h2-4-28" class="i">+
+</a><a href="#h2-4-29" id="h2-4-29" class="i">+        for (size_t i = 0; i &lt; size; i++) {
+</a><a href="#h2-4-30" id="h2-4-30" class="i">+            bool found = true;
+</a><a href="#h2-4-31" id="h2-4-31" class="i">+            for (size_t j = 0; j &lt; bytes.size(); j++) {
+</a><a href="#h2-4-32" id="h2-4-32" class="i">+                if (mask[j] == &#39;?&#39; || bytes[j] == *(char *) (module_base + i + j)) {
+</a><a href="#h2-4-33" id="h2-4-33" class="i">+                    continue;
+</a><a href="#h2-4-34" id="h2-4-34" class="i">+                }
+</a><a href="#h2-4-35" id="h2-4-35" class="i">+                found = false;
+</a><a href="#h2-4-36" id="h2-4-36" class="i">+                break;
+</a><a href="#h2-4-37" id="h2-4-37" class="i">+            }
+</a><a href="#h2-4-38" id="h2-4-38" class="i">+            if (found) {
+</a><a href="#h2-4-39" id="h2-4-39" class="i">+                return module_base + i;
+</a><a href="#h2-4-40" id="h2-4-40" class="i">+            }
+</a><a href="#h2-4-41" id="h2-4-41" class="i">+        }
+</a><a href="#h2-4-42" id="h2-4-42" class="i">+        return 0;
+</a><a href="#h2-4-43" id="h2-4-43" class="i">+    }
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h3" href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a> b/<a href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -1,11 +1,29 @@
+</a> package me.rhunk.snapenhance.nativelib
+ 
+<a href="#h3-0-2" id="h3-0-2" class="i">+import android.util.Log
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+
+</a> class NativeLib {
+<a href="#h3-0-5" id="h3-0-5" class="i">+    var nativeUnaryCallCallback: (NativeRequestData) -&gt; Unit = {}
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+
+</a>     fun initOnce(classloader: ClassLoader) {
+         System.loadLibrary(&quot;nativelib&quot;)
+         init(classloader)
+     }
+ 
+<a href="#h3-0-12" id="h3-0-12" class="i">+    @Suppress(&quot;unused&quot;)
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+    private fun onNativeUnaryCall(uri: String, buffer: ByteArray): NativeRequestData? {
+</a><a href="#h3-0-14" id="h3-0-14" class="i">+        Log.d(&quot;SnapEnhance&quot;, &quot;onNativeUnaryCall: uri=$uri, bufferSize=${buffer.size}, buffer=${buffer.contentToString()}&quot;)
+</a><a href="#h3-0-15" id="h3-0-15" class="i">+        val nativeRequestData = NativeRequestData(uri, buffer)
+</a><a href="#h3-0-16" id="h3-0-16" class="i">+        runCatching {
+</a><a href="#h3-0-17" id="h3-0-17" class="i">+            nativeUnaryCallCallback(nativeRequestData)
+</a><a href="#h3-0-18" id="h3-0-18" class="i">+        }.onFailure {
+</a><a href="#h3-0-19" id="h3-0-19" class="i">+            Log.e(&quot;SnapEnhance&quot;, &quot;nativeUnaryCallCallback failed&quot;, it)
+</a><a href="#h3-0-20" id="h3-0-20" class="i">+        }
+</a><a href="#h3-0-21" id="h3-0-21" class="i">+        if (!nativeRequestData.buffer.contentEquals(buffer) || nativeRequestData.canceled) return nativeRequestData
+</a><a href="#h3-0-22" id="h3-0-22" class="i">+        return null
+</a><a href="#h3-0-23" id="h3-0-23" class="i">+    }
+</a><a href="#h3-0-24" id="h3-0-24" class="i">+
+</a><a href="#h3-0-25" id="h3-0-25" class="i">+
+</a>     external fun init(classLoader: ClassLoader)
+     external fun loadConfig(config: NativeConfig)
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h4" href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeRequestData.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeRequestData.kt</a> b/<a href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeRequestData.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeRequestData.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -0,0 +1,7 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="i">+package me.rhunk.snapenhance.nativelib
+</a><a href="#h4-0-1" id="h4-0-1" class="i">+
+</a><a href="#h4-0-2" id="h4-0-2" class="i">+data class NativeRequestData(
+</a><a href="#h4-0-3" id="h4-0-3" class="i">+    val uri: String,
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+    var buffer: ByteArray,
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+    var canceled: Boolean = false,
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+)</a><a href="#h4-0-7" id="h4-0-7" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>refactor(bridge): file operation call - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/29e552569e00fba9b9fd560451b2796952ae9d5d.html">29e552569e00fba9b9fd560451b2796952ae9d5d</a>
+<b>parent</b> <a href="../commit/122a48e0475a835e9c0db533614c59500ea3c22d.html">122a48e0475a835e9c0db533614c59500ea3c22d</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 16 Aug 2023 22:28:43 +0200
+
+refactor(bridge): file operation call
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt</a></td><td> | </td><td class="num">88</td><td><span class="i">+++++++++++++++++++++++++</span><span class="d">------------------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl</a></td><td> | </td><td class="num">55</td><td><span class="i">+++</span><span class="d">----------------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeClient.kt</a></td><td> | </td><td class="num">11</td><td><span class="i">++++++</span><span class="d">-----</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/bridge/types/FileActionType.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>4 files changed, 43 insertions(+), 117 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -6,6 +6,7 @@ import android.os.IBinder
+</a> import me.rhunk.snapenhance.RemoteSideContext
+ import me.rhunk.snapenhance.SharedContextHolder
+ import me.rhunk.snapenhance.bridge.types.BridgeFileType
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.bridge.types.FileActionType
+</a> import me.rhunk.snapenhance.bridge.wrapper.LocaleWrapper
+ import me.rhunk.snapenhance.bridge.wrapper.MessageLoggerWrapper
+ import me.rhunk.snapenhance.download.DownloadProcessor
+<a href="#h0-1" id="h0-1" class="h">@@ -23,60 +24,35 @@ class BridgeService : Service() {
+</a>     }
+ 
+     inner class BridgeBinder : BridgeInterface.Stub() {
+<a href="#h0-1-3" id="h0-1-3" class="d">-        override fun createAndReadFile(fileType: Int, defaultContent: ByteArray?): ByteArray {
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-            val file = BridgeFileType.fromValue(fileType)?.resolve(this@BridgeService)
+</a><a href="#h0-1-5" id="h0-1-5" class="d">-                ?: return defaultContent ?: ByteArray(0)
+</a><a href="#h0-1-6" id="h0-1-6" class="d">-
+</a><a href="#h0-1-7" id="h0-1-7" class="d">-            if (!file.exists()) {
+</a><a href="#h0-1-8" id="h0-1-8" class="d">-                if (defaultContent == null) {
+</a><a href="#h0-1-9" id="h0-1-9" class="d">-                    return ByteArray(0)
+</a><a href="#h0-1-10" id="h0-1-10" class="i">+        override fun fileOperation(action: Int, fileType: Int, content: ByteArray?): ByteArray {
+</a><a href="#h0-1-11" id="h0-1-11" class="i">+            val resolvedFile by lazy { BridgeFileType.fromValue(fileType)?.resolve(this@BridgeService) }
+</a><a href="#h0-1-12" id="h0-1-12" class="i">+
+</a><a href="#h0-1-13" id="h0-1-13" class="i">+            return when (FileActionType.values()[action]) {
+</a><a href="#h0-1-14" id="h0-1-14" class="i">+                FileActionType.CREATE_AND_READ -&gt; {
+</a><a href="#h0-1-15" id="h0-1-15" class="i">+                    resolvedFile?.let {
+</a><a href="#h0-1-16" id="h0-1-16" class="i">+                        if (!it.exists()) {
+</a><a href="#h0-1-17" id="h0-1-17" class="i">+                            return content?.also { content -&gt; it.writeBytes(content) } ?: ByteArray(0)
+</a><a href="#h0-1-18" id="h0-1-18" class="i">+                        }
+</a><a href="#h0-1-19" id="h0-1-19" class="i">+
+</a><a href="#h0-1-20" id="h0-1-20" class="i">+                        it.readBytes()
+</a><a href="#h0-1-21" id="h0-1-21" class="i">+                    } ?: ByteArray(0)
+</a><a href="#h0-1-22" id="h0-1-22" class="i">+                }
+</a><a href="#h0-1-23" id="h0-1-23" class="i">+                FileActionType.READ -&gt; {
+</a><a href="#h0-1-24" id="h0-1-24" class="i">+                    resolvedFile?.takeIf { it.exists() }?.readBytes() ?: ByteArray(0)
+</a><a href="#h0-1-25" id="h0-1-25" class="i">+                }
+</a><a href="#h0-1-26" id="h0-1-26" class="i">+                FileActionType.WRITE -&gt; {
+</a><a href="#h0-1-27" id="h0-1-27" class="i">+                    content?.also { resolvedFile?.writeBytes(content) } ?: ByteArray(0)
+</a><a href="#h0-1-28" id="h0-1-28" class="i">+                }
+</a><a href="#h0-1-29" id="h0-1-29" class="i">+                FileActionType.DELETE -&gt; {
+</a><a href="#h0-1-30" id="h0-1-30" class="i">+                    resolvedFile?.takeIf { it.exists() }?.delete()
+</a><a href="#h0-1-31" id="h0-1-31" class="i">+                    ByteArray(0)
+</a><a href="#h0-1-32" id="h0-1-32" class="i">+                }
+</a><a href="#h0-1-33" id="h0-1-33" class="i">+                FileActionType.EXISTS -&gt; {
+</a><a href="#h0-1-34" id="h0-1-34" class="i">+                    if (resolvedFile?.exists() == true)
+</a><a href="#h0-1-35" id="h0-1-35" class="i">+                        ByteArray(1)
+</a><a href="#h0-1-36" id="h0-1-36" class="i">+                    else ByteArray(0)
+</a>                 }
+<a href="#h0-1-38" id="h0-1-38" class="d">-
+</a><a href="#h0-1-39" id="h0-1-39" class="d">-                file.writeBytes(defaultContent)
+</a><a href="#h0-1-40" id="h0-1-40" class="d">-            }
+</a><a href="#h0-1-41" id="h0-1-41" class="d">-
+</a><a href="#h0-1-42" id="h0-1-42" class="d">-            return file.readBytes()
+</a><a href="#h0-1-43" id="h0-1-43" class="d">-        }
+</a><a href="#h0-1-44" id="h0-1-44" class="d">-
+</a><a href="#h0-1-45" id="h0-1-45" class="d">-        override fun readFile(fileType: Int): ByteArray {
+</a><a href="#h0-1-46" id="h0-1-46" class="d">-            val file = BridgeFileType.fromValue(fileType)?.resolve(this@BridgeService)
+</a><a href="#h0-1-47" id="h0-1-47" class="d">-                ?: return ByteArray(0)
+</a><a href="#h0-1-48" id="h0-1-48" class="d">-
+</a><a href="#h0-1-49" id="h0-1-49" class="d">-            if (!file.exists()) {
+</a><a href="#h0-1-50" id="h0-1-50" class="d">-                return ByteArray(0)
+</a><a href="#h0-1-51" id="h0-1-51" class="d">-            }
+</a><a href="#h0-1-52" id="h0-1-52" class="d">-
+</a><a href="#h0-1-53" id="h0-1-53" class="d">-            return file.readBytes()
+</a><a href="#h0-1-54" id="h0-1-54" class="d">-        }
+</a><a href="#h0-1-55" id="h0-1-55" class="d">-
+</a><a href="#h0-1-56" id="h0-1-56" class="d">-        override fun writeFile(fileType: Int, content: ByteArray?): Boolean {
+</a><a href="#h0-1-57" id="h0-1-57" class="d">-            val file = BridgeFileType.fromValue(fileType)?.resolve(this@BridgeService)
+</a><a href="#h0-1-58" id="h0-1-58" class="d">-                ?: return false
+</a><a href="#h0-1-59" id="h0-1-59" class="d">-
+</a><a href="#h0-1-60" id="h0-1-60" class="d">-            if (content == null) {
+</a><a href="#h0-1-61" id="h0-1-61" class="d">-                return false
+</a><a href="#h0-1-62" id="h0-1-62" class="d">-            }
+</a><a href="#h0-1-63" id="h0-1-63" class="d">-
+</a><a href="#h0-1-64" id="h0-1-64" class="d">-            file.writeBytes(content)
+</a><a href="#h0-1-65" id="h0-1-65" class="d">-            return true
+</a><a href="#h0-1-66" id="h0-1-66" class="d">-        }
+</a><a href="#h0-1-67" id="h0-1-67" class="d">-
+</a><a href="#h0-1-68" id="h0-1-68" class="d">-        override fun deleteFile(fileType: Int): Boolean {
+</a><a href="#h0-1-69" id="h0-1-69" class="d">-            val file = BridgeFileType.fromValue(fileType)?.resolve(this@BridgeService)
+</a><a href="#h0-1-70" id="h0-1-70" class="d">-                ?: return false
+</a><a href="#h0-1-71" id="h0-1-71" class="d">-
+</a><a href="#h0-1-72" id="h0-1-72" class="d">-            if (!file.exists()) {
+</a><a href="#h0-1-73" id="h0-1-73" class="d">-                return false
+</a>             }
+<a href="#h0-1-75" id="h0-1-75" class="d">-
+</a><a href="#h0-1-76" id="h0-1-76" class="d">-            return file.delete()
+</a><a href="#h0-1-77" id="h0-1-77" class="d">-        }
+</a><a href="#h0-1-78" id="h0-1-78" class="d">-
+</a><a href="#h0-1-79" id="h0-1-79" class="d">-        override fun isFileExists(fileType: Int): Boolean {
+</a><a href="#h0-1-80" id="h0-1-80" class="d">-            val file = BridgeFileType.fromValue(fileType)?.resolve(this@BridgeService)
+</a><a href="#h0-1-81" id="h0-1-81" class="d">-                ?: return false
+</a><a href="#h0-1-82" id="h0-1-82" class="d">-
+</a><a href="#h0-1-83" id="h0-1-83" class="d">-            return file.exists()
+</a>         }
+ 
+         override fun getLoggedMessageIds(conversationId: String, limit: Int) = messageLoggerWrapper.getMessageIds(conversationId, limit).toLongArray()
+<a href="#h0-2" id="h0-2" class="h">@@ -95,14 +71,6 @@ class BridgeService : Service() {
+</a>             it.locale to it.content
+         }
+ 
+<a href="#h0-2-3" id="h0-2-3" class="d">-        override fun getAutoUpdaterTime(): Long {
+</a><a href="#h0-2-4" id="h0-2-4" class="d">-            throw UnsupportedOperationException()
+</a><a href="#h0-2-5" id="h0-2-5" class="d">-        }
+</a><a href="#h0-2-6" id="h0-2-6" class="d">-
+</a><a href="#h0-2-7" id="h0-2-7" class="d">-        override fun setAutoUpdaterTime(time: Long) {
+</a><a href="#h0-2-8" id="h0-2-8" class="d">-            throw UnsupportedOperationException()
+</a><a href="#h0-2-9" id="h0-2-9" class="d">-        }
+</a><a href="#h0-2-10" id="h0-2-10" class="d">-
+</a>         override fun enqueueDownload(intent: Intent, callback: DownloadCallback) {
+             DownloadProcessor(
+                 remoteSideContext = SharedContextHolder.remote(this@BridgeService),
+<b>diff --git a/<a id="h1" href="../file/core/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl.html">core/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl</a> b/<a href="../file/core/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl.html">core/src/main/aidl/me/rhunk/snapenhance/bridge/BridgeInterface.aidl</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -5,46 +5,9 @@ import me.rhunk.snapenhance.bridge.DownloadCallback;
+</a> 
+ interface BridgeInterface {
+         /**
+<a href="#h1-0-3" id="h1-0-3" class="d">-         * Create a file if it doesn&#39;t exist, and read it
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-         *
+</a><a href="#h1-0-5" id="h1-0-5" class="d">-         * @param fileType       the type of file to create and read
+</a><a href="#h1-0-6" id="h1-0-6" class="d">-         * @param defaultContent the default content to write to the file if it doesn&#39;t exist
+</a><a href="#h1-0-7" id="h1-0-7" class="d">-         * @return the content of the file
+</a><a href="#h1-0-8" id="h1-0-8" class="d">-         */
+</a><a href="#h1-0-9" id="h1-0-9" class="d">-        byte[] createAndReadFile(int fileType, in byte[] defaultContent);
+</a><a href="#h1-0-10" id="h1-0-10" class="d">-
+</a><a href="#h1-0-11" id="h1-0-11" class="d">-        /**
+</a><a href="#h1-0-12" id="h1-0-12" class="d">-         * Read a file
+</a><a href="#h1-0-13" id="h1-0-13" class="d">-         *
+</a><a href="#h1-0-14" id="h1-0-14" class="d">-         * @param fileType the type of file to read
+</a><a href="#h1-0-15" id="h1-0-15" class="d">-         * @return the content of the file
+</a><a href="#h1-0-16" id="h1-0-16" class="d">-         */
+</a><a href="#h1-0-17" id="h1-0-17" class="d">-        byte[] readFile(int fileType);
+</a><a href="#h1-0-18" id="h1-0-18" class="d">-
+</a><a href="#h1-0-19" id="h1-0-19" class="d">-        /**
+</a><a href="#h1-0-20" id="h1-0-20" class="d">-         * Write a file
+</a><a href="#h1-0-21" id="h1-0-21" class="d">-         *
+</a><a href="#h1-0-22" id="h1-0-22" class="d">-         * @param fileType the type of file to write
+</a><a href="#h1-0-23" id="h1-0-23" class="d">-         * @param content  the content to write to the file
+</a><a href="#h1-0-24" id="h1-0-24" class="d">-         * @return true if the file was written successfully
+</a><a href="#h1-0-25" id="h1-0-25" class="d">-         */
+</a><a href="#h1-0-26" id="h1-0-26" class="d">-        boolean writeFile(int fileType, in byte[] content);
+</a><a href="#h1-0-27" id="h1-0-27" class="d">-
+</a><a href="#h1-0-28" id="h1-0-28" class="d">-        /**
+</a><a href="#h1-0-29" id="h1-0-29" class="d">-         * Delete a file
+</a><a href="#h1-0-30" id="h1-0-30" class="d">-         *
+</a><a href="#h1-0-31" id="h1-0-31" class="d">-         * @param fileType the type of file to delete
+</a><a href="#h1-0-32" id="h1-0-32" class="d">-         * @return true if the file was deleted successfully
+</a><a href="#h1-0-33" id="h1-0-33" class="d">-         */
+</a><a href="#h1-0-34" id="h1-0-34" class="d">-        boolean deleteFile(int fileType);
+</a><a href="#h1-0-35" id="h1-0-35" class="d">-
+</a><a href="#h1-0-36" id="h1-0-36" class="d">-        /**
+</a><a href="#h1-0-37" id="h1-0-37" class="d">-         * Check if a file exists
+</a><a href="#h1-0-38" id="h1-0-38" class="d">-         *
+</a><a href="#h1-0-39" id="h1-0-39" class="d">-         * @param fileType the type of file to check
+</a><a href="#h1-0-40" id="h1-0-40" class="d">-         * @return true if the file exists
+</a><a href="#h1-0-41" id="h1-0-41" class="d">-         */
+</a><a href="#h1-0-42" id="h1-0-42" class="d">-        boolean isFileExists(int fileType);
+</a><a href="#h1-0-43" id="h1-0-43" class="i">+        * Execute a file operation
+</a><a href="#h1-0-44" id="h1-0-44" class="i">+        */
+</a><a href="#h1-0-45" id="h1-0-45" class="i">+        byte[] fileOperation(int action, int fileType, in @nullable byte[] content);
+</a> 
+         /**
+          * Get the content of a logged message from the database
+<a href="#h1-1" id="h1-1" class="h">@@ -90,18 +53,6 @@ interface BridgeInterface {
+</a>         Map&lt;String, String&gt; fetchLocales(String userLocale);
+ 
+         /**
+<a href="#h1-1-3" id="h1-1-3" class="d">-         * Get check for updates last time
+</a><a href="#h1-1-4" id="h1-1-4" class="d">-         * @return the last time check for updates was done
+</a><a href="#h1-1-5" id="h1-1-5" class="d">-         */
+</a><a href="#h1-1-6" id="h1-1-6" class="d">-        long getAutoUpdaterTime();
+</a><a href="#h1-1-7" id="h1-1-7" class="d">-
+</a><a href="#h1-1-8" id="h1-1-8" class="d">-        /**
+</a><a href="#h1-1-9" id="h1-1-9" class="d">-         * Set check for updates last time
+</a><a href="#h1-1-10" id="h1-1-10" class="d">-         * @param time the time to set
+</a><a href="#h1-1-11" id="h1-1-11" class="d">-         */
+</a><a href="#h1-1-12" id="h1-1-12" class="d">-        void setAutoUpdaterTime(long time);
+</a><a href="#h1-1-13" id="h1-1-13" class="d">-
+</a><a href="#h1-1-14" id="h1-1-14" class="d">-        /**
+</a>          * Enqueue a download
+          */
+         void enqueueDownload(in Intent intent, DownloadCallback callback);
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeClient.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeClient.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -13,6 +13,7 @@ import de.robv.android.xposed.XposedHelpers
+</a> import me.rhunk.snapenhance.Logger.xposedLog
+ import me.rhunk.snapenhance.ModContext
+ import me.rhunk.snapenhance.bridge.types.BridgeFileType
+<a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.bridge.types.FileActionType
+</a> import me.rhunk.snapenhance.core.BuildConfig
+ import me.rhunk.snapenhance.data.LocalePair
+ import java.util.concurrent.CompletableFuture
+<a href="#h2-1" id="h2-1" class="h">@@ -81,18 +82,18 @@ class BridgeClient(
+</a>     fun createAndReadFile(
+         fileType: BridgeFileType,
+         defaultContent: ByteArray
+<a href="#h2-1-3" id="h2-1-3" class="d">-    ): ByteArray = service.createAndReadFile(fileType.value, defaultContent)
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+    ): ByteArray = service.fileOperation(FileActionType.CREATE_AND_READ.ordinal, fileType.value, defaultContent)
+</a> 
+<a href="#h2-1-6" id="h2-1-6" class="d">-    fun readFile(fileType: BridgeFileType): ByteArray = service.readFile(fileType.value)
+</a><a href="#h2-1-7" id="h2-1-7" class="i">+    fun readFile(fileType: BridgeFileType): ByteArray = service.fileOperation(FileActionType.READ.ordinal, fileType.value, null)
+</a> 
+     fun writeFile(
+         fileType: BridgeFileType,
+         content: ByteArray?
+<a href="#h2-1-12" id="h2-1-12" class="d">-    ): Boolean = service.writeFile(fileType.value, content)
+</a><a href="#h2-1-13" id="h2-1-13" class="i">+    ) { service.fileOperation(FileActionType.WRITE.ordinal, fileType.value, content) }
+</a> 
+<a href="#h2-1-15" id="h2-1-15" class="d">-    fun deleteFile(fileType: BridgeFileType) = service.deleteFile(fileType.value)
+</a><a href="#h2-1-16" id="h2-1-16" class="i">+    fun deleteFile(fileType: BridgeFileType) { service.fileOperation(FileActionType.DELETE.ordinal, fileType.value, null) }
+</a> 
+<a href="#h2-1-18" id="h2-1-18" class="d">-    fun isFileExists(fileType: BridgeFileType) = service.isFileExists(fileType.value)
+</a><a href="#h2-1-19" id="h2-1-19" class="i">+    fun isFileExists(fileType: BridgeFileType) = service.fileOperation(FileActionType.EXISTS.ordinal, fileType.value, null).isNotEmpty()
+</a> 
+     fun getLoggedMessageIds(conversationId: String, limit: Int): LongArray = service.getLoggedMessageIds(conversationId, limit)
+ 
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/bridge/types/FileActionType.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/bridge/types/FileActionType.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/bridge/types/FileActionType.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/bridge/types/FileActionType.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -0,0 +1,5 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="i">+package me.rhunk.snapenhance.bridge.types
+</a><a href="#h3-0-1" id="h3-0-1" class="i">+
+</a><a href="#h3-0-2" id="h3-0-2" class="i">+enum class FileActionType {
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+    CREATE_AND_READ, READ, WRITE, DELETE, EXISTS
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+}</a><a href="#h3-0-5" id="h3-0-5" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

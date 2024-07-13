@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: better ff message preview - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/e0f6d05676cb54a59fb5319c7d16be9a304b3d65.html">e0f6d05676cb54a59fb5319c7d16be9a304b3d65</a>
+<b>parent</b> <a href="../commit/72b03085060d58d028a2e90972db72b84559587a.html">72b03085060d58d028a2e90972db72b84559587a</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun,  8 Oct 2023 21:03:39 +0200
+
+feat: better ff message preview
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">12</td><td><span class="i">+++++++++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/UserInterfaceTweaks.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/FriendFeedMessagePreview.kt</a></td><td> | </td><td class="num">84</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">----------------------------</span></td></tr>
+</table></pre><pre>3 files changed, 69 insertions(+), 35 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a> b/<a href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -220,9 +220,15 @@
+</a>                         &quot;name&quot;: &quot;AMOLED Dark Mode&quot;,
+                         &quot;description&quot;: &quot;Enables AMOLED dark mode\nMake sure Snapchats Dark mode is enabled&quot;
+                     },
+<a href="#h0-0-3" id="h0-0-3" class="d">-                    &quot;conversation_preview_in_friend_feed&quot;: {
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-                        &quot;name&quot;: &quot;Preview in FF&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-                        &quot;description&quot;: &quot;Shows a preview of the last messages in the Friend Feed&quot;
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                    &quot;friend_feed_message_preview&quot;: {
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+                        &quot;name&quot;: &quot;Friend Feed Message Preview&quot;,
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+                        &quot;description&quot;: &quot;Shows a preview of the last messages in the Friend Feed&quot;,
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+                        &quot;properties&quot;: {
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+                            &quot;amount&quot;: {
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+                                &quot;name&quot;: &quot;Amount&quot;,
+</a><a href="#h0-0-12" id="h0-0-12" class="i">+                                &quot;description&quot;: &quot;The amount of messages to get previewed&quot;
+</a><a href="#h0-0-13" id="h0-0-13" class="i">+                            }
+</a><a href="#h0-0-14" id="h0-0-14" class="i">+                        }
+</a>                     },
+                     &quot;bootstrap_override&quot;: {
+                         &quot;name&quot;: &quot;Bootstrap Override&quot;,
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/UserInterfaceTweaks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/UserInterfaceTweaks.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/UserInterfaceTweaks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/UserInterfaceTweaks.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -11,14 +11,18 @@ class UserInterfaceTweaks : ConfigContainer() {
+</a>         val homeTab = unique(&quot;home_tab&quot;, *ClientBootstrapOverride.tabs) { addNotices(FeatureNotice.UNSTABLE) }
+     }
+ 
+<a href="#h1-0-3" id="h1-0-3" class="i">+    inner class FriendFeedMessagePreview : ConfigContainer(hasGlobalState = true) {
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+        val amount = integer(&quot;amount&quot;, defaultValue = 1)
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+    }
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+
+</a>     val friendFeedMenuButtons = multiple(
+<a href="#h1-0-8" id="h1-0-8" class="d">-        &quot;friend_feed_menu_buttons&quot;,&quot;conversation_info&quot;, *MessagingRuleType.values().toList().filter { it.showInFriendMenu }.map { it.key }.toTypedArray()
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+        &quot;friend_feed_menu_buttons&quot;,&quot;conversation_info&quot;, *MessagingRuleType.entries.filter { it.showInFriendMenu }.map { it.key }.toTypedArray()
+</a>     ).apply {
+         set(mutableListOf(&quot;conversation_info&quot;, MessagingRuleType.STEALTH.key))
+     }
+     val friendFeedMenuPosition = integer(&quot;friend_feed_menu_position&quot;, defaultValue = 1)
+     val amoledDarkMode = boolean(&quot;amoled_dark_mode&quot;) { addNotices(FeatureNotice.UNSTABLE); requireRestart() }
+<a href="#h1-0-15" id="h1-0-15" class="d">-    val conversationPreviewInFriendFeed = boolean(&quot;conversation_preview_in_friend_feed&quot;) { requireRestart() }
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+    val friendFeedMessagePreview = container(&quot;friend_feed_message_preview&quot;, FriendFeedMessagePreview()) { requireRestart() }
+</a>     val bootstrapOverride = container(&quot;bootstrap_override&quot;, BootstrapOverride()) { requireRestart() }
+     val mapFriendNameTags = boolean(&quot;map_friend_nametags&quot;) { requireRestart() }
+     val streakExpirationInfo = boolean(&quot;streak_expiration_info&quot;) { requireRestart() }
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/FriendFeedMessagePreview.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/FriendFeedMessagePreview.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/FriendFeedMessagePreview.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/FriendFeedMessagePreview.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -3,11 +3,12 @@ package me.rhunk.snapenhance.features.impl.ui
+</a> import android.annotation.SuppressLint
+ import android.graphics.Canvas
+ import android.graphics.Paint
+<a href="#h2-0-3" id="h2-0-3" class="i">+import android.graphics.Rect
+</a> import android.graphics.drawable.ShapeDrawable
+ import android.graphics.drawable.shapes.Shape
+<a href="#h2-0-6" id="h2-0-6" class="i">+import android.text.TextPaint
+</a> import android.view.View
+ import android.view.ViewGroup
+<a href="#h2-0-9" id="h2-0-9" class="d">-import android.widget.FrameLayout
+</a> import me.rhunk.snapenhance.Constants
+ import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+ import me.rhunk.snapenhance.core.util.protobuf.ProtoReader
+<a href="#h2-1" id="h2-1" class="h">@@ -16,64 +17,87 @@ import me.rhunk.snapenhance.features.Feature
+</a> import me.rhunk.snapenhance.features.FeatureLoadParams
+ import me.rhunk.snapenhance.ui.addForegroundDrawable
+ import me.rhunk.snapenhance.ui.removeForegroundDrawable
+<a href="#h2-1-3" id="h2-1-3" class="i">+import kotlin.math.absoluteValue
+</a> 
+<a href="#h2-1-5" id="h2-1-5" class="i">+@SuppressLint(&quot;DiscouragedApi&quot;)
+</a> class FriendFeedMessagePreview : Feature(&quot;FriendFeedMessagePreview&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+<a href="#h2-1-7" id="h2-1-7" class="d">-    @SuppressLint(&quot;SetTextI18n&quot;, &quot;DiscouragedApi&quot;)
+</a><a href="#h2-1-8" id="h2-1-8" class="i">+    private val sigColorTextPrimary by lazy {
+</a><a href="#h2-1-9" id="h2-1-9" class="i">+        context.mainActivity!!.theme.obtainStyledAttributes(
+</a><a href="#h2-1-10" id="h2-1-10" class="i">+            intArrayOf(context.resources.getIdentifier(&quot;sigColorTextPrimary&quot;, &quot;attr&quot;, Constants.SNAPCHAT_PACKAGE_NAME))
+</a><a href="#h2-1-11" id="h2-1-11" class="i">+        ).getColor(0, 0)
+</a><a href="#h2-1-12" id="h2-1-12" class="i">+    }
+</a><a href="#h2-1-13" id="h2-1-13" class="i">+
+</a><a href="#h2-1-14" id="h2-1-14" class="i">+    private fun getDimens(name: String) = context.resources.getDimensionPixelSize(context.resources.getIdentifier(name, &quot;dimen&quot;, Constants.SNAPCHAT_PACKAGE_NAME))
+</a><a href="#h2-1-15" id="h2-1-15" class="i">+
+</a>     override fun onActivityCreate() {
+<a href="#h2-1-17" id="h2-1-17" class="d">-        if (!context.config.userInterface.conversationPreviewInFriendFeed.get()) return
+</a><a href="#h2-1-18" id="h2-1-18" class="i">+        val setting = context.config.userInterface.friendFeedMessagePreview
+</a><a href="#h2-1-19" id="h2-1-19" class="i">+        if (setting.globalState != true) return
+</a> 
+         val ffItemId = context.resources.getIdentifier(&quot;ff_item&quot;, &quot;id&quot;, Constants.SNAPCHAT_PACKAGE_NAME)
+ 
+<a href="#h2-1-23" id="h2-1-23" class="d">-        val sigColorTextPrimary by lazy {
+</a><a href="#h2-1-24" id="h2-1-24" class="d">-            context.mainActivity!!.theme.obtainStyledAttributes(
+</a><a href="#h2-1-25" id="h2-1-25" class="d">-                intArrayOf(context.resources.getIdentifier(&quot;sigColorTextPrimary&quot;, &quot;attr&quot;, Constants.SNAPCHAT_PACKAGE_NAME))
+</a><a href="#h2-1-26" id="h2-1-26" class="d">-            ).getColor(0, 0)
+</a><a href="#h2-1-27" id="h2-1-27" class="d">-        }
+</a><a href="#h2-1-28" id="h2-1-28" class="i">+        val secondaryTextSize = getDimens(&quot;ff_feed_cell_secondary_text_size&quot;).toFloat()
+</a><a href="#h2-1-29" id="h2-1-29" class="i">+        val ffSdlAvatarMargin = getDimens(&quot;ff_sdl_avatar_margin&quot;)
+</a><a href="#h2-1-30" id="h2-1-30" class="i">+        val ffSdlAvatarSize = getDimens(&quot;ff_sdl_avatar_size&quot;)
+</a><a href="#h2-1-31" id="h2-1-31" class="i">+        val ffSdlAvatarStartMargin = getDimens(&quot;ff_sdl_avatar_start_margin&quot;)
+</a><a href="#h2-1-32" id="h2-1-32" class="i">+        val ffSdlPrimaryTextStartMargin = getDimens(&quot;ff_sdl_primary_text_start_margin&quot;).toFloat()
+</a> 
+<a href="#h2-1-34" id="h2-1-34" class="d">-        val ffSdlAvatarMargin = context.resources.getDimensionPixelSize(context.resources.getIdentifier(&quot;ff_sdl_avatar_margin&quot;, &quot;dimen&quot;, Constants.SNAPCHAT_PACKAGE_NAME))
+</a><a href="#h2-1-35" id="h2-1-35" class="d">-        val ffSdlAvatarSize = context.resources.getDimensionPixelSize(context.resources.getIdentifier(&quot;ff_sdl_avatar_size&quot;, &quot;dimen&quot;, Constants.SNAPCHAT_PACKAGE_NAME))
+</a><a href="#h2-1-36" id="h2-1-36" class="d">-        val ffSdlAvatarStartMargin = context.resources.getDimensionPixelSize(context.resources.getIdentifier(&quot;ff_sdl_avatar_start_margin&quot;, &quot;dimen&quot;, Constants.SNAPCHAT_PACKAGE_NAME))
+</a><a href="#h2-1-37" id="h2-1-37" class="d">-        val ffSdlPrimaryTextStartMargin = context.resources.getDimensionPixelSize(context.resources.getIdentifier(&quot;ff_sdl_primary_text_start_margin&quot;, &quot;dimen&quot;, Constants.SNAPCHAT_PACKAGE_NAME))
+</a><a href="#h2-1-38" id="h2-1-38" class="i">+        val feedEntryHeight = ffSdlAvatarSize + ffSdlAvatarMargin * 2 + ffSdlAvatarStartMargin
+</a><a href="#h2-1-39" id="h2-1-39" class="i">+        val separatorHeight = (context.resources.displayMetrics.density * 2).toInt()
+</a><a href="#h2-1-40" id="h2-1-40" class="i">+        val textPaint = TextPaint().apply {
+</a><a href="#h2-1-41" id="h2-1-41" class="i">+            textSize = secondaryTextSize
+</a><a href="#h2-1-42" id="h2-1-42" class="i">+        }
+</a> 
+         context.event.subscribe(BindViewEvent::class) { param -&gt;
+             param.friendFeedItem { conversationId -&gt;
+<a href="#h2-1-46" id="h2-1-46" class="d">-                val frameLayout = param.view as FrameLayout
+</a><a href="#h2-1-47" id="h2-1-47" class="i">+                val frameLayout = param.view as ViewGroup
+</a>                 val ffItem = frameLayout.findViewById&lt;View&gt;(ffItemId)
+ 
+<a href="#h2-1-50" id="h2-1-50" class="d">-                context.log.verbose(&quot;updated $conversationId&quot;)
+</a><a href="#h2-1-51" id="h2-1-51" class="d">-
+</a>                 ffItem.layoutParams = ffItem.layoutParams.apply {
+                     height = ViewGroup.LayoutParams.MATCH_PARENT
+                 }
+<a href="#h2-1-55" id="h2-1-55" class="d">-
+</a>                 frameLayout.removeForegroundDrawable(&quot;ffItem&quot;)
+ 
+<a href="#h2-1-58" id="h2-1-58" class="d">-                val stringMessages = context.database.getMessagesFromConversationId(conversationId, 5)?.mapNotNull { message -&gt;
+</a><a href="#h2-1-59" id="h2-1-59" class="d">-                    message.messageContent
+</a><a href="#h2-1-60" id="h2-1-60" class="i">+                val stringMessages = context.database.getMessagesFromConversationId(conversationId, setting.amount.get().absoluteValue)?.mapNotNull { message -&gt;
+</a><a href="#h2-1-61" id="h2-1-61" class="i">+                    val messageContainer = message.messageContent
+</a>                         ?.let { ProtoReader(it) }
+                         ?.followPath(4, 4)
+<a href="#h2-1-64" id="h2-1-64" class="d">-                        ?.let { messageContainer -&gt;
+</a><a href="#h2-1-65" id="h2-1-65" class="d">-                        messageContainer.getString(2, 1) ?: ContentType.fromMessageContainer(messageContainer)?.name ?: return@mapNotNull null
+</a><a href="#h2-1-66" id="h2-1-66" class="d">-                    }
+</a><a href="#h2-1-67" id="h2-1-67" class="d">-                } ?: return@friendFeedItem
+</a><a href="#h2-1-68" id="h2-1-68" class="i">+                        ?: return@mapNotNull null
+</a><a href="#h2-1-69" id="h2-1-69" class="i">+
+</a><a href="#h2-1-70" id="h2-1-70" class="i">+                    val messageString = messageContainer.getString(2, 1)
+</a><a href="#h2-1-71" id="h2-1-71" class="i">+                        ?: ContentType.fromMessageContainer(messageContainer)?.name
+</a><a href="#h2-1-72" id="h2-1-72" class="i">+                        ?: return@mapNotNull null
+</a><a href="#h2-1-73" id="h2-1-73" class="i">+
+</a><a href="#h2-1-74" id="h2-1-74" class="i">+                    val friendName = context.database.getFriendInfo(message.senderId ?: return@mapNotNull null)?.let { it.displayName?: it.mutableUsername } ?: &quot;Unknown&quot;
+</a><a href="#h2-1-75" id="h2-1-75" class="i">+
+</a><a href="#h2-1-76" id="h2-1-76" class="i">+                    &quot;$friendName: $messageString&quot;
+</a><a href="#h2-1-77" id="h2-1-77" class="i">+                }?.reversed() ?: return@friendFeedItem
+</a><a href="#h2-1-78" id="h2-1-78" class="i">+
+</a><a href="#h2-1-79" id="h2-1-79" class="i">+                var maxTextHeight = 0
+</a><a href="#h2-1-80" id="h2-1-80" class="i">+                val previewContainerHeight = stringMessages.sumOf { msg -&gt;
+</a><a href="#h2-1-81" id="h2-1-81" class="i">+                    val rect = Rect()
+</a><a href="#h2-1-82" id="h2-1-82" class="i">+                    textPaint.getTextBounds(msg, 0, msg.length, rect)
+</a><a href="#h2-1-83" id="h2-1-83" class="i">+                    rect.height().also {
+</a><a href="#h2-1-84" id="h2-1-84" class="i">+                        if (it &gt; maxTextHeight) maxTextHeight = it
+</a><a href="#h2-1-85" id="h2-1-85" class="i">+                    }.plus(separatorHeight)
+</a><a href="#h2-1-86" id="h2-1-86" class="i">+                }
+</a><a href="#h2-1-87" id="h2-1-87" class="i">+
+</a><a href="#h2-1-88" id="h2-1-88" class="i">+                ffItem.layoutParams = ffItem.layoutParams.apply {
+</a><a href="#h2-1-89" id="h2-1-89" class="i">+                    height = feedEntryHeight + previewContainerHeight + separatorHeight
+</a><a href="#h2-1-90" id="h2-1-90" class="i">+                }
+</a> 
+                 frameLayout.addForegroundDrawable(&quot;ffItem&quot;, ShapeDrawable(object: Shape() {
+                     override fun draw(canvas: Canvas, paint: Paint) {
+<a href="#h2-1-94" id="h2-1-94" class="d">-                        val offsetY = canvas.height.toFloat() - (stringMessages.size * 30f)
+</a><a href="#h2-1-95" id="h2-1-95" class="i">+                        val offsetY = canvas.height.toFloat() - previewContainerHeight
+</a> 
+                         stringMessages.forEachIndexed { index, messageString -&gt;
+<a href="#h2-1-98" id="h2-1-98" class="d">-                            paint.textSize = 30f
+</a><a href="#h2-1-99" id="h2-1-99" class="i">+                            paint.textSize = secondaryTextSize
+</a>                             paint.color = sigColorTextPrimary
+                             canvas.drawText(messageString,
+<a href="#h2-1-102" id="h2-1-102" class="d">-                                ffSdlAvatarStartMargin.toFloat() + ffSdlAvatarMargin * 2 + ffSdlAvatarSize + ffSdlPrimaryTextStartMargin,
+</a><a href="#h2-1-103" id="h2-1-103" class="d">-                                offsetY + (index * 30f),
+</a><a href="#h2-1-104" id="h2-1-104" class="i">+                                feedEntryHeight + ffSdlPrimaryTextStartMargin,
+</a><a href="#h2-1-105" id="h2-1-105" class="i">+                                offsetY + index * maxTextHeight,
+</a>                                 paint
+                             )
+                         }
+<a href="#h2-1-109" id="h2-1-109" class="d">-
+</a><a href="#h2-1-110" id="h2-1-110" class="d">-                        ffItem.layoutParams = ffItem.layoutParams.apply {
+</a><a href="#h2-1-111" id="h2-1-111" class="d">-                            height = ffSdlAvatarSize + ffSdlAvatarMargin * 2 + ffSdlAvatarStartMargin + (stringMessages.size * 30)
+</a><a href="#h2-1-112" id="h2-1-112" class="d">-                        }
+</a>                     }
+                 }))
+             }
+</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core/media_downloader): missing attachments - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/699da4974300df5ea23c846469ec7a6f67be5679.html">699da4974300df5ea23c846469ec7a6f67be5679</a>
+<b>parent</b> <a href="../commit/0d3bffb05bc14af3dab21a05ad2795876e34dfc5.html">0d3bffb05bc14af3dab21a05ad2795876e34dfc5</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu, 21 Dec 2023 22:44:13 +0100
+
+fix(core/media_downloader): missing attachments
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">19</td><td><span class="i">+++++++++++++++++</span><span class="d">--</span></td></tr>
+</table></pre><pre>1 file changed, 17 insertions(+), 2 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -549,11 +549,26 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>         val friendInfo: FriendInfo = context.database.getFriendInfo(message.senderId!!) ?: throw Exception(&quot;Friend not found in database&quot;)
+         val authorName = friendInfo.usernameForSorting!!
+ 
+<a href="#h0-0-3" id="h0-0-3" class="d">-        val decodedAttachments = messageLogger.takeIf { it.isEnabled }?.getMessageObject(message.clientConversationId!!, message.clientMessageId.toLong())?.let {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        val decodedAttachments = (messageLogger.takeIf { it.isEnabled }?.getMessageObject(message.clientConversationId!!, message.clientMessageId.toLong())?.let {
+</a>             MessageDecoder.decode(it.getAsJsonObject(&quot;mMessageContent&quot;))
+         } ?: MessageDecoder.decode(
+             protoReader = ProtoReader(message.messageContent!!)
+<a href="#h0-0-8" id="h0-0-8" class="d">-        )
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+        )).toMutableList()
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+        context.feature(Messaging::class).conversationManager?.takeIf {
+</a><a href="#h0-0-12" id="h0-0-12" class="i">+            decodedAttachments.isEmpty()
+</a><a href="#h0-0-13" id="h0-0-13" class="i">+        }?.also { conversationManager -&gt;
+</a><a href="#h0-0-14" id="h0-0-14" class="i">+            runBlocking {
+</a><a href="#h0-0-15" id="h0-0-15" class="i">+                suspendCoroutine { continuation -&gt;
+</a><a href="#h0-0-16" id="h0-0-16" class="i">+                    conversationManager.fetchMessage(message.clientConversationId!!, message.clientMessageId.toLong(), onSuccess = { message -&gt;
+</a><a href="#h0-0-17" id="h0-0-17" class="i">+                        decodedAttachments.addAll(MessageDecoder.decode(message.messageContent!!))
+</a><a href="#h0-0-18" id="h0-0-18" class="i">+                        continuation.resumeWith(Result.success(Unit))
+</a><a href="#h0-0-19" id="h0-0-19" class="i">+                    }, onError = {
+</a><a href="#h0-0-20" id="h0-0-20" class="i">+                        continuation.resumeWith(Result.success(Unit))
+</a><a href="#h0-0-21" id="h0-0-21" class="i">+                    })
+</a><a href="#h0-0-22" id="h0-0-22" class="i">+                }
+</a><a href="#h0-0-23" id="h0-0-23" class="i">+            }
+</a><a href="#h0-0-24" id="h0-0-24" class="i">+        }
+</a> 
+         if (decodedAttachments.isEmpty()) {
+             context.shortToast(translations[&quot;no_attachments_toast&quot;])
+</pre>
+</div>
+</body>
+</html>

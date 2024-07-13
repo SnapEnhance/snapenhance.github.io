@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(scripting): better debug ui - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/94b519614d0e00af0623be239a7ba4d3e5708643.html">94b519614d0e00af0623be239a7ba4d3e5708643</a>
+<b>parent</b> <a href="../commit/0f3fb7bcd0d111c47e585b3d09ea92e86774acaf.html">0f3fb7bcd0d111c47e585b3d09ea92e86774acaf</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 17 Jan 2024 19:03:54 +0100
+
+feat(scripting): better debug ui
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">13</td><td><span class="i">++</span><span class="d">-----------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/DebugComponents.kt</a></td><td> | </td><td class="num">22</td><td><span class="i">++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt</a></td><td> | </td><td class="num">172</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">--------------------------</span></td></tr>
+</table></pre><pre>3 files changed, 139 insertions(+), 68 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -4,10 +4,8 @@ import android.annotation.SuppressLint
+</a> import android.graphics.Bitmap
+ import android.graphics.BitmapFactory
+ import android.net.Uri
+<a href="#h0-0-3" id="h0-0-3" class="d">-import android.text.InputType
+</a> import android.view.Gravity
+ import android.view.ViewGroup.MarginLayoutParams
+<a href="#h0-0-6" id="h0-0-6" class="d">-import android.widget.EditText
+</a> import android.widget.ImageView
+ import android.widget.LinearLayout
+ import android.widget.ProgressBar
+<a href="#h0-1" id="h0-1" class="h">@@ -35,6 +33,7 @@ import me.rhunk.snapenhance.core.features.impl.downloader.decoder.MessageDecoder
+</a> import me.rhunk.snapenhance.core.features.impl.messaging.Messaging
+ import me.rhunk.snapenhance.core.features.impl.spying.MessageLogger
+ import me.rhunk.snapenhance.core.ui.ViewAppearanceHelper
+<a href="#h0-1-3" id="h0-1-3" class="i">+import me.rhunk.snapenhance.core.ui.debugEditText
+</a> import me.rhunk.snapenhance.core.util.hook.HookAdapter
+ import me.rhunk.snapenhance.core.util.hook.HookStage
+ import me.rhunk.snapenhance.core.util.hook.hook
+<a href="#h0-2" id="h0-2" class="h">@@ -159,15 +158,7 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a> 
+             ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity!!).apply {
+                 setTitle(&quot;Debug Media Info&quot;)
+<a href="#h0-2-3" id="h0-2-3" class="d">-                setView(EditText(context).apply {
+</a><a href="#h0-2-4" id="h0-2-4" class="d">-                    inputType = InputType.TYPE_NULL
+</a><a href="#h0-2-5" id="h0-2-5" class="d">-                    setTextIsSelectable(true)
+</a><a href="#h0-2-6" id="h0-2-6" class="d">-                    isSingleLine = false
+</a><a href="#h0-2-7" id="h0-2-7" class="d">-                    textSize = 12f
+</a><a href="#h0-2-8" id="h0-2-8" class="d">-                    setPadding(20, 20, 20, 20)
+</a><a href="#h0-2-9" id="h0-2-9" class="d">-                    setText(mediaInfoText)
+</a><a href="#h0-2-10" id="h0-2-10" class="d">-                    setTextColor(context.resources.getColor(android.R.color.white, context.theme))
+</a><a href="#h0-2-11" id="h0-2-11" class="d">-                })
+</a><a href="#h0-2-12" id="h0-2-12" class="i">+                setView(debugEditText(context, mediaInfoText))
+</a>                 setNeutralButton(&quot;Copy&quot;) { _, _ -&gt;
+                     this@MediaDownloader.context.copyToClipboard(mediaInfoText)
+                 }
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/DebugComponents.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/DebugComponents.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/DebugComponents.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/DebugComponents.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -0,0 +1,21 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="i">+package me.rhunk.snapenhance.core.ui
+</a><a href="#h1-0-1" id="h1-0-1" class="i">+
+</a><a href="#h1-0-2" id="h1-0-2" class="i">+import android.content.Context
+</a><a href="#h1-0-3" id="h1-0-3" class="i">+import android.text.InputType
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import android.view.View
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+import android.widget.EditText
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+import android.widget.ScrollView
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+fun debugEditText(context: Context, initialText: String): View {
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+    return ScrollView(context).apply {
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+        isSmoothScrollingEnabled = true
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+        addView(EditText(context).apply {
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+            inputType = InputType.TYPE_NULL
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+            isSingleLine = false
+</a><a href="#h1-0-14" id="h1-0-14" class="i">+            setTextIsSelectable(true)
+</a><a href="#h1-0-15" id="h1-0-15" class="i">+            textSize = 12f
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+            setPadding(20, 20, 20, 20)
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+            setText(initialText)
+</a><a href="#h1-0-18" id="h1-0-18" class="i">+        })
+</a><a href="#h1-0-19" id="h1-0-19" class="i">+    }
+</a><a href="#h1-0-20" id="h1-0-20" class="i">+}</a><a href="#h1-0-21" id="h1-0-21" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -7,22 +7,34 @@ import android.view.ViewGroup
+</a> import android.view.ViewGroup.MarginLayoutParams
+ import android.widget.Button
+ import android.widget.LinearLayout
+<a href="#h2-0-3" id="h2-0-3" class="d">-import android.widget.TextView
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import androidx.compose.foundation.layout.Arrangement
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+import androidx.compose.foundation.layout.FlowRow
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+import androidx.compose.foundation.layout.fillMaxWidth
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+import androidx.compose.foundation.layout.padding
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+import androidx.compose.material3.Button
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+import androidx.compose.material3.Text
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+import androidx.compose.ui.Modifier
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+import androidx.compose.ui.unit.dp
+</a> import me.rhunk.snapenhance.common.data.ContentType
+<a href="#h2-0-14" id="h2-0-14" class="i">+import me.rhunk.snapenhance.common.ui.createComposeView
+</a> import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.core.features.impl.downloader.MediaDownloader
+<a href="#h2-0-17" id="h2-0-17" class="i">+import me.rhunk.snapenhance.core.features.impl.downloader.decoder.MessageDecoder
+</a> import me.rhunk.snapenhance.core.features.impl.experiments.ConvertMessageLocally
+ import me.rhunk.snapenhance.core.features.impl.messaging.Messaging
+ import me.rhunk.snapenhance.core.features.impl.spying.MessageLogger
+ import me.rhunk.snapenhance.core.ui.ViewAppearanceHelper
+ import me.rhunk.snapenhance.core.ui.ViewTagState
+ import me.rhunk.snapenhance.core.ui.applyTheme
+<a href="#h2-0-24" id="h2-0-24" class="i">+import me.rhunk.snapenhance.core.ui.debugEditText
+</a> import me.rhunk.snapenhance.core.ui.menu.AbstractMenu
+ import me.rhunk.snapenhance.core.ui.triggerCloseTouchEvent
+ import me.rhunk.snapenhance.core.util.hook.HookStage
+ import me.rhunk.snapenhance.core.util.hook.hook
+ import me.rhunk.snapenhance.core.util.ktx.getDimens
+<a href="#h2-0-30" id="h2-0-30" class="d">-import java.time.Instant
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+import java.text.SimpleDateFormat
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+import java.util.Date
+</a> 
+ 
+ @SuppressLint(&quot;DiscouragedApi&quot;)
+<a href="#h2-1" id="h2-1" class="h">@@ -50,15 +62,17 @@ class ChatActionMenu : AbstractMenu() {
+</a>         }
+     }
+ 
+<a href="#h2-1-3" id="h2-1-3" class="d">-    private fun copyAlertDialog(context: Context, title: String, text: String) {
+</a><a href="#h2-1-4" id="h2-1-4" class="d">-        ViewAppearanceHelper.newAlertDialogBuilder(context).apply {
+</a><a href="#h2-1-5" id="h2-1-5" class="d">-            setTitle(title)
+</a><a href="#h2-1-6" id="h2-1-6" class="d">-            setMessage(text)
+</a><a href="#h2-1-7" id="h2-1-7" class="d">-            setPositiveButton(&quot;OK&quot;) { dialog, _ -&gt; dialog.dismiss() }
+</a><a href="#h2-1-8" id="h2-1-8" class="d">-            setNegativeButton(&quot;Copy&quot;) { _, _ -&gt;
+</a><a href="#h2-1-9" id="h2-1-9" class="d">-                this@ChatActionMenu.context.copyToClipboard(text, title)
+</a><a href="#h2-1-10" id="h2-1-10" class="d">-            }
+</a><a href="#h2-1-11" id="h2-1-11" class="d">-        }.show()
+</a><a href="#h2-1-12" id="h2-1-12" class="i">+    private fun debugAlertDialog(context: Context, title: String, text: String) {
+</a><a href="#h2-1-13" id="h2-1-13" class="i">+        this@ChatActionMenu.context.runOnUiThread {
+</a><a href="#h2-1-14" id="h2-1-14" class="i">+            ViewAppearanceHelper.newAlertDialogBuilder(context).apply {
+</a><a href="#h2-1-15" id="h2-1-15" class="i">+                setTitle(title)
+</a><a href="#h2-1-16" id="h2-1-16" class="i">+                setView(debugEditText(context, text))
+</a><a href="#h2-1-17" id="h2-1-17" class="i">+                setPositiveButton(&quot;OK&quot;) { dialog, _ -&gt; dialog.dismiss() }
+</a><a href="#h2-1-18" id="h2-1-18" class="i">+                setNegativeButton(&quot;Copy&quot;) { _, _ -&gt;
+</a><a href="#h2-1-19" id="h2-1-19" class="i">+                    this@ChatActionMenu.context.copyToClipboard(text, title)
+</a><a href="#h2-1-20" id="h2-1-20" class="i">+                }
+</a><a href="#h2-1-21" id="h2-1-21" class="i">+            }.show()
+</a><a href="#h2-1-22" id="h2-1-22" class="i">+        }
+</a>     }
+ 
+     private val lastFocusedMessage
+<a href="#h2-2" id="h2-2" class="h">@@ -78,6 +92,7 @@ class ChatActionMenu : AbstractMenu() {
+</a>         }
+     }
+ 
+<a href="#h2-2-3" id="h2-2-3" class="i">+    @OptIn(ExperimentalLayoutApi::class)
+</a>     @SuppressLint(&quot;SetTextI18n&quot;, &quot;DiscouragedApi&quot;, &quot;ClickableViewAccessibility&quot;)
+     override fun inject(parent: ViewGroup, view: View, viewConsumer: (View) -&gt; Unit) {
+         val viewGroup = parent.parent.parent as? ViewGroup ?: return
+<a href="#h2-3" id="h2-3" class="h">@@ -176,56 +191,99 @@ class ChatActionMenu : AbstractMenu() {
+</a>         }
+ 
+         if (context.isDeveloper) {
+<a href="#h2-3-3" id="h2-3-3" class="d">-            viewGroup.addView(createContainer(viewGroup).apply {
+</a><a href="#h2-3-4" id="h2-3-4" class="d">-                val debugText = StringBuilder()
+</a><a href="#h2-3-5" id="h2-3-5" class="d">-
+</a><a href="#h2-3-6" id="h2-3-6" class="d">-                setOnClickListener {
+</a><a href="#h2-3-7" id="h2-3-7" class="d">-                    this@ChatActionMenu.context.copyToClipboard(debugText.toString(), &quot;debug&quot;)
+</a><a href="#h2-3-8" id="h2-3-8" class="d">-                }
+</a><a href="#h2-3-9" id="h2-3-9" class="d">-
+</a><a href="#h2-3-10" id="h2-3-10" class="d">-                addView(TextView(viewGroup.context).apply {
+</a><a href="#h2-3-11" id="h2-3-11" class="d">-                    setPadding(20, 20, 20, 20)
+</a><a href="#h2-3-12" id="h2-3-12" class="d">-                    textSize = 10f
+</a><a href="#h2-3-13" id="h2-3-13" class="d">-                    addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -&gt;
+</a><a href="#h2-3-14" id="h2-3-14" class="d">-                        val arroyoMessage = lastFocusedMessage ?: return@addOnLayoutChangeListener
+</a><a href="#h2-3-15" id="h2-3-15" class="d">-                        text = debugText.apply {
+</a><a href="#h2-3-16" id="h2-3-16" class="d">-                            runCatching {
+</a><a href="#h2-3-17" id="h2-3-17" class="d">-                                clear()
+</a><a href="#h2-3-18" id="h2-3-18" class="d">-                                append(&quot;sender_id: ${arroyoMessage.senderId}\n&quot;)
+</a><a href="#h2-3-19" id="h2-3-19" class="d">-                                append(&quot;client_id: ${arroyoMessage.clientMessageId}, server_id: ${arroyoMessage.serverMessageId}\n&quot;)
+</a><a href="#h2-3-20" id="h2-3-20" class="d">-                                append(&quot;conversation_id: ${arroyoMessage.clientConversationId}\n&quot;)
+</a><a href="#h2-3-21" id="h2-3-21" class="d">-                                append(&quot;arroyo_content_type: ${ContentType.fromId(arroyoMessage.contentType)} (${arroyoMessage.contentType})\n&quot;)
+</a><a href="#h2-3-22" id="h2-3-22" class="d">-                                append(&quot;parsed_content_type: ${
+</a><a href="#h2-3-23" id="h2-3-23" class="d">-                                    ContentType.fromMessageContainer(
+</a><a href="#h2-3-24" id="h2-3-24" class="d">-                                    ProtoReader(arroyoMessage.messageContent!!).followPath(4, 4)
+</a><a href="#h2-3-25" id="h2-3-25" class="d">-                                ).let { &quot;$it (${it?.id})&quot; }}\n&quot;)
+</a><a href="#h2-3-26" id="h2-3-26" class="d">-                                append(&quot;creation_timestamp: ${arroyoMessage.creationTimestamp} (${Instant.ofEpochMilli(arroyoMessage.creationTimestamp)})\n&quot;)
+</a><a href="#h2-3-27" id="h2-3-27" class="d">-                                append(&quot;read_timestamp: ${arroyoMessage.readTimestamp} (${Instant.ofEpochMilli(arroyoMessage.readTimestamp)})\n&quot;)
+</a><a href="#h2-3-28" id="h2-3-28" class="d">-                                append(&quot;is_messagelogger_deleted: ${messageLogger.isMessageDeleted(arroyoMessage.clientConversationId!!, arroyoMessage.clientMessageId.toLong())}\n&quot;)
+</a><a href="#h2-3-29" id="h2-3-29" class="d">-                                append(&quot;is_messagelogger_stored: ${messageLogger.getMessageObject(arroyoMessage.clientConversationId!!, arroyoMessage.clientMessageId.toLong()) != null}\n&quot;)
+</a><a href="#h2-3-30" id="h2-3-30" class="d">-                            }.onFailure {
+</a><a href="#h2-3-31" id="h2-3-31" class="d">-                                debugText.append(&quot;Error: $it\n&quot;)
+</a><a href="#h2-3-32" id="h2-3-32" class="d">-                            }
+</a><a href="#h2-3-33" id="h2-3-33" class="d">-                        }.toString().trimEnd()
+</a><a href="#h2-3-34" id="h2-3-34" class="i">+            val composeDebugView = createComposeView(viewGroup.context) {
+</a><a href="#h2-3-35" id="h2-3-35" class="i">+                FlowRow(
+</a><a href="#h2-3-36" id="h2-3-36" class="i">+                    modifier = Modifier.fillMaxWidth().padding(5.dp),
+</a><a href="#h2-3-37" id="h2-3-37" class="i">+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+</a><a href="#h2-3-38" id="h2-3-38" class="i">+                ) {
+</a><a href="#h2-3-39" id="h2-3-39" class="i">+                    Button(onClick = {
+</a><a href="#h2-3-40" id="h2-3-40" class="i">+                        val arroyoMessage = lastFocusedMessage ?: return@Button
+</a><a href="#h2-3-41" id="h2-3-41" class="i">+                        debugAlertDialog(viewGroup.context,
+</a><a href="#h2-3-42" id="h2-3-42" class="i">+                            &quot;Message Info&quot;,
+</a><a href="#h2-3-43" id="h2-3-43" class="i">+                            StringBuilder().apply {
+</a><a href="#h2-3-44" id="h2-3-44" class="i">+                                runCatching {
+</a><a href="#h2-3-45" id="h2-3-45" class="i">+                                    append(&quot;conversation_id: ${arroyoMessage.clientConversationId}\n&quot;)
+</a><a href="#h2-3-46" id="h2-3-46" class="i">+                                    append(&quot;sender_id: ${arroyoMessage.senderId}\n&quot;)
+</a><a href="#h2-3-47" id="h2-3-47" class="i">+                                    append(&quot;client_id: ${arroyoMessage.clientMessageId}, server_id: ${arroyoMessage.serverMessageId}\n&quot;)
+</a><a href="#h2-3-48" id="h2-3-48" class="i">+                                    append(&quot;content_type: ${ContentType.fromId(arroyoMessage.contentType)} (${arroyoMessage.contentType})\n&quot;)
+</a><a href="#h2-3-49" id="h2-3-49" class="i">+                                    append(&quot;parsed_content_type: ${
+</a><a href="#h2-3-50" id="h2-3-50" class="i">+                                        ContentType.fromMessageContainer(
+</a><a href="#h2-3-51" id="h2-3-51" class="i">+                                            ProtoReader(arroyoMessage.messageContent!!).followPath(4, 4)
+</a><a href="#h2-3-52" id="h2-3-52" class="i">+                                        ).let { &quot;$it (${it?.id})&quot; }}\n&quot;)
+</a><a href="#h2-3-53" id="h2-3-53" class="i">+                                    append(&quot;creation_timestamp: ${
+</a><a href="#h2-3-54" id="h2-3-54" class="i">+                                        SimpleDateFormat.getDateTimeInstance().format(
+</a><a href="#h2-3-55" id="h2-3-55" class="i">+                                            Date(arroyoMessage.creationTimestamp)
+</a><a href="#h2-3-56" id="h2-3-56" class="i">+                                        )} (${arroyoMessage.creationTimestamp})\n&quot;)
+</a><a href="#h2-3-57" id="h2-3-57" class="i">+                                    append(&quot;read_timestamp: ${SimpleDateFormat.getDateTimeInstance().format(
+</a><a href="#h2-3-58" id="h2-3-58" class="i">+                                        Date(arroyoMessage.readTimestamp)
+</a><a href="#h2-3-59" id="h2-3-59" class="i">+                                    )} (${arroyoMessage.readTimestamp})\n&quot;)
+</a><a href="#h2-3-60" id="h2-3-60" class="i">+                                    append(&quot;ml_deleted: ${messageLogger.isMessageDeleted(arroyoMessage.clientConversationId!!, arroyoMessage.clientMessageId.toLong())}, &quot;)
+</a><a href="#h2-3-61" id="h2-3-61" class="i">+                                    append(&quot;ml_stored: ${messageLogger.getMessageObject(arroyoMessage.clientConversationId!!, arroyoMessage.clientMessageId.toLong()) != null}\n&quot;)
+</a><a href="#h2-3-62" id="h2-3-62" class="i">+                                }
+</a><a href="#h2-3-63" id="h2-3-63" class="i">+                            }.toString()
+</a><a href="#h2-3-64" id="h2-3-64" class="i">+                        )
+</a><a href="#h2-3-65" id="h2-3-65" class="i">+                    }) {
+</a><a href="#h2-3-66" id="h2-3-66" class="i">+                        Text(&quot;Info&quot;)
+</a>                     }
+<a href="#h2-3-68" id="h2-3-68" class="d">-                })
+</a><a href="#h2-3-69" id="h2-3-69" class="i">+                    Button(onClick = {
+</a><a href="#h2-3-70" id="h2-3-70" class="i">+                        val arroyoMessage = lastFocusedMessage ?: return@Button
+</a><a href="#h2-3-71" id="h2-3-71" class="i">+                        messaging.conversationManager?.fetchMessage(arroyoMessage.clientConversationId!!, arroyoMessage.clientMessageId.toLong(), onSuccess = { message -&gt;
+</a><a href="#h2-3-72" id="h2-3-72" class="i">+                            val decodedAttachments = MessageDecoder.decode(message.messageContent!!)
+</a> 
+<a href="#h2-3-74" id="h2-3-74" class="d">-                // action buttons
+</a><a href="#h2-3-75" id="h2-3-75" class="d">-                addView(LinearLayout(viewGroup.context).apply {
+</a><a href="#h2-3-76" id="h2-3-76" class="d">-                    orientation = LinearLayout.HORIZONTAL
+</a><a href="#h2-3-77" id="h2-3-77" class="d">-                    addView(Button(viewGroup.context).apply {
+</a><a href="#h2-3-78" id="h2-3-78" class="d">-                        text = &quot;Show Deleted Message Object&quot;
+</a><a href="#h2-3-79" id="h2-3-79" class="d">-                        setOnClickListener {
+</a><a href="#h2-3-80" id="h2-3-80" class="d">-                            val message = lastFocusedMessage ?: return@setOnClickListener
+</a><a href="#h2-3-81" id="h2-3-81" class="d">-                            copyAlertDialog(
+</a><a href="#h2-3-82" id="h2-3-82" class="i">+                            debugAlertDialog(
+</a>                                 viewGroup.context,
+<a href="#h2-3-84" id="h2-3-84" class="d">-                                &quot;Deleted Message Object&quot;,
+</a><a href="#h2-3-85" id="h2-3-85" class="d">-                                messageLogger.getMessageObject(message.clientConversationId!!, message.clientMessageId.toLong())?.toString()
+</a><a href="#h2-3-86" id="h2-3-86" class="d">-                                    ?: &quot;null&quot;
+</a><a href="#h2-3-87" id="h2-3-87" class="i">+                                &quot;Media References&quot;,
+</a><a href="#h2-3-88" id="h2-3-88" class="i">+                                decodedAttachments.mapIndexed { index, attachment -&gt;
+</a><a href="#h2-3-89" id="h2-3-89" class="i">+                                    StringBuilder().apply {
+</a><a href="#h2-3-90" id="h2-3-90" class="i">+                                        append(&quot;---- media $index ----\n&quot;)
+</a><a href="#h2-3-91" id="h2-3-91" class="i">+                                        append(&quot;resolveProto: ${attachment.mediaUrlKey}\n&quot;)
+</a><a href="#h2-3-92" id="h2-3-92" class="i">+                                        append(&quot;type: ${attachment.type}\n&quot;)
+</a><a href="#h2-3-93" id="h2-3-93" class="i">+                                        attachment.attachmentInfo?.apply {
+</a><a href="#h2-3-94" id="h2-3-94" class="i">+                                            encryption?.let {
+</a><a href="#h2-3-95" id="h2-3-95" class="i">+                                                append(&quot;encryption:\n  - key: ${it.key}\n  - iv: ${it.iv}\n&quot;)
+</a><a href="#h2-3-96" id="h2-3-96" class="i">+                                            }
+</a><a href="#h2-3-97" id="h2-3-97" class="i">+                                            resolution?.let {
+</a><a href="#h2-3-98" id="h2-3-98" class="i">+                                                append(&quot;resolution: ${it.first}x${it.second}\n&quot;)
+</a><a href="#h2-3-99" id="h2-3-99" class="i">+                                            }
+</a><a href="#h2-3-100" id="h2-3-100" class="i">+                                            duration?.let {
+</a><a href="#h2-3-101" id="h2-3-101" class="i">+                                                append(&quot;duration: $it\n&quot;)
+</a><a href="#h2-3-102" id="h2-3-102" class="i">+                                            }
+</a><a href="#h2-3-103" id="h2-3-103" class="i">+                                        }
+</a><a href="#h2-3-104" id="h2-3-104" class="i">+                                    }.toString()
+</a><a href="#h2-3-105" id="h2-3-105" class="i">+                                }.joinToString(&quot;\n\n&quot;)
+</a>                             )
+<a href="#h2-3-107" id="h2-3-107" class="d">-                        }
+</a><a href="#h2-3-108" id="h2-3-108" class="d">-                    })
+</a><a href="#h2-3-109" id="h2-3-109" class="d">-                })
+</a><a href="#h2-3-110" id="h2-3-110" class="i">+                        })
+</a><a href="#h2-3-111" id="h2-3-111" class="i">+                    }) {
+</a><a href="#h2-3-112" id="h2-3-112" class="i">+                        Text(&quot;Refs&quot;)
+</a><a href="#h2-3-113" id="h2-3-113" class="i">+                    }
+</a><a href="#h2-3-114" id="h2-3-114" class="i">+                    Button(onClick = {
+</a><a href="#h2-3-115" id="h2-3-115" class="i">+                        val message = lastFocusedMessage ?: return@Button
+</a><a href="#h2-3-116" id="h2-3-116" class="i">+                        debugAlertDialog(
+</a><a href="#h2-3-117" id="h2-3-117" class="i">+                            viewGroup.context,
+</a><a href="#h2-3-118" id="h2-3-118" class="i">+                            &quot;Arroyo proto&quot;,
+</a><a href="#h2-3-119" id="h2-3-119" class="i">+                            message.messageContent?.let { ProtoReader(it) }?.toString() ?: &quot;empty&quot;
+</a><a href="#h2-3-120" id="h2-3-120" class="i">+                        )
+</a><a href="#h2-3-121" id="h2-3-121" class="i">+                    }) {
+</a><a href="#h2-3-122" id="h2-3-122" class="i">+                        Text(&quot;Arroyo proto&quot;)
+</a><a href="#h2-3-123" id="h2-3-123" class="i">+                    }
+</a><a href="#h2-3-124" id="h2-3-124" class="i">+                    Button(onClick = {
+</a><a href="#h2-3-125" id="h2-3-125" class="i">+                        val arroyoMessage = lastFocusedMessage ?: return@Button
+</a><a href="#h2-3-126" id="h2-3-126" class="i">+                        messaging.conversationManager?.fetchMessage(arroyoMessage.clientConversationId!!, arroyoMessage.clientMessageId.toLong(), onSuccess = { message -&gt;
+</a><a href="#h2-3-127" id="h2-3-127" class="i">+                            debugAlertDialog(
+</a><a href="#h2-3-128" id="h2-3-128" class="i">+                                viewGroup.context,
+</a><a href="#h2-3-129" id="h2-3-129" class="i">+                                &quot;Message proto&quot;,
+</a><a href="#h2-3-130" id="h2-3-130" class="i">+                                message.messageContent?.content?.let { ProtoReader(it) }?.toString() ?: &quot;empty&quot;
+</a><a href="#h2-3-131" id="h2-3-131" class="i">+                            )
+</a><a href="#h2-3-132" id="h2-3-132" class="i">+                        }, onError = {
+</a><a href="#h2-3-133" id="h2-3-133" class="i">+                            this@ChatActionMenu.context.shortToast(&quot;Failed to fetch message: $it&quot;)
+</a><a href="#h2-3-134" id="h2-3-134" class="i">+                        })
+</a><a href="#h2-3-135" id="h2-3-135" class="i">+                    }) {
+</a><a href="#h2-3-136" id="h2-3-136" class="i">+                        Text(&quot;Message proto&quot;)
+</a><a href="#h2-3-137" id="h2-3-137" class="i">+                    }
+</a><a href="#h2-3-138" id="h2-3-138" class="i">+                }
+</a><a href="#h2-3-139" id="h2-3-139" class="i">+            }
+</a><a href="#h2-3-140" id="h2-3-140" class="i">+            viewGroup.addView(createContainer(viewGroup).apply {
+</a><a href="#h2-3-141" id="h2-3-141" class="i">+                addView(composeDebugView)
+</a>             })
+         }
+ 
+</pre>
+</div>
+</body>
+</html>

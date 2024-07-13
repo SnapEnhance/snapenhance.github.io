@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core): hide streak restore - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/debaecf91d7031f1797398be12fdfef28206bcc4.html">debaecf91d7031f1797398be12fdfef28206bcc4</a>
+<b>parent</b> <a href="../commit/7fc3ec9d104c1df6c9a441736b7d9b60f69d89f5.html">7fc3ec9d104c1df6c9a441736b7d9b60f69d89f5</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 26 Apr 2024 17:37:55 +0200
+
+fix(core): hide streak restore
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideStreakRestore.kt</a></td><td> | </td><td class="num">32</td><td><span class="i">+++++++++++++++++++++++++++</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>2 files changed, 35 insertions(+), 5 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideStreakRestore.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideStreakRestore.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideStreakRestore.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideStreakRestore.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -2,22 +2,44 @@ package me.rhunk.snapenhance.core.features.impl.ui
+</a> 
+ import me.rhunk.snapenhance.core.features.Feature
+ import me.rhunk.snapenhance.core.features.FeatureLoadParams
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.core.features.impl.messaging.Messaging
+</a> import me.rhunk.snapenhance.core.util.dataBuilder
+ import me.rhunk.snapenhance.core.util.hook.HookStage
+ import me.rhunk.snapenhance.core.util.hook.hookConstructor
+<a href="#h0-0-7" id="h0-0-7" class="i">+import me.rhunk.snapenhance.core.util.ktx.getObjectField
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+import me.rhunk.snapenhance.core.util.ktx.getObjectFieldOrNull
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+import me.rhunk.snapenhance.core.util.ktx.setObjectField
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+import me.rhunk.snapenhance.core.wrapper.impl.SnapUUID
+</a> 
+ class HideStreakRestore : Feature(&quot;HideStreakRestore&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+     override fun init() {
+         if (!context.config.userInterface.hideStreakRestore.get()) return
+ 
+<a href="#h0-0-16" id="h0-0-16" class="i">+        findClass(&quot;com.snapchat.client.messaging.FeedEntry&quot;).hookConstructor(HookStage.AFTER) { param -&gt;
+</a><a href="#h0-0-17" id="h0-0-17" class="i">+            val instance = param.thisObject&lt;Any&gt;()
+</a><a href="#h0-0-18" id="h0-0-18" class="i">+            if (instance.getObjectFieldOrNull(&quot;mDisplayInfo&quot;)
+</a><a href="#h0-0-19" id="h0-0-19" class="i">+                    ?.getObjectFieldOrNull(&quot;mFeedItem&quot;)
+</a><a href="#h0-0-20" id="h0-0-20" class="i">+                    ?.getObjectFieldOrNull(&quot;mConversation&quot;)
+</a><a href="#h0-0-21" id="h0-0-21" class="i">+                    ?.getObjectFieldOrNull(&quot;mState&quot;)
+</a><a href="#h0-0-22" id="h0-0-22" class="i">+                    ?.toString() == &quot;STREAK_RESTORE&quot;) {
+</a><a href="#h0-0-23" id="h0-0-23" class="i">+                instance.getObjectFieldOrNull(&quot;mDisplayInfo&quot;)
+</a><a href="#h0-0-24" id="h0-0-24" class="i">+                    ?.getObjectFieldOrNull(&quot;mFeedItem&quot;)
+</a><a href="#h0-0-25" id="h0-0-25" class="i">+                    ?.setObjectField(&quot;mConversation&quot;, null)
+</a><a href="#h0-0-26" id="h0-0-26" class="i">+                val conversationId = SnapUUID(instance.getObjectField(&quot;mConversationId&quot;)).toString()
+</a><a href="#h0-0-27" id="h0-0-27" class="i">+                context.feature(Messaging::class).conversationManager?.dismissStreakRestore(
+</a><a href="#h0-0-28" id="h0-0-28" class="i">+                    conversationId,
+</a><a href="#h0-0-29" id="h0-0-29" class="i">+                    onError = {
+</a><a href="#h0-0-30" id="h0-0-30" class="i">+                        context.log.error(&quot;Failed to dismiss streak restore: $it&quot;)
+</a><a href="#h0-0-31" id="h0-0-31" class="i">+                    }, onSuccess = {
+</a><a href="#h0-0-32" id="h0-0-32" class="i">+                        context.log.info(&quot;Dismissed streak restore for conversation $conversationId&quot;)
+</a><a href="#h0-0-33" id="h0-0-33" class="i">+                    }
+</a><a href="#h0-0-34" id="h0-0-34" class="i">+                )
+</a><a href="#h0-0-35" id="h0-0-35" class="i">+            }
+</a><a href="#h0-0-36" id="h0-0-36" class="i">+        }
+</a><a href="#h0-0-37" id="h0-0-37" class="i">+
+</a>         findClass(&quot;com.snapchat.client.messaging.StreakMetadata&quot;).hookConstructor(HookStage.AFTER) { param -&gt;
+             param.thisObject&lt;Any&gt;().dataBuilder {
+<a href="#h0-0-40" id="h0-0-40" class="d">-                val currentTimeMillis = System.currentTimeMillis()
+</a><a href="#h0-0-41" id="h0-0-41" class="d">-                val expiration = get&lt;Long&gt;(&quot;mExpirationTimestampMs&quot;) ?: return@hookConstructor
+</a>                 set(&quot;mExpiredStreak&quot;, null)
+<a href="#h0-0-43" id="h0-0-43" class="d">-                if (expiration &lt; currentTimeMillis) {
+</a><a href="#h0-0-44" id="h0-0-44" class="d">-                    set(&quot;mExpirationTimestampMs&quot;, currentTimeMillis + 60000L)
+</a><a href="#h0-0-45" id="h0-0-45" class="d">-                }
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -26,6 +26,7 @@ class ConversationManager(
+</a>     private val fetchMessage by lazy { findMethodByName(&quot;fetchMessage&quot;) }
+     private val clearConversation by lazy { findMethodByName(&quot;clearConversation&quot;) }
+     private val getOneOnOneConversationIds by lazy { findMethodByName(&quot;getOneOnOneConversationIds&quot;) }
+<a href="#h1-0-3" id="h1-0-3" class="i">+    private val dismissStreakRestore by lazy { findMethodByName(&quot;dismissStreakRestore&quot;) }
+</a> 
+ 
+     private fun getCallbackClass(name: String): Class&lt;*&gt; {
+<a href="#h1-1" id="h1-1" class="h">@@ -175,4 +176,11 @@ class ConversationManager(
+</a>     }
+ 
+     fun isEditMessageSupported() = instanceNonNull()::class.java.methods.any { it.name == &quot;editMessage&quot; }
+<a href="#h1-1-3" id="h1-1-3" class="i">+
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+    fun dismissStreakRestore(conversationId: String, onSuccess: () -&gt; Unit, onError: (error: String) -&gt; Unit) {
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+        val callback = CallbackBuilder(getCallbackClass(&quot;Callback&quot;))
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+            .override(&quot;onSuccess&quot;) { onSuccess() }
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+            .override(&quot;onError&quot;) { onError(it.arg&lt;Any&gt;(0).toString()) }.build()
+</a><a href="#h1-1-8" id="h1-1-8" class="i">+        dismissStreakRestore.invoke(instanceNonNull(), conversationId.toSnapUUID().instanceNonNull(), callback)
+</a><a href="#h1-1-9" id="h1-1-9" class="i">+    }
+</a> } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(mapper): remove friend - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/f0aa035f7cd470c0d97ee6ff48a5e004232e0398.html">f0aa035f7cd470c0d97ee6ff48a5e004232e0398</a>
+<b>parent</b> <a href="../commit/54d3010970857027ffb51f44c7522945fec5af71.html">54d3010970857027ffb51f44c7522945fec5af71</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Tue, 23 Jan 2024 19:03:14 +0100
+
+fix(mapper): remove friend
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a></td><td> | </td><td class="num">17</td><td><span class="i">++++++++</span><span class="d">---------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">gradle/libs.versions.toml</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/FriendRelationshipChangerMapper.kt</a></td><td> | </td><td class="num">29</td><td><span class="i">++++++++++++++++++++</span><span class="d">---------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">mapper/src/test/kotlin/me/rhunk/snapenhance/mapper/tests/TestMappings.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">+</span><span class="d">--</span></td></tr>
+</table></pre><pre>4 files changed, 31 insertions(+), 22 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -148,21 +148,20 @@ class BulkMessagingAction : AbstractAction() {
+</a>     private fun removeFriend(userId: String) {
+         context.mappings.useMapper(FriendRelationshipChangerMapper::class) {
+             val friendRelationshipChangerInstance = context.feature(AddFriendSourceSpoof::class).friendRelationshipChangerInstance!!
+<a href="#h0-0-3" id="h0-0-3" class="d">-            val removeFriendMethod = friendRelationshipChangerInstance::class.java.methods.first {
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-                it.name == this.removeFriendMethod.get()
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-            }
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+            val removeMethod = removeFriendClass.getAsClass()?.methods?.first {
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+                it.name == removeFriendMethod.getAsString()
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+            } ?: throw Exception(&quot;Failed to find removeFriend method&quot;)
+</a> 
+<a href="#h0-0-10" id="h0-0-10" class="d">-            val completable = removeFriendMethod.invoke(friendRelationshipChangerInstance,
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+            val completable = removeMethod.invoke(null,
+</a><a href="#h0-0-12" id="h0-0-12" class="i">+                friendRelationshipChangerInstance,
+</a>                 userId, // userId
+<a href="#h0-0-14" id="h0-0-14" class="d">-                removeFriendMethod.parameterTypes[1].enumConstants.first { it.toString() == &quot;DELETED_BY_MY_FRIENDS&quot; }, // source
+</a><a href="#h0-0-15" id="h0-0-15" class="d">-                null, // unknown
+</a><a href="#h0-0-16" id="h0-0-16" class="d">-                null, // unknown
+</a><a href="#h0-0-17" id="h0-0-17" class="d">-                null // InteractionPlacementInfo
+</a><a href="#h0-0-18" id="h0-0-18" class="i">+                removeMethod.parameterTypes[2].enumConstants.first { it.toString() == &quot;DELETED_BY_MY_FRIENDS&quot; }, // source
+</a><a href="#h0-0-19" id="h0-0-19" class="i">+                null, // InteractionPlacementInfo
+</a><a href="#h0-0-20" id="h0-0-20" class="i">+                0
+</a>             )!!
+             completable::class.java.methods.first {
+                 it.name == &quot;subscribe&quot; &amp;&amp; it.parameterTypes.isEmpty()
+             }.invoke(completable)
+         }
+<a href="#h0-0-26" id="h0-0-26" class="d">-
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h1" href="../file/gradle/libs.versions.toml.html">gradle/libs.versions.toml</a> b/<a href="../file/gradle/libs.versions.toml.html">gradle/libs.versions.toml</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -20,7 +20,7 @@ bcprov-jdk18on = &quot;1.77&quot;
+</a> dexlib2 = &quot;3.0.3&quot;
+ ffmpeg-kit = &quot;5.1.LTS&quot; # DO NOT UPDATE FFMPEG-KIT TO &quot;5.1&quot; it breaks stuff :3
+ gson = &quot;2.10.1&quot;
+<a href="#h1-0-3" id="h1-0-3" class="d">-junit = &quot;5.10.1&quot;
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+junit = &quot;4.13.2&quot;
+</a> material3 = &quot;1.1.2&quot;
+ okhttp = &quot;5.0.0-alpha.12&quot;
+ rhino = &quot;1.7.14&quot;
+<a href="#h1-1" id="h1-1" class="h">@@ -48,7 +48,7 @@ ffmpeg-kit = { group = &quot;com.arthenica&quot;, name = &quot;ffmpeg-kit-full-gpl&quot;, version.re
+</a> gson = { group = &quot;com.google.code.gson&quot;, name = &quot;gson&quot;, version.ref = &quot;gson&quot; }
+ guava = { module = &quot;com.google.guava:guava&quot;, version.ref = &quot;guava&quot; }
+ jsoup = { module = &quot;org.jsoup:jsoup&quot;, version.ref = &quot;jsoup&quot; }
+<a href="#h1-1-3" id="h1-1-3" class="d">-junit = { group = &quot;org.junit.jupiter&quot;, name = &quot;junit-jupiter-api&quot;, version.ref = &quot;junit&quot; }
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+junit = { module = &quot;junit:junit&quot;, version.ref = &quot;junit&quot; }
+</a> okhttp = { group = &quot;com.squareup.okhttp3&quot;, name = &quot;okhttp&quot;, version.ref = &quot;okhttp&quot; }
+ osmdroid-android = { group = &quot;org.osmdroid&quot;, name = &quot;osmdroid-android&quot;, version.ref = &quot;osmdroid-android&quot; }
+ recyclerview = { group = &quot;androidx.recyclerview&quot;, name = &quot;recyclerview&quot;, version.ref = &quot;recyclerview&quot; }
+<b>diff --git a/<a id="h2" href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/FriendRelationshipChangerMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/FriendRelationshipChangerMapper.kt</a> b/<a href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/FriendRelationshipChangerMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/FriendRelationshipChangerMapper.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -3,11 +3,15 @@ package me.rhunk.snapenhance.mapper.impl
+</a> import me.rhunk.snapenhance.mapper.AbstractClassMapper
+ import me.rhunk.snapenhance.mapper.ext.findConstString
+ import me.rhunk.snapenhance.mapper.ext.getClassName
+<a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.mapper.ext.isAbstract
+</a> import me.rhunk.snapenhance.mapper.ext.isEnum
+<a href="#h2-0-5" id="h2-0-5" class="i">+import java.lang.reflect.Modifier
+</a> 
+ class FriendRelationshipChangerMapper : AbstractClassMapper(&quot;FriendRelationshipChanger&quot;) {
+     val classReference = classReference(&quot;class&quot;)
+     val addFriendMethod = string(&quot;addFriendMethod&quot;)
+<a href="#h2-0-10" id="h2-0-10" class="i">+
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+    val removeFriendClass = classReference(&quot;removeFriendClass&quot;)
+</a>     val removeFriendMethod = string(&quot;removeFriendMethod&quot;)
+ 
+     init {
+<a href="#h2-1" id="h2-1" class="h">@@ -22,22 +26,29 @@ class FriendRelationshipChangerMapper : AbstractClassMapper(&quot;FriendRelationshipC
+</a>                             it.parameters[4].type == &quot;Ljava/lang/String;&quot;
+                 }
+ 
+<a href="#h2-1-3" id="h2-1-3" class="d">-                val removeFriendDexMethod = classDef.methods.firstOrNull {
+</a><a href="#h2-1-4" id="h2-1-4" class="d">-                    it.parameterTypes.size == 5 &amp;&amp;
+</a><a href="#h2-1-5" id="h2-1-5" class="d">-                    it.parameterTypes[0] == &quot;Ljava/lang/String;&quot; &amp;&amp;
+</a><a href="#h2-1-6" id="h2-1-6" class="d">-                    getClass(it.parameterTypes[1])?.isEnum() == true &amp;&amp;
+</a><a href="#h2-1-7" id="h2-1-7" class="d">-                    it.parameterTypes[2] == &quot;Ljava/lang/String;&quot; &amp;&amp;
+</a><a href="#h2-1-8" id="h2-1-8" class="d">-                    it.parameterTypes[3] == &quot;Ljava/lang/String;&quot;
+</a><a href="#h2-1-9" id="h2-1-9" class="d">-                }
+</a><a href="#h2-1-10" id="h2-1-10" class="d">-
+</a>                 this@FriendRelationshipChangerMapper.apply {
+                     classReference.set(classDef.getClassName())
+                     addFriendMethod.set(addFriendDexMethod.name)
+<a href="#h2-1-14" id="h2-1-14" class="d">-                    removeFriendMethod.set(removeFriendDexMethod?.name)
+</a>                 }
+ 
+                 return@mapper
+             }
+         }
+<a href="#h2-1-20" id="h2-1-20" class="i">+        mapper {
+</a><a href="#h2-1-21" id="h2-1-21" class="i">+            for (classDef in classes) {
+</a><a href="#h2-1-22" id="h2-1-22" class="i">+                if (!classDef.isAbstract()) continue
+</a><a href="#h2-1-23" id="h2-1-23" class="i">+                val removeFriendDexMethod = classDef.methods.firstOrNull {
+</a><a href="#h2-1-24" id="h2-1-24" class="i">+                    Modifier.isStatic(it.accessFlags) &amp;&amp;
+</a><a href="#h2-1-25" id="h2-1-25" class="i">+                    it.parameterTypes.size == 5 &amp;&amp;
+</a><a href="#h2-1-26" id="h2-1-26" class="i">+                    it.returnType.contains(&quot;io/reactivex/rxjava3&quot;) &amp;&amp;
+</a><a href="#h2-1-27" id="h2-1-27" class="i">+                    getClass(it.parameterTypes[2])?.isEnum() == true &amp;&amp;
+</a><a href="#h2-1-28" id="h2-1-28" class="i">+                    getClass(it.parameterTypes[3])?.getClassName()?.endsWith(&quot;InteractionPlacementInfo&quot;) == true
+</a><a href="#h2-1-29" id="h2-1-29" class="i">+                } ?: continue
+</a><a href="#h2-1-30" id="h2-1-30" class="i">+
+</a><a href="#h2-1-31" id="h2-1-31" class="i">+                removeFriendClass.set(classDef.getClassName())
+</a><a href="#h2-1-32" id="h2-1-32" class="i">+                removeFriendMethod.set(removeFriendDexMethod.name)
+</a><a href="#h2-1-33" id="h2-1-33" class="i">+                return@mapper
+</a><a href="#h2-1-34" id="h2-1-34" class="i">+            }
+</a><a href="#h2-1-35" id="h2-1-35" class="i">+        }
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h3" href="../file/mapper/src/test/kotlin/me/rhunk/snapenhance/mapper/tests/TestMappings.kt.html">mapper/src/test/kotlin/me/rhunk/snapenhance/mapper/tests/TestMappings.kt</a> b/<a href="../file/mapper/src/test/kotlin/me/rhunk/snapenhance/mapper/tests/TestMappings.kt.html">mapper/src/test/kotlin/me/rhunk/snapenhance/mapper/tests/TestMappings.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -3,8 +3,7 @@ package me.rhunk.snapenhance.mapper.tests
+</a> import com.google.gson.GsonBuilder
+ import kotlinx.coroutines.runBlocking
+ import me.rhunk.snapenhance.mapper.ClassMapper
+<a href="#h3-0-3" id="h3-0-3" class="d">-import me.rhunk.snapenhance.mapper.impl.*
+</a><a href="#h3-0-4" id="h3-0-4" class="d">-import org.junit.jupiter.api.Test
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+import org.junit.Test
+</a> import java.io.File
+ 
+ 
+</pre>
+</div>
+</body>
+</html>

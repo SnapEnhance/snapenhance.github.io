@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: custom path format - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/0d3bffb05bc14af3dab21a05ad2795876e34dfc5.html">0d3bffb05bc14af3dab21a05ad2795876e34dfc5</a>
+<b>parent</b> <a href="../commit/cc94ea93b27398a0ef17b1d6e259f525a2d796ae.html">cc94ea93b27398a0ef17b1d6e259f525a2d796ae</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu, 21 Dec 2023 00:03:39 +0100
+
+feat: custom path format
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/DownloaderConfig.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/DownloadRequest.kt</a></td><td> | </td><td class="num">47</td><td><span class="i">++++++++++++++++++++++++++++</span><span class="d">-------------------</span></td></tr>
+</table></pre><pre>3 files changed, 33 insertions(+), 19 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -212,6 +212,10 @@
+</a>                     &quot;logging&quot;: {
+                         &quot;name&quot;: &quot;Logging&quot;,
+                         &quot;description&quot;: &quot;Shows toasts when media is downloading&quot;
+<a href="#h0-0-3" id="h0-0-3" class="i">+                    },
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                    &quot;custom_path_format&quot;: {
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+                        &quot;name&quot;: &quot;Custom Path Format&quot;,
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                        &quot;description&quot;: &quot;Specify a custom path format for downloaded media\n\nAvailable variables:\n - %username%\n - %source%\n - %hash%\n - %date_time%&quot;
+</a>                     }
+                 }
+             },
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/DownloaderConfig.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/DownloaderConfig.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/DownloaderConfig.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/DownloaderConfig.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -48,4 +48,5 @@ class DownloaderConfig : ConfigContainer() {
+</a>     val logging = multiple(&quot;logging&quot;, &quot;started&quot;, &quot;success&quot;, &quot;progress&quot;, &quot;failure&quot;).apply {
+         set(mutableListOf(&quot;success&quot;, &quot;progress&quot;, &quot;failure&quot;))
+     }
+<a href="#h1-0-3" id="h1-0-3" class="i">+    val customPathFormat = string(&quot;custom_path_format&quot;) { addNotices(FeatureNotice.UNSTABLE) }
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/DownloadRequest.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/DownloadRequest.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/DownloadRequest.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/DownloadRequest.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -44,8 +44,8 @@ fun createNewFilePath(
+</a>     creationTimestamp: Long?
+ ): String {
+     val pathFormat by config.downloader.pathFormat
+<a href="#h2-0-3" id="h2-0-3" class="i">+    val customPathFormat by config.downloader.customPathFormat
+</a>     val sanitizedMediaAuthor = mediaAuthor.sanitizeForPath().ifEmpty { hexHash }
+<a href="#h2-0-5" id="h2-0-5" class="d">-
+</a>     val currentDateTime = SimpleDateFormat(&quot;yyyy-MM-dd_HH-mm-ss&quot;, Locale.ENGLISH).format(creationTimestamp ?: System.currentTimeMillis())
+ 
+     val finalPath = StringBuilder()
+<a href="#h2-1" id="h2-1" class="h">@@ -58,26 +58,35 @@ fun createNewFilePath(
+</a>         }
+     }
+ 
+<a href="#h2-1-3" id="h2-1-3" class="d">-    if (pathFormat.contains(&quot;create_author_folder&quot;)) {
+</a><a href="#h2-1-4" id="h2-1-4" class="d">-        finalPath.append(sanitizedMediaAuthor).append(&quot;/&quot;)
+</a><a href="#h2-1-5" id="h2-1-5" class="d">-    }
+</a><a href="#h2-1-6" id="h2-1-6" class="d">-    if (pathFormat.contains(&quot;create_source_folder&quot;)) {
+</a><a href="#h2-1-7" id="h2-1-7" class="d">-        finalPath.append(downloadSource.pathName).append(&quot;/&quot;)
+</a><a href="#h2-1-8" id="h2-1-8" class="d">-    }
+</a><a href="#h2-1-9" id="h2-1-9" class="d">-    if (pathFormat.contains(&quot;append_hash&quot;)) {
+</a><a href="#h2-1-10" id="h2-1-10" class="d">-        appendFileName(hexHash)
+</a><a href="#h2-1-11" id="h2-1-11" class="d">-    }
+</a><a href="#h2-1-12" id="h2-1-12" class="d">-    if (pathFormat.contains(&quot;append_source&quot;)) {
+</a><a href="#h2-1-13" id="h2-1-13" class="d">-        appendFileName(downloadSource.pathName)
+</a><a href="#h2-1-14" id="h2-1-14" class="d">-    }
+</a><a href="#h2-1-15" id="h2-1-15" class="d">-    if (pathFormat.contains(&quot;append_username&quot;)) {
+</a><a href="#h2-1-16" id="h2-1-16" class="d">-        appendFileName(sanitizedMediaAuthor)
+</a><a href="#h2-1-17" id="h2-1-17" class="d">-    }
+</a><a href="#h2-1-18" id="h2-1-18" class="d">-    if (pathFormat.contains(&quot;append_date_time&quot;)) {
+</a><a href="#h2-1-19" id="h2-1-19" class="d">-        appendFileName(currentDateTime)
+</a><a href="#h2-1-20" id="h2-1-20" class="i">+    if (customPathFormat.isNotEmpty()) {
+</a><a href="#h2-1-21" id="h2-1-21" class="i">+        finalPath.append(customPathFormat
+</a><a href="#h2-1-22" id="h2-1-22" class="i">+            .replace(&quot;%username%&quot;, sanitizedMediaAuthor)
+</a><a href="#h2-1-23" id="h2-1-23" class="i">+            .replace(&quot;%source%&quot;, downloadSource.pathName)
+</a><a href="#h2-1-24" id="h2-1-24" class="i">+            .replace(&quot;%hash%&quot;, hexHash)
+</a><a href="#h2-1-25" id="h2-1-25" class="i">+            .replace(&quot;%date_time%&quot;, currentDateTime)
+</a><a href="#h2-1-26" id="h2-1-26" class="i">+        )
+</a><a href="#h2-1-27" id="h2-1-27" class="i">+    } else {
+</a><a href="#h2-1-28" id="h2-1-28" class="i">+        if (pathFormat.contains(&quot;create_author_folder&quot;)) {
+</a><a href="#h2-1-29" id="h2-1-29" class="i">+            finalPath.append(sanitizedMediaAuthor).append(&quot;/&quot;)
+</a><a href="#h2-1-30" id="h2-1-30" class="i">+        }
+</a><a href="#h2-1-31" id="h2-1-31" class="i">+        if (pathFormat.contains(&quot;create_source_folder&quot;)) {
+</a><a href="#h2-1-32" id="h2-1-32" class="i">+            finalPath.append(downloadSource.pathName).append(&quot;/&quot;)
+</a><a href="#h2-1-33" id="h2-1-33" class="i">+        }
+</a><a href="#h2-1-34" id="h2-1-34" class="i">+        if (pathFormat.contains(&quot;append_hash&quot;)) {
+</a><a href="#h2-1-35" id="h2-1-35" class="i">+            appendFileName(hexHash)
+</a><a href="#h2-1-36" id="h2-1-36" class="i">+        }
+</a><a href="#h2-1-37" id="h2-1-37" class="i">+        if (pathFormat.contains(&quot;append_source&quot;)) {
+</a><a href="#h2-1-38" id="h2-1-38" class="i">+            appendFileName(downloadSource.pathName)
+</a><a href="#h2-1-39" id="h2-1-39" class="i">+        }
+</a><a href="#h2-1-40" id="h2-1-40" class="i">+        if (pathFormat.contains(&quot;append_username&quot;)) {
+</a><a href="#h2-1-41" id="h2-1-41" class="i">+            appendFileName(sanitizedMediaAuthor)
+</a><a href="#h2-1-42" id="h2-1-42" class="i">+        }
+</a><a href="#h2-1-43" id="h2-1-43" class="i">+        if (pathFormat.contains(&quot;append_date_time&quot;)) {
+</a><a href="#h2-1-44" id="h2-1-44" class="i">+            appendFileName(currentDateTime)
+</a><a href="#h2-1-45" id="h2-1-45" class="i">+        }
+</a>     }
+ 
+<a href="#h2-1-48" id="h2-1-48" class="d">-    if (finalPath.isEmpty()) finalPath.append(hexHash)
+</a><a href="#h2-1-49" id="h2-1-49" class="i">+    if (finalPath.isEmpty() || finalPath.isBlank()) finalPath.append(hexHash)
+</a> 
+     return finalPath.toString()
+ } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

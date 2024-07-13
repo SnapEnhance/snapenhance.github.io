@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix: shared context weak reference - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/581b2df37ee4c89ca1b89d5dc9d27ddcddf506a2.html">581b2df37ee4c89ca1b89d5dc9d27ddcddf506a2</a>
+<b>parent</b> <a href="../commit/2cb5872ab0875757293901f26195efbfe5c417ab.html">2cb5872ab0875757293901f26195efbfe5c417ab</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat,  5 Aug 2023 09:44:26 +0200
+
+fix: shared context weak reference
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></td><td> | </td><td class="num">19</td><td><span class="i">+++</span><span class="d">----------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/SharedContextHolder.kt</a></td><td> | </td><td class="num">13</td><td><span class="i">+++++</span><span class="d">--------</span></td></tr>
+</table></pre><pre>2 files changed, 8 insertions(+), 24 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -18,19 +18,10 @@ import java.lang.ref.WeakReference
+</a> import kotlin.system.exitProcess
+ 
+ class RemoteSideContext(
+<a href="#h0-0-3" id="h0-0-3" class="d">-    ctx: Context
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+    val androidContext: Context
+</a> ) {
+<a href="#h0-0-6" id="h0-0-6" class="d">-    private var _context: WeakReference&lt;Context&gt; = WeakReference(ctx)
+</a>     private var _activity: WeakReference&lt;Activity&gt;? = null
+ 
+<a href="#h0-0-9" id="h0-0-9" class="d">-    var androidContext: Context
+</a><a href="#h0-0-10" id="h0-0-10" class="d">-        get() = synchronized(this) {
+</a><a href="#h0-0-11" id="h0-0-11" class="d">-            _context.get() ?: error(&quot;Context is null&quot;)
+</a><a href="#h0-0-12" id="h0-0-12" class="d">-        }
+</a><a href="#h0-0-13" id="h0-0-13" class="d">-        set(value) { synchronized(this) {
+</a><a href="#h0-0-14" id="h0-0-14" class="d">-            _context.clear(); _context = WeakReference(value)
+</a><a href="#h0-0-15" id="h0-0-15" class="d">-        } }
+</a><a href="#h0-0-16" id="h0-0-16" class="d">-
+</a>     var activity: Activity?
+         get() = _activity?.get()
+         set(value) { _activity?.clear(); _activity = WeakReference(value) }
+<a href="#h0-1" id="h0-1" class="h">@@ -99,13 +90,9 @@ class RemoteSideContext(
+</a>             if (currentContext !is Activity) {
+                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                 currentContext.startActivity(this)
+<a href="#h0-1-3" id="h0-1-3" class="d">-                return@apply
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+                exitProcess(0)
+</a>             }
+<a href="#h0-1-6" id="h0-1-6" class="d">-            currentContext.startActivityForResult(this, 22)
+</a><a href="#h0-1-7" id="h0-1-7" class="d">-        }
+</a><a href="#h0-1-8" id="h0-1-8" class="d">-
+</a><a href="#h0-1-9" id="h0-1-9" class="d">-        if (currentContext !is Activity) {
+</a><a href="#h0-1-10" id="h0-1-10" class="d">-            exitProcess(0)
+</a><a href="#h0-1-11" id="h0-1-11" class="i">+            currentContext.startActivity(this)
+</a>         }
+     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/SharedContextHolder.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/SharedContextHolder.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/SharedContextHolder.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/SharedContextHolder.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,19 +1,16 @@
+</a> package me.rhunk.snapenhance
+ 
+ import android.content.Context
+<a href="#h1-0-3" id="h1-0-3" class="i">+import java.lang.ref.WeakReference
+</a> 
+ object SharedContextHolder {
+<a href="#h1-0-6" id="h1-0-6" class="d">-    private lateinit var _remoteSideContext: RemoteSideContext
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+    private lateinit var _remoteSideContext: WeakReference&lt;RemoteSideContext&gt;
+</a> 
+     fun remote(context: Context): RemoteSideContext {
+<a href="#h1-0-10" id="h1-0-10" class="d">-        if (!::_remoteSideContext.isInitialized) {
+</a><a href="#h1-0-11" id="h1-0-11" class="d">-            _remoteSideContext = RemoteSideContext(context)
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+        if (!::_remoteSideContext.isInitialized || _remoteSideContext.get() == null) {
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+            _remoteSideContext = WeakReference(RemoteSideContext(context))
+</a>         }
+ 
+<a href="#h1-0-16" id="h1-0-16" class="d">-        if (_remoteSideContext.androidContext != context) {
+</a><a href="#h1-0-17" id="h1-0-17" class="d">-            _remoteSideContext.androidContext = context
+</a><a href="#h1-0-18" id="h1-0-18" class="d">-        }
+</a><a href="#h1-0-19" id="h1-0-19" class="d">-
+</a><a href="#h1-0-20" id="h1-0-20" class="d">-        return _remoteSideContext
+</a><a href="#h1-0-21" id="h1-0-21" class="i">+        return _remoteSideContext.get()!!
+</a>     }
+ } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

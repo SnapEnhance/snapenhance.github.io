@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>refactor: snap to chat media as experimental - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/1a7755e45cc02081c9e3a6bf57a938beae6c3947.html">1a7755e45cc02081c9e3a6bf57a938beae6c3947</a>
+<b>parent</b> <a href="../commit/3c13f14c07e3a95d2aef66d954c69e733b260cfd.html">3c13f14c07e3a95d2aef66d954c69e733b260cfd</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 11 Oct 2023 16:46:21 +0200
+
+refactor: snap to chat media as experimental
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt</a></td><td> | </td><td class="num">1</td><td><span class="i"></span><span class="d">-</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/NativeHooks.kt</a></td><td> | </td><td class="num">9</td><td><span class="i"></span><span class="d">---------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/SnapToChatMedia.kt</a></td><td> | </td><td class="num">26</td><td><span class="i">++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="D">D</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/SnapToChatMedia.kt</a></td><td> | </td><td class="num">26</td><td><span class="i"></span><span class="d">--------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+</table></pre><pre>6 files changed, 33 insertions(+), 37 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -4,8 +4,14 @@ import me.rhunk.snapenhance.common.config.ConfigContainer
+</a> import me.rhunk.snapenhance.common.config.FeatureNotice
+ 
+ class Experimental : ConfigContainer() {
+<a href="#h0-0-3" id="h0-0-3" class="i">+    class NativeHooks : ConfigContainer(hasGlobalState = true) {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        val disableBitmoji = boolean(&quot;disable_bitmoji&quot;)
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+        val fixGalleryMediaOverride = boolean(&quot;fix_gallery_media_override&quot;)
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+    }
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+
+</a>     val nativeHooks = container(&quot;native_hooks&quot;, NativeHooks()) { icon = &quot;Memory&quot;; requireRestart() }
+     val spoof = container(&quot;spoof&quot;, Spoof()) { icon = &quot;Fingerprint&quot; }
+<a href="#h0-0-10" id="h0-0-10" class="i">+    val snapToChatMedia = boolean(&quot;snap_to_chat_media&quot;) { requireRestart(); addNotices(FeatureNotice.UNSTABLE) }
+</a>     val appPasscode = string(&quot;app_passcode&quot;)
+     val appLockOnResume = boolean(&quot;app_lock_on_resume&quot;)
+     val infiniteStoryBoost = boolean(&quot;infinite_story_boost&quot;)
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -17,7 +17,6 @@ class MessagingTweaks : ConfigContainer() {
+</a>         &quot;EXTERNAL_MEDIA&quot;,
+         &quot;STICKER&quot;
+     ) { requireRestart() }
+<a href="#h1-0-3" id="h1-0-3" class="d">-    val snapToChatMedia = boolean(&quot;snap_to_chat_media&quot;) { requireRestart() }
+</a>     val preventMessageSending = multiple(&quot;prevent_message_sending&quot;, *NotificationType.getOutgoingValues().map { it.key }.toTypedArray()) {
+         customOptionTranslationPath = &quot;features.options.notifications&quot;
+     }
+<b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/NativeHooks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/NativeHooks.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/NativeHooks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/NativeHooks.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,8 +0,0 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="d">-package me.rhunk.snapenhance.common.config.impl
+</a><a href="#h2-0-1" id="h2-0-1" class="d">-
+</a><a href="#h2-0-2" id="h2-0-2" class="d">-import me.rhunk.snapenhance.common.config.ConfigContainer
+</a><a href="#h2-0-3" id="h2-0-3" class="d">-
+</a><a href="#h2-0-4" id="h2-0-4" class="d">-class NativeHooks: ConfigContainer(hasGlobalState = true) {
+</a><a href="#h2-0-5" id="h2-0-5" class="d">-    val disableBitmoji = boolean(&quot;disable_bitmoji&quot;)
+</a><a href="#h2-0-6" id="h2-0-6" class="d">-    val fixGalleryMediaOverride = boolean(&quot;fix_gallery_media_override&quot;)
+</a><a href="#h2-0-7" id="h2-0-7" class="d">-}</a><a href="#h2-0-8" id="h2-0-8" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/SnapToChatMedia.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/SnapToChatMedia.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/SnapToChatMedia.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/SnapToChatMedia.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -0,0 +1,25 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="i">+package me.rhunk.snapenhance.core.features.impl.experiments
+</a><a href="#h3-0-1" id="h3-0-1" class="i">+
+</a><a href="#h3-0-2" id="h3-0-2" class="i">+import me.rhunk.snapenhance.common.data.ContentType
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import me.rhunk.snapenhance.common.util.protobuf.ProtoWriter
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+import me.rhunk.snapenhance.core.event.events.impl.BuildMessageEvent
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+import me.rhunk.snapenhance.core.features.Feature
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+import me.rhunk.snapenhance.core.features.FeatureLoadParams
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+class SnapToChatMedia : Feature(&quot;SnapToChatMedia&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+    override fun onActivityCreate() {
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+        if (!context.config.experimental.snapToChatMedia.get()) return
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+        context.event.subscribe(BuildMessageEvent::class, priority = 100) { event -&gt;
+</a><a href="#h3-0-14" id="h3-0-14" class="i">+            if (event.message.messageContent.contentType != ContentType.SNAP) return@subscribe
+</a><a href="#h3-0-15" id="h3-0-15" class="i">+
+</a><a href="#h3-0-16" id="h3-0-16" class="i">+            val snapMessageContent = ProtoReader(event.message.messageContent.content).followPath(11)?.getBuffer() ?: return@subscribe
+</a><a href="#h3-0-17" id="h3-0-17" class="i">+            event.message.messageContent.content = ProtoWriter().apply {
+</a><a href="#h3-0-18" id="h3-0-18" class="i">+                from(3) {
+</a><a href="#h3-0-19" id="h3-0-19" class="i">+                    addBuffer(3, snapMessageContent)
+</a><a href="#h3-0-20" id="h3-0-20" class="i">+                }
+</a><a href="#h3-0-21" id="h3-0-21" class="i">+            }.toByteArray()
+</a><a href="#h3-0-22" id="h3-0-22" class="i">+        }
+</a><a href="#h3-0-23" id="h3-0-23" class="i">+    }
+</a><a href="#h3-0-24" id="h3-0-24" class="i">+}</a><a href="#h3-0-25" id="h3-0-25" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/SnapToChatMedia.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/SnapToChatMedia.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/SnapToChatMedia.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/SnapToChatMedia.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -1,25 +0,0 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="d">-package me.rhunk.snapenhance.core.features.impl.spying
+</a><a href="#h4-0-1" id="h4-0-1" class="d">-
+</a><a href="#h4-0-2" id="h4-0-2" class="d">-import me.rhunk.snapenhance.common.data.ContentType
+</a><a href="#h4-0-3" id="h4-0-3" class="d">-import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+</a><a href="#h4-0-4" id="h4-0-4" class="d">-import me.rhunk.snapenhance.common.util.protobuf.ProtoWriter
+</a><a href="#h4-0-5" id="h4-0-5" class="d">-import me.rhunk.snapenhance.core.event.events.impl.BuildMessageEvent
+</a><a href="#h4-0-6" id="h4-0-6" class="d">-import me.rhunk.snapenhance.core.features.Feature
+</a><a href="#h4-0-7" id="h4-0-7" class="d">-import me.rhunk.snapenhance.core.features.FeatureLoadParams
+</a><a href="#h4-0-8" id="h4-0-8" class="d">-
+</a><a href="#h4-0-9" id="h4-0-9" class="d">-class SnapToChatMedia : Feature(&quot;SnapToChatMedia&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+</a><a href="#h4-0-10" id="h4-0-10" class="d">-    override fun onActivityCreate() {
+</a><a href="#h4-0-11" id="h4-0-11" class="d">-        if (!context.config.messaging.snapToChatMedia.get()) return
+</a><a href="#h4-0-12" id="h4-0-12" class="d">-
+</a><a href="#h4-0-13" id="h4-0-13" class="d">-        context.event.subscribe(BuildMessageEvent::class, priority = 100) { event -&gt;
+</a><a href="#h4-0-14" id="h4-0-14" class="d">-            if (event.message.messageContent.contentType != ContentType.SNAP) return@subscribe
+</a><a href="#h4-0-15" id="h4-0-15" class="d">-
+</a><a href="#h4-0-16" id="h4-0-16" class="d">-            val snapMessageContent = ProtoReader(event.message.messageContent.content).followPath(11)?.getBuffer() ?: return@subscribe
+</a><a href="#h4-0-17" id="h4-0-17" class="d">-            event.message.messageContent.content = ProtoWriter().apply {
+</a><a href="#h4-0-18" id="h4-0-18" class="d">-                from(3) {
+</a><a href="#h4-0-19" id="h4-0-19" class="d">-                    addBuffer(3, snapMessageContent)
+</a><a href="#h4-0-20" id="h4-0-20" class="d">-                }
+</a><a href="#h4-0-21" id="h4-0-21" class="d">-            }.toByteArray()
+</a><a href="#h4-0-22" id="h4-0-22" class="d">-        }
+</a><a href="#h4-0-23" id="h4-0-23" class="d">-    }
+</a><a href="#h4-0-24" id="h4-0-24" class="d">-}</a><a href="#h4-0-25" id="h4-0-25" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -15,7 +15,7 @@ import me.rhunk.snapenhance.core.features.impl.experiments.*
+</a> import me.rhunk.snapenhance.core.features.impl.global.*
+ import me.rhunk.snapenhance.core.features.impl.messaging.*
+ import me.rhunk.snapenhance.core.features.impl.spying.MessageLogger
+<a href="#h5-0-3" id="h5-0-3" class="d">-import me.rhunk.snapenhance.core.features.impl.spying.SnapToChatMedia
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+import me.rhunk.snapenhance.core.features.impl.experiments.SnapToChatMedia
+</a> import me.rhunk.snapenhance.core.features.impl.spying.StealthMode
+ import me.rhunk.snapenhance.core.features.impl.tweaks.CameraTweaks
+ import me.rhunk.snapenhance.core.features.impl.ui.*
+</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(app/tasks): download progress - fix crashes - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/7938871086d68501335c86aec1baf4d7e3663e32.html">7938871086d68501335c86aec1baf4d7e3663e32</a>
+<b>parent</b> <a href="../commit/bbcaab4e75b4aac792907802532aacdb4a188cf4.html">bbcaab4e75b4aac792907802532aacdb4a188cf4</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 29 Oct 2023 03:06:11 +0100
+
+fix(app/tasks): download progress
+- fix crashes
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/task/PendingTask.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/task/TaskManager.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/TasksSection.kt</a></td><td> | </td><td class="num">39</td><td><span class="i">++++++++++++++++++++</span><span class="d">-------------------</span></td></tr>
+</table></pre><pre>4 files changed, 28 insertions(+), 21 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -180,12 +180,14 @@ class DownloadProcessor (
+</a>     private fun downloadInputMedias(pendingTask: PendingTask, downloadRequest: DownloadRequest) = runBlocking {
+         val jobs = mutableListOf&lt;Job&gt;()
+         val downloadedMedias = mutableMapOf&lt;InputMedia, File&gt;()
+<a href="#h0-0-3" id="h0-0-3" class="i">+        var totalSize = 1L
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        val inputMediaDownloadedBytes = mutableMapOf&lt;InputMedia, Long&gt;()
+</a>         val inputMediaProgress = ConcurrentHashMap&lt;InputMedia, String&gt;()
+ 
+         fun updateDownloadProgress() {
+             pendingTask.updateProgress(
+                 inputMediaProgress.values.joinToString(&quot;\n&quot;),
+<a href="#h0-0-10" id="h0-0-10" class="d">-                progress = (jobs.filter { it.isActive }.size.toDouble() / jobs.size.toDouble() * 100.0).toInt()
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+                progress = (inputMediaDownloadedBytes.values.sum() * 100 / totalSize).toInt().coerceIn(0, 100)
+</a>             )
+         }
+ 
+<a href="#h0-1" id="h0-1" class="h">@@ -207,6 +209,7 @@ class DownloadProcessor (
+</a>                     while (decryptedInputStream.read(buffer).also { read = it } != -1) {
+                         outputStream.write(buffer, 0, read)
+                         totalRead += read
+<a href="#h0-1-3" id="h0-1-3" class="i">+                        inputMediaDownloadedBytes[inputMedia] = totalRead
+</a>                         if (totalRead - lastTotalRead &gt; 1024 * 1024) {
+                             setProgress(&quot;${totalRead / 1024}KB/${estimatedSize / 1024}KB&quot;)
+                             lastTotalRead = totalRead
+<a href="#h0-2" id="h0-2" class="h">@@ -219,6 +222,7 @@ class DownloadProcessor (
+</a>                 when (inputMedia.type) {
+                     DownloadMediaType.PROTO_MEDIA -&gt; {
+                         RemoteMediaResolver.downloadBoltMedia(Base64.UrlSafe.decode(inputMedia.content), decryptionCallback = { it }, resultCallback = { inputStream, length -&gt;
+<a href="#h0-2-3" id="h0-2-3" class="i">+                            totalSize += length
+</a>                             handleInputStream(inputStream, estimatedSize = length)
+                         })
+                     }
+<a href="#h0-3" id="h0-3" class="h">@@ -227,6 +231,7 @@ class DownloadProcessor (
+</a>                             requestMethod = &quot;GET&quot;
+                             setRequestProperty(&quot;User-Agent&quot;, Constants.USER_AGENT)
+                             connect()
+<a href="#h0-3-3" id="h0-3-3" class="i">+                            totalSize += contentLength.toLong()
+</a>                             handleInputStream(inputStream, estimatedSize = contentLength.toLong())
+                         }
+                     }
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/task/PendingTask.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/task/PendingTask.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/task/PendingTask.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/task/PendingTask.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -61,6 +61,7 @@ data class Task(
+</a> }
+ 
+ class PendingTask(
+<a href="#h1-0-3" id="h1-0-3" class="i">+    val taskId: Long,
+</a>     val task: Task
+ ) {
+     private val listeners = mutableListOf&lt;PendingTaskListener&gt;()
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/task/TaskManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/task/TaskManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/task/TaskManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/task/TaskManager.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -89,7 +89,7 @@ class TaskManager(
+</a>             updateTask(taskId, task)
+         }
+ 
+<a href="#h2-0-3" id="h2-0-3" class="d">-        val pendingTask = PendingTask(task)
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+        val pendingTask = PendingTask(taskId, task)
+</a>         activeTasks[taskId] = pendingTask
+         return pendingTask
+     }
+<b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/TasksSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/TasksSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/TasksSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/TasksSection.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -25,7 +25,7 @@ import me.rhunk.snapenhance.ui.manager.Section
+</a> import me.rhunk.snapenhance.ui.util.OnLifecycleEvent
+ 
+ class TasksSection : Section() {
+<a href="#h3-0-3" id="h3-0-3" class="d">-    private lateinit var activeTasks: MutableMap&lt;Long, PendingTask&gt;
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+    private var activeTasks by mutableStateOf(listOf&lt;PendingTask&gt;())
+</a>     private lateinit var recentTasks: MutableList&lt;Task&gt;
+ 
+     @Composable
+<a href="#h3-1" id="h3-1" class="h">@@ -48,14 +48,14 @@ class TasksSection : Section() {
+</a>                         onClick = {
+                             context.taskManager.clearAllTasks()
+                             recentTasks.clear()
+<a href="#h3-1-3" id="h3-1-3" class="d">-                            activeTasks.toList().forEach {
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+                            activeTasks.forEach {
+</a>                                 runCatching {
+<a href="#h3-1-6" id="h3-1-6" class="d">-                                    it.second.cancel()
+</a><a href="#h3-1-7" id="h3-1-7" class="i">+                                    it.cancel()
+</a>                                 }.onFailure { throwable -&gt;
+<a href="#h3-1-9" id="h3-1-9" class="d">-                                    context.log.error(&quot;Failed to cancel task ${it.first}&quot;, throwable)
+</a><a href="#h3-1-10" id="h3-1-10" class="i">+                                    context.log.error(&quot;Failed to cancel task $it&quot;, throwable)
+</a>                                 }
+<a href="#h3-1-12" id="h3-1-12" class="d">-                                activeTasks.remove(it.first)
+</a>                             }
+<a href="#h3-1-14" id="h3-1-14" class="i">+                            activeTasks = listOf()
+</a>                             context.taskManager.getActiveTasks().clear()
+                             showConfirmDialog = false
+                         }
+<a href="#h3-2" id="h3-2" class="h">@@ -90,7 +90,11 @@ class TasksSection : Section() {
+</a>                 taskProgressLabel = label
+                 taskProgress = progress
+             }
+<a href="#h3-2-3" id="h3-2-3" class="d">-        ).also { pendingTask?.addListener(it) }}
+</a><a href="#h3-2-4" id="h3-2-4" class="i">+        ) }
+</a><a href="#h3-2-5" id="h3-2-5" class="i">+
+</a><a href="#h3-2-6" id="h3-2-6" class="i">+        LaunchedEffect(Unit) {
+</a><a href="#h3-2-7" id="h3-2-7" class="i">+            pendingTask?.addListener(listener)
+</a><a href="#h3-2-8" id="h3-2-8" class="i">+        }
+</a> 
+         DisposableEffect(Unit) {
+             onDispose {
+<a href="#h3-3" id="h3-3" class="h">@@ -163,7 +167,6 @@ class TasksSection : Section() {
+</a>     override fun Content() {
+         val scrollState = rememberLazyListState()
+         val scope = rememberCoroutineScope()
+<a href="#h3-3-3" id="h3-3-3" class="d">-        activeTasks = remember { mutableStateMapOf() }
+</a>         recentTasks = remember { mutableStateListOf() }
+         var lastFetchedTaskId: Long? by remember { mutableStateOf(null) }
+ 
+<a href="#h3-4" id="h3-4" class="h">@@ -172,28 +175,27 @@ class TasksSection : Section() {
+</a>                 val tasks = context.taskManager.fetchStoredTasks(lastFetchedTaskId ?: Long.MAX_VALUE)
+                 if (tasks.isNotEmpty()) {
+                     lastFetchedTaskId = tasks.keys.last()
+<a href="#h3-4-3" id="h3-4-3" class="d">-                    recentTasks.addAll(tasks.filter { !activeTasks.containsKey(it.key) }.values)
+</a><a href="#h3-4-4" id="h3-4-4" class="i">+                    scope.launch {
+</a><a href="#h3-4-5" id="h3-4-5" class="i">+                        val activeTaskIds = activeTasks.map { it.taskId }
+</a><a href="#h3-4-6" id="h3-4-6" class="i">+                        recentTasks.addAll(tasks.filter { it.key !in activeTaskIds }.values)
+</a><a href="#h3-4-7" id="h3-4-7" class="i">+                    }
+</a>                 }
+             }
+         }
+ 
+         fun fetchActiveTasks() {
+<a href="#h3-4-13" id="h3-4-13" class="d">-            scope.launch {
+</a><a href="#h3-4-14" id="h3-4-14" class="d">-                activeTasks.clear()
+</a><a href="#h3-4-15" id="h3-4-15" class="d">-                activeTasks.putAll(context.taskManager.getActiveTasks())
+</a><a href="#h3-4-16" id="h3-4-16" class="d">-            }
+</a><a href="#h3-4-17" id="h3-4-17" class="i">+            activeTasks = context.taskManager.getActiveTasks().values.sortedByDescending { it.taskId }.toMutableList()
+</a>         }
+ 
+<a href="#h3-4-20" id="h3-4-20" class="d">-        SideEffect {
+</a><a href="#h3-4-21" id="h3-4-21" class="i">+        LaunchedEffect(Unit) {
+</a>             fetchActiveTasks()
+         }
+ 
+         OnLifecycleEvent { _, event -&gt;
+<a href="#h3-4-26" id="h3-4-26" class="d">-            when (event) {
+</a><a href="#h3-4-27" id="h3-4-27" class="d">-                Lifecycle.Event.ON_RESUME -&gt; {
+</a><a href="#h3-4-28" id="h3-4-28" class="i">+            if (event == Lifecycle.Event.ON_RESUME) {
+</a><a href="#h3-4-29" id="h3-4-29" class="i">+                scope.launch {
+</a>                     fetchActiveTasks()
+                 }
+<a href="#h3-4-32" id="h3-4-32" class="d">-                else -&gt; {}
+</a>             }
+         }
+ 
+<a href="#h3-5" id="h3-5" class="h">@@ -213,11 +215,10 @@ class TasksSection : Section() {
+</a>                     }
+                 }
+             }
+<a href="#h3-5-3" id="h3-5-3" class="d">-            items(activeTasks.size) { index -&gt;
+</a><a href="#h3-5-4" id="h3-5-4" class="d">-                val pendingTask = activeTasks.values.elementAt(index)
+</a><a href="#h3-5-5" id="h3-5-5" class="i">+            items(activeTasks, key = { it.task.hash }) {pendingTask -&gt;
+</a>                 TaskCard(modifier = Modifier.padding(8.dp), pendingTask.task, pendingTask = pendingTask)
+             }
+<a href="#h3-5-8" id="h3-5-8" class="d">-            items(recentTasks) { task -&gt;
+</a><a href="#h3-5-9" id="h3-5-9" class="i">+            items(recentTasks, key = { it.hash }) { task -&gt;
+</a>                 TaskCard(modifier = Modifier.padding(8.dp), task)
+             }
+             item {
+</pre>
+</div>
+</body>
+</html>

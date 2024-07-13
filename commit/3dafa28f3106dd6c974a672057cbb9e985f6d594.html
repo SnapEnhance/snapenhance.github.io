@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(mediadownloader): new media sources - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/3dafa28f3106dd6c974a672057cbb9e985f6d594.html">3dafa28f3106dd6c974a672057cbb9e985f6d594</a>
+<b>parent</b> <a href="../commit/33c8e79557d5dd269e61fbd757b9790460aa5267.html">33c8e79557d5dd269e61fbd757b9790460aa5267</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 27 May 2023 18:34:01 +0200
+
+fix(mediadownloader): new media sources
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/opera/ParamMap.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">18</td><td><span class="i">+++++++++++</span><span class="d">-------</span></td></tr>
+</table></pre><pre>3 files changed, 13 insertions(+), 8 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -60,6 +60,7 @@ class ModContext {
+</a>             runCatching {
+                 runnable()
+             }.onFailure {
+<a href="#h0-0-3" id="h0-0-3" class="i">+                longToast(&quot;Async task failed &quot; + it.message)
+</a>                 Logger.xposedLog(&quot;Async task failed&quot;, it)
+             }
+         }
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/opera/ParamMap.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/opera/ParamMap.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/opera/ParamMap.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/opera/ParamMap.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -15,7 +15,7 @@ class ParamMap(obj: Any?) : AbstractWrapper(obj) {
+</a>         )!!
+     }
+ 
+<a href="#h1-0-3" id="h1-0-3" class="d">-    private val concurrentHashMap: ConcurrentHashMap&lt;Any, Any&gt;
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    val concurrentHashMap: ConcurrentHashMap&lt;Any, Any&gt;
+</a>         get() = instanceNonNull().getObjectField(paramMapField.name) as ConcurrentHashMap&lt;Any, Any&gt;
+ 
+     operator fun get(key: String): Any? {
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -143,10 +143,7 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a>     fun downloadLastOperaMediaAsync() {
+         if (lastSeenMapParams == null || lastSeenMediaInfoMap == null) return
+         context.executeAsync {
+<a href="#h2-0-3" id="h2-0-3" class="d">-            handleOperaMedia(
+</a><a href="#h2-0-4" id="h2-0-4" class="d">-                lastSeenMapParams!!,
+</a><a href="#h2-0-5" id="h2-0-5" class="d">-                lastSeenMediaInfoMap!!, true
+</a><a href="#h2-0-6" id="h2-0-6" class="d">-            )
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+            handleOperaMedia(lastSeenMapParams!!, lastSeenMediaInfoMap!!, true)
+</a>         }
+     }
+ 
+<a href="#h2-1" id="h2-1" class="h">@@ -224,14 +221,15 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a>         ) {
+             val storyIdStartIndex = playlistV2Group.indexOf(&quot;storyUserId=&quot;) + 12
+             val storyUserId = playlistV2Group.substring(storyIdStartIndex, playlistV2Group.indexOf(&quot;,&quot;, storyIdStartIndex))
+<a href="#h2-1-3" id="h2-1-3" class="d">-            val author = context.database.getFriendInfo(storyUserId)
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+            val author = context.database.getFriendInfo(if (storyUserId == &quot;null&quot;) context.database.getMyUserId()!! else storyUserId)
+</a>             downloadOperaMedia(mediaInfoMap, author!!.usernameForSorting!!)
+             return
+         }
+         val snapSource = paramMap[&quot;SNAP_SOURCE&quot;].toString()
+ 
+         //public stories
+<a href="#h2-1-11" id="h2-1-11" class="d">-        if (snapSource == &quot;PUBLIC_USER&quot; &amp;&amp; (forceDownload || context.config.bool(ConfigProperty.AUTO_DOWNLOAD_PUBLIC_STORIES))) {
+</a><a href="#h2-1-12" id="h2-1-12" class="i">+        if ((snapSource == &quot;PUBLIC_USER&quot; || snapSource == &quot;SAVED_STORY&quot;) &amp;&amp;
+</a><a href="#h2-1-13" id="h2-1-13" class="i">+            (forceDownload || context.config.bool(ConfigProperty.AUTO_DOWNLOAD_PUBLIC_STORIES))) {
+</a>             val userDisplayName = (if (paramMap.containsKey(&quot;USER_DISPLAY_NAME&quot;)) paramMap[&quot;USER_DISPLAY_NAME&quot;].toString() else &quot;&quot;).replace(
+                     &quot;[^\\x00-\\x7F]&quot;.toRegex(),
+                     &quot;&quot;)
+<a href="#h2-2" id="h2-2" class="h">@@ -247,7 +245,7 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a> 
+         //stories with mpeg dash media
+         //TODO: option to download multiple chapters
+<a href="#h2-2-3" id="h2-2-3" class="d">-        if (paramMap.containsKey(&quot;SNAP_PLAYLIST_ITEM&quot;) &amp;&amp; forceDownload) {
+</a><a href="#h2-2-4" id="h2-2-4" class="i">+        if (paramMap.containsKey(&quot;LONGFORM_VIDEO_PLAYLIST_ITEM&quot;) &amp;&amp; forceDownload) {
+</a>             if (!isFFmpegPresent) {
+                 context.shortToast(&quot;Can&#39;t download media. ffmpeg was not found&quot;)
+                 return
+<a href="#h2-3" id="h2-3" class="h">@@ -293,6 +291,12 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a>             }
+             return
+         }
+<a href="#h2-3-3" id="h2-3-3" class="i">+
+</a><a href="#h2-3-4" id="h2-3-4" class="i">+        context.longToast(&quot;Download not implemented. Please report this issue!&quot;)
+</a><a href="#h2-3-5" id="h2-3-5" class="i">+        xposedLog(&quot;download not implemented issue:&quot;)
+</a><a href="#h2-3-6" id="h2-3-6" class="i">+        xposedLog(&quot;paramMap: ${paramMap.concurrentHashMap}&quot;)
+</a><a href="#h2-3-7" id="h2-3-7" class="i">+        xposedLog(&quot;mediaInfoMap: $mediaInfoMap&quot;)
+</a><a href="#h2-3-8" id="h2-3-8" class="i">+        xposedLog(&quot;forceDownload: $forceDownload&quot;)
+</a>     }
+ 
+     private fun canAutoDownload(): Boolean {
+</pre>
+</div>
+</body>
+</html>

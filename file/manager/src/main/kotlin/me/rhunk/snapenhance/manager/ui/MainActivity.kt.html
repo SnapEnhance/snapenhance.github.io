@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MainActivity.kt - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../../../../../../../../../../logo.png"/>
+<link rel="alternate icon" href="../../../../../../../../../../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../../../../../../../../../../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../../../../../../../../../../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../../../../../../../../../../"><img src="../../../../../../../../../../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../../../../../../../../../../about.html">About</a> | <a href="../../../../../../../../../../log.html">Log</a> | <a href="../../../../../../../../../../files.html">Files</a> | <a href="../../../../../../../../../../refs.html">Refs</a> | <a href="../../../../../../../../../../file/.gitmodules.html">Submodules</a> | <a href="../../../../../../../../../../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<p> MainActivity.kt (3255B) - <a href="../../../../../../../../../../raw/manager/src/main/kotlin/me/rhunk/snapenhance/manager/ui/MainActivity.kt">raw</a></p><hr/><pre id="blob">
+<a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.manager.ui
+<a href="#l2" class="line" id="l2">      2</a> 
+<a href="#l3" class="line" id="l3">      3</a> import android.os.Build
+<a href="#l4" class="line" id="l4">      4</a> import android.os.Bundle
+<a href="#l5" class="line" id="l5">      5</a> import androidx.activity.ComponentActivity
+<a href="#l6" class="line" id="l6">      6</a> import androidx.activity.compose.setContent
+<a href="#l7" class="line" id="l7">      7</a> import androidx.compose.foundation.isSystemInDarkTheme
+<a href="#l8" class="line" id="l8">      8</a> import androidx.compose.material3.*
+<a href="#l9" class="line" id="l9">      9</a> import androidx.compose.runtime.remember
+<a href="#l10" class="line" id="l10">     10</a> import androidx.compose.ui.platform.LocalContext
+<a href="#l11" class="line" id="l11">     11</a> import androidx.navigation.compose.rememberNavController
+<a href="#l12" class="line" id="l12">     12</a> import com.topjohnwu.superuser.Shell
+<a href="#l13" class="line" id="l13">     13</a> import me.rhunk.snapenhance.manager.BuildConfig
+<a href="#l14" class="line" id="l14">     14</a> import me.rhunk.snapenhance.manager.data.SharedConfig
+<a href="#l15" class="line" id="l15">     15</a> import me.rhunk.snapenhance.manager.ui.tab.Tab
+<a href="#l16" class="line" id="l16">     16</a> import me.rhunk.snapenhance.manager.ui.tab.impl.HomeTab
+<a href="#l17" class="line" id="l17">     17</a> import me.rhunk.snapenhance.manager.ui.tab.impl.SettingsTab
+<a href="#l18" class="line" id="l18">     18</a> import me.rhunk.snapenhance.manager.ui.tab.impl.download.InstallPackageTab
+<a href="#l19" class="line" id="l19">     19</a> import me.rhunk.snapenhance.manager.ui.tab.impl.download.RepackageTab
+<a href="#l20" class="line" id="l20">     20</a> 
+<a href="#l21" class="line" id="l21">     21</a> class MainActivity : ComponentActivity() {
+<a href="#l22" class="line" id="l22">     22</a>     companion object{
+<a href="#l23" class="line" id="l23">     23</a>         private val primaryTabs = listOf(HomeTab::class, SettingsTab::class, InstallPackageTab::class, RepackageTab::class)
+<a href="#l24" class="line" id="l24">     24</a>     }
+<a href="#l25" class="line" id="l25">     25</a> 
+<a href="#l26" class="line" id="l26">     26</a>     override fun onCreate(savedInstanceState: Bundle?) {
+<a href="#l27" class="line" id="l27">     27</a>         super.onCreate(savedInstanceState)
+<a href="#l28" class="line" id="l28">     28</a> 
+<a href="#l29" class="line" id="l29">     29</a>         Shell.enableVerboseLogging = BuildConfig.DEBUG;
+<a href="#l30" class="line" id="l30">     30</a>         Shell.setDefaultBuilder(Shell.Builder.create()
+<a href="#l31" class="line" id="l31">     31</a>             .setFlags(Shell.FLAG_REDIRECT_STDERR)
+<a href="#l32" class="line" id="l32">     32</a>             .setTimeout(10)
+<a href="#l33" class="line" id="l33">     33</a>         );
+<a href="#l34" class="line" id="l34">     34</a>         val tabs = primaryTabs.mapNotNull {
+<a href="#l35" class="line" id="l35">     35</a>             runCatching { it.java.constructors.first().newInstance() as Tab }.getOrNull()
+<a href="#l36" class="line" id="l36">     36</a>         }.toMutableList().apply {
+<a href="#l37" class="line" id="l37">     37</a>             forEach { it.init(this@MainActivity) }
+<a href="#l38" class="line" id="l38">     38</a>             fun addNestedTabsRecursively(tabs: List&lt;Tab&gt;) {
+<a href="#l39" class="line" id="l39">     39</a>                 tabs.forEach { tab -&gt;
+<a href="#l40" class="line" id="l40">     40</a>                     add(tab)
+<a href="#l41" class="line" id="l41">     41</a>                     addNestedTabsRecursively(tab.nestedTabs)
+<a href="#l42" class="line" id="l42">     42</a>                 }
+<a href="#l43" class="line" id="l43">     43</a>             }
+<a href="#l44" class="line" id="l44">     44</a>             toList().forEach { addNestedTabsRecursively(it.nestedTabs) }
+<a href="#l45" class="line" id="l45">     45</a>         }
+<a href="#l46" class="line" id="l46">     46</a>         setContent {
+<a href="#l47" class="line" id="l47">     47</a>             MaterialTheme(
+<a href="#l48" class="line" id="l48">     48</a>                 colorScheme = if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.S) {
+<a href="#l49" class="line" id="l49">     49</a>                     if (isSystemInDarkTheme()) dynamicDarkColorScheme(LocalContext.current)
+<a href="#l50" class="line" id="l50">     50</a>                     else dynamicLightColorScheme(LocalContext.current)
+<a href="#l51" class="line" id="l51">     51</a>                 } else darkColorScheme()
+<a href="#l52" class="line" id="l52">     52</a>             ) {
+<a href="#l53" class="line" id="l53">     53</a>                 val navHostController = rememberNavController()
+<a href="#l54" class="line" id="l54">     54</a>                 val sharedConfig = remember { SharedConfig(this) }
+<a href="#l55" class="line" id="l55">     55</a> 
+<a href="#l56" class="line" id="l56">     56</a> 
+<a href="#l57" class="line" id="l57">     57</a>                 val navigation = remember {
+<a href="#l58" class="line" id="l58">     58</a>                     Navigation(
+<a href="#l59" class="line" id="l59">     59</a>                         navHostController = navHostController,
+<a href="#l60" class="line" id="l60">     60</a>                         tabs = tabs,
+<a href="#l61" class="line" id="l61">     61</a>                         defaultTab = HomeTab::class
+<a href="#l62" class="line" id="l62">     62</a>                     ).also {
+<a href="#l63" class="line" id="l63">     63</a>                         tabs.forEach { tab -&gt;
+<a href="#l64" class="line" id="l64">     64</a>                             tab.navigation = it
+<a href="#l65" class="line" id="l65">     65</a>                             tab.sharedConfig = sharedConfig
+<a href="#l66" class="line" id="l66">     66</a>                         }
+<a href="#l67" class="line" id="l67">     67</a>                     }
+<a href="#l68" class="line" id="l68">     68</a>                 }
+<a href="#l69" class="line" id="l69">     69</a> 
+<a href="#l70" class="line" id="l70">     70</a>                 Scaffold(
+<a href="#l71" class="line" id="l71">     71</a>                     bottomBar = { navigation.BottomBar() },
+<a href="#l72" class="line" id="l72">     72</a>                     topBar = { navigation.TopBar() },
+<a href="#l73" class="line" id="l73">     73</a>                     floatingActionButton = { navigation.FloatingActionButtons() },
+<a href="#l74" class="line" id="l74">     74</a>                     floatingActionButtonPosition = FabPosition.End,
+<a href="#l75" class="line" id="l75">     75</a>                 ) {
+<a href="#l76" class="line" id="l76">     76</a>                     navigation.NavigationHost(it)
+<a href="#l77" class="line" id="l77">     77</a>                 }
+<a href="#l78" class="line" id="l78">     78</a>             }
+<a href="#l79" class="line" id="l79">     79</a>         }
+<a href="#l80" class="line" id="l80">     80</a>     }
+<a href="#l81" class="line" id="l81">     81</a> }</pre>
+</div>
+</body>
+</html>

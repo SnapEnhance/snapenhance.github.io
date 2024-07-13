@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(app/ui): error handling - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/1241d68d3cacb114540b0624612ca4f0855a5bf9.html">1241d68d3cacb114540b0624612ca4f0855a5bf9</a>
+<b>parent</b> <a href="../commit/0b0220ce848afee9a65dc225d8b47909816031ef.html">0b0220ce848afee9a65dc225d8b47909816031ef</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed,  3 Jan 2024 01:48:30 +0100
+
+fix(app/ui): error handling
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/LoggedStories.kt</a></td><td> | </td><td class="num">41</td><td><span class="i">+++++++++++++++++++++++++</span><span class="d">----------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/MessagingPreview.kt</a></td><td> | </td><td class="num">45</td><td><span class="i">+++++++++++++++++++++++++</span><span class="d">--------------------</span></td></tr>
+</table></pre><pre>2 files changed, 50 insertions(+), 36 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/LoggedStories.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/LoggedStories.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/LoggedStories.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/LoggedStories.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
+</a> import androidx.compose.ui.Modifier
+ import androidx.compose.ui.graphics.ImageBitmap
+ import androidx.compose.ui.graphics.asImageBitmap
+<a href="#h0-0-3" id="h0-0-3" class="i">+import androidx.compose.ui.text.style.TextAlign
+</a> import androidx.compose.ui.unit.dp
+ import androidx.core.content.FileProvider
+ import coil.annotation.ExperimentalCoilApi
+<a href="#h0-1" id="h0-1" class="h">@@ -161,6 +162,10 @@ fun LoggedStories(
+</a>         }
+     }
+ 
+<a href="#h0-1-3" id="h0-1-3" class="i">+    if (stories.isEmpty()) {
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+        Text(text = &quot;No stories found&quot;, Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+    }
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+
+</a>     LazyVerticalGrid(
+         columns = GridCells.Adaptive(100.dp),
+         contentPadding = PaddingValues(8.dp),
+<a href="#h0-2" id="h0-2" class="h">@@ -203,25 +208,29 @@ fun LoggedStories(
+</a>                             return@withTimeout
+                         }
+ 
+<a href="#h0-2-3" id="h0-2-3" class="d">-                        val response = httpClient.newCall(Request(
+</a><a href="#h0-2-4" id="h0-2-4" class="d">-                            url = story.url.toHttpUrl()
+</a><a href="#h0-2-5" id="h0-2-5" class="d">-                        )).execute()
+</a><a href="#h0-2-6" id="h0-2-6" class="d">-                        response.body.byteStream().use {
+</a><a href="#h0-2-7" id="h0-2-7" class="d">-                            val decrypted = story.key?.let { _ -&gt;
+</a><a href="#h0-2-8" id="h0-2-8" class="d">-                                val cipher = Cipher.getInstance(&quot;AES/CBC/PKCS5Padding&quot;)
+</a><a href="#h0-2-9" id="h0-2-9" class="d">-                                cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(story.key, &quot;AES&quot;), IvParameterSpec(story.iv))
+</a><a href="#h0-2-10" id="h0-2-10" class="d">-                                CipherInputStream(it, cipher)
+</a><a href="#h0-2-11" id="h0-2-11" class="d">-                            } ?: it
+</a><a href="#h0-2-12" id="h0-2-12" class="i">+                        runCatching {
+</a><a href="#h0-2-13" id="h0-2-13" class="i">+                            val response = httpClient.newCall(Request(
+</a><a href="#h0-2-14" id="h0-2-14" class="i">+                                url = story.url.toHttpUrl()
+</a><a href="#h0-2-15" id="h0-2-15" class="i">+                            )).execute()
+</a><a href="#h0-2-16" id="h0-2-16" class="i">+                            response.body.byteStream().use {
+</a><a href="#h0-2-17" id="h0-2-17" class="i">+                                val decrypted = story.key?.let { _ -&gt;
+</a><a href="#h0-2-18" id="h0-2-18" class="i">+                                    val cipher = Cipher.getInstance(&quot;AES/CBC/PKCS5Padding&quot;)
+</a><a href="#h0-2-19" id="h0-2-19" class="i">+                                    cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(story.key, &quot;AES&quot;), IvParameterSpec(story.iv))
+</a><a href="#h0-2-20" id="h0-2-20" class="i">+                                    CipherInputStream(it, cipher)
+</a><a href="#h0-2-21" id="h0-2-21" class="i">+                                } ?: it
+</a> 
+<a href="#h0-2-23" id="h0-2-23" class="d">-                            context.imageLoader.diskCache?.openEditor(uniqueHash)?.apply {
+</a><a href="#h0-2-24" id="h0-2-24" class="d">-                                data.toFile().outputStream().use { fos -&gt;
+</a><a href="#h0-2-25" id="h0-2-25" class="d">-                                    decrypted.copyTo(fos)
+</a><a href="#h0-2-26" id="h0-2-26" class="d">-                                }
+</a><a href="#h0-2-27" id="h0-2-27" class="d">-                                commitAndOpenSnapshot()?.use { snapshot -&gt;
+</a><a href="#h0-2-28" id="h0-2-28" class="d">-                                    openDiskCacheSnapshot(snapshot)
+</a><a href="#h0-2-29" id="h0-2-29" class="d">-                                    snapshot.close()
+</a><a href="#h0-2-30" id="h0-2-30" class="i">+                                context.imageLoader.diskCache?.openEditor(uniqueHash)?.apply {
+</a><a href="#h0-2-31" id="h0-2-31" class="i">+                                    data.toFile().outputStream().use { fos -&gt;
+</a><a href="#h0-2-32" id="h0-2-32" class="i">+                                        decrypted.copyTo(fos)
+</a><a href="#h0-2-33" id="h0-2-33" class="i">+                                    }
+</a><a href="#h0-2-34" id="h0-2-34" class="i">+                                    commitAndOpenSnapshot()?.use { snapshot -&gt;
+</a><a href="#h0-2-35" id="h0-2-35" class="i">+                                        openDiskCacheSnapshot(snapshot)
+</a><a href="#h0-2-36" id="h0-2-36" class="i">+                                        snapshot.close()
+</a><a href="#h0-2-37" id="h0-2-37" class="i">+                                    }
+</a>                                 }
+                             }
+<a href="#h0-2-40" id="h0-2-40" class="i">+                        }.onFailure {
+</a><a href="#h0-2-41" id="h0-2-41" class="i">+                            context.log.error(&quot;Failed to load story&quot;, it)
+</a>                         }
+                     }
+                 }
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/MessagingPreview.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/MessagingPreview.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/MessagingPreview.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/MessagingPreview.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -423,29 +423,34 @@ class MessagingPreview(
+</a>     }
+ 
+     private fun onMessagingBridgeReady() {
+<a href="#h1-0-3" id="h1-0-3" class="d">-        messagingBridge = context.bridgeService!!.messagingBridge!!
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-        conversationId = if (scope == SocialScope.FRIEND) messagingBridge.getOneToOneConversationId(scopeId) else scopeId
+</a><a href="#h1-0-5" id="h1-0-5" class="d">-        if (conversationId == null) {
+</a><a href="#h1-0-6" id="h1-0-6" class="d">-            context.longToast(&quot;Failed to fetch conversation id&quot;)
+</a><a href="#h1-0-7" id="h1-0-7" class="d">-            return
+</a><a href="#h1-0-8" id="h1-0-8" class="d">-        }
+</a><a href="#h1-0-9" id="h1-0-9" class="d">-        if (!messagingBridge.isSessionStarted) {
+</a><a href="#h1-0-10" id="h1-0-10" class="d">-            context.androidContext.packageManager.getLaunchIntentForPackage(
+</a><a href="#h1-0-11" id="h1-0-11" class="d">-                Constants.SNAPCHAT_PACKAGE_NAME
+</a><a href="#h1-0-12" id="h1-0-12" class="d">-            )?.let {
+</a><a href="#h1-0-13" id="h1-0-13" class="d">-                val mainIntent = Intent.makeRestartActivityTask(it.component).apply {
+</a><a href="#h1-0-14" id="h1-0-14" class="d">-                    putExtra(ReceiversConfig.MESSAGING_PREVIEW_EXTRA, true)
+</a><a href="#h1-0-15" id="h1-0-15" class="d">-                }
+</a><a href="#h1-0-16" id="h1-0-16" class="d">-                context.androidContext.startActivity(mainIntent)
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+        runCatching {
+</a><a href="#h1-0-18" id="h1-0-18" class="i">+            messagingBridge = context.bridgeService!!.messagingBridge!!
+</a><a href="#h1-0-19" id="h1-0-19" class="i">+            conversationId = if (scope == SocialScope.FRIEND) messagingBridge.getOneToOneConversationId(scopeId) else scopeId
+</a><a href="#h1-0-20" id="h1-0-20" class="i">+            if (conversationId == null) {
+</a><a href="#h1-0-21" id="h1-0-21" class="i">+                context.longToast(&quot;Failed to fetch conversation id&quot;)
+</a><a href="#h1-0-22" id="h1-0-22" class="i">+                return
+</a>             }
+<a href="#h1-0-24" id="h1-0-24" class="d">-            messagingBridge.registerSessionStartListener(object: SessionStartListener.Stub() {
+</a><a href="#h1-0-25" id="h1-0-25" class="d">-                override fun onConnected() {
+</a><a href="#h1-0-26" id="h1-0-26" class="d">-                    fetchNewMessages()
+</a><a href="#h1-0-27" id="h1-0-27" class="i">+            if (!messagingBridge.isSessionStarted) {
+</a><a href="#h1-0-28" id="h1-0-28" class="i">+                context.androidContext.packageManager.getLaunchIntentForPackage(
+</a><a href="#h1-0-29" id="h1-0-29" class="i">+                    Constants.SNAPCHAT_PACKAGE_NAME
+</a><a href="#h1-0-30" id="h1-0-30" class="i">+                )?.let {
+</a><a href="#h1-0-31" id="h1-0-31" class="i">+                    val mainIntent = Intent.makeRestartActivityTask(it.component).apply {
+</a><a href="#h1-0-32" id="h1-0-32" class="i">+                        putExtra(ReceiversConfig.MESSAGING_PREVIEW_EXTRA, true)
+</a><a href="#h1-0-33" id="h1-0-33" class="i">+                    }
+</a><a href="#h1-0-34" id="h1-0-34" class="i">+                    context.androidContext.startActivity(mainIntent)
+</a>                 }
+<a href="#h1-0-36" id="h1-0-36" class="d">-            })
+</a><a href="#h1-0-37" id="h1-0-37" class="d">-            return
+</a><a href="#h1-0-38" id="h1-0-38" class="i">+                messagingBridge.registerSessionStartListener(object: SessionStartListener.Stub() {
+</a><a href="#h1-0-39" id="h1-0-39" class="i">+                    override fun onConnected() {
+</a><a href="#h1-0-40" id="h1-0-40" class="i">+                        fetchNewMessages()
+</a><a href="#h1-0-41" id="h1-0-41" class="i">+                    }
+</a><a href="#h1-0-42" id="h1-0-42" class="i">+                })
+</a><a href="#h1-0-43" id="h1-0-43" class="i">+                return
+</a><a href="#h1-0-44" id="h1-0-44" class="i">+            }
+</a><a href="#h1-0-45" id="h1-0-45" class="i">+            fetchNewMessages()
+</a><a href="#h1-0-46" id="h1-0-46" class="i">+        }.onFailure {
+</a><a href="#h1-0-47" id="h1-0-47" class="i">+            context.longToast(&quot;Failed to initialize messaging bridge&quot;)
+</a><a href="#h1-0-48" id="h1-0-48" class="i">+            context.log.error(&quot;Failed to initialize messaging bridge&quot;, it)
+</a>         }
+<a href="#h1-0-50" id="h1-0-50" class="d">-        fetchNewMessages()
+</a>     }
+ 
+     @Composable
+</pre>
+</div>
+</body>
+</html>

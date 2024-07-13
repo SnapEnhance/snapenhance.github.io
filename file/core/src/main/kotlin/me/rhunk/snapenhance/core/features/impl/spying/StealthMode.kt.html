@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StealthMode.kt - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../../../../../../../../../../../../logo.png"/>
+<link rel="alternate icon" href="../../../../../../../../../../../../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../../../../../../../../../../../../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../../../../../../../../../../../../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../../../../../../../../../../../../"><img src="../../../../../../../../../../../../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../../../../../../../../../../../../about.html">About</a> | <a href="../../../../../../../../../../../../log.html">Log</a> | <a href="../../../../../../../../../../../../files.html">Files</a> | <a href="../../../../../../../../../../../../refs.html">Refs</a> | <a href="../../../../../../../../../../../../file/.gitmodules.html">Submodules</a> | <a href="../../../../../../../../../../../../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<p> StealthMode.kt (1672B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/StealthMode.kt">raw</a></p><hr/><pre id="blob">
+<a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core.features.impl.spying
+<a href="#l2" class="line" id="l2">      2</a> 
+<a href="#l3" class="line" id="l3">      3</a> import me.rhunk.snapenhance.common.data.MessagingRuleType
+<a href="#l4" class="line" id="l4">      4</a> import me.rhunk.snapenhance.core.event.events.impl.OnSnapInteractionEvent
+<a href="#l5" class="line" id="l5">      5</a> import me.rhunk.snapenhance.core.features.FeatureLoadParams
+<a href="#l6" class="line" id="l6">      6</a> import me.rhunk.snapenhance.core.features.MessagingRuleFeature
+<a href="#l7" class="line" id="l7">      7</a> import me.rhunk.snapenhance.core.util.hook.HookStage
+<a href="#l8" class="line" id="l8">      8</a> import me.rhunk.snapenhance.core.util.hook.hook
+<a href="#l9" class="line" id="l9">      9</a> import me.rhunk.snapenhance.core.wrapper.impl.SnapUUID
+<a href="#l10" class="line" id="l10">     10</a> import java.util.concurrent.CopyOnWriteArraySet
+<a href="#l11" class="line" id="l11">     11</a> 
+<a href="#l12" class="line" id="l12">     12</a> class StealthMode : MessagingRuleFeature(&quot;StealthMode&quot;, MessagingRuleType.STEALTH, loadParams = FeatureLoadParams.INIT_SYNC) {
+<a href="#l13" class="line" id="l13">     13</a>     private val displayedMessageQueue = CopyOnWriteArraySet&lt;Long&gt;()
+<a href="#l14" class="line" id="l14">     14</a> 
+<a href="#l15" class="line" id="l15">     15</a>     fun addDisplayedMessageException(clientMessageId: Long) {
+<a href="#l16" class="line" id="l16">     16</a>         displayedMessageQueue.add(clientMessageId)
+<a href="#l17" class="line" id="l17">     17</a>     }
+<a href="#l18" class="line" id="l18">     18</a> 
+<a href="#l19" class="line" id="l19">     19</a>     override fun init() {
+<a href="#l20" class="line" id="l20">     20</a>         val isConversationInStealthMode: (SnapUUID) -&gt; Boolean = hook@{
+<a href="#l21" class="line" id="l21">     21</a>             context.feature(StealthMode::class).canUseRule(it.toString())
+<a href="#l22" class="line" id="l22">     22</a>         }
+<a href="#l23" class="line" id="l23">     23</a> 
+<a href="#l24" class="line" id="l24">     24</a>         arrayOf(&quot;mediaMessagesDisplayed&quot;, &quot;displayedMessages&quot;).forEach { methodName: String -&gt;
+<a href="#l25" class="line" id="l25">     25</a>             context.classCache.conversationManager.hook(methodName, HookStage.BEFORE) { param -&gt;
+<a href="#l26" class="line" id="l26">     26</a>                 if (displayedMessageQueue.removeIf { param.arg&lt;Long&gt;(1) == it }) return@hook
+<a href="#l27" class="line" id="l27">     27</a>                 if (isConversationInStealthMode(SnapUUID(param.arg(0)))) {
+<a href="#l28" class="line" id="l28">     28</a>                     param.setResult(null)
+<a href="#l29" class="line" id="l29">     29</a>                 }
+<a href="#l30" class="line" id="l30">     30</a>             }
+<a href="#l31" class="line" id="l31">     31</a>         }
+<a href="#l32" class="line" id="l32">     32</a> 
+<a href="#l33" class="line" id="l33">     33</a>         context.event.subscribe(OnSnapInteractionEvent::class) { event -&gt;
+<a href="#l34" class="line" id="l34">     34</a>             if (isConversationInStealthMode(event.conversationId)) {
+<a href="#l35" class="line" id="l35">     35</a>                 event.canceled = true
+<a href="#l36" class="line" id="l36">     36</a>             }
+<a href="#l37" class="line" id="l37">     37</a>         }
+<a href="#l38" class="line" id="l38">     38</a>     }
+<a href="#l39" class="line" id="l39">     39</a> }</pre>
+</div>
+</body>
+</html>

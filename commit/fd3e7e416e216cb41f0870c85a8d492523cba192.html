@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pref: bridge client - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/fd3e7e416e216cb41f0870c85a8d492523cba192.html">fd3e7e416e216cb41f0870c85a8d492523cba192</a>
+<b>parent</b> <a href="../commit/8caf2b6d90a746ade4ea6ad73f542a70184565e2.html">8caf2b6d90a746ade4ea6ad73f542a70184565e2</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 10 Jun 2023 12:24:23 +0200
+
+pref: bridge client
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/ServiceBridgeClient.kt</a></td><td> | </td><td class="num">45</td><td><span class="i">++++++++++++++++++++++</span><span class="d">-----------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/MappingManager.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">+</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/TranslationManager.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+</table></pre><pre>3 files changed, 24 insertions(+), 26 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/ServiceBridgeClient.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/ServiceBridgeClient.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/ServiceBridgeClient.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/ServiceBridgeClient.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -13,8 +13,6 @@ import android.os.HandlerThread
+</a> import android.os.IBinder
+ import android.os.Message
+ import android.os.Messenger
+<a href="#h0-0-3" id="h0-0-3" class="d">-import kotlinx.coroutines.runBlocking
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-import kotlinx.coroutines.suspendCancellableCoroutine
+</a> import me.rhunk.snapenhance.BuildConfig
+ import me.rhunk.snapenhance.Logger.xposedLog
+ import me.rhunk.snapenhance.bridge.AbstractBridgeClient
+<a href="#h0-1" id="h0-1" class="h">@@ -33,13 +31,16 @@ import me.rhunk.snapenhance.bridge.common.impl.messagelogger.MessageLoggerResult
+</a> import me.rhunk.snapenhance.bridge.service.BridgeService
+ import java.util.concurrent.CompletableFuture
+ import java.util.concurrent.Executors
+<a href="#h0-1-3" id="h0-1-3" class="d">-import kotlin.coroutines.resume
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+import java.util.concurrent.atomic.AtomicReference
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+import java.util.concurrent.locks.ReentrantLock
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+import kotlin.concurrent.withLock
+</a> import kotlin.reflect.KClass
+ import kotlin.system.exitProcess
+ 
+ 
+ class ServiceBridgeClient: AbstractBridgeClient(), ServiceConnection {
+     private val handlerThread = HandlerThread(&quot;BridgeClient&quot;)
+<a href="#h0-1-13" id="h0-1-13" class="i">+    private val lock = ReentrantLock()
+</a> 
+     private lateinit var messenger: Messenger
+     private lateinit var future: CompletableFuture&lt;Boolean&gt;
+<a href="#h0-2" id="h0-2" class="h">@@ -83,33 +84,31 @@ class ServiceBridgeClient: AbstractBridgeClient(), ServiceConnection {
+</a>     @Suppress(&quot;UNCHECKED_CAST&quot;, &quot;UNUSED_PARAMETER&quot;)
+     private fun &lt;T : BridgeMessage&gt; sendMessage(
+         messageType: BridgeMessageType,
+<a href="#h0-2-3" id="h0-2-3" class="d">-        message: BridgeMessage,
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+        bridgeMessage: BridgeMessage,
+</a>         resultType: KClass&lt;T&gt;? = null
+<a href="#h0-2-6" id="h0-2-6" class="d">-    ) = runBlocking {
+</a><a href="#h0-2-7" id="h0-2-7" class="d">-        suspendCancellableCoroutine { cancelableContinuation -&gt;
+</a><a href="#h0-2-8" id="h0-2-8" class="d">-            val replyMessenger = Messenger(object : Handler(handlerThread.looper) {
+</a><a href="#h0-2-9" id="h0-2-9" class="i">+    ): T {
+</a><a href="#h0-2-10" id="h0-2-10" class="i">+        val response = AtomicReference&lt;BridgeMessage&gt;()
+</a><a href="#h0-2-11" id="h0-2-11" class="i">+        val condition = lock.newCondition()
+</a><a href="#h0-2-12" id="h0-2-12" class="i">+
+</a><a href="#h0-2-13" id="h0-2-13" class="i">+        with(Message.obtain()) {
+</a><a href="#h0-2-14" id="h0-2-14" class="i">+            what = messageType.value
+</a><a href="#h0-2-15" id="h0-2-15" class="i">+            replyTo = Messenger(object : Handler(handlerThread.looper) {
+</a>                 override fun handleMessage(msg: Message) {
+<a href="#h0-2-17" id="h0-2-17" class="d">-                    if (cancelableContinuation.isCancelled) return
+</a><a href="#h0-2-18" id="h0-2-18" class="d">-                    runCatching {
+</a><a href="#h0-2-19" id="h0-2-19" class="d">-                        cancelableContinuation.resume(handleResponseMessage(msg) as T)
+</a><a href="#h0-2-20" id="h0-2-20" class="d">-                    }.onFailure {
+</a><a href="#h0-2-21" id="h0-2-21" class="d">-                        cancelableContinuation.cancel(it)
+</a><a href="#h0-2-22" id="h0-2-22" class="i">+                    response.set(handleResponseMessage(msg))
+</a><a href="#h0-2-23" id="h0-2-23" class="i">+                    lock.withLock {
+</a><a href="#h0-2-24" id="h0-2-24" class="i">+                        condition.signal()
+</a>                     }
+                 }
+             })
+<a href="#h0-2-28" id="h0-2-28" class="i">+            data = Bundle()
+</a><a href="#h0-2-29" id="h0-2-29" class="i">+            bridgeMessage.write(data)
+</a><a href="#h0-2-30" id="h0-2-30" class="i">+            messenger.send(this)
+</a><a href="#h0-2-31" id="h0-2-31" class="i">+        }
+</a> 
+<a href="#h0-2-33" id="h0-2-33" class="d">-            runCatching {
+</a><a href="#h0-2-34" id="h0-2-34" class="d">-                with(Message.obtain()) {
+</a><a href="#h0-2-35" id="h0-2-35" class="d">-                    what = messageType.value
+</a><a href="#h0-2-36" id="h0-2-36" class="d">-                    replyTo = replyMessenger
+</a><a href="#h0-2-37" id="h0-2-37" class="d">-                    data = Bundle()
+</a><a href="#h0-2-38" id="h0-2-38" class="d">-                    message.write(data)
+</a><a href="#h0-2-39" id="h0-2-39" class="d">-                    messenger.send(this)
+</a><a href="#h0-2-40" id="h0-2-40" class="d">-                }
+</a><a href="#h0-2-41" id="h0-2-41" class="d">-            }.onFailure {
+</a><a href="#h0-2-42" id="h0-2-42" class="d">-                cancelableContinuation.cancel(it)
+</a><a href="#h0-2-43" id="h0-2-43" class="d">-            }
+</a><a href="#h0-2-44" id="h0-2-44" class="i">+        lock.withLock {
+</a><a href="#h0-2-45" id="h0-2-45" class="i">+            condition.awaitUninterruptibly()
+</a>         }
+<a href="#h0-2-47" id="h0-2-47" class="i">+        return response.get() as T
+</a>     }
+ 
+     override fun createAndReadFile(
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/MappingManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/MappingManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/MappingManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/MappingManager.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -16,8 +16,8 @@ import me.rhunk.snapenhance.manager.Manager
+</a> import me.rhunk.snapenhance.mapping.Mapper
+ import me.rhunk.snapenhance.mapping.impl.BCryptClassMapper
+ import me.rhunk.snapenhance.mapping.impl.CallbackMapper
+<a href="#h1-0-3" id="h1-0-3" class="d">-import me.rhunk.snapenhance.mapping.impl.EnumMapper
+</a> import me.rhunk.snapenhance.mapping.impl.DefaultMediaItemMapper
+<a href="#h1-0-5" id="h1-0-5" class="i">+import me.rhunk.snapenhance.mapping.impl.EnumMapper
+</a> import me.rhunk.snapenhance.mapping.impl.OperaPageViewControllerMapper
+ import me.rhunk.snapenhance.mapping.impl.PlatformAnalyticsCreatorMapper
+ import me.rhunk.snapenhance.mapping.impl.PlusSubscriptionMapper
+<a href="#h1-1" id="h1-1" class="h">@@ -26,7 +26,6 @@ import me.rhunk.snapenhance.mapping.impl.StoryBoostStateMapper
+</a> import me.rhunk.snapenhance.util.getObjectField
+ import java.nio.charset.StandardCharsets
+ import java.util.concurrent.ConcurrentHashMap
+<a href="#h1-1-3" id="h1-1-3" class="d">-import kotlin.concurrent.thread
+</a> 
+ @Suppress(&quot;UNCHECKED_CAST&quot;)
+ class MappingManager(private val context: ModContext) : Manager {
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/TranslationManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/TranslationManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/TranslationManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/TranslationManager.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -14,7 +14,7 @@ class TranslationManager(
+</a>     lateinit var locale: Locale
+ 
+     override fun init() {
+<a href="#h2-0-3" id="h2-0-3" class="d">-        val messageLocaleResult = context.bridgeClient.fetchTranslations();
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+        val messageLocaleResult = context.bridgeClient.fetchTranslations()
+</a>         locale = messageLocaleResult.locale?.split(&quot;_&quot;)?.let { Locale(it[0], it[1]) } ?: Locale.getDefault()
+ 
+         val translations = JsonParser.parseString(messageLocaleResult.content?.toString(Charsets.UTF_8)).asJsonObject
+</pre>
+</div>
+</body>
+</html>

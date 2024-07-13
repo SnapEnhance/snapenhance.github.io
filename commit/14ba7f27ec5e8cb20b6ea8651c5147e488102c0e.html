@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix: messaging preview crash - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/14ba7f27ec5e8cb20b6ea8651c5147e488102c0e.html">14ba7f27ec5e8cb20b6ea8651c5147e488102c0e</a>
+<b>parent</b> <a href="../commit/4f2dfbeb8a027445e99af3f7785ebffd560f4940.html">4f2dfbeb8a027445e99af3f7785ebffd560f4940</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 30 Mar 2024 17:11:51 +0100
+
+fix: messaging preview crash
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/MessagingPreview.kt</a></td><td> | </td><td class="num">80</td><td><span class="i">+++++++++++++++++++++++++++++++++++</span><span class="d">--------------------------------------------</span></td></tr>
+</table></pre><pre>1 file changed, 35 insertions(+), 45 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/MessagingPreview.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/MessagingPreview.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/MessagingPreview.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/MessagingPreview.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
+</a> import androidx.compose.foundation.layout.*
+ import androidx.compose.foundation.lazy.LazyColumn
+ import androidx.compose.foundation.lazy.LazyListState
+<a href="#h0-0-3" id="h0-0-3" class="i">+import androidx.compose.foundation.lazy.items
+</a> import androidx.compose.foundation.lazy.rememberLazyListState
+ import androidx.compose.foundation.shape.RoundedCornerShape
+ import androidx.compose.material.icons.Icons
+<a href="#h0-1" id="h0-1" class="h">@@ -40,7 +41,6 @@ import me.rhunk.snapenhance.messaging.MessagingTaskConstraint
+</a> import me.rhunk.snapenhance.messaging.MessagingTaskType
+ import me.rhunk.snapenhance.ui.manager.Routes
+ import me.rhunk.snapenhance.ui.util.Dialog
+<a href="#h0-1-3" id="h0-1-3" class="d">-import java.util.SortedMap
+</a> 
+ class MessagingPreview: Routes.Route() {
+     private lateinit var coroutineScope: CoroutineScope
+<a href="#h0-2" id="h0-2" class="h">@@ -50,8 +50,7 @@ class MessagingPreview: Routes.Route() {
+</a>     private val myUserId by lazy { messagingBridge.myUserId }
+     private val contentTypeTranslation by lazy { context.translation.getCategory(&quot;content_type&quot;) }
+ 
+<a href="#h0-2-3" id="h0-2-3" class="d">-    private var messages = sortedMapOf&lt;Long, Message&gt;()
+</a><a href="#h0-2-4" id="h0-2-4" class="d">-    private var messageSize by mutableIntStateOf(0)
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+    private var messages = mutableStateListOf&lt;Message&gt;()
+</a>     private var conversationId by mutableStateOf&lt;String?&gt;(null)
+     private val selectedMessages = mutableStateListOf&lt;Long&gt;() // client message id
+ 
+<a href="#h0-3" id="h0-3" class="h">@@ -310,8 +309,7 @@ class MessagingPreview: Routes.Route() {
+</a>                 ActionButton(text = if (hasSelection) &quot;Delete selected&quot; else &quot;Delete all&quot;, icon = Icons.Rounded.DeleteForever) {
+                     launchMessagingTask(MessagingTaskType.DELETE, listOf(MessagingConstraints.USER_ID(myUserId))) { message -&gt;
+                         coroutineScope.launch {
+<a href="#h0-3-3" id="h0-3-3" class="d">-                            messages.remove(message.serverMessageId)
+</a><a href="#h0-3-4" id="h0-3-4" class="d">-                            messageSize = messages.size
+</a><a href="#h0-3-5" id="h0-3-5" class="i">+                            message.contentType = ContentType.STATUS.id
+</a>                         }
+                     }
+                     if (hasSelection) runCurrentTask()
+<a href="#h0-4" id="h0-4" class="h">@@ -323,8 +321,7 @@ class MessagingPreview: Routes.Route() {
+</a> 
+     @Composable
+     private fun ConversationPreview(
+<a href="#h0-4-3" id="h0-4-3" class="d">-        messages: SortedMap&lt;Long, Message&gt;,
+</a><a href="#h0-4-4" id="h0-4-4" class="d">-        messageSize: Int,
+</a><a href="#h0-4-5" id="h0-4-5" class="i">+        messages: List&lt;Message&gt;,
+</a>         fetchNewMessages: () -&gt; Unit
+     ) {
+         DisposableEffect(Unit) {
+<a href="#h0-5" id="h0-5" class="h">@@ -334,32 +331,13 @@ class MessagingPreview: Routes.Route() {
+</a>         }
+ 
+         LazyColumn(
+<a href="#h0-5-3" id="h0-5-3" class="i">+            reverseLayout = true,
+</a>             modifier = Modifier
+<a href="#h0-5-5" id="h0-5-5" class="d">-                .fillMaxSize(),
+</a><a href="#h0-5-6" id="h0-5-6" class="i">+                .fillMaxWidth(),
+</a>             state = previewScrollState,
+         ) {
+<a href="#h0-5-9" id="h0-5-9" class="d">-            item {
+</a><a href="#h0-5-10" id="h0-5-10" class="d">-                if (messages.isEmpty()) {
+</a><a href="#h0-5-11" id="h0-5-11" class="d">-                    Row(
+</a><a href="#h0-5-12" id="h0-5-12" class="d">-                        modifier = Modifier
+</a><a href="#h0-5-13" id="h0-5-13" class="d">-                            .fillMaxWidth()
+</a><a href="#h0-5-14" id="h0-5-14" class="d">-                            .padding(40.dp),
+</a><a href="#h0-5-15" id="h0-5-15" class="d">-                        horizontalArrangement = Arrangement.Center
+</a><a href="#h0-5-16" id="h0-5-16" class="d">-                    ) {
+</a><a href="#h0-5-17" id="h0-5-17" class="d">-                        Text(&quot;No messages&quot;)
+</a><a href="#h0-5-18" id="h0-5-18" class="d">-                    }
+</a><a href="#h0-5-19" id="h0-5-19" class="d">-                }
+</a><a href="#h0-5-20" id="h0-5-20" class="d">-                Spacer(modifier = Modifier.height(20.dp))
+</a><a href="#h0-5-21" id="h0-5-21" class="d">-
+</a><a href="#h0-5-22" id="h0-5-22" class="d">-                LaunchedEffect(Unit) {
+</a><a href="#h0-5-23" id="h0-5-23" class="d">-                    if (messages.size &gt; 0) {
+</a><a href="#h0-5-24" id="h0-5-24" class="d">-                        fetchNewMessages()
+</a><a href="#h0-5-25" id="h0-5-25" class="d">-                    }
+</a><a href="#h0-5-26" id="h0-5-26" class="d">-                }
+</a><a href="#h0-5-27" id="h0-5-27" class="d">-            }
+</a><a href="#h0-5-28" id="h0-5-28" class="d">-            items(messageSize) {index -&gt;
+</a><a href="#h0-5-29" id="h0-5-29" class="d">-                val elementKey = remember(index) { messages.entries.elementAt(index).value.clientMessageId }
+</a><a href="#h0-5-30" id="h0-5-30" class="d">-                val messageReader = ProtoReader(messages.entries.elementAt(index).value.content)
+</a><a href="#h0-5-31" id="h0-5-31" class="i">+            items(messages, key = { it.serverMessageId }) {message -&gt;
+</a><a href="#h0-5-32" id="h0-5-32" class="i">+                val messageReader = remember(message.contentType) { ProtoReader(message.content) }
+</a>                 val contentType = ContentType.fromMessageContainer(messageReader)
+ 
+                 Card(
+<a href="#h0-6" id="h0-6" class="h">@@ -369,25 +347,44 @@ class MessagingPreview: Routes.Route() {
+</a>                             if (contentType == ContentType.STATUS) return@pointerInput
+                             detectTapGestures(
+                                 onLongPress = {
+<a href="#h0-6-3" id="h0-6-3" class="d">-                                    toggleSelectedMessage(elementKey)
+</a><a href="#h0-6-4" id="h0-6-4" class="i">+                                    toggleSelectedMessage(message.clientMessageId)
+</a>                                 },
+                                 onTap = {
+                                     if (selectedMessages.isNotEmpty()) {
+<a href="#h0-6-8" id="h0-6-8" class="d">-                                        toggleSelectedMessage(elementKey)
+</a><a href="#h0-6-9" id="h0-6-9" class="i">+                                        toggleSelectedMessage(message.clientMessageId)
+</a>                                     }
+                                 }
+                             )
+                         },
+                     colors = CardDefaults.cardColors(
+<a href="#h0-6-15" id="h0-6-15" class="d">-                        containerColor = if (selectedMessages.contains(elementKey)) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+</a><a href="#h0-6-16" id="h0-6-16" class="i">+                        containerColor = if (selectedMessages.contains(message.clientMessageId)) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+</a>                     ),
+                 ) {
+<a href="#h0-6-19" id="h0-6-19" class="i">+                    val contentMessage = remember(message.contentType) { &quot;[${contentType?.let { contentTypeTranslation.getOrNull(it.name) ?: it.name } }] ${messageReader.getString(2, 1) ?: &quot;&quot; }&quot; }
+</a>                     Row(
+                         modifier = Modifier
+                             .padding(5.dp)
+                     ) {
+<a href="#h0-6-24" id="h0-6-24" class="i">+                        Text(contentMessage)
+</a><a href="#h0-6-25" id="h0-6-25" class="i">+                    }
+</a><a href="#h0-6-26" id="h0-6-26" class="i">+                }
+</a><a href="#h0-6-27" id="h0-6-27" class="i">+            }
+</a><a href="#h0-6-28" id="h0-6-28" class="i">+            item {
+</a><a href="#h0-6-29" id="h0-6-29" class="i">+                if (messages.isEmpty()) {
+</a><a href="#h0-6-30" id="h0-6-30" class="i">+                    Row(
+</a><a href="#h0-6-31" id="h0-6-31" class="i">+                        modifier = Modifier
+</a><a href="#h0-6-32" id="h0-6-32" class="i">+                            .fillMaxWidth()
+</a><a href="#h0-6-33" id="h0-6-33" class="i">+                            .padding(40.dp),
+</a><a href="#h0-6-34" id="h0-6-34" class="i">+                        horizontalArrangement = Arrangement.Center
+</a><a href="#h0-6-35" id="h0-6-35" class="i">+                    ) {
+</a><a href="#h0-6-36" id="h0-6-36" class="i">+                        Text(&quot;No messages&quot;)
+</a><a href="#h0-6-37" id="h0-6-37" class="i">+                    }
+</a><a href="#h0-6-38" id="h0-6-38" class="i">+                }
+</a><a href="#h0-6-39" id="h0-6-39" class="i">+                Spacer(modifier = Modifier.height(20.dp))
+</a> 
+<a href="#h0-6-41" id="h0-6-41" class="d">-                        Text(&quot;[${contentType?.let { contentTypeTranslation.getOrNull(it.name) ?: it.name } }] ${messageReader.getString(2, 1) ?: &quot;&quot;}&quot;)
+</a><a href="#h0-6-42" id="h0-6-42" class="i">+                LaunchedEffect(Unit) {
+</a><a href="#h0-6-43" id="h0-6-43" class="i">+                    if (messages.isNotEmpty()) {
+</a><a href="#h0-6-44" id="h0-6-44" class="i">+                        fetchNewMessages()
+</a>                     }
+                 }
+             }
+<a href="#h0-7" id="h0-7" class="h">@@ -431,7 +428,7 @@ class MessagingPreview: Routes.Route() {
+</a>                         conversationId!!,
+                         20,
+                         lastMessageId
+<a href="#h0-7-3" id="h0-7-3" class="d">-                    )
+</a><a href="#h0-7-4" id="h0-7-4" class="i">+                    )?.reversed()
+</a> 
+                     if (queriedMessages == null) {
+                         context.shortToast(&quot;Failed to fetch messages&quot;)
+<a href="#h0-8" id="h0-8" class="h">@@ -439,19 +436,13 @@ class MessagingPreview: Routes.Route() {
+</a>                     }
+ 
+                     withContext(Dispatchers.Main) {
+<a href="#h0-8-3" id="h0-8-3" class="d">-                        messages.putAll(queriedMessages.map { it.serverMessageId to it })
+</a><a href="#h0-8-4" id="h0-8-4" class="d">-                        messageSize = messages.size
+</a><a href="#h0-8-5" id="h0-8-5" class="d">-                        if (queriedMessages.isNotEmpty()) {
+</a><a href="#h0-8-6" id="h0-8-6" class="d">-                            lastMessageId = queriedMessages.first().clientMessageId
+</a><a href="#h0-8-7" id="h0-8-7" class="d">-                            delay(20)
+</a><a href="#h0-8-8" id="h0-8-8" class="d">-                            previewScrollState.scrollToItem(queriedMessages.size - 1)
+</a><a href="#h0-8-9" id="h0-8-9" class="d">-                        }
+</a><a href="#h0-8-10" id="h0-8-10" class="i">+                        messages.addAll(queriedMessages)
+</a><a href="#h0-8-11" id="h0-8-11" class="i">+                        lastMessageId = queriedMessages.lastOrNull()?.clientMessageId ?: lastMessageId
+</a>                     }
+                 }.onFailure {
+                     context.log.error(&quot;Failed to fetch messages&quot;, it)
+                     context.shortToast(&quot;Failed to fetch messages: ${it.message}&quot;)
+                 }
+<a href="#h0-8-17" id="h0-8-17" class="d">-                context.log.verbose(&quot;fetched ${messages.size} messages&quot;)
+</a>             }
+         }
+ 
+<a href="#h0-9" id="h0-9" class="h">@@ -490,7 +481,6 @@ class MessagingPreview: Routes.Route() {
+</a> 
+         LaunchedEffect(Unit) {
+             messages.clear()
+<a href="#h0-9-3" id="h0-9-3" class="d">-            messageSize = 0
+</a>             conversationId = null
+ 
+             isBridgeConnected = context.hasMessagingBridge()
+<a href="#h0-10" id="h0-10" class="h">@@ -529,7 +519,7 @@ class MessagingPreview: Routes.Route() {
+</a>             }
+ 
+             if (isBridgeConnected &amp;&amp; !hasBridgeError) {
+<a href="#h0-10-3" id="h0-10-3" class="d">-                ConversationPreview(messages, messageSize, ::fetchNewMessages)
+</a><a href="#h0-10-4" id="h0-10-4" class="i">+                ConversationPreview(messages, ::fetchNewMessages)
+</a>             }
+         }
+     }
+</pre>
+</div>
+</body>
+</html>

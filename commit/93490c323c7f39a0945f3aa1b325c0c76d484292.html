@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: stealth mode indicator - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/93490c323c7f39a0945f3aa1b325c0c76d484292.html">93490c323c7f39a0945f3aa1b325c0c76d484292</a>
+<b>parent</b> <a href="../commit/8c71e4af27c7b08e1a8c0901b5efaa5bba4cb3a2.html">8c71e4af27c7b08e1a8c0901b5efaa5bba4cb3a2</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 17 Jan 2024 14:53:15 +0100
+
+feat: stealth mode indicator
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/UserInterfaceTweaks.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/MessagingRuleFeature.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/StealthModeIndicator.kt</a></td><td> | </td><td class="num">78</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+</table></pre><pre>5 files changed, 90 insertions(+), 0 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -340,6 +340,10 @@
+</a>                         &quot;name&quot;: &quot;Fidelius Indicator&quot;,
+                         &quot;description&quot;: &quot;Adds a green circle next to messages that have been sent only to you&quot;
+                     },
+<a href="#h0-0-3" id="h0-0-3" class="i">+                    &quot;stealth_mode_indicator&quot;: {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                        &quot;name&quot;: &quot;Stealth Mode Indicator&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+                        &quot;description&quot;: &quot;Adds a \uD83D\uDC7B emoji next to conversations in stealth mode&quot;
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                    },
+</a>                     &quot;edit_text_override&quot;: {
+                         &quot;name&quot;: &quot;Edit Text Override&quot;,
+                         &quot;description&quot;: &quot;Overrides text field behavior&quot;
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/UserInterfaceTweaks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/UserInterfaceTweaks.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/UserInterfaceTweaks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/UserInterfaceTweaks.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -49,6 +49,7 @@ class UserInterfaceTweaks : ConfigContainer() {
+</a>     val hideSettingsGear = boolean(&quot;hide_settings_gear&quot;) { requireRestart() }
+     val verticalStoryViewer = boolean(&quot;vertical_story_viewer&quot;) { requireRestart() }
+     val fideliusIndicator = boolean(&quot;fidelius_indicator&quot;) { requireRestart() }
+<a href="#h1-0-3" id="h1-0-3" class="i">+    val stealthModeIndicator = boolean(&quot;stealth_mode_indicator&quot;) { requireRestart() }
+</a>     val editTextOverride = multiple(&quot;edit_text_override&quot;, &quot;multi_line_chat_input&quot;, &quot;bypass_text_input_limit&quot;) {
+         requireRestart(); addNotices(FeatureNotice.BAN_RISK, FeatureNotice.INTERNAL_BEHAVIOR)
+     }
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/MessagingRuleFeature.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/MessagingRuleFeature.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/MessagingRuleFeature.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/MessagingRuleFeature.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -4,6 +4,11 @@ import me.rhunk.snapenhance.common.data.MessagingRuleType
+</a> import me.rhunk.snapenhance.common.data.RuleState
+ 
+ abstract class MessagingRuleFeature(name: String, val ruleType: MessagingRuleType, loadParams: Int = 0) : Feature(name, loadParams) {
+<a href="#h2-0-3" id="h2-0-3" class="i">+    private val listeners = mutableListOf&lt;(String, Boolean) -&gt; Unit&gt;()
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+    fun addStateListener(listener: (conversationId: String, newState: Boolean) -&gt; Unit) {
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+        listeners.add(listener)
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+    }
+</a> 
+     open fun getRuleState() = context.config.rules.getRuleState(ruleType)
+ 
+<a href="#h2-1" id="h2-1" class="h">@@ -13,6 +18,7 @@ abstract class MessagingRuleFeature(name: String, val ruleType: MessagingRuleTyp
+</a>             ruleType,
+             state
+         )
+<a href="#h2-1-3" id="h2-1-3" class="i">+        listeners.forEach { it(conversationId, state) }
+</a>     }
+ 
+     fun getState(conversationId: String) =
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/StealthModeIndicator.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/StealthModeIndicator.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/StealthModeIndicator.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/StealthModeIndicator.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -0,0 +1,77 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="i">+package me.rhunk.snapenhance.core.features.impl.ui
+</a><a href="#h3-0-1" id="h3-0-1" class="i">+
+</a><a href="#h3-0-2" id="h3-0-2" class="i">+import android.graphics.Canvas
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+import android.graphics.Paint
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import android.graphics.drawable.ShapeDrawable
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+import android.graphics.drawable.shapes.Shape
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+import kotlinx.coroutines.Dispatchers
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+import kotlinx.coroutines.launch
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+import kotlinx.coroutines.withContext
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+import me.rhunk.snapenhance.core.features.Feature
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+import me.rhunk.snapenhance.core.features.FeatureLoadParams
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+import me.rhunk.snapenhance.core.features.impl.spying.StealthMode
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+import me.rhunk.snapenhance.core.ui.addForegroundDrawable
+</a><a href="#h3-0-14" id="h3-0-14" class="i">+import me.rhunk.snapenhance.core.ui.removeForegroundDrawable
+</a><a href="#h3-0-15" id="h3-0-15" class="i">+import me.rhunk.snapenhance.core.util.EvictingMap
+</a><a href="#h3-0-16" id="h3-0-16" class="i">+import me.rhunk.snapenhance.core.util.ktx.getDimens
+</a><a href="#h3-0-17" id="h3-0-17" class="i">+import me.rhunk.snapenhance.core.util.ktx.getIdentifier
+</a><a href="#h3-0-18" id="h3-0-18" class="i">+
+</a><a href="#h3-0-19" id="h3-0-19" class="i">+class StealthModeIndicator : Feature(&quot;StealthModeIndicator&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+</a><a href="#h3-0-20" id="h3-0-20" class="i">+    private val stealthMode by lazy { context.feature(StealthMode::class) }
+</a><a href="#h3-0-21" id="h3-0-21" class="i">+    private val listeners = EvictingMap&lt;String, (Boolean) -&gt; Unit&gt;(100)
+</a><a href="#h3-0-22" id="h3-0-22" class="i">+
+</a><a href="#h3-0-23" id="h3-0-23" class="i">+    private fun fetchStealthState(conversationId: String, result: (Boolean) -&gt; Unit) {
+</a><a href="#h3-0-24" id="h3-0-24" class="i">+        context.coroutineScope.launch {
+</a><a href="#h3-0-25" id="h3-0-25" class="i">+            val isStealth = stealthMode.getState(conversationId)
+</a><a href="#h3-0-26" id="h3-0-26" class="i">+            withContext(Dispatchers.Main) {
+</a><a href="#h3-0-27" id="h3-0-27" class="i">+                result(isStealth)
+</a><a href="#h3-0-28" id="h3-0-28" class="i">+            }
+</a><a href="#h3-0-29" id="h3-0-29" class="i">+        }
+</a><a href="#h3-0-30" id="h3-0-30" class="i">+    }
+</a><a href="#h3-0-31" id="h3-0-31" class="i">+
+</a><a href="#h3-0-32" id="h3-0-32" class="i">+    override fun onActivityCreate() {
+</a><a href="#h3-0-33" id="h3-0-33" class="i">+        if (!context.config.userInterface.stealthModeIndicator.get()) return
+</a><a href="#h3-0-34" id="h3-0-34" class="i">+
+</a><a href="#h3-0-35" id="h3-0-35" class="i">+        val secondaryTextSize = context.resources.getDimens(&quot;ff_feed_cell_secondary_text_size&quot;).toFloat()
+</a><a href="#h3-0-36" id="h3-0-36" class="i">+        val sigColorTextPrimary = context.mainActivity!!.obtainStyledAttributes(
+</a><a href="#h3-0-37" id="h3-0-37" class="i">+            intArrayOf(context.resources.getIdentifier(&quot;sigColorTextPrimary&quot;, &quot;attr&quot;))
+</a><a href="#h3-0-38" id="h3-0-38" class="i">+        ).use { it.getColor(0, 0) }
+</a><a href="#h3-0-39" id="h3-0-39" class="i">+
+</a><a href="#h3-0-40" id="h3-0-40" class="i">+        stealthMode.addStateListener { conversationId, state -&gt;
+</a><a href="#h3-0-41" id="h3-0-41" class="i">+            runCatching {
+</a><a href="#h3-0-42" id="h3-0-42" class="i">+                listeners[conversationId]?.invoke(state)
+</a><a href="#h3-0-43" id="h3-0-43" class="i">+            }.onFailure {
+</a><a href="#h3-0-44" id="h3-0-44" class="i">+                context.log.error(&quot;Failed to update stealth mode indicator&quot;, it)
+</a><a href="#h3-0-45" id="h3-0-45" class="i">+            }
+</a><a href="#h3-0-46" id="h3-0-46" class="i">+        }
+</a><a href="#h3-0-47" id="h3-0-47" class="i">+
+</a><a href="#h3-0-48" id="h3-0-48" class="i">+        context.event.subscribe(BindViewEvent::class) { event -&gt;
+</a><a href="#h3-0-49" id="h3-0-49" class="i">+            fun updateStealthIndicator(isStealth: Boolean = true) {
+</a><a href="#h3-0-50" id="h3-0-50" class="i">+                event.view.removeForegroundDrawable(&quot;stealthModeIndicator&quot;)
+</a><a href="#h3-0-51" id="h3-0-51" class="i">+                if (!isStealth || !event.view.isAttachedToWindow) return
+</a><a href="#h3-0-52" id="h3-0-52" class="i">+                event.view.addForegroundDrawable(&quot;stealthModeIndicator&quot;, ShapeDrawable(object : Shape() {
+</a><a href="#h3-0-53" id="h3-0-53" class="i">+                    override fun draw(canvas: Canvas, paint: Paint) {
+</a><a href="#h3-0-54" id="h3-0-54" class="i">+                        paint.textSize = secondaryTextSize
+</a><a href="#h3-0-55" id="h3-0-55" class="i">+                        paint.color = sigColorTextPrimary
+</a><a href="#h3-0-56" id="h3-0-56" class="i">+                        canvas.drawText(
+</a><a href="#h3-0-57" id="h3-0-57" class="i">+                            &quot;\uD83D\uDC7B&quot;,
+</a><a href="#h3-0-58" id="h3-0-58" class="i">+                            0f,
+</a><a href="#h3-0-59" id="h3-0-59" class="i">+                            canvas.height.toFloat() - secondaryTextSize / 2,
+</a><a href="#h3-0-60" id="h3-0-60" class="i">+                            paint
+</a><a href="#h3-0-61" id="h3-0-61" class="i">+                        )
+</a><a href="#h3-0-62" id="h3-0-62" class="i">+                    }
+</a><a href="#h3-0-63" id="h3-0-63" class="i">+                }))
+</a><a href="#h3-0-64" id="h3-0-64" class="i">+            }
+</a><a href="#h3-0-65" id="h3-0-65" class="i">+
+</a><a href="#h3-0-66" id="h3-0-66" class="i">+            event.friendFeedItem { conversationId -&gt;
+</a><a href="#h3-0-67" id="h3-0-67" class="i">+                listeners[conversationId] = addStateListener@{ stealth -&gt;
+</a><a href="#h3-0-68" id="h3-0-68" class="i">+                    updateStealthIndicator(stealth)
+</a><a href="#h3-0-69" id="h3-0-69" class="i">+                }
+</a><a href="#h3-0-70" id="h3-0-70" class="i">+                fetchStealthState(conversationId) { isStealth -&gt;
+</a><a href="#h3-0-71" id="h3-0-71" class="i">+                    updateStealthIndicator(isStealth)
+</a><a href="#h3-0-72" id="h3-0-72" class="i">+                }
+</a><a href="#h3-0-73" id="h3-0-73" class="i">+            }
+</a><a href="#h3-0-74" id="h3-0-74" class="i">+        }
+</a><a href="#h3-0-75" id="h3-0-75" class="i">+    }
+</a><a href="#h3-0-76" id="h3-0-76" class="i">+}</a><a href="#h3-0-77" id="h3-0-77" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -116,6 +116,7 @@ class FeatureManager(
+</a>             ConversationToolbox(),
+             SpotlightCommentsUsername(),
+             OperaViewerParamsOverride(),
+<a href="#h4-0-3" id="h4-0-3" class="i">+            StealthModeIndicator(),
+</a>         )
+ 
+         initializeFeatures()
+</pre>
+</div>
+</body>
+</html>

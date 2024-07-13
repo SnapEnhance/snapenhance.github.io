@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(notification): new message attachment decoder - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/5a47e04093d05b2f811a10475421a067220b46d8.html">5a47e04093d05b2f811a10475421a067220b46d8</a>
+<b>parent</b> <a href="../commit/904d9175b69b20156d6f083a4d389149655ab908.html">904d9175b69b20156d6f083a4d389149655ab908</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 15 Sep 2023 00:53:42 +0200
+
+feat(notification): new message attachment decoder
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/Notifications.kt</a></td><td> | </td><td class="num">32</td><td><span class="i">+++++++++++++++++++++</span><span class="d">-----------</span></td></tr>
+</table></pre><pre>1 file changed, 21 insertions(+), 11 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/Notifications.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/Notifications.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/Notifications.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/Notifications.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -30,9 +30,12 @@ import me.rhunk.snapenhance.features.Feature
+</a> import me.rhunk.snapenhance.features.FeatureLoadParams
+ import me.rhunk.snapenhance.features.impl.Messaging
+ import me.rhunk.snapenhance.features.impl.downloader.MediaDownloader
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.features.impl.downloader.decoder.MessageDecoder
+</a> import me.rhunk.snapenhance.hook.HookStage
+ import me.rhunk.snapenhance.hook.Hooker
+ import me.rhunk.snapenhance.hook.hook
+<a href="#h0-0-7" id="h0-0-7" class="i">+import kotlin.io.encoding.Base64
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+import kotlin.io.encoding.ExperimentalEncodingApi
+</a> 
+ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+     companion object{
+<a href="#h0-1" id="h0-1" class="h">@@ -183,6 +186,7 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>         }
+     }
+ 
+<a href="#h0-1-3" id="h0-1-3" class="i">+    @OptIn(ExperimentalEncodingApi::class)
+</a>     private fun fetchMessagesResult(conversationId: String, messages: List&lt;Message&gt;) {
+         val sendNotificationData = { notificationData: NotificationData, forceCreate: Boolean  -&gt;
+             val notificationId = if (forceCreate) System.nanoTime().toInt() else notificationData.id
+<a href="#h0-2" id="h0-2" class="h">@@ -241,20 +245,25 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>                         }
+                         appendNotifications()
+                     }
+<a href="#h0-2-3" id="h0-2-3" class="d">-                    ContentType.SNAP, ContentType.EXTERNAL_MEDIA-&gt; {
+</a><a href="#h0-2-4" id="h0-2-4" class="d">-                        //serialize the message content into a json object
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+                    ContentType.SNAP, ContentType.EXTERNAL_MEDIA -&gt; {
+</a>                         val serializedMessageContent = context.gson.toJsonTree(snapMessage.messageContent.instanceNonNull()).asJsonObject
+<a href="#h0-2-7" id="h0-2-7" class="d">-                        val mediaReferences = serializedMessageContent[&quot;mRemoteMediaReferences&quot;]
+</a><a href="#h0-2-8" id="h0-2-8" class="d">-                            .asJsonArray.map { it.asJsonObject[&quot;mMediaReferences&quot;].asJsonArray }
+</a><a href="#h0-2-9" id="h0-2-9" class="i">+                        val mediaReferences = serializedMessageContent
+</a><a href="#h0-2-10" id="h0-2-10" class="i">+                            .getAsJsonArray(&quot;mRemoteMediaReferences&quot;)
+</a><a href="#h0-2-11" id="h0-2-11" class="i">+                            .map { it.asJsonObject.getAsJsonArray(&quot;mMediaReferences&quot;) }
+</a>                             .flatten()
+ 
+<a href="#h0-2-14" id="h0-2-14" class="d">-                        mediaReferences.forEach { media -&gt;
+</a><a href="#h0-2-15" id="h0-2-15" class="d">-                            val protoMediaReference = media.asJsonObject[&quot;mContentObject&quot;].asJsonArray.map { it.asByte }.toByteArray()
+</a><a href="#h0-2-16" id="h0-2-16" class="d">-                            val mediaType = MediaReferenceType.valueOf(media.asJsonObject[&quot;mMediaType&quot;].asString)
+</a><a href="#h0-2-17" id="h0-2-17" class="i">+                        val mediaReferenceUrls = mediaReferences.map { reference -&gt;
+</a><a href="#h0-2-18" id="h0-2-18" class="i">+                            reference.asJsonObject.getAsJsonArray(&quot;mContentObject&quot;).map { it.asByte }.toByteArray()
+</a><a href="#h0-2-19" id="h0-2-19" class="i">+                        }
+</a><a href="#h0-2-20" id="h0-2-20" class="i">+
+</a><a href="#h0-2-21" id="h0-2-21" class="i">+                        MessageDecoder.decode(
+</a><a href="#h0-2-22" id="h0-2-22" class="i">+                            ProtoReader(contentData),
+</a><a href="#h0-2-23" id="h0-2-23" class="i">+                            customMediaReferences = mediaReferenceUrls.map { Base64.UrlSafe.encode(it) }
+</a><a href="#h0-2-24" id="h0-2-24" class="i">+                        ).forEachIndexed { index, media -&gt;
+</a><a href="#h0-2-25" id="h0-2-25" class="i">+                            val mediaType = MediaReferenceType.valueOf(mediaReferences[index].asJsonObject[&quot;mMediaType&quot;].asString)
+</a>                             runCatching {
+<a href="#h0-2-27" id="h0-2-27" class="d">-                                val messageReader = ProtoReader(contentData)
+</a><a href="#h0-2-28" id="h0-2-28" class="d">-                                val downloadedMediaList = MediaDownloaderHelper.downloadMediaFromReference(protoMediaReference) {
+</a><a href="#h0-2-29" id="h0-2-29" class="d">-                                    EncryptionHelper.decryptInputStream(it, contentType, messageReader, isArroyo = false)
+</a><a href="#h0-2-30" id="h0-2-30" class="i">+                                val downloadedMediaList = MediaDownloaderHelper.downloadMediaFromReference(mediaReferenceUrls[index]) { inputStream -&gt;
+</a><a href="#h0-2-31" id="h0-2-31" class="i">+                                    media.attachmentInfo?.encryption?.let { EncryptionHelper.decryptInputStream(inputStream, it) } ?: inputStream
+</a>                                 }
+ 
+                                 var bitmapPreview = PreviewUtils.createPreview(downloadedMediaList[SplitMediaAssetType.ORIGINAL]!!, mediaType.name.contains(&quot;VIDEO&quot;))!!
+<a href="#h0-3" id="h0-3" class="h">@@ -279,7 +288,8 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>                         }
+                     }
+                     else -&gt; {
+<a href="#h0-3-3" id="h0-3-3" class="d">-                        notificationCache.add(formatUsername(&quot;sent $contentType&quot;))
+</a><a href="#h0-3-4" id="h0-3-4" class="i">+                        notificationCache.add(formatUsername(&quot;sent ${contentType.name.lowercase()}&quot;))
+</a><a href="#h0-3-5" id="h0-3-5" class="i">+                        appendNotifications()
+</a>                     }
+                 }
+ 
+</pre>
+</div>
+</body>
+</html>

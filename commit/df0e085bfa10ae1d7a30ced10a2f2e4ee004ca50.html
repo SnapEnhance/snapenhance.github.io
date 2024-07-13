@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(scripting): module data folder - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/df0e085bfa10ae1d7a30ced10a2f2e4ee004ca50.html">df0e085bfa10ae1d7a30ced10a2f2e4ee004ca50</a>
+<b>parent</b> <a href="../commit/86cc8238efd26c1d08703ce077162075e63b9763.html">86cc8238efd26c1d08703ce077162075e63b9763</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Mon, 18 Sep 2023 00:18:06 +0200
+
+feat(scripting): module data folder
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></td><td> | </td><td class="num">25</td><td><span class="i">+++++++++++++++++</span><span class="d">--------</span></td></tr>
+</table></pre><pre>1 file changed, 17 insertions(+), 8 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -40,21 +40,30 @@ class RemoteScriptManager(
+</a>         }
+ 
+         sync()
+<a href="#h0-0-3" id="h0-0-3" class="d">-        enabledScripts.forEach { path -&gt;
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-            val content = getScriptContent(path) ?: return@forEach
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-            runtime.load(path, content)
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+        enabledScripts.forEach { name -&gt;
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+            if (getModuleDataFolder(name) == null) {
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+                context.log.warn(&quot;Module data folder not found for $name&quot;)
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+            }
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+            val content = getScriptContent(name) ?: return@forEach
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+            runtime.load(name, content)
+</a>         }
+     }
+ 
+     private fun &lt;R&gt; getScriptInputStream(name: String, callback: (InputStream?) -&gt; R): R {
+<a href="#h0-0-16" id="h0-0-16" class="d">-        val file = getScriptFolder()?.findFile(name) ?: return callback(null)
+</a><a href="#h0-0-17" id="h0-0-17" class="i">+        val file = getScriptsFolder()?.findFile(name) ?: return callback(null)
+</a>         return context.androidContext.contentResolver.openInputStream(file.uri)?.use(callback) ?: callback(null)
+     }
+ 
+<a href="#h0-0-21" id="h0-0-21" class="d">-    private fun getScriptFolder() = DocumentFile.fromTreeUri(context.androidContext, Uri.parse(context.config.root.scripting.moduleFolder.get()))
+</a><a href="#h0-0-22" id="h0-0-22" class="i">+    private fun getModuleDataFolder(moduleFileName: String): DocumentFile? {
+</a><a href="#h0-0-23" id="h0-0-23" class="i">+        val folderName = moduleFileName.substringBeforeLast(&quot;.js&quot;)
+</a><a href="#h0-0-24" id="h0-0-24" class="i">+        val folder = getScriptsFolder() ?: return null
+</a><a href="#h0-0-25" id="h0-0-25" class="i">+        return folder.findFile(folderName) ?: folder.createDirectory(folderName)
+</a><a href="#h0-0-26" id="h0-0-26" class="i">+    }
+</a><a href="#h0-0-27" id="h0-0-27" class="i">+
+</a><a href="#h0-0-28" id="h0-0-28" class="i">+    private fun getScriptsFolder() = DocumentFile.fromTreeUri(context.androidContext, Uri.parse(context.config.root.scripting.moduleFolder.get()))
+</a> 
+     private fun getScriptFileNames(): List&lt;String&gt; {
+<a href="#h0-0-31" id="h0-0-31" class="d">-        return (getScriptFolder() ?: return emptyList()).listFiles().filter { it.name?.endsWith(&quot;.js&quot;) ?: false }.map { it.name!! }
+</a><a href="#h0-0-32" id="h0-0-32" class="i">+        return (getScriptsFolder() ?: return emptyList()).listFiles().filter { it.name?.endsWith(&quot;.js&quot;) ?: false }.map { it.name!! }
+</a>     }
+ 
+     override fun getEnabledScripts(): List&lt;String&gt; {
+<a href="#h0-1" id="h0-1" class="h">@@ -67,8 +76,8 @@ class RemoteScriptManager(
+</a>         }.getOrDefault(emptyList())
+     }
+ 
+<a href="#h0-1-3" id="h0-1-3" class="d">-    override fun getScriptContent(name: String): String? {
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-        return getScriptInputStream(name) { it?.bufferedReader()?.readText() }
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+    override fun getScriptContent(moduleName: String): String? {
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+        return getScriptInputStream(moduleName) { it?.bufferedReader()?.readText() }
+</a>     }
+ 
+     override fun registerReloadListener(listener: ReloadListener) {
+</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(core): mark snaps as seen - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/8823093b30746348bbfb1310823822f9f738e931.html">8823093b30746348bbfb1310823822f9f738e931</a>
+<b>parent</b> <a href="../commit/c357825dc75efef756a2fa08996cd088f1c56784.html">c357825dc75efef756a2fa08996cd088f1c56784</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed,  8 Nov 2023 01:43:47 +0100
+
+feat(core): mark snaps as seen
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/UserInterfaceTweaks.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt</a></td><td> | </td><td class="num">29</td><td><span class="i">++++++++++++++++++++++++</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/FriendFeedInfoMenu.kt</a></td><td> | </td><td class="num">55</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>4 files changed, 82 insertions(+), 6 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -612,6 +612,7 @@
+</a>                 &quot;auto_download&quot;: &quot;\u2B07\uFE0F Auto Download&quot;,
+                 &quot;auto_save&quot;: &quot;\uD83D\uDCAC Auto Save Messages&quot;,
+                 &quot;stealth&quot;: &quot;\uD83D\uDC7B Stealth Mode&quot;,
+<a href="#h0-0-3" id="h0-0-3" class="i">+                &quot;mark_as_seen&quot;: &quot;\uD83D\uDC40 Mark Snaps as seen&quot;,
+</a>                 &quot;conversation_info&quot;: &quot;\uD83D\uDC64 Conversation Info&quot;,
+                 &quot;e2e_encryption&quot;: &quot;\uD83D\uDD12 Use E2E Encryption&quot;
+             },
+<a href="#h0-1" id="h0-1" class="h">@@ -710,6 +711,7 @@
+</a>     },
+ 
+     &quot;friend_menu_option&quot;: {
+<a href="#h0-1-3" id="h0-1-3" class="i">+        &quot;mark_as_seen&quot;: &quot;Mark Snaps as seen&quot;,
+</a>         &quot;preview&quot;: &quot;Preview&quot;,
+         &quot;stealth_mode&quot;: &quot;Stealth Mode&quot;,
+         &quot;auto_download_blacklist&quot;: &quot;Auto Download Blacklist&quot;,
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/UserInterfaceTweaks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/UserInterfaceTweaks.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/UserInterfaceTweaks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/UserInterfaceTweaks.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -19,7 +19,7 @@ class UserInterfaceTweaks : ConfigContainer() {
+</a>     }
+ 
+     val friendFeedMenuButtons = multiple(
+<a href="#h1-0-3" id="h1-0-3" class="d">-        &quot;friend_feed_menu_buttons&quot;,&quot;conversation_info&quot;, *MessagingRuleType.entries.filter { it.showInFriendMenu }.map { it.key }.toTypedArray()
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+        &quot;friend_feed_menu_buttons&quot;,&quot;conversation_info&quot;, &quot;mark_as_seen&quot;, *MessagingRuleType.entries.filter { it.showInFriendMenu }.map { it.key }.toTypedArray()
+</a>     ).apply {
+         set(mutableListOf(&quot;conversation_info&quot;, MessagingRuleType.STEALTH.key))
+     }
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -5,18 +5,20 @@ import me.rhunk.snapenhance.core.event.events.impl.OnSnapInteractionEvent
+</a> import me.rhunk.snapenhance.core.features.Feature
+ import me.rhunk.snapenhance.core.features.FeatureLoadParams
+ import me.rhunk.snapenhance.core.features.impl.spying.StealthMode
+<a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.core.util.EvictingMap
+</a> import me.rhunk.snapenhance.core.util.hook.HookStage
+ import me.rhunk.snapenhance.core.util.hook.Hooker
+ import me.rhunk.snapenhance.core.util.hook.hook
+<a href="#h2-0-7" id="h2-0-7" class="i">+import me.rhunk.snapenhance.core.util.hook.hookConstructor
+</a> import me.rhunk.snapenhance.core.util.ktx.getObjectField
+<a href="#h2-0-9" id="h2-0-9" class="i">+import me.rhunk.snapenhance.core.util.ktx.getObjectFieldOrNull
+</a> import me.rhunk.snapenhance.core.wrapper.impl.ConversationManager
+<a href="#h2-0-11" id="h2-0-11" class="i">+import me.rhunk.snapenhance.core.wrapper.impl.Message
+</a> import me.rhunk.snapenhance.core.wrapper.impl.SnapUUID
+ 
+ class Messaging : Feature(&quot;Messaging&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC or FeatureLoadParams.INIT_ASYNC or FeatureLoadParams.INIT_SYNC) {
+     var conversationManager: ConversationManager? = null
+         private set
+<a href="#h2-0-17" id="h2-0-17" class="d">-
+</a><a href="#h2-0-18" id="h2-0-18" class="d">-
+</a>     var openedConversationUUID: SnapUUID? = null
+         private set
+     var lastFetchConversationUserUUID: SnapUUID? = null
+<a href="#h2-1" id="h2-1" class="h">@@ -27,8 +29,10 @@ class Messaging : Feature(&quot;Messaging&quot;, loadParams = FeatureLoadParams.ACTIVITY_C
+</a>     var lastFocusedMessageId: Long = -1
+         private set
+ 
+<a href="#h2-1-3" id="h2-1-3" class="i">+    private val feedCachedSnapMessages = EvictingMap&lt;String, List&lt;Long&gt;&gt;(100)
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+
+</a>     override fun init() {
+<a href="#h2-1-6" id="h2-1-6" class="d">-        Hooker.hookConstructor(context.classCache.conversationManager, HookStage.BEFORE) { param -&gt;
+</a><a href="#h2-1-7" id="h2-1-7" class="i">+        context.classCache.conversationManager.hookConstructor(HookStage.BEFORE) { param -&gt;
+</a>             conversationManager = ConversationManager(context, param.thisObject())
+             context.messagingBridge.triggerSessionStart()
+             context.mainActivity?.takeIf { it.intent.getBooleanExtra(ReceiversConfig.MESSAGING_PREVIEW_EXTRA,false) }?.run {
+<a href="#h2-2" id="h2-2" class="h">@@ -37,6 +41,8 @@ class Messaging : Feature(&quot;Messaging&quot;, loadParams = FeatureLoadParams.ACTIVITY_C
+</a>         }
+     }
+ 
+<a href="#h2-2-3" id="h2-2-3" class="i">+    fun getFeedCachedMessageIds(conversationId: String) = feedCachedSnapMessages[conversationId]
+</a><a href="#h2-2-4" id="h2-2-4" class="i">+
+</a>     override fun onActivityCreate() {
+         context.mappings.getMappedObjectNullable(&quot;FriendsFeedEventDispatcher&quot;).let { it as? Map&lt;*, *&gt; }?.let { mappings -&gt;
+             findClass(mappings[&quot;class&quot;].toString()).hook(&quot;onItemLongPress&quot;, HookStage.BEFORE) { param -&gt;
+<a href="#h2-3" id="h2-3" class="h">@@ -51,6 +57,19 @@ class Messaging : Feature(&quot;Messaging&quot;, loadParams = FeatureLoadParams.ACTIVITY_C
+</a>             }
+         }
+ 
+<a href="#h2-3-3" id="h2-3-3" class="i">+        val myUserId = context.database.myUserId
+</a><a href="#h2-3-4" id="h2-3-4" class="i">+
+</a><a href="#h2-3-5" id="h2-3-5" class="i">+        context.classCache.feedEntry.hookConstructor(HookStage.AFTER) { param -&gt;
+</a><a href="#h2-3-6" id="h2-3-6" class="i">+            val instance = param.thisObject&lt;Any&gt;()
+</a><a href="#h2-3-7" id="h2-3-7" class="i">+            val interactionInfo = instance.getObjectFieldOrNull(&quot;mInteractionInfo&quot;) ?: return@hookConstructor
+</a><a href="#h2-3-8" id="h2-3-8" class="i">+            val messages = (interactionInfo.getObjectFieldOrNull(&quot;mMessages&quot;) as? List&lt;*&gt;)?.map { Message(it) } ?: return@hookConstructor
+</a><a href="#h2-3-9" id="h2-3-9" class="i">+            val conversationId = SnapUUID(instance.getObjectFieldOrNull(&quot;mConversationId&quot;) ?: return@hookConstructor).toString()
+</a><a href="#h2-3-10" id="h2-3-10" class="i">+
+</a><a href="#h2-3-11" id="h2-3-11" class="i">+            feedCachedSnapMessages[conversationId] = messages.filter { msg -&gt;
+</a><a href="#h2-3-12" id="h2-3-12" class="i">+                msg.messageMetadata?.seenBy?.none { it.toString() == myUserId } == true
+</a><a href="#h2-3-13" id="h2-3-13" class="i">+            }.sortedBy { it.orderKey }.mapNotNull { it.messageDescriptor?.messageId }
+</a><a href="#h2-3-14" id="h2-3-14" class="i">+        }
+</a><a href="#h2-3-15" id="h2-3-15" class="i">+
+</a>         context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;GetOneOnOneConversationIdsCallback&quot;).hook(&quot;onSuccess&quot;, HookStage.BEFORE) { param -&gt;
+             val userIdToConversation = (param.arg&lt;ArrayList&lt;*&gt;&gt;(0))
+                 .takeIf { it.isNotEmpty() }
+<a href="#h2-4" id="h2-4" class="h">@@ -96,12 +115,12 @@ class Messaging : Feature(&quot;Messaging&quot;, loadParams = FeatureLoadParams.ACTIVITY_C
+</a>             lastFocusedMessageId = event.messageId
+         }
+ 
+<a href="#h2-4-3" id="h2-4-3" class="d">-        Hooker.hook(context.classCache.conversationManager, &quot;fetchMessage&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h2-4-4" id="h2-4-4" class="i">+        context.classCache.conversationManager.hook(&quot;fetchMessage&quot;, HookStage.BEFORE) { param -&gt;
+</a>             lastFetchConversationUserUUID = SnapUUID((param.arg(0) as Any))
+             lastFocusedMessageId = param.arg(1)
+         }
+ 
+<a href="#h2-4-9" id="h2-4-9" class="d">-        Hooker.hook(context.classCache.conversationManager, &quot;sendTypingNotification&quot;, HookStage.BEFORE, {
+</a><a href="#h2-4-10" id="h2-4-10" class="i">+        context.classCache.conversationManager.hook(&quot;sendTypingNotification&quot;, HookStage.BEFORE, {
+</a>             hideTypingNotification || stealthMode.canUseRule(openedConversationUUID.toString())
+         }) {
+             it.setResult(null)
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/FriendFeedInfoMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/FriendFeedInfoMenu.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/FriendFeedInfoMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/FriendFeedInfoMenu.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -9,9 +9,15 @@ import android.view.View
+</a> import android.view.ViewGroup
+ import android.widget.Button
+ import android.widget.CompoundButton
+<a href="#h3-0-3" id="h3-0-3" class="i">+import android.widget.ProgressBar
+</a> import android.widget.Switch
+<a href="#h3-0-5" id="h3-0-5" class="i">+import kotlinx.coroutines.Dispatchers
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+import kotlinx.coroutines.Job
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+import kotlinx.coroutines.delay
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+import kotlinx.coroutines.launch
+</a> import me.rhunk.snapenhance.common.data.ContentType
+ import me.rhunk.snapenhance.common.data.FriendLinkType
+<a href="#h3-0-11" id="h3-0-11" class="i">+import me.rhunk.snapenhance.common.data.MessageUpdate
+</a> import me.rhunk.snapenhance.common.database.impl.ConversationMessage
+ import me.rhunk.snapenhance.common.database.impl.FriendInfo
+ import me.rhunk.snapenhance.common.database.impl.UserConversationLink
+<a href="#h3-1" id="h3-1" class="h">@@ -29,6 +35,9 @@ import java.text.SimpleDateFormat
+</a> import java.util.Calendar
+ import java.util.Date
+ import java.util.Locale
+<a href="#h3-1-3" id="h3-1-3" class="i">+import kotlin.coroutines.resume
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+import kotlin.coroutines.suspendCoroutine
+</a><a href="#h3-1-5" id="h3-1-5" class="i">+import kotlin.random.Random
+</a> 
+ class FriendFeedInfoMenu : AbstractMenu() {
+     private fun getImageDrawable(url: String): Drawable {
+<a href="#h3-2" id="h3-2" class="h">@@ -101,6 +110,44 @@ class FriendFeedInfoMenu : AbstractMenu() {
+</a>         }
+     }
+ 
+<a href="#h3-2-3" id="h3-2-3" class="i">+    private fun markAsSeen(conversationId: String) {
+</a><a href="#h3-2-4" id="h3-2-4" class="i">+        val messaging = context.feature(Messaging::class)
+</a><a href="#h3-2-5" id="h3-2-5" class="i">+        val messageIds = messaging.getFeedCachedMessageIds(conversationId)?.takeIf { it.isNotEmpty() } ?: run {
+</a><a href="#h3-2-6" id="h3-2-6" class="i">+            context.shortToast(&quot;No recent snaps found&quot;)
+</a><a href="#h3-2-7" id="h3-2-7" class="i">+            return
+</a><a href="#h3-2-8" id="h3-2-8" class="i">+        }
+</a><a href="#h3-2-9" id="h3-2-9" class="i">+
+</a><a href="#h3-2-10" id="h3-2-10" class="i">+        var job: Job? = null
+</a><a href="#h3-2-11" id="h3-2-11" class="i">+        val dialog = ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity)
+</a><a href="#h3-2-12" id="h3-2-12" class="i">+            .setTitle(&quot;Processing...&quot;)
+</a><a href="#h3-2-13" id="h3-2-13" class="i">+            .setView(ProgressBar(context.mainActivity).apply {
+</a><a href="#h3-2-14" id="h3-2-14" class="i">+                setPadding(10, 10, 10, 10)
+</a><a href="#h3-2-15" id="h3-2-15" class="i">+            })
+</a><a href="#h3-2-16" id="h3-2-16" class="i">+            .setOnDismissListener { job?.cancel() }
+</a><a href="#h3-2-17" id="h3-2-17" class="i">+            .show()
+</a><a href="#h3-2-18" id="h3-2-18" class="i">+
+</a><a href="#h3-2-19" id="h3-2-19" class="i">+        context.coroutineScope.launch(Dispatchers.IO) {
+</a><a href="#h3-2-20" id="h3-2-20" class="i">+            messageIds.forEach { messageId -&gt;
+</a><a href="#h3-2-21" id="h3-2-21" class="i">+                suspendCoroutine { continuation -&gt;
+</a><a href="#h3-2-22" id="h3-2-22" class="i">+                    messaging.conversationManager?.updateMessage(conversationId, messageId, MessageUpdate.READ) {
+</a><a href="#h3-2-23" id="h3-2-23" class="i">+                        continuation.resume(Unit)
+</a><a href="#h3-2-24" id="h3-2-24" class="i">+                        if (it != null &amp;&amp; it != &quot;DUPLICATEREQUEST&quot;) {
+</a><a href="#h3-2-25" id="h3-2-25" class="i">+                            context.log.error(&quot;Error marking message as read $it&quot;)
+</a><a href="#h3-2-26" id="h3-2-26" class="i">+                        }
+</a><a href="#h3-2-27" id="h3-2-27" class="i">+                    }
+</a><a href="#h3-2-28" id="h3-2-28" class="i">+                }
+</a><a href="#h3-2-29" id="h3-2-29" class="i">+                delay(Random.nextLong(20, 60))
+</a><a href="#h3-2-30" id="h3-2-30" class="i">+                context.runOnUiThread {
+</a><a href="#h3-2-31" id="h3-2-31" class="i">+                    dialog.setTitle(&quot;Processing... (${messageIds.indexOf(messageId) + 1}/${messageIds.size})&quot;)
+</a><a href="#h3-2-32" id="h3-2-32" class="i">+                }
+</a><a href="#h3-2-33" id="h3-2-33" class="i">+            }
+</a><a href="#h3-2-34" id="h3-2-34" class="i">+        }.also { job = it }.invokeOnCompletion {
+</a><a href="#h3-2-35" id="h3-2-35" class="i">+            context.runOnUiThread {
+</a><a href="#h3-2-36" id="h3-2-36" class="i">+                dialog.dismiss()
+</a><a href="#h3-2-37" id="h3-2-37" class="i">+            }
+</a><a href="#h3-2-38" id="h3-2-38" class="i">+        }
+</a><a href="#h3-2-39" id="h3-2-39" class="i">+    }
+</a><a href="#h3-2-40" id="h3-2-40" class="i">+
+</a>     private fun showPreview(userId: String?, conversationId: String) {
+         //query message
+         val messageLogger = context.feature(MessageLogger::class)
+<a href="#h3-3" id="h3-3" class="h">@@ -253,5 +300,13 @@ class FriendFeedInfoMenu : AbstractMenu() {
+</a>                 { ruleFeature.setState(conversationId, it) }
+             )
+         }
+<a href="#h3-3-3" id="h3-3-3" class="i">+
+</a><a href="#h3-3-4" id="h3-3-4" class="i">+        if (friendFeedMenuOptions.contains(&quot;mark_as_seen&quot;)) {
+</a><a href="#h3-3-5" id="h3-3-5" class="i">+            viewConsumer(Button(view.context).apply {
+</a><a href="#h3-3-6" id="h3-3-6" class="i">+                text = modContext.translation[&quot;friend_menu_option.mark_as_seen&quot;]
+</a><a href="#h3-3-7" id="h3-3-7" class="i">+                applyTheme(view.width, hasRadius = true)
+</a><a href="#h3-3-8" id="h3-3-8" class="i">+                setOnClickListener { markAsSeen(conversationId) }
+</a><a href="#h3-3-9" id="h3-3-9" class="i">+            })
+</a><a href="#h3-3-10" id="h3-3-10" class="i">+        }
+</a>     }
+ } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

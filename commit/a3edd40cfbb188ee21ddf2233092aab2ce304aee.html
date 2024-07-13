@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(send_override): media extras (mentions, places, ...) - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/a3edd40cfbb188ee21ddf2233092aab2ce304aee.html">a3edd40cfbb188ee21ddf2233092aab2ce304aee</a>
+<b>parent</b> <a href="../commit/d0e6c5571703820c31a430f883e019b97aceedcd.html">d0e6c5571703820c31a430f883e019b97aceedcd</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri,  1 Sep 2023 16:37:08 +0200
+
+fix(send_override): media extras (mentions, places, ...)
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/data/MessageSender.kt</a></td><td> | </td><td class="num">25</td><td><span class="i">+++++++++++++++</span><span class="d">----------</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt</a></td><td> | </td><td class="num">113</td><td><span class="i"></span><span class="d">-------------------------------------------------------------------------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/SendOverride.kt</a></td><td> | </td><td class="num">115</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+</table></pre><pre>4 files changed, 132 insertions(+), 125 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/data/MessageSender.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/data/MessageSender.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/data/MessageSender.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/data/MessageSender.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -12,20 +12,25 @@ class MessageSender(
+</a>     private val context: ModContext,
+ ) {
+     companion object {
+<a href="#h0-0-3" id="h0-0-3" class="d">-        val redSnapProto: () -&gt; ByteArray = {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        val redSnapProto: (ByteArray?) -&gt; ByteArray = { extras -&gt;
+</a>             ProtoWriter().apply {
+<a href="#h0-0-6" id="h0-0-6" class="d">-                from(11, 5) {
+</a><a href="#h0-0-7" id="h0-0-7" class="d">-                    from(1) {
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+                from(11) {
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+                    from(5) {
+</a>                         from(1) {
+<a href="#h0-0-11" id="h0-0-11" class="d">-                            addVarInt(2, 0)
+</a><a href="#h0-0-12" id="h0-0-12" class="d">-                            addVarInt(12, 0)
+</a><a href="#h0-0-13" id="h0-0-13" class="d">-                            addVarInt(15, 0)
+</a><a href="#h0-0-14" id="h0-0-14" class="i">+                            from(1) {
+</a><a href="#h0-0-15" id="h0-0-15" class="i">+                                addVarInt(2, 0)
+</a><a href="#h0-0-16" id="h0-0-16" class="i">+                                addVarInt(12, 0)
+</a><a href="#h0-0-17" id="h0-0-17" class="i">+                                addVarInt(15, 0)
+</a><a href="#h0-0-18" id="h0-0-18" class="i">+                            }
+</a><a href="#h0-0-19" id="h0-0-19" class="i">+                            addVarInt(6, 0)
+</a><a href="#h0-0-20" id="h0-0-20" class="i">+                        }
+</a><a href="#h0-0-21" id="h0-0-21" class="i">+                        from(2) {
+</a><a href="#h0-0-22" id="h0-0-22" class="i">+                            addVarInt(5, 1) // audio by default
+</a><a href="#h0-0-23" id="h0-0-23" class="i">+                            addBuffer(6, byteArrayOf())
+</a>                         }
+<a href="#h0-0-25" id="h0-0-25" class="d">-                        addVarInt(6, 0)
+</a>                     }
+<a href="#h0-0-27" id="h0-0-27" class="d">-                    from(2) {
+</a><a href="#h0-0-28" id="h0-0-28" class="d">-                        addVarInt(5, 1) // audio by default
+</a><a href="#h0-0-29" id="h0-0-29" class="d">-                        addBuffer(6, byteArrayOf())
+</a><a href="#h0-0-30" id="h0-0-30" class="i">+                    extras?.let {
+</a><a href="#h0-0-31" id="h0-0-31" class="i">+                        addBuffer(13, it)
+</a>                     }
+                 }
+             }.toByteArray()
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,112 +0,0 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="d">-package me.rhunk.snapenhance.features.impl.tweaks
+</a><a href="#h1-0-1" id="h1-0-1" class="d">-
+</a><a href="#h1-0-2" id="h1-0-2" class="d">-import me.rhunk.snapenhance.Constants
+</a><a href="#h1-0-3" id="h1-0-3" class="d">-import me.rhunk.snapenhance.core.eventbus.events.impl.SendMessageWithContentEvent
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-import me.rhunk.snapenhance.core.eventbus.events.impl.UnaryCallEvent
+</a><a href="#h1-0-5" id="h1-0-5" class="d">-import me.rhunk.snapenhance.data.ContentType
+</a><a href="#h1-0-6" id="h1-0-6" class="d">-import me.rhunk.snapenhance.data.MessageSender
+</a><a href="#h1-0-7" id="h1-0-7" class="d">-import me.rhunk.snapenhance.features.Feature
+</a><a href="#h1-0-8" id="h1-0-8" class="d">-import me.rhunk.snapenhance.features.FeatureLoadParams
+</a><a href="#h1-0-9" id="h1-0-9" class="d">-import me.rhunk.snapenhance.ui.ViewAppearanceHelper
+</a><a href="#h1-0-10" id="h1-0-10" class="d">-import me.rhunk.snapenhance.util.protobuf.ProtoEditor
+</a><a href="#h1-0-11" id="h1-0-11" class="d">-import me.rhunk.snapenhance.util.protobuf.ProtoReader
+</a><a href="#h1-0-12" id="h1-0-12" class="d">-
+</a><a href="#h1-0-13" id="h1-0-13" class="d">-class GalleryMediaSendOverride : Feature(&quot;Gallery Media Send Override&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+</a><a href="#h1-0-14" id="h1-0-14" class="d">-    private var isLastSnapSavable = false
+</a><a href="#h1-0-15" id="h1-0-15" class="d">-
+</a><a href="#h1-0-16" id="h1-0-16" class="d">-    override fun init() {
+</a><a href="#h1-0-17" id="h1-0-17" class="d">-        val fixGalleryMediaSendOverride = context.config.experimental.nativeHooks.let {
+</a><a href="#h1-0-18" id="h1-0-18" class="d">-            it.globalState == true &amp;&amp; it.fixGalleryMediaOverride.get()
+</a><a href="#h1-0-19" id="h1-0-19" class="d">-        }
+</a><a href="#h1-0-20" id="h1-0-20" class="d">-        val typeNames = mutableListOf(
+</a><a href="#h1-0-21" id="h1-0-21" class="d">-            &quot;ORIGINAL&quot;,
+</a><a href="#h1-0-22" id="h1-0-22" class="d">-            &quot;SNAP&quot;,
+</a><a href="#h1-0-23" id="h1-0-23" class="d">-            &quot;NOTE&quot;
+</a><a href="#h1-0-24" id="h1-0-24" class="d">-        ).also {
+</a><a href="#h1-0-25" id="h1-0-25" class="d">-            if (fixGalleryMediaSendOverride) {
+</a><a href="#h1-0-26" id="h1-0-26" class="d">-                it.add(&quot;SAVABLE_SNAP&quot;)
+</a><a href="#h1-0-27" id="h1-0-27" class="d">-            }
+</a><a href="#h1-0-28" id="h1-0-28" class="d">-        }.associateWith {
+</a><a href="#h1-0-29" id="h1-0-29" class="d">-           it
+</a><a href="#h1-0-30" id="h1-0-30" class="d">-        }
+</a><a href="#h1-0-31" id="h1-0-31" class="d">-
+</a><a href="#h1-0-32" id="h1-0-32" class="d">-        context.event.subscribe(UnaryCallEvent::class, { fixGalleryMediaSendOverride }) { event -&gt;
+</a><a href="#h1-0-33" id="h1-0-33" class="d">-            if (event.uri != &quot;/messagingcoreservice.MessagingCoreService/CreateContentMessage&quot;) return@subscribe
+</a><a href="#h1-0-34" id="h1-0-34" class="d">-            if (!isLastSnapSavable) return@subscribe
+</a><a href="#h1-0-35" id="h1-0-35" class="d">-            ProtoReader(event.buffer).also {
+</a><a href="#h1-0-36" id="h1-0-36" class="d">-                // only affect snaps
+</a><a href="#h1-0-37" id="h1-0-37" class="d">-                if (!it.containsPath(*Constants.ARROYO_MEDIA_CONTAINER_PROTO_PATH, 11)) return@subscribe
+</a><a href="#h1-0-38" id="h1-0-38" class="d">-            }
+</a><a href="#h1-0-39" id="h1-0-39" class="d">-            isLastSnapSavable = false
+</a><a href="#h1-0-40" id="h1-0-40" class="d">-
+</a><a href="#h1-0-41" id="h1-0-41" class="d">-            event.buffer = ProtoEditor(event.buffer).apply {
+</a><a href="#h1-0-42" id="h1-0-42" class="d">-                //remove the max view time
+</a><a href="#h1-0-43" id="h1-0-43" class="d">-                edit(*Constants.ARROYO_MEDIA_CONTAINER_PROTO_PATH, 11, 5, 2) {
+</a><a href="#h1-0-44" id="h1-0-44" class="d">-                    remove(8)
+</a><a href="#h1-0-45" id="h1-0-45" class="d">-                    addBuffer(6, byteArrayOf())
+</a><a href="#h1-0-46" id="h1-0-46" class="d">-                }
+</a><a href="#h1-0-47" id="h1-0-47" class="d">-                //make snaps savable in chat
+</a><a href="#h1-0-48" id="h1-0-48" class="d">-                edit(4) {
+</a><a href="#h1-0-49" id="h1-0-49" class="d">-                    val savableState = firstOrNull(7)?.value ?: return@edit
+</a><a href="#h1-0-50" id="h1-0-50" class="d">-                    if (savableState == 2L) {
+</a><a href="#h1-0-51" id="h1-0-51" class="d">-                        remove(7)
+</a><a href="#h1-0-52" id="h1-0-52" class="d">-                        addVarInt(7, 3)
+</a><a href="#h1-0-53" id="h1-0-53" class="d">-                    }
+</a><a href="#h1-0-54" id="h1-0-54" class="d">-                }
+</a><a href="#h1-0-55" id="h1-0-55" class="d">-            }.toByteArray()
+</a><a href="#h1-0-56" id="h1-0-56" class="d">-        }
+</a><a href="#h1-0-57" id="h1-0-57" class="d">-
+</a><a href="#h1-0-58" id="h1-0-58" class="d">-        context.event.subscribe(SendMessageWithContentEvent::class, {
+</a><a href="#h1-0-59" id="h1-0-59" class="d">-            context.config.messaging.galleryMediaSendOverride.get()
+</a><a href="#h1-0-60" id="h1-0-60" class="d">-        }) { event -&gt;
+</a><a href="#h1-0-61" id="h1-0-61" class="d">-            val localMessageContent = event.messageContent
+</a><a href="#h1-0-62" id="h1-0-62" class="d">-            if (localMessageContent.contentType != ContentType.EXTERNAL_MEDIA) return@subscribe
+</a><a href="#h1-0-63" id="h1-0-63" class="d">-
+</a><a href="#h1-0-64" id="h1-0-64" class="d">-            //prevent story replies
+</a><a href="#h1-0-65" id="h1-0-65" class="d">-            val messageProtoReader = ProtoReader(localMessageContent.content)
+</a><a href="#h1-0-66" id="h1-0-66" class="d">-            if (messageProtoReader.contains(7)) return@subscribe
+</a><a href="#h1-0-67" id="h1-0-67" class="d">-
+</a><a href="#h1-0-68" id="h1-0-68" class="d">-            event.canceled = true
+</a><a href="#h1-0-69" id="h1-0-69" class="d">-
+</a><a href="#h1-0-70" id="h1-0-70" class="d">-            context.runOnUiThread {
+</a><a href="#h1-0-71" id="h1-0-71" class="d">-                ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity!!)
+</a><a href="#h1-0-72" id="h1-0-72" class="d">-                    .setItems(typeNames.values.toTypedArray()) { dialog, which -&gt;
+</a><a href="#h1-0-73" id="h1-0-73" class="d">-                        dialog.dismiss()
+</a><a href="#h1-0-74" id="h1-0-74" class="d">-                        val overrideType = typeNames.keys.toTypedArray()[which]
+</a><a href="#h1-0-75" id="h1-0-75" class="d">-
+</a><a href="#h1-0-76" id="h1-0-76" class="d">-                        if (overrideType != &quot;ORIGINAL&quot; &amp;&amp; messageProtoReader.followPath(3)?.getCount(3) != 1) {
+</a><a href="#h1-0-77" id="h1-0-77" class="d">-                            context.runOnUiThread {
+</a><a href="#h1-0-78" id="h1-0-78" class="d">-                                ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity!!)
+</a><a href="#h1-0-79" id="h1-0-79" class="d">-                                    .setMessage(context.translation[&quot;gallery_media_send_override.multiple_media_toast&quot;])
+</a><a href="#h1-0-80" id="h1-0-80" class="d">-                                    .setPositiveButton(context.translation[&quot;button.ok&quot;], null)
+</a><a href="#h1-0-81" id="h1-0-81" class="d">-                                    .show()
+</a><a href="#h1-0-82" id="h1-0-82" class="d">-                            }
+</a><a href="#h1-0-83" id="h1-0-83" class="d">-                            return@setItems
+</a><a href="#h1-0-84" id="h1-0-84" class="d">-                        }
+</a><a href="#h1-0-85" id="h1-0-85" class="d">-
+</a><a href="#h1-0-86" id="h1-0-86" class="d">-                        when (overrideType) {
+</a><a href="#h1-0-87" id="h1-0-87" class="d">-                            &quot;SNAP&quot;, &quot;SAVABLE_SNAP&quot; -&gt; {
+</a><a href="#h1-0-88" id="h1-0-88" class="d">-                                localMessageContent.contentType = ContentType.SNAP
+</a><a href="#h1-0-89" id="h1-0-89" class="d">-                                localMessageContent.content = MessageSender.redSnapProto()
+</a><a href="#h1-0-90" id="h1-0-90" class="d">-                                if (overrideType == &quot;SAVABLE_SNAP&quot;) {
+</a><a href="#h1-0-91" id="h1-0-91" class="d">-                                    isLastSnapSavable = true
+</a><a href="#h1-0-92" id="h1-0-92" class="d">-                                }
+</a><a href="#h1-0-93" id="h1-0-93" class="d">-                            }
+</a><a href="#h1-0-94" id="h1-0-94" class="d">-
+</a><a href="#h1-0-95" id="h1-0-95" class="d">-                            &quot;NOTE&quot; -&gt; {
+</a><a href="#h1-0-96" id="h1-0-96" class="d">-                                localMessageContent.contentType = ContentType.NOTE
+</a><a href="#h1-0-97" id="h1-0-97" class="d">-                                val mediaDuration =
+</a><a href="#h1-0-98" id="h1-0-98" class="d">-                                    messageProtoReader.getVarInt(3, 3, 5, 1, 1, 15) ?: 0
+</a><a href="#h1-0-99" id="h1-0-99" class="d">-                                localMessageContent.content =
+</a><a href="#h1-0-100" id="h1-0-100" class="d">-                                    MessageSender.audioNoteProto(mediaDuration)
+</a><a href="#h1-0-101" id="h1-0-101" class="d">-                            }
+</a><a href="#h1-0-102" id="h1-0-102" class="d">-                        }
+</a><a href="#h1-0-103" id="h1-0-103" class="d">-
+</a><a href="#h1-0-104" id="h1-0-104" class="d">-                        event.adapter.invokeOriginal()
+</a><a href="#h1-0-105" id="h1-0-105" class="d">-                    }
+</a><a href="#h1-0-106" id="h1-0-106" class="d">-                    .setNegativeButton(context.translation[&quot;button.cancel&quot;], null)
+</a><a href="#h1-0-107" id="h1-0-107" class="d">-                    .show()
+</a><a href="#h1-0-108" id="h1-0-108" class="d">-            }
+</a><a href="#h1-0-109" id="h1-0-109" class="d">-        }
+</a><a href="#h1-0-110" id="h1-0-110" class="d">-    }
+</a><a href="#h1-0-111" id="h1-0-111" class="d">-}</a><a href="#h1-0-112" id="h1-0-112" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/SendOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/SendOverride.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/SendOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/SendOverride.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -0,0 +1,114 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="i">+package me.rhunk.snapenhance.features.impl.tweaks
+</a><a href="#h2-0-1" id="h2-0-1" class="i">+
+</a><a href="#h2-0-2" id="h2-0-2" class="i">+import me.rhunk.snapenhance.Constants
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.core.eventbus.events.impl.SendMessageWithContentEvent
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import me.rhunk.snapenhance.core.eventbus.events.impl.UnaryCallEvent
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+import me.rhunk.snapenhance.data.ContentType
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+import me.rhunk.snapenhance.data.MessageSender
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+import me.rhunk.snapenhance.features.Feature
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+import me.rhunk.snapenhance.features.FeatureLoadParams
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+import me.rhunk.snapenhance.ui.ViewAppearanceHelper
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+import me.rhunk.snapenhance.util.protobuf.ProtoEditor
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+import me.rhunk.snapenhance.util.protobuf.ProtoReader
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+class SendOverride : Feature(&quot;Send Override&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+    private var isLastSnapSavable = false
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+
+</a><a href="#h2-0-16" id="h2-0-16" class="i">+    override fun init() {
+</a><a href="#h2-0-17" id="h2-0-17" class="i">+        val fixGalleryMediaSendOverride = context.config.experimental.nativeHooks.let {
+</a><a href="#h2-0-18" id="h2-0-18" class="i">+            it.globalState == true &amp;&amp; it.fixGalleryMediaOverride.get()
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+        }
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+        val typeNames = mutableListOf(
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+            &quot;ORIGINAL&quot;,
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+            &quot;SNAP&quot;,
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+            &quot;NOTE&quot;
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+        ).also {
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+            if (fixGalleryMediaSendOverride) {
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+                it.add(&quot;SAVABLE_SNAP&quot;)
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+            }
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+        }.associateWith {
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+           it
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+        }
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+        context.event.subscribe(UnaryCallEvent::class, { fixGalleryMediaSendOverride }) { event -&gt;
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+            if (event.uri != &quot;/messagingcoreservice.MessagingCoreService/CreateContentMessage&quot;) return@subscribe
+</a><a href="#h2-0-34" id="h2-0-34" class="i">+            if (!isLastSnapSavable) return@subscribe
+</a><a href="#h2-0-35" id="h2-0-35" class="i">+            ProtoReader(event.buffer).also {
+</a><a href="#h2-0-36" id="h2-0-36" class="i">+                // only affect snaps
+</a><a href="#h2-0-37" id="h2-0-37" class="i">+                if (!it.containsPath(*Constants.ARROYO_MEDIA_CONTAINER_PROTO_PATH, 11)) return@subscribe
+</a><a href="#h2-0-38" id="h2-0-38" class="i">+            }
+</a><a href="#h2-0-39" id="h2-0-39" class="i">+
+</a><a href="#h2-0-40" id="h2-0-40" class="i">+            event.buffer = ProtoEditor(event.buffer).apply {
+</a><a href="#h2-0-41" id="h2-0-41" class="i">+                //remove the max view time
+</a><a href="#h2-0-42" id="h2-0-42" class="i">+                edit(*Constants.ARROYO_MEDIA_CONTAINER_PROTO_PATH, 11, 5, 2) {
+</a><a href="#h2-0-43" id="h2-0-43" class="i">+                    remove(8)
+</a><a href="#h2-0-44" id="h2-0-44" class="i">+                    addBuffer(6, byteArrayOf())
+</a><a href="#h2-0-45" id="h2-0-45" class="i">+                }
+</a><a href="#h2-0-46" id="h2-0-46" class="i">+                //make snaps savable in chat
+</a><a href="#h2-0-47" id="h2-0-47" class="i">+                edit(4) {
+</a><a href="#h2-0-48" id="h2-0-48" class="i">+                    val savableState = firstOrNull(7)?.value ?: return@edit
+</a><a href="#h2-0-49" id="h2-0-49" class="i">+                    if (savableState == 2L) {
+</a><a href="#h2-0-50" id="h2-0-50" class="i">+                        remove(7)
+</a><a href="#h2-0-51" id="h2-0-51" class="i">+                        addVarInt(7, 3)
+</a><a href="#h2-0-52" id="h2-0-52" class="i">+                    }
+</a><a href="#h2-0-53" id="h2-0-53" class="i">+                }
+</a><a href="#h2-0-54" id="h2-0-54" class="i">+            }.toByteArray()
+</a><a href="#h2-0-55" id="h2-0-55" class="i">+        }
+</a><a href="#h2-0-56" id="h2-0-56" class="i">+
+</a><a href="#h2-0-57" id="h2-0-57" class="i">+        context.event.subscribe(SendMessageWithContentEvent::class, {
+</a><a href="#h2-0-58" id="h2-0-58" class="i">+            context.config.messaging.galleryMediaSendOverride.get()
+</a><a href="#h2-0-59" id="h2-0-59" class="i">+        }) { event -&gt;
+</a><a href="#h2-0-60" id="h2-0-60" class="i">+            isLastSnapSavable = false
+</a><a href="#h2-0-61" id="h2-0-61" class="i">+            val localMessageContent = event.messageContent
+</a><a href="#h2-0-62" id="h2-0-62" class="i">+            if (localMessageContent.contentType != ContentType.EXTERNAL_MEDIA) return@subscribe
+</a><a href="#h2-0-63" id="h2-0-63" class="i">+
+</a><a href="#h2-0-64" id="h2-0-64" class="i">+            //prevent story replies
+</a><a href="#h2-0-65" id="h2-0-65" class="i">+            val messageProtoReader = ProtoReader(localMessageContent.content)
+</a><a href="#h2-0-66" id="h2-0-66" class="i">+            if (messageProtoReader.contains(7)) return@subscribe
+</a><a href="#h2-0-67" id="h2-0-67" class="i">+
+</a><a href="#h2-0-68" id="h2-0-68" class="i">+            event.canceled = true
+</a><a href="#h2-0-69" id="h2-0-69" class="i">+
+</a><a href="#h2-0-70" id="h2-0-70" class="i">+            context.runOnUiThread {
+</a><a href="#h2-0-71" id="h2-0-71" class="i">+                ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity!!)
+</a><a href="#h2-0-72" id="h2-0-72" class="i">+                    .setItems(typeNames.values.toTypedArray()) { dialog, which -&gt;
+</a><a href="#h2-0-73" id="h2-0-73" class="i">+                        dialog.dismiss()
+</a><a href="#h2-0-74" id="h2-0-74" class="i">+                        val overrideType = typeNames.keys.toTypedArray()[which]
+</a><a href="#h2-0-75" id="h2-0-75" class="i">+
+</a><a href="#h2-0-76" id="h2-0-76" class="i">+                        if (overrideType != &quot;ORIGINAL&quot; &amp;&amp; messageProtoReader.followPath(3)?.getCount(3) != 1) {
+</a><a href="#h2-0-77" id="h2-0-77" class="i">+                            context.runOnUiThread {
+</a><a href="#h2-0-78" id="h2-0-78" class="i">+                                ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity!!)
+</a><a href="#h2-0-79" id="h2-0-79" class="i">+                                    .setMessage(context.translation[&quot;gallery_media_send_override.multiple_media_toast&quot;])
+</a><a href="#h2-0-80" id="h2-0-80" class="i">+                                    .setPositiveButton(context.translation[&quot;button.ok&quot;], null)
+</a><a href="#h2-0-81" id="h2-0-81" class="i">+                                    .show()
+</a><a href="#h2-0-82" id="h2-0-82" class="i">+                            }
+</a><a href="#h2-0-83" id="h2-0-83" class="i">+                            return@setItems
+</a><a href="#h2-0-84" id="h2-0-84" class="i">+                        }
+</a><a href="#h2-0-85" id="h2-0-85" class="i">+
+</a><a href="#h2-0-86" id="h2-0-86" class="i">+                        when (overrideType) {
+</a><a href="#h2-0-87" id="h2-0-87" class="i">+                            &quot;SNAP&quot;, &quot;SAVABLE_SNAP&quot; -&gt; {
+</a><a href="#h2-0-88" id="h2-0-88" class="i">+                                val extras = messageProtoReader.followPath(3, 3, 13)?.getBuffer()
+</a><a href="#h2-0-89" id="h2-0-89" class="i">+
+</a><a href="#h2-0-90" id="h2-0-90" class="i">+                                localMessageContent.contentType = ContentType.SNAP
+</a><a href="#h2-0-91" id="h2-0-91" class="i">+                                localMessageContent.content = MessageSender.redSnapProto(extras)
+</a><a href="#h2-0-92" id="h2-0-92" class="i">+                                if (overrideType == &quot;SAVABLE_SNAP&quot;) {
+</a><a href="#h2-0-93" id="h2-0-93" class="i">+                                    isLastSnapSavable = true
+</a><a href="#h2-0-94" id="h2-0-94" class="i">+                                }
+</a><a href="#h2-0-95" id="h2-0-95" class="i">+                            }
+</a><a href="#h2-0-96" id="h2-0-96" class="i">+
+</a><a href="#h2-0-97" id="h2-0-97" class="i">+                            &quot;NOTE&quot; -&gt; {
+</a><a href="#h2-0-98" id="h2-0-98" class="i">+                                localMessageContent.contentType = ContentType.NOTE
+</a><a href="#h2-0-99" id="h2-0-99" class="i">+                                val mediaDuration =
+</a><a href="#h2-0-100" id="h2-0-100" class="i">+                                    messageProtoReader.getVarInt(3, 3, 5, 1, 1, 15) ?: 0
+</a><a href="#h2-0-101" id="h2-0-101" class="i">+                                localMessageContent.content =
+</a><a href="#h2-0-102" id="h2-0-102" class="i">+                                    MessageSender.audioNoteProto(mediaDuration)
+</a><a href="#h2-0-103" id="h2-0-103" class="i">+                            }
+</a><a href="#h2-0-104" id="h2-0-104" class="i">+                        }
+</a><a href="#h2-0-105" id="h2-0-105" class="i">+
+</a><a href="#h2-0-106" id="h2-0-106" class="i">+                        event.adapter.invokeOriginal()
+</a><a href="#h2-0-107" id="h2-0-107" class="i">+                    }
+</a><a href="#h2-0-108" id="h2-0-108" class="i">+                    .setNegativeButton(context.translation[&quot;button.cancel&quot;], null)
+</a><a href="#h2-0-109" id="h2-0-109" class="i">+                    .show()
+</a><a href="#h2-0-110" id="h2-0-110" class="i">+            }
+</a><a href="#h2-0-111" id="h2-0-111" class="i">+        }
+</a><a href="#h2-0-112" id="h2-0-112" class="i">+    }
+</a><a href="#h2-0-113" id="h2-0-113" class="i">+}</a><a href="#h2-0-114" id="h2-0-114" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -27,7 +27,7 @@ import me.rhunk.snapenhance.features.impl.tweaks.AutoSave
+</a> import me.rhunk.snapenhance.features.impl.tweaks.CameraTweaks
+ import me.rhunk.snapenhance.features.impl.tweaks.DisableReplayInFF
+ import me.rhunk.snapenhance.features.impl.tweaks.DisableVideoLengthRestriction
+<a href="#h3-0-3" id="h3-0-3" class="d">-import me.rhunk.snapenhance.features.impl.tweaks.GalleryMediaSendOverride
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import me.rhunk.snapenhance.features.impl.tweaks.SendOverride
+</a> import me.rhunk.snapenhance.features.impl.tweaks.GooglePlayServicesDialogs
+ import me.rhunk.snapenhance.features.impl.tweaks.LocationSpoofer
+ import me.rhunk.snapenhance.features.impl.tweaks.MediaQualityLevelOverride
+<a href="#h3-1" id="h3-1" class="h">@@ -77,7 +77,7 @@ class FeatureManager(private val context: ModContext) : Manager {
+</a>         register(AutoSave::class)
+         register(UITweaks::class)
+         register(ConfigurationOverride::class)
+<a href="#h3-1-3" id="h3-1-3" class="d">-        register(GalleryMediaSendOverride::class)
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+        register(SendOverride::class)
+</a>         register(UnlimitedSnapViewTime::class)
+         register(DisableVideoLengthRestriction::class)
+         register(MediaQualityLevelOverride::class)
+</pre>
+</div>
+</body>
+</html>

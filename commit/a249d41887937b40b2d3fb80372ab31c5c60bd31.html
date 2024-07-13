@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(scripting): sleep - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/a249d41887937b40b2d3fb80372ab31c5c60bd31.html">a249d41887937b40b2d3fb80372ab31c5c60bd31</a>
+<b>parent</b> <a href="../commit/fe5c6306e1c8fd568823f82e6f52aa8359bb81f7.html">fe5c6306e1c8fd568823f82e6f52aa8359bb81f7</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 27 Dec 2023 11:55:29 +0100
+
+feat(scripting): sleep
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Navigation.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a></td><td> | </td><td class="num">13</td><td><span class="i">+++++++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>3 files changed, 19 insertions(+), 4 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Navigation.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Navigation.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Navigation.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Navigation.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -39,8 +39,8 @@ class Navigation(
+</a>             navHostController,
+             startDestination = startDestination.route,
+             Modifier.padding(innerPadding),
+<a href="#h0-0-3" id="h0-0-3" class="d">-            enterTransition = { fadeIn(tween(200)) },
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-            exitTransition = { fadeOut(tween(200)) }
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+            enterTransition = { fadeIn(tween(100)) },
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+            exitTransition = { fadeOut(tween(100)) }
+</a>         ) {
+             sections.forEach { (_, instance) -&gt;
+                 instance.navController = navHostController
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -17,8 +17,10 @@ import androidx.compose.ui.unit.dp
+</a> import androidx.compose.ui.unit.sp
+ import androidx.core.net.toUri
+ import androidx.documentfile.provider.DocumentFile
+<a href="#h1-0-3" id="h1-0-3" class="i">+import kotlinx.coroutines.Dispatchers
+</a> import kotlinx.coroutines.delay
+ import kotlinx.coroutines.launch
+<a href="#h1-0-6" id="h1-0-6" class="i">+import kotlinx.coroutines.withContext
+</a> import me.rhunk.snapenhance.common.scripting.type.ModuleInfo
+ import me.rhunk.snapenhance.common.scripting.ui.EnumScriptInterface
+ import me.rhunk.snapenhance.common.scripting.ui.InterfaceManager
+<a href="#h1-1" id="h1-1" class="h">@@ -49,7 +51,7 @@ class ScriptsSection : Section() {
+</a>         Card(
+             modifier = Modifier
+                 .fillMaxWidth()
+<a href="#h1-1-3" id="h1-1-3" class="d">-                .padding(12.dp),
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+                .padding(8.dp),
+</a>             elevation = CardDefaults.cardElevation()
+         ) {
+             Row(
+<a href="#h1-2" id="h1-2" class="h">@@ -179,7 +181,11 @@ class ScriptsSection : Section() {
+</a>         }
+ 
+         LaunchedEffect(Unit) {
+<a href="#h1-2-3" id="h1-2-3" class="d">-            syncScripts()
+</a><a href="#h1-2-4" id="h1-2-4" class="i">+            refreshing = true
+</a><a href="#h1-2-5" id="h1-2-5" class="i">+            withContext(Dispatchers.IO) {
+</a><a href="#h1-2-6" id="h1-2-6" class="i">+                syncScripts()
+</a><a href="#h1-2-7" id="h1-2-7" class="i">+                refreshing = false
+</a><a href="#h1-2-8" id="h1-2-8" class="i">+            }
+</a>         }
+ 
+         val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = {
+<a href="#h1-3" id="h1-3" class="h">@@ -230,6 +236,9 @@ class ScriptsSection : Section() {
+</a>                 items(scriptModules.size) { index -&gt;
+                     ModuleItem(scriptModules[index])
+                 }
+<a href="#h1-3-3" id="h1-3-3" class="i">+                item {
+</a><a href="#h1-3-4" id="h1-3-4" class="i">+                    Spacer(modifier = Modifier.height(200.dp))
+</a><a href="#h1-3-5" id="h1-3-5" class="i">+                }
+</a>             }
+ 
+             PullRefreshIndicator(
+<b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -80,6 +80,12 @@ class JSModule(
+</a>                 field.get(obj.unwrap())
+             }
+ 
+<a href="#h2-0-3" id="h2-0-3" class="i">+            moduleObject.putFunction(&quot;sleep&quot;) { args -&gt;
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+                val time = args?.get(0) as? Number ?: return@putFunction Undefined.instance
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+                Thread.sleep(time.toLong())
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+                Undefined.instance
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+            }
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+
+</a>             moduleObject.putFunction(&quot;findClass&quot;) {
+                 val className = it?.get(0).toString()
+                 val useModClassLoader = it?.getOrNull(1) as? Boolean ?: false
+</pre>
+</div>
+</body>
+</html>
