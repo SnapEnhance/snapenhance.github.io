@@ -1,0 +1,65 @@
+name: Build stagit web
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+    - name: Setup Git
+      uses: actions4git/setup-git@v1
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y make gcc libmd4c* libgit2-dev
+    - name: Build stagit
+      run: |
+        git clone https://github.com/ChausseBenjamin/stagit
+        cd stagit
+        make
+        sudo make install
+    - name: Clone SnapEnhance
+      run: |
+        git clone https://github.com/rhunk/SnapEnhance
+        cd SnapEnhance
+        cd .git
+        echo "An Xposed module offering an enhanced Snapchat experience" > description
+    - name: Generate stagit web
+      run: |
+        find . -type f ! -name 'logo.png' ! -name 'favicon.png' ! -name 'style.css' ! -path './.git/*' ! -path './SnapEnhance/*' ! -path './.github/*' ! -name 'description' ! -name 'owner' ! -name '.gitignore' -delete
+        stagit ./SnapEnhance
+        mv ./about.html ./index.html
+    - name: Commit changes
+      run: |
+        rm -rf ./stagit
+        rm -rf ./SnapEnhance
+        git add .
+        git commit -m "chore(web): update stagit web"
+        git push
+  deploy:
+    needs: [build]
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
