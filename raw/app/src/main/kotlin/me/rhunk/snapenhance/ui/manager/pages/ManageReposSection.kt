@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import me.rhunk.snapenhance.common.data.RepositoryIndex
 import me.rhunk.snapenhance.common.ui.AsyncUpdateDispatcher
 import me.rhunk.snapenhance.common.ui.rememberAsyncMutableStateList
+import me.rhunk.snapenhance.common.util.ktx.copyToClipboard
 import me.rhunk.snapenhance.common.util.ktx.getUrlFromClipboard
 import me.rhunk.snapenhance.storage.addRepo
 import me.rhunk.snapenhance.storage.getRepositories
@@ -159,7 +160,9 @@ class ManageReposSection: Routes.Route() {
                 }
             }
             items(repositories) { url ->
-                ElevatedCard(onClick = {}) {
+                ElevatedCard(onClick = {
+                    context.androidContext.copyToClipboard(url)
+                }) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -168,7 +171,7 @@ class ManageReposSection: Routes.Route() {
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                     ) {
                         Icon(Icons.Default.Public, contentDescription = null)
-                        Text(text = url, modifier = Modifier.weight(1f), overflow = TextOverflow.Ellipsis, maxLines = 1)
+                        Text(text = url, modifier = Modifier.weight(1f), overflow = TextOverflow.Ellipsis, maxLines = 4, fontSize = 15.sp, lineHeight = 15.sp)
                         Button(
                             onClick = {
                                 context.database.removeRepo(url)
