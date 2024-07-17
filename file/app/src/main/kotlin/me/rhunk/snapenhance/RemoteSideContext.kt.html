@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> RemoteSideContext.kt (9896B) - <a href="../../../../../../../../raw/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt">raw</a></p><hr/><pre id="blob">
+<p> RemoteSideContext.kt (10213B) - <a href="../../../../../../../../raw/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import android.app.Activity
@@ -101,166 +101,174 @@
 <a href="#l78" class="line" id="l78">     78</a>     val tracker = RemoteTracker(this)
 <a href="#l79" class="line" id="l79">     79</a>     val accountStorage = RemoteAccountStorage(this)
 <a href="#l80" class="line" id="l80">     80</a>     val locationManager = RemoteLocationManager(this)
-<a href="#l81" class="line" id="l81">     81</a> 
-<a href="#l82" class="line" id="l82">     82</a>     //used to load bitmoji selfies and download previews
-<a href="#l83" class="line" id="l83">     83</a>     val imageLoader by lazy {
-<a href="#l84" class="line" id="l84">     84</a>         ImageLoader.Builder(androidContext)
-<a href="#l85" class="line" id="l85">     85</a>             .dispatcher(Dispatchers.IO)
-<a href="#l86" class="line" id="l86">     86</a>             .memoryCache {
-<a href="#l87" class="line" id="l87">     87</a>                 MemoryCache.Builder(androidContext)
-<a href="#l88" class="line" id="l88">     88</a>                     .maxSizePercent(0.25)
-<a href="#l89" class="line" id="l89">     89</a>                     .build()
-<a href="#l90" class="line" id="l90">     90</a>             }
-<a href="#l91" class="line" id="l91">     91</a>             .diskCache {
-<a href="#l92" class="line" id="l92">     92</a>                 DiskCache.Builder()
-<a href="#l93" class="line" id="l93">     93</a>                     .directory(androidContext.cacheDir.resolve(&quot;coil-disk-cache&quot;))
-<a href="#l94" class="line" id="l94">     94</a>                     .maxSizeBytes(1024 * 1024 * 100) // 100MB
-<a href="#l95" class="line" id="l95">     95</a>                     .build()
-<a href="#l96" class="line" id="l96">     96</a>             }
-<a href="#l97" class="line" id="l97">     97</a>             .components { add(VideoFrameDecoder.Factory()) }.build()
-<a href="#l98" class="line" id="l98">     98</a>     }
-<a href="#l99" class="line" id="l99">     99</a> 
-<a href="#l100" class="line" id="l100">    100</a>     val gson: Gson by lazy { GsonBuilder().setPrettyPrinting().create() }
-<a href="#l101" class="line" id="l101">    101</a> 
-<a href="#l102" class="line" id="l102">    102</a>     fun reload() {
-<a href="#l103" class="line" id="l103">    103</a>         runCatching {
-<a href="#l104" class="line" id="l104">    104</a>             runBlocking(Dispatchers.IO) {
-<a href="#l105" class="line" id="l105">    105</a>                 log.init()
-<a href="#l106" class="line" id="l106">    106</a>                 log.verbose(&quot;Loading RemoteSideContext&quot;)
-<a href="#l107" class="line" id="l107">    107</a>                 config.load()
-<a href="#l108" class="line" id="l108">    108</a>                 launch {
-<a href="#l109" class="line" id="l109">    109</a>                     mappings.apply {
-<a href="#l110" class="line" id="l110">    110</a>                         init(androidContext)
-<a href="#l111" class="line" id="l111">    111</a>                     }
-<a href="#l112" class="line" id="l112">    112</a>                 }
-<a href="#l113" class="line" id="l113">    113</a>                 translation.apply {
-<a href="#l114" class="line" id="l114">    114</a>                     userLocale = config.locale
-<a href="#l115" class="line" id="l115">    115</a>                     load()
-<a href="#l116" class="line" id="l116">    116</a>                 }
-<a href="#l117" class="line" id="l117">    117</a>                 database.init()
-<a href="#l118" class="line" id="l118">    118</a>                 streaksReminder.init()
-<a href="#l119" class="line" id="l119">    119</a>                 scriptManager.init()
-<a href="#l120" class="line" id="l120">    120</a>                 launch {
-<a href="#l121" class="line" id="l121">    121</a>                     taskManager.init()
-<a href="#l122" class="line" id="l122">    122</a>                     config.root.messaging.messageLogger.takeIf {
-<a href="#l123" class="line" id="l123">    123</a>                         it.globalState == true
-<a href="#l124" class="line" id="l124">    124</a>                     }?.autoPurge?.let { getPurgeTime(it.getNullable()) }?.let {
-<a href="#l125" class="line" id="l125">    125</a>                         messageLogger.purgeAll(it)
-<a href="#l126" class="line" id="l126">    126</a>                     }
-<a href="#l127" class="line" id="l127">    127</a> 
-<a href="#l128" class="line" id="l128">    128</a>                     config.root.friendTracker.takeIf {
-<a href="#l129" class="line" id="l129">    129</a>                         it.globalState == true
-<a href="#l130" class="line" id="l130">    130</a>                     }?.autoPurge?.let { getPurgeTime(it.getNullable()) }?.let {
-<a href="#l131" class="line" id="l131">    131</a>                         messageLogger.purgeTrackerLogs(it)
-<a href="#l132" class="line" id="l132">    132</a>                     }
-<a href="#l133" class="line" id="l133">    133</a>                 }
-<a href="#l134" class="line" id="l134">    134</a>             }
-<a href="#l135" class="line" id="l135">    135</a>         }.onFailure {
-<a href="#l136" class="line" id="l136">    136</a>             log.error(&quot;Failed to load RemoteSideContext&quot;, it)
-<a href="#l137" class="line" id="l137">    137</a>             androidContext.fatalCrash(it)
-<a href="#l138" class="line" id="l138">    138</a>         }
-<a href="#l139" class="line" id="l139">    139</a> 
-<a href="#l140" class="line" id="l140">    140</a>         scriptManager.runtime.eachModule {
-<a href="#l141" class="line" id="l141">    141</a>             callFunction(&quot;module.onSnapEnhanceLoad&quot;, androidContext)
+<a href="#l81" class="line" id="l81">     81</a>     val remoteSharedLibraryManager = RemoteSharedLibraryManager(this)
+<a href="#l82" class="line" id="l82">     82</a> 
+<a href="#l83" class="line" id="l83">     83</a>     //used to load bitmoji selfies and download previews
+<a href="#l84" class="line" id="l84">     84</a>     val imageLoader by lazy {
+<a href="#l85" class="line" id="l85">     85</a>         ImageLoader.Builder(androidContext)
+<a href="#l86" class="line" id="l86">     86</a>             .dispatcher(Dispatchers.IO)
+<a href="#l87" class="line" id="l87">     87</a>             .memoryCache {
+<a href="#l88" class="line" id="l88">     88</a>                 MemoryCache.Builder(androidContext)
+<a href="#l89" class="line" id="l89">     89</a>                     .maxSizePercent(0.25)
+<a href="#l90" class="line" id="l90">     90</a>                     .build()
+<a href="#l91" class="line" id="l91">     91</a>             }
+<a href="#l92" class="line" id="l92">     92</a>             .diskCache {
+<a href="#l93" class="line" id="l93">     93</a>                 DiskCache.Builder()
+<a href="#l94" class="line" id="l94">     94</a>                     .directory(androidContext.cacheDir.resolve(&quot;coil-disk-cache&quot;))
+<a href="#l95" class="line" id="l95">     95</a>                     .maxSizeBytes(1024 * 1024 * 100) // 100MB
+<a href="#l96" class="line" id="l96">     96</a>                     .build()
+<a href="#l97" class="line" id="l97">     97</a>             }
+<a href="#l98" class="line" id="l98">     98</a>             .components { add(VideoFrameDecoder.Factory()) }.build()
+<a href="#l99" class="line" id="l99">     99</a>     }
+<a href="#l100" class="line" id="l100">    100</a> 
+<a href="#l101" class="line" id="l101">    101</a>     val gson: Gson by lazy { GsonBuilder().setPrettyPrinting().create() }
+<a href="#l102" class="line" id="l102">    102</a> 
+<a href="#l103" class="line" id="l103">    103</a>     fun reload() {
+<a href="#l104" class="line" id="l104">    104</a>         runCatching {
+<a href="#l105" class="line" id="l105">    105</a>             runBlocking(Dispatchers.IO) {
+<a href="#l106" class="line" id="l106">    106</a>                 log.init()
+<a href="#l107" class="line" id="l107">    107</a>                 log.verbose(&quot;Loading RemoteSideContext&quot;)
+<a href="#l108" class="line" id="l108">    108</a>                 config.load()
+<a href="#l109" class="line" id="l109">    109</a>                 launch {
+<a href="#l110" class="line" id="l110">    110</a>                     mappings.apply {
+<a href="#l111" class="line" id="l111">    111</a>                         init(androidContext)
+<a href="#l112" class="line" id="l112">    112</a>                     }
+<a href="#l113" class="line" id="l113">    113</a>                 }
+<a href="#l114" class="line" id="l114">    114</a>                 translation.apply {
+<a href="#l115" class="line" id="l115">    115</a>                     userLocale = config.locale
+<a href="#l116" class="line" id="l116">    116</a>                     load()
+<a href="#l117" class="line" id="l117">    117</a>                 }
+<a href="#l118" class="line" id="l118">    118</a>                 database.init()
+<a href="#l119" class="line" id="l119">    119</a>                 streaksReminder.init()
+<a href="#l120" class="line" id="l120">    120</a>                 scriptManager.init()
+<a href="#l121" class="line" id="l121">    121</a>                 launch {
+<a href="#l122" class="line" id="l122">    122</a>                     taskManager.init()
+<a href="#l123" class="line" id="l123">    123</a>                     config.root.messaging.messageLogger.takeIf {
+<a href="#l124" class="line" id="l124">    124</a>                         it.globalState == true
+<a href="#l125" class="line" id="l125">    125</a>                     }?.autoPurge?.let { getPurgeTime(it.getNullable()) }?.let {
+<a href="#l126" class="line" id="l126">    126</a>                         messageLogger.purgeAll(it)
+<a href="#l127" class="line" id="l127">    127</a>                     }
+<a href="#l128" class="line" id="l128">    128</a> 
+<a href="#l129" class="line" id="l129">    129</a>                     config.root.friendTracker.takeIf {
+<a href="#l130" class="line" id="l130">    130</a>                         it.globalState == true
+<a href="#l131" class="line" id="l131">    131</a>                     }?.autoPurge?.let { getPurgeTime(it.getNullable()) }?.let {
+<a href="#l132" class="line" id="l132">    132</a>                         messageLogger.purgeTrackerLogs(it)
+<a href="#l133" class="line" id="l133">    133</a>                     }
+<a href="#l134" class="line" id="l134">    134</a>                 }
+<a href="#l135" class="line" id="l135">    135</a>                 coroutineScope.launch {
+<a href="#l136" class="line" id="l136">    136</a>                     remoteSharedLibraryManager.init()
+<a href="#l137" class="line" id="l137">    137</a>                 }
+<a href="#l138" class="line" id="l138">    138</a>             }
+<a href="#l139" class="line" id="l139">    139</a>         }.onFailure {
+<a href="#l140" class="line" id="l140">    140</a>             log.error(&quot;Failed to load RemoteSideContext&quot;, it)
+<a href="#l141" class="line" id="l141">    141</a>             androidContext.fatalCrash(it)
 <a href="#l142" class="line" id="l142">    142</a>         }
-<a href="#l143" class="line" id="l143">    143</a>     }
-<a href="#l144" class="line" id="l144">    144</a> 
-<a href="#l145" class="line" id="l145">    145</a>     val installationSummary by lazy {
-<a href="#l146" class="line" id="l146">    146</a>         InstallationSummary(
-<a href="#l147" class="line" id="l147">    147</a>             snapchatInfo = mappings.getSnapchatPackageInfo()?.let {
-<a href="#l148" class="line" id="l148">    148</a>                 SnapchatAppInfo(
-<a href="#l149" class="line" id="l149">    149</a>                     packageName = it.packageName,
-<a href="#l150" class="line" id="l150">    150</a>                     version = it.versionName,
-<a href="#l151" class="line" id="l151">    151</a>                     versionCode = it.longVersionCode,
-<a href="#l152" class="line" id="l152">    152</a>                     isLSPatched = it.applicationInfo.appComponentFactory != CoreComponentFactory::class.java.name,
-<a href="#l153" class="line" id="l153">    153</a>                     isSplitApk = it.splitNames?.isNotEmpty() ?: false
-<a href="#l154" class="line" id="l154">    154</a>                 )
-<a href="#l155" class="line" id="l155">    155</a>             },
-<a href="#l156" class="line" id="l156">    156</a>             modInfo = ModInfo(
-<a href="#l157" class="line" id="l157">    157</a>                 loaderPackageName = MainActivity::class.java.`package`?.name,
-<a href="#l158" class="line" id="l158">    158</a>                 buildPackageName = androidContext.packageName,
-<a href="#l159" class="line" id="l159">    159</a>                 buildVersion = BuildConfig.VERSION_NAME,
-<a href="#l160" class="line" id="l160">    160</a>                 buildVersionCode = BuildConfig.VERSION_CODE.toLong(),
-<a href="#l161" class="line" id="l161">    161</a>                 buildIssuer = androidContext.packageManager.getPackageInfo(androidContext.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
-<a href="#l162" class="line" id="l162">    162</a>                     ?.signingInfo?.apkContentsSigners?.firstOrNull()?.let {
-<a href="#l163" class="line" id="l163">    163</a>                         val certFactory = CertificateFactory.getInstance(&quot;X509&quot;)
-<a href="#l164" class="line" id="l164">    164</a>                         val cert = certFactory.generateCertificate(ByteArrayInputStream(it.toByteArray())) as X509Certificate
-<a href="#l165" class="line" id="l165">    165</a>                         cert.issuerDN.toString()
-<a href="#l166" class="line" id="l166">    166</a>                     } ?: throw Exception(&quot;Failed to get certificate info&quot;),
-<a href="#l167" class="line" id="l167">    167</a>                 gitHash = BuildConfig.GIT_HASH,
-<a href="#l168" class="line" id="l168">    168</a>                 isDebugBuild = BuildConfig.DEBUG,
-<a href="#l169" class="line" id="l169">    169</a>                 mappingVersion = mappings.getGeneratedBuildNumber(),
-<a href="#l170" class="line" id="l170">    170</a>                 mappingsOutdated = mappings.isMappingsOutdated()
-<a href="#l171" class="line" id="l171">    171</a>             ),
-<a href="#l172" class="line" id="l172">    172</a>             platformInfo = PlatformInfo(
-<a href="#l173" class="line" id="l173">    173</a>                 device = Build.DEVICE,
-<a href="#l174" class="line" id="l174">    174</a>                 androidVersion = Build.VERSION.RELEASE,
-<a href="#l175" class="line" id="l175">    175</a>                 systemAbi = Build.SUPPORTED_ABIS.firstOrNull() ?: &quot;unknown&quot;
-<a href="#l176" class="line" id="l176">    176</a>             )
-<a href="#l177" class="line" id="l177">    177</a>         )
-<a href="#l178" class="line" id="l178">    178</a>     }
-<a href="#l179" class="line" id="l179">    179</a> 
-<a href="#l180" class="line" id="l180">    180</a>     fun longToast(message: Any) {
-<a href="#l181" class="line" id="l181">    181</a>         androidContext.mainExecutor.execute {
-<a href="#l182" class="line" id="l182">    182</a>             Toast.makeText(androidContext, message.toString(), Toast.LENGTH_LONG).show()
-<a href="#l183" class="line" id="l183">    183</a>         }
-<a href="#l184" class="line" id="l184">    184</a>         log.debug(message.toString())
-<a href="#l185" class="line" id="l185">    185</a>     }
-<a href="#l186" class="line" id="l186">    186</a> 
-<a href="#l187" class="line" id="l187">    187</a>     fun shortToast(message: Any) {
-<a href="#l188" class="line" id="l188">    188</a>         androidContext.mainExecutor.execute {
-<a href="#l189" class="line" id="l189">    189</a>             Toast.makeText(androidContext, message.toString(), Toast.LENGTH_SHORT).show()
-<a href="#l190" class="line" id="l190">    190</a>         }
-<a href="#l191" class="line" id="l191">    191</a>         log.debug(message.toString())
-<a href="#l192" class="line" id="l192">    192</a>     }
-<a href="#l193" class="line" id="l193">    193</a> 
-<a href="#l194" class="line" id="l194">    194</a>     fun hasMessagingBridge() = bridgeService != null &amp;&amp; bridgeService?.messagingBridge != null &amp;&amp; bridgeService?.messagingBridge?.asBinder()?.pingBinder() == true
-<a href="#l195" class="line" id="l195">    195</a> 
-<a href="#l196" class="line" id="l196">    196</a>     fun checkForRequirements(overrideRequirements: Int? = null): Boolean {
-<a href="#l197" class="line" id="l197">    197</a>         var requirements = overrideRequirements ?: 0
-<a href="#l198" class="line" id="l198">    198</a>         if (!config.wasPresent) {
-<a href="#l199" class="line" id="l199">    199</a>             requirements = requirements or Requirements.FIRST_RUN
-<a href="#l200" class="line" id="l200">    200</a>         }
-<a href="#l201" class="line" id="l201">    201</a> 
-<a href="#l202" class="line" id="l202">    202</a>         config.root.downloader.saveFolder.get().let {
-<a href="#l203" class="line" id="l203">    203</a>             if (it.isEmpty() || run {
-<a href="#l204" class="line" id="l204">    204</a>                     val documentFile = runCatching { DocumentFile.fromTreeUri(androidContext, Uri.parse(it)) }.getOrNull()
-<a href="#l205" class="line" id="l205">    205</a>                     documentFile == null || !documentFile.exists() || !documentFile.canWrite()
-<a href="#l206" class="line" id="l206">    206</a>                 }) {
-<a href="#l207" class="line" id="l207">    207</a>                 requirements = requirements or Requirements.SAVE_FOLDER
-<a href="#l208" class="line" id="l208">    208</a>             }
-<a href="#l209" class="line" id="l209">    209</a>         }
-<a href="#l210" class="line" id="l210">    210</a> 
-<a href="#l211" class="line" id="l211">    211</a>         if (!sharedPreferences.getBoolean(&quot;debug_disable_mapper&quot;, false) &amp;&amp; mappings.getSnapchatPackageInfo() != null &amp;&amp; mappings.isMappingsOutdated()) {
-<a href="#l212" class="line" id="l212">    212</a>             requirements = requirements or Requirements.MAPPINGS
+<a href="#l143" class="line" id="l143">    143</a> 
+<a href="#l144" class="line" id="l144">    144</a>         scriptManager.runtime.eachModule {
+<a href="#l145" class="line" id="l145">    145</a>             callFunction(&quot;module.onSnapEnhanceLoad&quot;, androidContext)
+<a href="#l146" class="line" id="l146">    146</a>         }
+<a href="#l147" class="line" id="l147">    147</a>     }
+<a href="#l148" class="line" id="l148">    148</a> 
+<a href="#l149" class="line" id="l149">    149</a>     val installationSummary by lazy {
+<a href="#l150" class="line" id="l150">    150</a>         InstallationSummary(
+<a href="#l151" class="line" id="l151">    151</a>             snapchatInfo = mappings.getSnapchatPackageInfo()?.let {
+<a href="#l152" class="line" id="l152">    152</a>                 SnapchatAppInfo(
+<a href="#l153" class="line" id="l153">    153</a>                     packageName = it.packageName,
+<a href="#l154" class="line" id="l154">    154</a>                     version = it.versionName,
+<a href="#l155" class="line" id="l155">    155</a>                     versionCode = it.longVersionCode,
+<a href="#l156" class="line" id="l156">    156</a>                     isLSPatched = it.applicationInfo.appComponentFactory != CoreComponentFactory::class.java.name,
+<a href="#l157" class="line" id="l157">    157</a>                     isSplitApk = it.splitNames?.isNotEmpty() ?: false
+<a href="#l158" class="line" id="l158">    158</a>                 )
+<a href="#l159" class="line" id="l159">    159</a>             },
+<a href="#l160" class="line" id="l160">    160</a>             modInfo = ModInfo(
+<a href="#l161" class="line" id="l161">    161</a>                 loaderPackageName = MainActivity::class.java.`package`?.name,
+<a href="#l162" class="line" id="l162">    162</a>                 buildPackageName = androidContext.packageName,
+<a href="#l163" class="line" id="l163">    163</a>                 buildVersion = BuildConfig.VERSION_NAME,
+<a href="#l164" class="line" id="l164">    164</a>                 buildVersionCode = BuildConfig.VERSION_CODE.toLong(),
+<a href="#l165" class="line" id="l165">    165</a>                 buildIssuer = androidContext.packageManager.getPackageInfo(androidContext.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+<a href="#l166" class="line" id="l166">    166</a>                     ?.signingInfo?.apkContentsSigners?.firstOrNull()?.let {
+<a href="#l167" class="line" id="l167">    167</a>                         val certFactory = CertificateFactory.getInstance(&quot;X509&quot;)
+<a href="#l168" class="line" id="l168">    168</a>                         val cert = certFactory.generateCertificate(ByteArrayInputStream(it.toByteArray())) as X509Certificate
+<a href="#l169" class="line" id="l169">    169</a>                         cert.issuerDN.toString()
+<a href="#l170" class="line" id="l170">    170</a>                     } ?: throw Exception(&quot;Failed to get certificate info&quot;),
+<a href="#l171" class="line" id="l171">    171</a>                 gitHash = BuildConfig.GIT_HASH,
+<a href="#l172" class="line" id="l172">    172</a>                 isDebugBuild = BuildConfig.DEBUG,
+<a href="#l173" class="line" id="l173">    173</a>                 mappingVersion = mappings.getGeneratedBuildNumber(),
+<a href="#l174" class="line" id="l174">    174</a>                 mappingsOutdated = mappings.isMappingsOutdated()
+<a href="#l175" class="line" id="l175">    175</a>             ),
+<a href="#l176" class="line" id="l176">    176</a>             platformInfo = PlatformInfo(
+<a href="#l177" class="line" id="l177">    177</a>                 device = Build.DEVICE,
+<a href="#l178" class="line" id="l178">    178</a>                 androidVersion = Build.VERSION.RELEASE,
+<a href="#l179" class="line" id="l179">    179</a>                 systemAbi = Build.SUPPORTED_ABIS.firstOrNull() ?: &quot;unknown&quot;
+<a href="#l180" class="line" id="l180">    180</a>             )
+<a href="#l181" class="line" id="l181">    181</a>         )
+<a href="#l182" class="line" id="l182">    182</a>     }
+<a href="#l183" class="line" id="l183">    183</a> 
+<a href="#l184" class="line" id="l184">    184</a>     fun longToast(message: Any) {
+<a href="#l185" class="line" id="l185">    185</a>         androidContext.mainExecutor.execute {
+<a href="#l186" class="line" id="l186">    186</a>             Toast.makeText(androidContext, message.toString(), Toast.LENGTH_LONG).show()
+<a href="#l187" class="line" id="l187">    187</a>         }
+<a href="#l188" class="line" id="l188">    188</a>         log.debug(message.toString())
+<a href="#l189" class="line" id="l189">    189</a>     }
+<a href="#l190" class="line" id="l190">    190</a> 
+<a href="#l191" class="line" id="l191">    191</a>     fun shortToast(message: Any) {
+<a href="#l192" class="line" id="l192">    192</a>         androidContext.mainExecutor.execute {
+<a href="#l193" class="line" id="l193">    193</a>             Toast.makeText(androidContext, message.toString(), Toast.LENGTH_SHORT).show()
+<a href="#l194" class="line" id="l194">    194</a>         }
+<a href="#l195" class="line" id="l195">    195</a>         log.debug(message.toString())
+<a href="#l196" class="line" id="l196">    196</a>     }
+<a href="#l197" class="line" id="l197">    197</a> 
+<a href="#l198" class="line" id="l198">    198</a>     fun hasMessagingBridge() = bridgeService != null &amp;&amp; bridgeService?.messagingBridge != null &amp;&amp; bridgeService?.messagingBridge?.asBinder()?.pingBinder() == true
+<a href="#l199" class="line" id="l199">    199</a> 
+<a href="#l200" class="line" id="l200">    200</a>     fun checkForRequirements(overrideRequirements: Int? = null): Boolean {
+<a href="#l201" class="line" id="l201">    201</a>         var requirements = overrideRequirements ?: 0
+<a href="#l202" class="line" id="l202">    202</a>         if (!config.wasPresent) {
+<a href="#l203" class="line" id="l203">    203</a>             requirements = requirements or Requirements.FIRST_RUN
+<a href="#l204" class="line" id="l204">    204</a>         }
+<a href="#l205" class="line" id="l205">    205</a> 
+<a href="#l206" class="line" id="l206">    206</a>         config.root.downloader.saveFolder.get().let {
+<a href="#l207" class="line" id="l207">    207</a>             if (it.isEmpty() || run {
+<a href="#l208" class="line" id="l208">    208</a>                     val documentFile = runCatching { DocumentFile.fromTreeUri(androidContext, Uri.parse(it)) }.getOrNull()
+<a href="#l209" class="line" id="l209">    209</a>                     documentFile == null || !documentFile.exists() || !documentFile.canWrite()
+<a href="#l210" class="line" id="l210">    210</a>                 }) {
+<a href="#l211" class="line" id="l211">    211</a>                 requirements = requirements or Requirements.SAVE_FOLDER
+<a href="#l212" class="line" id="l212">    212</a>             }
 <a href="#l213" class="line" id="l213">    213</a>         }
 <a href="#l214" class="line" id="l214">    214</a> 
-<a href="#l215" class="line" id="l215">    215</a>         if (requirements == 0) return false
-<a href="#l216" class="line" id="l216">    216</a> 
-<a href="#l217" class="line" id="l217">    217</a>         val currentContext = activity ?: androidContext
+<a href="#l215" class="line" id="l215">    215</a>         if (!sharedPreferences.getBoolean(&quot;debug_disable_mapper&quot;, false) &amp;&amp; mappings.getSnapchatPackageInfo() != null &amp;&amp; mappings.isMappingsOutdated()) {
+<a href="#l216" class="line" id="l216">    216</a>             requirements = requirements or Requirements.MAPPINGS
+<a href="#l217" class="line" id="l217">    217</a>         }
 <a href="#l218" class="line" id="l218">    218</a> 
-<a href="#l219" class="line" id="l219">    219</a>         Intent(currentContext, SetupActivity::class.java).apply {
-<a href="#l220" class="line" id="l220">    220</a>             putExtra(&quot;requirements&quot;, requirements)
-<a href="#l221" class="line" id="l221">    221</a>             if (currentContext !is Activity) {
-<a href="#l222" class="line" id="l222">    222</a>                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-<a href="#l223" class="line" id="l223">    223</a>             }
-<a href="#l224" class="line" id="l224">    224</a>             currentContext.startActivity(this)
-<a href="#l225" class="line" id="l225">    225</a>             return true
-<a href="#l226" class="line" id="l226">    226</a>         }
-<a href="#l227" class="line" id="l227">    227</a>     }
-<a href="#l228" class="line" id="l228">    228</a> 
-<a href="#l229" class="line" id="l229">    229</a>     fun launchActionIntent(action: EnumAction) {
-<a href="#l230" class="line" id="l230">    230</a>         val intent = androidContext.packageManager.getLaunchIntentForPackage(
-<a href="#l231" class="line" id="l231">    231</a>             Constants.SNAPCHAT_PACKAGE_NAME
-<a href="#l232" class="line" id="l232">    232</a>         )
-<a href="#l233" class="line" id="l233">    233</a>         if (intent == null) {
-<a href="#l234" class="line" id="l234">    234</a>             shortToast(&quot;Can&#39;t execute action: Snapchat is not installed&quot;)
-<a href="#l235" class="line" id="l235">    235</a>             return
-<a href="#l236" class="line" id="l236">    236</a>         }
-<a href="#l237" class="line" id="l237">    237</a>         intent.putExtra(EnumAction.ACTION_PARAMETER, action.key)
-<a href="#l238" class="line" id="l238">    238</a>         androidContext.startActivity(intent)
-<a href="#l239" class="line" id="l239">    239</a>     }
-<a href="#l240" class="line" id="l240">    240</a> }
+<a href="#l219" class="line" id="l219">    219</a>         if (sharedPreferences.getString(&quot;sif&quot;, null) == null) {
+<a href="#l220" class="line" id="l220">    220</a>             requirements = requirements or Requirements.SIF
+<a href="#l221" class="line" id="l221">    221</a>         }
+<a href="#l222" class="line" id="l222">    222</a> 
+<a href="#l223" class="line" id="l223">    223</a>         if (requirements == 0) return false
+<a href="#l224" class="line" id="l224">    224</a> 
+<a href="#l225" class="line" id="l225">    225</a>         val currentContext = activity ?: androidContext
+<a href="#l226" class="line" id="l226">    226</a> 
+<a href="#l227" class="line" id="l227">    227</a>         Intent(currentContext, SetupActivity::class.java).apply {
+<a href="#l228" class="line" id="l228">    228</a>             putExtra(&quot;requirements&quot;, requirements)
+<a href="#l229" class="line" id="l229">    229</a>             if (currentContext !is Activity) {
+<a href="#l230" class="line" id="l230">    230</a>                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+<a href="#l231" class="line" id="l231">    231</a>             }
+<a href="#l232" class="line" id="l232">    232</a>             currentContext.startActivity(this)
+<a href="#l233" class="line" id="l233">    233</a>             return true
+<a href="#l234" class="line" id="l234">    234</a>         }
+<a href="#l235" class="line" id="l235">    235</a>     }
+<a href="#l236" class="line" id="l236">    236</a> 
+<a href="#l237" class="line" id="l237">    237</a>     fun launchActionIntent(action: EnumAction) {
+<a href="#l238" class="line" id="l238">    238</a>         val intent = androidContext.packageManager.getLaunchIntentForPackage(
+<a href="#l239" class="line" id="l239">    239</a>             Constants.SNAPCHAT_PACKAGE_NAME
+<a href="#l240" class="line" id="l240">    240</a>         )
+<a href="#l241" class="line" id="l241">    241</a>         if (intent == null) {
+<a href="#l242" class="line" id="l242">    242</a>             shortToast(&quot;Can&#39;t execute action: Snapchat is not installed&quot;)
+<a href="#l243" class="line" id="l243">    243</a>             return
+<a href="#l244" class="line" id="l244">    244</a>         }
+<a href="#l245" class="line" id="l245">    245</a>         intent.putExtra(EnumAction.ACTION_PARAMETER, action.key)
+<a href="#l246" class="line" id="l246">    246</a>         androidContext.startActivity(intent)
+<a href="#l247" class="line" id="l247">    247</a>     }
+<a href="#l248" class="line" id="l248">    248</a> }
 </pre>
 </div>
 </body>

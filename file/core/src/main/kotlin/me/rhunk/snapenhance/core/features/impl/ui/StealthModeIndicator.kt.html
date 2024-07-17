@@ -20,19 +20,19 @@
 </div>
 <hr/>
 <div id="content">
-<p> StealthModeIndicator.kt (3357B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/StealthModeIndicator.kt">raw</a></p><hr/><pre id="blob">
+<p> StealthModeIndicator.kt (3458B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/StealthModeIndicator.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core.features.impl.ui
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import android.graphics.Canvas
 <a href="#l4" class="line" id="l4">      4</a> import android.graphics.Paint
 <a href="#l5" class="line" id="l5">      5</a> import android.graphics.drawable.ShapeDrawable
 <a href="#l6" class="line" id="l6">      6</a> import android.graphics.drawable.shapes.Shape
-<a href="#l7" class="line" id="l7">      7</a> import kotlinx.coroutines.Dispatchers
-<a href="#l8" class="line" id="l8">      8</a> import kotlinx.coroutines.launch
-<a href="#l9" class="line" id="l9">      9</a> import kotlinx.coroutines.withContext
-<a href="#l10" class="line" id="l10">     10</a> import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
-<a href="#l11" class="line" id="l11">     11</a> import me.rhunk.snapenhance.core.features.Feature
-<a href="#l12" class="line" id="l12">     12</a> import me.rhunk.snapenhance.core.features.FeatureLoadParams
+<a href="#l7" class="line" id="l7">      7</a> import androidx.core.content.res.use
+<a href="#l8" class="line" id="l8">      8</a> import kotlinx.coroutines.Dispatchers
+<a href="#l9" class="line" id="l9">      9</a> import kotlinx.coroutines.launch
+<a href="#l10" class="line" id="l10">     10</a> import kotlinx.coroutines.withContext
+<a href="#l11" class="line" id="l11">     11</a> import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+<a href="#l12" class="line" id="l12">     12</a> import me.rhunk.snapenhance.core.features.Feature
 <a href="#l13" class="line" id="l13">     13</a> import me.rhunk.snapenhance.core.features.impl.spying.StealthMode
 <a href="#l14" class="line" id="l14">     14</a> import me.rhunk.snapenhance.core.ui.addForegroundDrawable
 <a href="#l15" class="line" id="l15">     15</a> import me.rhunk.snapenhance.core.ui.removeForegroundDrawable
@@ -40,7 +40,7 @@
 <a href="#l17" class="line" id="l17">     17</a> import me.rhunk.snapenhance.core.util.ktx.getDimens
 <a href="#l18" class="line" id="l18">     18</a> import me.rhunk.snapenhance.core.util.ktx.getIdentifier
 <a href="#l19" class="line" id="l19">     19</a> 
-<a href="#l20" class="line" id="l20">     20</a> class StealthModeIndicator : Feature(&quot;StealthModeIndicator&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+<a href="#l20" class="line" id="l20">     20</a> class StealthModeIndicator : Feature(&quot;StealthModeIndicator&quot;) {
 <a href="#l21" class="line" id="l21">     21</a>     private val stealthMode by lazy { context.feature(StealthMode::class) }
 <a href="#l22" class="line" id="l22">     22</a>     private val listeners = EvictingMap&lt;String, (Boolean) -&gt; Unit&gt;(100)
 <a href="#l23" class="line" id="l23">     23</a> 
@@ -53,51 +53,53 @@
 <a href="#l30" class="line" id="l30">     30</a>         }
 <a href="#l31" class="line" id="l31">     31</a>     }
 <a href="#l32" class="line" id="l32">     32</a> 
-<a href="#l33" class="line" id="l33">     33</a>     override fun onActivityCreate() {
+<a href="#l33" class="line" id="l33">     33</a>     override fun init() {
 <a href="#l34" class="line" id="l34">     34</a>         if (!context.config.userInterface.stealthModeIndicator.get()) return
 <a href="#l35" class="line" id="l35">     35</a> 
-<a href="#l36" class="line" id="l36">     36</a>         val secondaryTextSize = context.resources.getDimens(&quot;ff_feed_cell_secondary_text_size&quot;).toFloat()
-<a href="#l37" class="line" id="l37">     37</a>         val sigColorTextPrimary = context.mainActivity!!.obtainStyledAttributes(
-<a href="#l38" class="line" id="l38">     38</a>             intArrayOf(context.resources.getIdentifier(&quot;sigColorTextPrimary&quot;, &quot;attr&quot;))
-<a href="#l39" class="line" id="l39">     39</a>         ).use { it.getColor(0, 0) }
-<a href="#l40" class="line" id="l40">     40</a> 
-<a href="#l41" class="line" id="l41">     41</a>         stealthMode.addStateListener { conversationId, state -&gt;
-<a href="#l42" class="line" id="l42">     42</a>             runCatching {
-<a href="#l43" class="line" id="l43">     43</a>                 listeners[conversationId]?.invoke(state)
-<a href="#l44" class="line" id="l44">     44</a>             }.onFailure {
-<a href="#l45" class="line" id="l45">     45</a>                 context.log.error(&quot;Failed to update stealth mode indicator&quot;, it)
-<a href="#l46" class="line" id="l46">     46</a>             }
-<a href="#l47" class="line" id="l47">     47</a>         }
-<a href="#l48" class="line" id="l48">     48</a> 
-<a href="#l49" class="line" id="l49">     49</a>         context.event.subscribe(BindViewEvent::class) { event -&gt;
-<a href="#l50" class="line" id="l50">     50</a>             fun updateStealthIndicator(isStealth: Boolean = true) {
-<a href="#l51" class="line" id="l51">     51</a>                 event.view.removeForegroundDrawable(&quot;stealthModeIndicator&quot;)
-<a href="#l52" class="line" id="l52">     52</a>                 if (!isStealth || !event.view.isAttachedToWindow) return
-<a href="#l53" class="line" id="l53">     53</a>                 event.view.addForegroundDrawable(&quot;stealthModeIndicator&quot;, ShapeDrawable(object : Shape() {
-<a href="#l54" class="line" id="l54">     54</a>                     override fun draw(canvas: Canvas, paint: Paint) {
-<a href="#l55" class="line" id="l55">     55</a>                         paint.textSize = secondaryTextSize
-<a href="#l56" class="line" id="l56">     56</a>                         paint.color = sigColorTextPrimary
-<a href="#l57" class="line" id="l57">     57</a>                         canvas.drawText(
-<a href="#l58" class="line" id="l58">     58</a>                             &quot;\uD83D\uDC7B&quot;,
-<a href="#l59" class="line" id="l59">     59</a>                             0f,
-<a href="#l60" class="line" id="l60">     60</a>                             canvas.height.toFloat() - secondaryTextSize / 2,
-<a href="#l61" class="line" id="l61">     61</a>                             paint
-<a href="#l62" class="line" id="l62">     62</a>                         )
-<a href="#l63" class="line" id="l63">     63</a>                     }
-<a href="#l64" class="line" id="l64">     64</a>                 }))
-<a href="#l65" class="line" id="l65">     65</a>             }
-<a href="#l66" class="line" id="l66">     66</a> 
-<a href="#l67" class="line" id="l67">     67</a>             event.friendFeedItem { conversationId -&gt;
-<a href="#l68" class="line" id="l68">     68</a>                 listeners[conversationId] = addStateListener@{ stealth -&gt;
-<a href="#l69" class="line" id="l69">     69</a>                     updateStealthIndicator(stealth)
-<a href="#l70" class="line" id="l70">     70</a>                 }
-<a href="#l71" class="line" id="l71">     71</a>                 fetchStealthState(conversationId) { isStealth -&gt;
-<a href="#l72" class="line" id="l72">     72</a>                     updateStealthIndicator(isStealth)
-<a href="#l73" class="line" id="l73">     73</a>                 }
-<a href="#l74" class="line" id="l74">     74</a>             }
-<a href="#l75" class="line" id="l75">     75</a>         }
-<a href="#l76" class="line" id="l76">     76</a>     }
-<a href="#l77" class="line" id="l77">     77</a> }</pre>
+<a href="#l36" class="line" id="l36">     36</a>         onNextActivityCreate {
+<a href="#l37" class="line" id="l37">     37</a>             val secondaryTextSize = context.resources.getDimens(&quot;ff_feed_cell_secondary_text_size&quot;).toFloat()
+<a href="#l38" class="line" id="l38">     38</a>             val sigColorTextPrimary = context.mainActivity!!.obtainStyledAttributes(
+<a href="#l39" class="line" id="l39">     39</a>                 intArrayOf(context.resources.getIdentifier(&quot;sigColorTextPrimary&quot;, &quot;attr&quot;))
+<a href="#l40" class="line" id="l40">     40</a>             ).use { it.getColor(0, 0) }
+<a href="#l41" class="line" id="l41">     41</a> 
+<a href="#l42" class="line" id="l42">     42</a>             stealthMode.addStateListener { conversationId, state -&gt;
+<a href="#l43" class="line" id="l43">     43</a>                 runCatching {
+<a href="#l44" class="line" id="l44">     44</a>                     listeners[conversationId]?.invoke(state)
+<a href="#l45" class="line" id="l45">     45</a>                 }.onFailure {
+<a href="#l46" class="line" id="l46">     46</a>                     context.log.error(&quot;Failed to update stealth mode indicator&quot;, it)
+<a href="#l47" class="line" id="l47">     47</a>                 }
+<a href="#l48" class="line" id="l48">     48</a>             }
+<a href="#l49" class="line" id="l49">     49</a> 
+<a href="#l50" class="line" id="l50">     50</a>             context.event.subscribe(BindViewEvent::class) { event -&gt;
+<a href="#l51" class="line" id="l51">     51</a>                 fun updateStealthIndicator(isStealth: Boolean = true) {
+<a href="#l52" class="line" id="l52">     52</a>                     event.view.removeForegroundDrawable(&quot;stealthModeIndicator&quot;)
+<a href="#l53" class="line" id="l53">     53</a>                     if (!isStealth || !event.view.isAttachedToWindow) return
+<a href="#l54" class="line" id="l54">     54</a>                     event.view.addForegroundDrawable(&quot;stealthModeIndicator&quot;, ShapeDrawable(object : Shape() {
+<a href="#l55" class="line" id="l55">     55</a>                         override fun draw(canvas: Canvas, paint: Paint) {
+<a href="#l56" class="line" id="l56">     56</a>                             paint.textSize = secondaryTextSize
+<a href="#l57" class="line" id="l57">     57</a>                             paint.color = sigColorTextPrimary
+<a href="#l58" class="line" id="l58">     58</a>                             canvas.drawText(
+<a href="#l59" class="line" id="l59">     59</a>                                 &quot;\uD83D\uDC7B&quot;,
+<a href="#l60" class="line" id="l60">     60</a>                                 0f,
+<a href="#l61" class="line" id="l61">     61</a>                                 canvas.height.toFloat() - secondaryTextSize / 2,
+<a href="#l62" class="line" id="l62">     62</a>                                 paint
+<a href="#l63" class="line" id="l63">     63</a>                             )
+<a href="#l64" class="line" id="l64">     64</a>                         }
+<a href="#l65" class="line" id="l65">     65</a>                     }))
+<a href="#l66" class="line" id="l66">     66</a>                 }
+<a href="#l67" class="line" id="l67">     67</a> 
+<a href="#l68" class="line" id="l68">     68</a>                 event.friendFeedItem { conversationId -&gt;
+<a href="#l69" class="line" id="l69">     69</a>                     listeners[conversationId] = addStateListener@{ stealth -&gt;
+<a href="#l70" class="line" id="l70">     70</a>                         updateStealthIndicator(stealth)
+<a href="#l71" class="line" id="l71">     71</a>                     }
+<a href="#l72" class="line" id="l72">     72</a>                     fetchStealthState(conversationId) { isStealth -&gt;
+<a href="#l73" class="line" id="l73">     73</a>                         updateStealthIndicator(isStealth)
+<a href="#l74" class="line" id="l74">     74</a>                     }
+<a href="#l75" class="line" id="l75">     75</a>                 }
+<a href="#l76" class="line" id="l76">     76</a>             }
+<a href="#l77" class="line" id="l77">     77</a>         }
+<a href="#l78" class="line" id="l78">     78</a>     }
+<a href="#l79" class="line" id="l79">     79</a> }</pre>
 </div>
 </body>
 </html>

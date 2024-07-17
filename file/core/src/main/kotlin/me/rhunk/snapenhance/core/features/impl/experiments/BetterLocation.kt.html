@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> BetterLocation.kt (10647B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt">raw</a></p><hr/><pre id="blob">
+<p> BetterLocation.kt (10545B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core.features.impl.experiments
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import android.location.Location
@@ -48,235 +48,234 @@
 <a href="#l25" class="line" id="l25">     25</a> import me.rhunk.snapenhance.core.event.events.impl.AddViewEvent
 <a href="#l26" class="line" id="l26">     26</a> import me.rhunk.snapenhance.core.event.events.impl.UnaryCallEvent
 <a href="#l27" class="line" id="l27">     27</a> import me.rhunk.snapenhance.core.features.Feature
-<a href="#l28" class="line" id="l28">     28</a> import me.rhunk.snapenhance.core.features.FeatureLoadParams
-<a href="#l29" class="line" id="l29">     29</a> import me.rhunk.snapenhance.core.util.RandomWalking
-<a href="#l30" class="line" id="l30">     30</a> import me.rhunk.snapenhance.core.util.hook.HookStage
-<a href="#l31" class="line" id="l31">     31</a> import me.rhunk.snapenhance.core.util.hook.hook
-<a href="#l32" class="line" id="l32">     32</a> import me.rhunk.snapenhance.core.util.ktx.getId
-<a href="#l33" class="line" id="l33">     33</a> import me.rhunk.snapenhance.core.util.ktx.isDarkTheme
-<a href="#l34" class="line" id="l34">     34</a> import me.rhunk.snapenhance.mapper.impl.CallbackMapper
-<a href="#l35" class="line" id="l35">     35</a> import java.nio.ByteBuffer
-<a href="#l36" class="line" id="l36">     36</a> import java.util.UUID
-<a href="#l37" class="line" id="l37">     37</a> 
-<a href="#l38" class="line" id="l38">     38</a> data class FriendLocation(
-<a href="#l39" class="line" id="l39">     39</a>     val userId: String,
-<a href="#l40" class="line" id="l40">     40</a>     val latitude: Double,
-<a href="#l41" class="line" id="l41">     41</a>     val longitude: Double,
-<a href="#l42" class="line" id="l42">     42</a>     val lastUpdated: Long,
-<a href="#l43" class="line" id="l43">     43</a>     val locality: String?,
-<a href="#l44" class="line" id="l44">     44</a>     val localityPieces: List&lt;String&gt;
-<a href="#l45" class="line" id="l45">     45</a> )
-<a href="#l46" class="line" id="l46">     46</a> 
-<a href="#l47" class="line" id="l47">     47</a> class BetterLocation : Feature(&quot;Better Location&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
-<a href="#l48" class="line" id="l48">     48</a>     private val locationHistory = mutableMapOf&lt;String, FriendLocation&gt;()
-<a href="#l49" class="line" id="l49">     49</a> 
-<a href="#l50" class="line" id="l50">     50</a>     private val walkRadius by lazy {
-<a href="#l51" class="line" id="l51">     51</a>         context.config.global.betterLocation.walkRadius.getNullable()
-<a href="#l52" class="line" id="l52">     52</a>     }
-<a href="#l53" class="line" id="l53">     53</a> 
-<a href="#l54" class="line" id="l54">     54</a>     private val randomWalking by lazy {
-<a href="#l55" class="line" id="l55">     55</a>         RandomWalking(walkRadius?.toDoubleOrNull())
-<a href="#l56" class="line" id="l56">     56</a>     }
-<a href="#l57" class="line" id="l57">     57</a> 
-<a href="#l58" class="line" id="l58">     58</a>     private fun getLat() : Double {
-<a href="#l59" class="line" id="l59">     59</a>         var spoofedLatitude = context.config.global.betterLocation.coordinates.get().first
-<a href="#l60" class="line" id="l60">     60</a>         walkRadius?.let {
-<a href="#l61" class="line" id="l61">     61</a>             spoofedLatitude += randomWalking.current_x
-<a href="#l62" class="line" id="l62">     62</a>         }
-<a href="#l63" class="line" id="l63">     63</a>         return spoofedLatitude
-<a href="#l64" class="line" id="l64">     64</a>     }
-<a href="#l65" class="line" id="l65">     65</a> 
-<a href="#l66" class="line" id="l66">     66</a>     private fun getLong() : Double {
-<a href="#l67" class="line" id="l67">     67</a>         var spoofedLongitude = context.config.global.betterLocation.coordinates.get().second
-<a href="#l68" class="line" id="l68">     68</a>         walkRadius?.let {
-<a href="#l69" class="line" id="l69">     69</a>             spoofedLongitude += randomWalking.current_y
-<a href="#l70" class="line" id="l70">     70</a>         }
-<a href="#l71" class="line" id="l71">     71</a>         return spoofedLongitude
-<a href="#l72" class="line" id="l72">     72</a>     }
-<a href="#l73" class="line" id="l73">     73</a> 
-<a href="#l74" class="line" id="l74">     74</a>     private fun editClientUpdate(editor: EditorContext) {
-<a href="#l75" class="line" id="l75">     75</a>         val config = context.config.global.betterLocation
-<a href="#l76" class="line" id="l76">     76</a> 
-<a href="#l77" class="line" id="l77">     77</a>         editor.apply {
-<a href="#l78" class="line" id="l78">     78</a>             // SCVSLocationUpdate
-<a href="#l79" class="line" id="l79">     79</a>             edit(1) {
-<a href="#l80" class="line" id="l80">     80</a>                 if (config.spoofLocation.get()) {
-<a href="#l81" class="line" id="l81">     81</a>                     randomWalking.updatePosition()
-<a href="#l82" class="line" id="l82">     82</a>                     remove(1)
-<a href="#l83" class="line" id="l83">     83</a>                     remove(2)
-<a href="#l84" class="line" id="l84">     84</a>                     addFixed32(1, getLat().toFloat()) // lat
-<a href="#l85" class="line" id="l85">     85</a>                     addFixed32(2, getLong().toFloat()) // lng
-<a href="#l86" class="line" id="l86">     86</a>                 }
-<a href="#l87" class="line" id="l87">     87</a> 
-<a href="#l88" class="line" id="l88">     88</a>                 if (config.alwaysUpdateLocation.get()) {
-<a href="#l89" class="line" id="l89">     89</a>                     remove(7)
-<a href="#l90" class="line" id="l90">     90</a>                     addVarInt(7, System.currentTimeMillis()) // timestamp
-<a href="#l91" class="line" id="l91">     91</a>                 }
-<a href="#l92" class="line" id="l92">     92</a>             }
-<a href="#l93" class="line" id="l93">     93</a> 
-<a href="#l94" class="line" id="l94">     94</a>             if (context.config.global.betterLocation.suspendLocationUpdates.get()) {
-<a href="#l95" class="line" id="l95">     95</a>                 remove(1)
-<a href="#l96" class="line" id="l96">     96</a>             }
-<a href="#l97" class="line" id="l97">     97</a> 
-<a href="#l98" class="line" id="l98">     98</a>             // SCVSDeviceData
-<a href="#l99" class="line" id="l99">     99</a>             edit(3) {
-<a href="#l100" class="line" id="l100">    100</a>                 config.spoofBatteryLevel.getNullable()?.takeIf { it.isNotEmpty() }?.let {
-<a href="#l101" class="line" id="l101">    101</a>                     val value = it.toIntOrNull()?.toFloat()?.div(100) ?: return@edit
-<a href="#l102" class="line" id="l102">    102</a>                     remove(2)
-<a href="#l103" class="line" id="l103">    103</a>                     addFixed32(2, value)
-<a href="#l104" class="line" id="l104">    104</a>                     if (value == 100F) {
-<a href="#l105" class="line" id="l105">    105</a>                         remove(3)
-<a href="#l106" class="line" id="l106">    106</a>                         addVarInt(3, 1) // devicePluggedIn
-<a href="#l107" class="line" id="l107">    107</a>                     }
-<a href="#l108" class="line" id="l108">    108</a>                 }
-<a href="#l109" class="line" id="l109">    109</a> 
-<a href="#l110" class="line" id="l110">    110</a>                 if (config.spoofHeadphones.get()) {
-<a href="#l111" class="line" id="l111">    111</a>                     remove(4)
-<a href="#l112" class="line" id="l112">    112</a>                     addVarInt(4, 1) // headphoneOutput
-<a href="#l113" class="line" id="l113">    113</a>                     remove(6)
-<a href="#l114" class="line" id="l114">    114</a>                     addVarInt(6, 1) // isOtherAudioPlaying
-<a href="#l115" class="line" id="l115">    115</a>                 }
-<a href="#l116" class="line" id="l116">    116</a> 
-<a href="#l117" class="line" id="l117">    117</a>                 edit(10) {
-<a href="#l118" class="line" id="l118">    118</a>                     remove(1)
-<a href="#l119" class="line" id="l119">    119</a>                     addVarInt(1, 4) // type = ALWAYS
-<a href="#l120" class="line" id="l120">    120</a>                     remove(2)
-<a href="#l121" class="line" id="l121">    121</a>                     addVarInt(2, 1) // precise = true
-<a href="#l122" class="line" id="l122">    122</a>                 }
-<a href="#l123" class="line" id="l123">    123</a>             }
-<a href="#l124" class="line" id="l124">    124</a>         }
-<a href="#l125" class="line" id="l125">    125</a>     }
-<a href="#l126" class="line" id="l126">    126</a> 
-<a href="#l127" class="line" id="l127">    127</a>     private fun onLocationEvent(protoReader: ProtoReader) {
-<a href="#l128" class="line" id="l128">    128</a>         protoReader.eachBuffer(3, 1) {
-<a href="#l129" class="line" id="l129">    129</a>             val userId = UUID(getFixed64(1, 1) ?: return@eachBuffer, getFixed64(1, 2) ?: return@eachBuffer).toString()
-<a href="#l130" class="line" id="l130">    130</a>             val friendCluster = FriendLocation(
-<a href="#l131" class="line" id="l131">    131</a>                 userId = userId,
-<a href="#l132" class="line" id="l132">    132</a>                 latitude = Float.fromBits(getFixed32(4)).toDouble(),
-<a href="#l133" class="line" id="l133">    133</a>                 longitude = Float.fromBits(getFixed32(5)).toDouble(),
-<a href="#l134" class="line" id="l134">    134</a>                 lastUpdated = getVarInt(7, 2) ?: -1L,
-<a href="#l135" class="line" id="l135">    135</a>                 locality = getString(10),
-<a href="#l136" class="line" id="l136">    136</a>                 localityPieces = mutableListOf&lt;String&gt;().also {
-<a href="#l137" class="line" id="l137">    137</a>                     forEach { index, wire -&gt;
-<a href="#l138" class="line" id="l138">    138</a>                         if (index != 11) return@forEach
-<a href="#l139" class="line" id="l139">    139</a>                         it.add((wire.value as ByteArray).toString(Charsets.UTF_8) )
-<a href="#l140" class="line" id="l140">    140</a>                     }
-<a href="#l141" class="line" id="l141">    141</a>                 }
-<a href="#l142" class="line" id="l142">    142</a>             )
-<a href="#l143" class="line" id="l143">    143</a> 
-<a href="#l144" class="line" id="l144">    144</a>             locationHistory[userId] = friendCluster
-<a href="#l145" class="line" id="l145">    145</a>         }
-<a href="#l146" class="line" id="l146">    146</a>     }
-<a href="#l147" class="line" id="l147">    147</a> 
-<a href="#l148" class="line" id="l148">    148</a>     private fun openManagementOverlay() {
-<a href="#l149" class="line" id="l149">    149</a>         context.bridgeClient.getLocationManager().provideFriendsLocation(
-<a href="#l150" class="line" id="l150">    150</a>             locationHistory.values.toList().mapNotNull { locationHistory -&gt;
-<a href="#l151" class="line" id="l151">    151</a>                 val friendInfo = context.database.getFriendInfo(locationHistory.userId) ?: return@mapNotNull null
-<a href="#l152" class="line" id="l152">    152</a> 
-<a href="#l153" class="line" id="l153">    153</a>                 me.rhunk.snapenhance.bridge.location.FriendLocation().also {
-<a href="#l154" class="line" id="l154">    154</a>                     it.username = friendInfo.mutableUsername ?: return@mapNotNull null
-<a href="#l155" class="line" id="l155">    155</a>                     it.displayName = friendInfo.displayName
-<a href="#l156" class="line" id="l156">    156</a>                     it.bitmojiId = friendInfo.bitmojiAvatarId
-<a href="#l157" class="line" id="l157">    157</a>                     it.bitmojiSelfieId = friendInfo.bitmojiSelfieId
-<a href="#l158" class="line" id="l158">    158</a>                     it.latitude = locationHistory.latitude
-<a href="#l159" class="line" id="l159">    159</a>                     it.longitude = locationHistory.longitude
-<a href="#l160" class="line" id="l160">    160</a>                     it.lastUpdated = locationHistory.lastUpdated
-<a href="#l161" class="line" id="l161">    161</a>                     it.locality = locationHistory.locality
-<a href="#l162" class="line" id="l162">    162</a>                     it.localityPieces = locationHistory.localityPieces
-<a href="#l163" class="line" id="l163">    163</a>                 }
-<a href="#l164" class="line" id="l164">    164</a>             }
-<a href="#l165" class="line" id="l165">    165</a>         )
-<a href="#l166" class="line" id="l166">    166</a>         context.bridgeClient.openOverlay(OverlayType.BETTER_LOCATION)
-<a href="#l167" class="line" id="l167">    167</a>     }
-<a href="#l168" class="line" id="l168">    168</a> 
-<a href="#l169" class="line" id="l169">    169</a>     override fun init() {
-<a href="#l170" class="line" id="l170">    170</a>         if (context.config.global.betterLocation.globalState != true) return
-<a href="#l171" class="line" id="l171">    171</a> 
-<a href="#l172" class="line" id="l172">    172</a>         val canSpoofLocation = { context.config.global.betterLocation.spoofLocation.get() }
-<a href="#l173" class="line" id="l173">    173</a> 
-<a href="#l174" class="line" id="l174">    174</a>         LocationManager::class.java.apply {
-<a href="#l175" class="line" id="l175">    175</a>             hook(&quot;isProviderEnabled&quot;, HookStage.BEFORE, { canSpoofLocation() }) { it.setResult(true) }
-<a href="#l176" class="line" id="l176">    176</a>             hook(&quot;isProviderEnabledForUser&quot;, HookStage.BEFORE, { canSpoofLocation() }) { it.setResult(true) }
-<a href="#l177" class="line" id="l177">    177</a>         }
-<a href="#l178" class="line" id="l178">    178</a>         Location::class.java.apply {
-<a href="#l179" class="line" id="l179">    179</a>             hook(&quot;getLatitude&quot;, HookStage.BEFORE, { canSpoofLocation() }) { it.setResult(getLat()) }
-<a href="#l180" class="line" id="l180">    180</a>             hook(&quot;getLongitude&quot;, HookStage.BEFORE, { canSpoofLocation() }) { it.setResult(getLong()) }
-<a href="#l181" class="line" id="l181">    181</a>         }
-<a href="#l182" class="line" id="l182">    182</a> 
-<a href="#l183" class="line" id="l183">    183</a>         val mapFeaturesRootId = context.resources.getId(&quot;map_features_root&quot;)
-<a href="#l184" class="line" id="l184">    184</a> 
-<a href="#l185" class="line" id="l185">    185</a>         context.event.subscribe(AddViewEvent::class) { event -&gt;
-<a href="#l186" class="line" id="l186">    186</a>             if (event.view.id != mapFeaturesRootId) return@subscribe
-<a href="#l187" class="line" id="l187">    187</a>             val view = event.view as RelativeLayout
-<a href="#l188" class="line" id="l188">    188</a> 
-<a href="#l189" class="line" id="l189">    189</a>             view.addOnAttachStateChangeListener(object: View.OnAttachStateChangeListener {
-<a href="#l190" class="line" id="l190">    190</a>                 override fun onViewAttachedToWindow(v: View) {
-<a href="#l191" class="line" id="l191">    191</a>                     view.addView(createComposeView(view.context) {
-<a href="#l192" class="line" id="l192">    192</a>                         val darkTheme = remember { context.androidContext.isDarkTheme() }
-<a href="#l193" class="line" id="l193">    193</a>                         Box(
-<a href="#l194" class="line" id="l194">    194</a>                             modifier = Modifier.padding(start = 8.dp)
-<a href="#l195" class="line" id="l195">    195</a>                         ) {
-<a href="#l196" class="line" id="l196">    196</a>                             FilledIconButton(
-<a href="#l197" class="line" id="l197">    197</a>                                 modifier = Modifier.size(40.dp),
-<a href="#l198" class="line" id="l198">    198</a>                                 colors = IconButtonDefaults.filledIconButtonColors(
-<a href="#l199" class="line" id="l199">    199</a>                                     containerColor = if (darkTheme) Color(0xFF1D1D1D) else Color.White,
-<a href="#l200" class="line" id="l200">    200</a>                                     contentColor = if (darkTheme) Color.White else Color(0xFF151A1A),
-<a href="#l201" class="line" id="l201">    201</a>                                 ),
-<a href="#l202" class="line" id="l202">    202</a>                                 onClick = { openManagementOverlay() }
-<a href="#l203" class="line" id="l203">    203</a>                             ) {
-<a href="#l204" class="line" id="l204">    204</a>                                 Icon(Icons.Default.EditLocation, contentDescription = null)
-<a href="#l205" class="line" id="l205">    205</a>                             }
-<a href="#l206" class="line" id="l206">    206</a>                         }
-<a href="#l207" class="line" id="l207">    207</a>                     }.apply {
-<a href="#l208" class="line" id="l208">    208</a>                         layoutParams = RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-<a href="#l209" class="line" id="l209">    209</a>                             addRule(RelativeLayout.ALIGN_PARENT_LEFT)
-<a href="#l210" class="line" id="l210">    210</a>                             setMargins(0, (60 * context.resources.displayMetrics.density).toInt(), 0, 0)
-<a href="#l211" class="line" id="l211">    211</a>                         }
-<a href="#l212" class="line" id="l212">    212</a>                     })
-<a href="#l213" class="line" id="l213">    213</a>                 }
-<a href="#l214" class="line" id="l214">    214</a> 
-<a href="#l215" class="line" id="l215">    215</a>                 override fun onViewDetachedFromWindow(v: View) {}
-<a href="#l216" class="line" id="l216">    216</a>             })
-<a href="#l217" class="line" id="l217">    217</a>         }
-<a href="#l218" class="line" id="l218">    218</a> 
-<a href="#l219" class="line" id="l219">    219</a>         context.event.subscribe(UnaryCallEvent::class) { event -&gt;
-<a href="#l220" class="line" id="l220">    220</a>             if (event.uri == &quot;/snapchat.valis.Valis/SendClientUpdate&quot;) {
-<a href="#l221" class="line" id="l221">    221</a>                 event.buffer = ProtoEditor(event.buffer).apply {
-<a href="#l222" class="line" id="l222">    222</a>                     edit {
-<a href="#l223" class="line" id="l223">    223</a>                         editEach(1) {
-<a href="#l224" class="line" id="l224">    224</a>                             editClientUpdate(this)
-<a href="#l225" class="line" id="l225">    225</a>                         }
-<a href="#l226" class="line" id="l226">    226</a>                     }
-<a href="#l227" class="line" id="l227">    227</a>                 }.toByteArray()
-<a href="#l228" class="line" id="l228">    228</a>             }
-<a href="#l229" class="line" id="l229">    229</a>         }
-<a href="#l230" class="line" id="l230">    230</a> 
-<a href="#l231" class="line" id="l231">    231</a>         context.mappings.useMapper(CallbackMapper::class) {
-<a href="#l232" class="line" id="l232">    232</a>             callbacks.getClass(&quot;ServerStreamingEventHandler&quot;)?.hook(&quot;onEvent&quot;, HookStage.BEFORE) { param -&gt;
-<a href="#l233" class="line" id="l233">    233</a>                 val buffer = param.argNullable&lt;ByteBuffer&gt;(1)?.let {
-<a href="#l234" class="line" id="l234">    234</a>                     it.position(0)
-<a href="#l235" class="line" id="l235">    235</a>                     ByteArray(it.capacity()).also { buffer -&gt; it.get(buffer); it.position(0) }
-<a href="#l236" class="line" id="l236">    236</a>                 } ?: return@hook
-<a href="#l237" class="line" id="l237">    237</a>                 onLocationEvent(ProtoReader(buffer))
-<a href="#l238" class="line" id="l238">    238</a>             }
-<a href="#l239" class="line" id="l239">    239</a>         }
-<a href="#l240" class="line" id="l240">    240</a> 
-<a href="#l241" class="line" id="l241">    241</a>         findClass(&quot;com.snapchat.client.grpc.ClientStreamSendHandler\$CppProxy&quot;).hook(&quot;send&quot;, HookStage.BEFORE) { param -&gt;
-<a href="#l242" class="line" id="l242">    242</a>             val array = param.arg&lt;ByteBuffer&gt;(0).let {
-<a href="#l243" class="line" id="l243">    243</a>                 it.position(0)
-<a href="#l244" class="line" id="l244">    244</a>                 ByteArray(it.capacity()).also { buffer -&gt; it.get(buffer); it.position(0) }
-<a href="#l245" class="line" id="l245">    245</a>             }
-<a href="#l246" class="line" id="l246">    246</a> 
-<a href="#l247" class="line" id="l247">    247</a>             param.setArg(0, ProtoEditor(array).apply {
-<a href="#l248" class="line" id="l248">    248</a>                 edit {
-<a href="#l249" class="line" id="l249">    249</a>                     editClientUpdate(this)
-<a href="#l250" class="line" id="l250">    250</a>                 }
-<a href="#l251" class="line" id="l251">    251</a>             }.toByteArray().let {
-<a href="#l252" class="line" id="l252">    252</a>                 ByteBuffer.allocateDirect(it.size).put(it).rewind()
-<a href="#l253" class="line" id="l253">    253</a>             })
-<a href="#l254" class="line" id="l254">    254</a>         }
-<a href="#l255" class="line" id="l255">    255</a>     }
-<a href="#l256" class="line" id="l256">    256</a> }</pre>
+<a href="#l28" class="line" id="l28">     28</a> import me.rhunk.snapenhance.core.util.RandomWalking
+<a href="#l29" class="line" id="l29">     29</a> import me.rhunk.snapenhance.core.util.hook.HookStage
+<a href="#l30" class="line" id="l30">     30</a> import me.rhunk.snapenhance.core.util.hook.hook
+<a href="#l31" class="line" id="l31">     31</a> import me.rhunk.snapenhance.core.util.ktx.getId
+<a href="#l32" class="line" id="l32">     32</a> import me.rhunk.snapenhance.core.util.ktx.isDarkTheme
+<a href="#l33" class="line" id="l33">     33</a> import me.rhunk.snapenhance.mapper.impl.CallbackMapper
+<a href="#l34" class="line" id="l34">     34</a> import java.nio.ByteBuffer
+<a href="#l35" class="line" id="l35">     35</a> import java.util.UUID
+<a href="#l36" class="line" id="l36">     36</a> 
+<a href="#l37" class="line" id="l37">     37</a> data class FriendLocation(
+<a href="#l38" class="line" id="l38">     38</a>     val userId: String,
+<a href="#l39" class="line" id="l39">     39</a>     val latitude: Double,
+<a href="#l40" class="line" id="l40">     40</a>     val longitude: Double,
+<a href="#l41" class="line" id="l41">     41</a>     val lastUpdated: Long,
+<a href="#l42" class="line" id="l42">     42</a>     val locality: String?,
+<a href="#l43" class="line" id="l43">     43</a>     val localityPieces: List&lt;String&gt;
+<a href="#l44" class="line" id="l44">     44</a> )
+<a href="#l45" class="line" id="l45">     45</a> 
+<a href="#l46" class="line" id="l46">     46</a> class BetterLocation : Feature(&quot;Better Location&quot;) {
+<a href="#l47" class="line" id="l47">     47</a>     private val locationHistory = mutableMapOf&lt;String, FriendLocation&gt;()
+<a href="#l48" class="line" id="l48">     48</a> 
+<a href="#l49" class="line" id="l49">     49</a>     private val walkRadius by lazy {
+<a href="#l50" class="line" id="l50">     50</a>         context.config.global.betterLocation.walkRadius.getNullable()
+<a href="#l51" class="line" id="l51">     51</a>     }
+<a href="#l52" class="line" id="l52">     52</a> 
+<a href="#l53" class="line" id="l53">     53</a>     private val randomWalking by lazy {
+<a href="#l54" class="line" id="l54">     54</a>         RandomWalking(walkRadius?.toDoubleOrNull())
+<a href="#l55" class="line" id="l55">     55</a>     }
+<a href="#l56" class="line" id="l56">     56</a> 
+<a href="#l57" class="line" id="l57">     57</a>     private fun getLat() : Double {
+<a href="#l58" class="line" id="l58">     58</a>         var spoofedLatitude = context.config.global.betterLocation.coordinates.get().first
+<a href="#l59" class="line" id="l59">     59</a>         walkRadius?.let {
+<a href="#l60" class="line" id="l60">     60</a>             spoofedLatitude += randomWalking.current_x
+<a href="#l61" class="line" id="l61">     61</a>         }
+<a href="#l62" class="line" id="l62">     62</a>         return spoofedLatitude
+<a href="#l63" class="line" id="l63">     63</a>     }
+<a href="#l64" class="line" id="l64">     64</a> 
+<a href="#l65" class="line" id="l65">     65</a>     private fun getLong() : Double {
+<a href="#l66" class="line" id="l66">     66</a>         var spoofedLongitude = context.config.global.betterLocation.coordinates.get().second
+<a href="#l67" class="line" id="l67">     67</a>         walkRadius?.let {
+<a href="#l68" class="line" id="l68">     68</a>             spoofedLongitude += randomWalking.current_y
+<a href="#l69" class="line" id="l69">     69</a>         }
+<a href="#l70" class="line" id="l70">     70</a>         return spoofedLongitude
+<a href="#l71" class="line" id="l71">     71</a>     }
+<a href="#l72" class="line" id="l72">     72</a> 
+<a href="#l73" class="line" id="l73">     73</a>     private fun editClientUpdate(editor: EditorContext) {
+<a href="#l74" class="line" id="l74">     74</a>         val config = context.config.global.betterLocation
+<a href="#l75" class="line" id="l75">     75</a> 
+<a href="#l76" class="line" id="l76">     76</a>         editor.apply {
+<a href="#l77" class="line" id="l77">     77</a>             // SCVSLocationUpdate
+<a href="#l78" class="line" id="l78">     78</a>             edit(1) {
+<a href="#l79" class="line" id="l79">     79</a>                 if (config.spoofLocation.get()) {
+<a href="#l80" class="line" id="l80">     80</a>                     randomWalking.updatePosition()
+<a href="#l81" class="line" id="l81">     81</a>                     remove(1)
+<a href="#l82" class="line" id="l82">     82</a>                     remove(2)
+<a href="#l83" class="line" id="l83">     83</a>                     addFixed32(1, getLat().toFloat()) // lat
+<a href="#l84" class="line" id="l84">     84</a>                     addFixed32(2, getLong().toFloat()) // lng
+<a href="#l85" class="line" id="l85">     85</a>                 }
+<a href="#l86" class="line" id="l86">     86</a> 
+<a href="#l87" class="line" id="l87">     87</a>                 if (config.alwaysUpdateLocation.get()) {
+<a href="#l88" class="line" id="l88">     88</a>                     remove(7)
+<a href="#l89" class="line" id="l89">     89</a>                     addVarInt(7, System.currentTimeMillis()) // timestamp
+<a href="#l90" class="line" id="l90">     90</a>                 }
+<a href="#l91" class="line" id="l91">     91</a>             }
+<a href="#l92" class="line" id="l92">     92</a> 
+<a href="#l93" class="line" id="l93">     93</a>             if (context.config.global.betterLocation.suspendLocationUpdates.get()) {
+<a href="#l94" class="line" id="l94">     94</a>                 remove(1)
+<a href="#l95" class="line" id="l95">     95</a>             }
+<a href="#l96" class="line" id="l96">     96</a> 
+<a href="#l97" class="line" id="l97">     97</a>             // SCVSDeviceData
+<a href="#l98" class="line" id="l98">     98</a>             edit(3) {
+<a href="#l99" class="line" id="l99">     99</a>                 config.spoofBatteryLevel.getNullable()?.takeIf { it.isNotEmpty() }?.let {
+<a href="#l100" class="line" id="l100">    100</a>                     val value = it.toIntOrNull()?.toFloat()?.div(100) ?: return@edit
+<a href="#l101" class="line" id="l101">    101</a>                     remove(2)
+<a href="#l102" class="line" id="l102">    102</a>                     addFixed32(2, value)
+<a href="#l103" class="line" id="l103">    103</a>                     if (value == 100F) {
+<a href="#l104" class="line" id="l104">    104</a>                         remove(3)
+<a href="#l105" class="line" id="l105">    105</a>                         addVarInt(3, 1) // devicePluggedIn
+<a href="#l106" class="line" id="l106">    106</a>                     }
+<a href="#l107" class="line" id="l107">    107</a>                 }
+<a href="#l108" class="line" id="l108">    108</a> 
+<a href="#l109" class="line" id="l109">    109</a>                 if (config.spoofHeadphones.get()) {
+<a href="#l110" class="line" id="l110">    110</a>                     remove(4)
+<a href="#l111" class="line" id="l111">    111</a>                     addVarInt(4, 1) // headphoneOutput
+<a href="#l112" class="line" id="l112">    112</a>                     remove(6)
+<a href="#l113" class="line" id="l113">    113</a>                     addVarInt(6, 1) // isOtherAudioPlaying
+<a href="#l114" class="line" id="l114">    114</a>                 }
+<a href="#l115" class="line" id="l115">    115</a> 
+<a href="#l116" class="line" id="l116">    116</a>                 edit(10) {
+<a href="#l117" class="line" id="l117">    117</a>                     remove(1)
+<a href="#l118" class="line" id="l118">    118</a>                     addVarInt(1, 4) // type = ALWAYS
+<a href="#l119" class="line" id="l119">    119</a>                     remove(2)
+<a href="#l120" class="line" id="l120">    120</a>                     addVarInt(2, 1) // precise = true
+<a href="#l121" class="line" id="l121">    121</a>                 }
+<a href="#l122" class="line" id="l122">    122</a>             }
+<a href="#l123" class="line" id="l123">    123</a>         }
+<a href="#l124" class="line" id="l124">    124</a>     }
+<a href="#l125" class="line" id="l125">    125</a> 
+<a href="#l126" class="line" id="l126">    126</a>     private fun onLocationEvent(protoReader: ProtoReader) {
+<a href="#l127" class="line" id="l127">    127</a>         protoReader.eachBuffer(3, 1) {
+<a href="#l128" class="line" id="l128">    128</a>             val userId = UUID(getFixed64(1, 1) ?: return@eachBuffer, getFixed64(1, 2) ?: return@eachBuffer).toString()
+<a href="#l129" class="line" id="l129">    129</a>             val friendCluster = FriendLocation(
+<a href="#l130" class="line" id="l130">    130</a>                 userId = userId,
+<a href="#l131" class="line" id="l131">    131</a>                 latitude = Float.fromBits(getFixed32(4)).toDouble(),
+<a href="#l132" class="line" id="l132">    132</a>                 longitude = Float.fromBits(getFixed32(5)).toDouble(),
+<a href="#l133" class="line" id="l133">    133</a>                 lastUpdated = getVarInt(7, 2) ?: -1L,
+<a href="#l134" class="line" id="l134">    134</a>                 locality = getString(10),
+<a href="#l135" class="line" id="l135">    135</a>                 localityPieces = mutableListOf&lt;String&gt;().also {
+<a href="#l136" class="line" id="l136">    136</a>                     forEach { index, wire -&gt;
+<a href="#l137" class="line" id="l137">    137</a>                         if (index != 11) return@forEach
+<a href="#l138" class="line" id="l138">    138</a>                         it.add((wire.value as ByteArray).toString(Charsets.UTF_8) )
+<a href="#l139" class="line" id="l139">    139</a>                     }
+<a href="#l140" class="line" id="l140">    140</a>                 }
+<a href="#l141" class="line" id="l141">    141</a>             )
+<a href="#l142" class="line" id="l142">    142</a> 
+<a href="#l143" class="line" id="l143">    143</a>             locationHistory[userId] = friendCluster
+<a href="#l144" class="line" id="l144">    144</a>         }
+<a href="#l145" class="line" id="l145">    145</a>     }
+<a href="#l146" class="line" id="l146">    146</a> 
+<a href="#l147" class="line" id="l147">    147</a>     private fun openManagementOverlay() {
+<a href="#l148" class="line" id="l148">    148</a>         context.bridgeClient.getLocationManager().provideFriendsLocation(
+<a href="#l149" class="line" id="l149">    149</a>             locationHistory.values.toList().mapNotNull { locationHistory -&gt;
+<a href="#l150" class="line" id="l150">    150</a>                 val friendInfo = context.database.getFriendInfo(locationHistory.userId) ?: return@mapNotNull null
+<a href="#l151" class="line" id="l151">    151</a> 
+<a href="#l152" class="line" id="l152">    152</a>                 me.rhunk.snapenhance.bridge.location.FriendLocation().also {
+<a href="#l153" class="line" id="l153">    153</a>                     it.username = friendInfo.mutableUsername ?: return@mapNotNull null
+<a href="#l154" class="line" id="l154">    154</a>                     it.displayName = friendInfo.displayName
+<a href="#l155" class="line" id="l155">    155</a>                     it.bitmojiId = friendInfo.bitmojiAvatarId
+<a href="#l156" class="line" id="l156">    156</a>                     it.bitmojiSelfieId = friendInfo.bitmojiSelfieId
+<a href="#l157" class="line" id="l157">    157</a>                     it.latitude = locationHistory.latitude
+<a href="#l158" class="line" id="l158">    158</a>                     it.longitude = locationHistory.longitude
+<a href="#l159" class="line" id="l159">    159</a>                     it.lastUpdated = locationHistory.lastUpdated
+<a href="#l160" class="line" id="l160">    160</a>                     it.locality = locationHistory.locality
+<a href="#l161" class="line" id="l161">    161</a>                     it.localityPieces = locationHistory.localityPieces
+<a href="#l162" class="line" id="l162">    162</a>                 }
+<a href="#l163" class="line" id="l163">    163</a>             }
+<a href="#l164" class="line" id="l164">    164</a>         )
+<a href="#l165" class="line" id="l165">    165</a>         context.bridgeClient.openOverlay(OverlayType.BETTER_LOCATION)
+<a href="#l166" class="line" id="l166">    166</a>     }
+<a href="#l167" class="line" id="l167">    167</a> 
+<a href="#l168" class="line" id="l168">    168</a>     override fun init() {
+<a href="#l169" class="line" id="l169">    169</a>         if (context.config.global.betterLocation.globalState != true) return
+<a href="#l170" class="line" id="l170">    170</a> 
+<a href="#l171" class="line" id="l171">    171</a>         val canSpoofLocation = { context.config.global.betterLocation.spoofLocation.get() }
+<a href="#l172" class="line" id="l172">    172</a> 
+<a href="#l173" class="line" id="l173">    173</a>         LocationManager::class.java.apply {
+<a href="#l174" class="line" id="l174">    174</a>             hook(&quot;isProviderEnabled&quot;, HookStage.BEFORE, { canSpoofLocation() }) { it.setResult(true) }
+<a href="#l175" class="line" id="l175">    175</a>             hook(&quot;isProviderEnabledForUser&quot;, HookStage.BEFORE, { canSpoofLocation() }) { it.setResult(true) }
+<a href="#l176" class="line" id="l176">    176</a>         }
+<a href="#l177" class="line" id="l177">    177</a>         Location::class.java.apply {
+<a href="#l178" class="line" id="l178">    178</a>             hook(&quot;getLatitude&quot;, HookStage.BEFORE, { canSpoofLocation() }) { it.setResult(getLat()) }
+<a href="#l179" class="line" id="l179">    179</a>             hook(&quot;getLongitude&quot;, HookStage.BEFORE, { canSpoofLocation() }) { it.setResult(getLong()) }
+<a href="#l180" class="line" id="l180">    180</a>         }
+<a href="#l181" class="line" id="l181">    181</a> 
+<a href="#l182" class="line" id="l182">    182</a>         val mapFeaturesRootId = context.resources.getId(&quot;map_features_root&quot;)
+<a href="#l183" class="line" id="l183">    183</a> 
+<a href="#l184" class="line" id="l184">    184</a>         context.event.subscribe(AddViewEvent::class) { event -&gt;
+<a href="#l185" class="line" id="l185">    185</a>             if (event.view.id != mapFeaturesRootId) return@subscribe
+<a href="#l186" class="line" id="l186">    186</a>             val view = event.view as RelativeLayout
+<a href="#l187" class="line" id="l187">    187</a> 
+<a href="#l188" class="line" id="l188">    188</a>             view.addOnAttachStateChangeListener(object: View.OnAttachStateChangeListener {
+<a href="#l189" class="line" id="l189">    189</a>                 override fun onViewAttachedToWindow(v: View) {
+<a href="#l190" class="line" id="l190">    190</a>                     view.addView(createComposeView(view.context) {
+<a href="#l191" class="line" id="l191">    191</a>                         val darkTheme = remember { context.androidContext.isDarkTheme() }
+<a href="#l192" class="line" id="l192">    192</a>                         Box(
+<a href="#l193" class="line" id="l193">    193</a>                             modifier = Modifier.padding(start = 8.dp)
+<a href="#l194" class="line" id="l194">    194</a>                         ) {
+<a href="#l195" class="line" id="l195">    195</a>                             FilledIconButton(
+<a href="#l196" class="line" id="l196">    196</a>                                 modifier = Modifier.size(40.dp),
+<a href="#l197" class="line" id="l197">    197</a>                                 colors = IconButtonDefaults.filledIconButtonColors(
+<a href="#l198" class="line" id="l198">    198</a>                                     containerColor = if (darkTheme) Color(0xFF1D1D1D) else Color.White,
+<a href="#l199" class="line" id="l199">    199</a>                                     contentColor = if (darkTheme) Color.White else Color(0xFF151A1A),
+<a href="#l200" class="line" id="l200">    200</a>                                 ),
+<a href="#l201" class="line" id="l201">    201</a>                                 onClick = { openManagementOverlay() }
+<a href="#l202" class="line" id="l202">    202</a>                             ) {
+<a href="#l203" class="line" id="l203">    203</a>                                 Icon(Icons.Default.EditLocation, contentDescription = null)
+<a href="#l204" class="line" id="l204">    204</a>                             }
+<a href="#l205" class="line" id="l205">    205</a>                         }
+<a href="#l206" class="line" id="l206">    206</a>                     }.apply {
+<a href="#l207" class="line" id="l207">    207</a>                         layoutParams = RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+<a href="#l208" class="line" id="l208">    208</a>                             addRule(RelativeLayout.ALIGN_PARENT_LEFT)
+<a href="#l209" class="line" id="l209">    209</a>                             setMargins(0, (60 * context.resources.displayMetrics.density).toInt(), 0, 0)
+<a href="#l210" class="line" id="l210">    210</a>                         }
+<a href="#l211" class="line" id="l211">    211</a>                     })
+<a href="#l212" class="line" id="l212">    212</a>                 }
+<a href="#l213" class="line" id="l213">    213</a> 
+<a href="#l214" class="line" id="l214">    214</a>                 override fun onViewDetachedFromWindow(v: View) {}
+<a href="#l215" class="line" id="l215">    215</a>             })
+<a href="#l216" class="line" id="l216">    216</a>         }
+<a href="#l217" class="line" id="l217">    217</a> 
+<a href="#l218" class="line" id="l218">    218</a>         context.event.subscribe(UnaryCallEvent::class) { event -&gt;
+<a href="#l219" class="line" id="l219">    219</a>             if (event.uri == &quot;/snapchat.valis.Valis/SendClientUpdate&quot;) {
+<a href="#l220" class="line" id="l220">    220</a>                 event.buffer = ProtoEditor(event.buffer).apply {
+<a href="#l221" class="line" id="l221">    221</a>                     edit {
+<a href="#l222" class="line" id="l222">    222</a>                         editEach(1) {
+<a href="#l223" class="line" id="l223">    223</a>                             editClientUpdate(this)
+<a href="#l224" class="line" id="l224">    224</a>                         }
+<a href="#l225" class="line" id="l225">    225</a>                     }
+<a href="#l226" class="line" id="l226">    226</a>                 }.toByteArray()
+<a href="#l227" class="line" id="l227">    227</a>             }
+<a href="#l228" class="line" id="l228">    228</a>         }
+<a href="#l229" class="line" id="l229">    229</a> 
+<a href="#l230" class="line" id="l230">    230</a>         context.mappings.useMapper(CallbackMapper::class) {
+<a href="#l231" class="line" id="l231">    231</a>             callbacks.getClass(&quot;ServerStreamingEventHandler&quot;)?.hook(&quot;onEvent&quot;, HookStage.BEFORE) { param -&gt;
+<a href="#l232" class="line" id="l232">    232</a>                 val buffer = param.argNullable&lt;ByteBuffer&gt;(1)?.let {
+<a href="#l233" class="line" id="l233">    233</a>                     it.position(0)
+<a href="#l234" class="line" id="l234">    234</a>                     ByteArray(it.capacity()).also { buffer -&gt; it.get(buffer); it.position(0) }
+<a href="#l235" class="line" id="l235">    235</a>                 } ?: return@hook
+<a href="#l236" class="line" id="l236">    236</a>                 onLocationEvent(ProtoReader(buffer))
+<a href="#l237" class="line" id="l237">    237</a>             }
+<a href="#l238" class="line" id="l238">    238</a>         }
+<a href="#l239" class="line" id="l239">    239</a> 
+<a href="#l240" class="line" id="l240">    240</a>         findClass(&quot;com.snapchat.client.grpc.ClientStreamSendHandler\$CppProxy&quot;).hook(&quot;send&quot;, HookStage.BEFORE) { param -&gt;
+<a href="#l241" class="line" id="l241">    241</a>             val array = param.arg&lt;ByteBuffer&gt;(0).let {
+<a href="#l242" class="line" id="l242">    242</a>                 it.position(0)
+<a href="#l243" class="line" id="l243">    243</a>                 ByteArray(it.capacity()).also { buffer -&gt; it.get(buffer); it.position(0) }
+<a href="#l244" class="line" id="l244">    244</a>             }
+<a href="#l245" class="line" id="l245">    245</a> 
+<a href="#l246" class="line" id="l246">    246</a>             param.setArg(0, ProtoEditor(array).apply {
+<a href="#l247" class="line" id="l247">    247</a>                 edit {
+<a href="#l248" class="line" id="l248">    248</a>                     editClientUpdate(this)
+<a href="#l249" class="line" id="l249">    249</a>                 }
+<a href="#l250" class="line" id="l250">    250</a>             }.toByteArray().let {
+<a href="#l251" class="line" id="l251">    251</a>                 ByteBuffer.allocateDirect(it.size).put(it).rewind()
+<a href="#l252" class="line" id="l252">    252</a>             })
+<a href="#l253" class="line" id="l253">    253</a>         }
+<a href="#l254" class="line" id="l254">    254</a>     }
+<a href="#l255" class="line" id="l255">    255</a> }</pre>
 </div>
 </body>
 </html>

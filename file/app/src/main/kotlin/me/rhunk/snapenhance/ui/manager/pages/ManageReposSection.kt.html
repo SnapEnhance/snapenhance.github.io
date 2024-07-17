@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ManageReposSection.kt - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../../../../../../../../../../../logo.png"/>
+<link rel="alternate icon" href="../../../../../../../../../../../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../../../../../../../../../../../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../../../../../../../../../../../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../../../../../../../../../../../"><img src="../../../../../../../../../../../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../../../../../../../../../../../about.html">About</a> | <a href="../../../../../../../../../../../log.html">Log</a> | <a href="../../../../../../../../../../../files.html">Files</a> | <a href="../../../../../../../../../../../refs.html">Refs</a> | <a href="../../../../../../../../../../../file/.gitmodules.html">Submodules</a> | <a href="../../../../../../../../../../../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<p> ManageReposSection.kt (8015B) - <a href="../../../../../../../../../../../raw/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/ManageReposSection.kt">raw</a></p><hr/><pre id="blob">
+<a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.ui.manager.pages
+<a href="#l2" class="line" id="l2">      2</a> 
+<a href="#l3" class="line" id="l3">      3</a> import androidx.compose.foundation.layout.*
+<a href="#l4" class="line" id="l4">      4</a> import androidx.compose.foundation.lazy.LazyColumn
+<a href="#l5" class="line" id="l5">      5</a> import androidx.compose.foundation.lazy.items
+<a href="#l6" class="line" id="l6">      6</a> import androidx.compose.material.icons.Icons
+<a href="#l7" class="line" id="l7">      7</a> import androidx.compose.material.icons.filled.Public
+<a href="#l8" class="line" id="l8">      8</a> import androidx.compose.material3.*
+<a href="#l9" class="line" id="l9">      9</a> import androidx.compose.runtime.*
+<a href="#l10" class="line" id="l10">     10</a> import androidx.compose.ui.Modifier
+<a href="#l11" class="line" id="l11">     11</a> import androidx.compose.ui.focus.FocusRequester
+<a href="#l12" class="line" id="l12">     12</a> import androidx.compose.ui.focus.focusRequester
+<a href="#l13" class="line" id="l13">     13</a> import androidx.compose.ui.layout.onGloballyPositioned
+<a href="#l14" class="line" id="l14">     14</a> import androidx.compose.ui.text.font.FontWeight
+<a href="#l15" class="line" id="l15">     15</a> import androidx.compose.ui.text.style.TextAlign
+<a href="#l16" class="line" id="l16">     16</a> import androidx.compose.ui.text.style.TextOverflow
+<a href="#l17" class="line" id="l17">     17</a> import androidx.compose.ui.unit.dp
+<a href="#l18" class="line" id="l18">     18</a> import androidx.compose.ui.unit.sp
+<a href="#l19" class="line" id="l19">     19</a> import androidx.core.net.toUri
+<a href="#l20" class="line" id="l20">     20</a> import androidx.navigation.NavBackStackEntry
+<a href="#l21" class="line" id="l21">     21</a> import kotlinx.coroutines.Dispatchers
+<a href="#l22" class="line" id="l22">     22</a> import kotlinx.coroutines.launch
+<a href="#l23" class="line" id="l23">     23</a> import me.rhunk.snapenhance.common.data.RepositoryIndex
+<a href="#l24" class="line" id="l24">     24</a> import me.rhunk.snapenhance.common.ui.AsyncUpdateDispatcher
+<a href="#l25" class="line" id="l25">     25</a> import me.rhunk.snapenhance.common.ui.rememberAsyncMutableStateList
+<a href="#l26" class="line" id="l26">     26</a> import me.rhunk.snapenhance.common.util.ktx.getUrlFromClipboard
+<a href="#l27" class="line" id="l27">     27</a> import me.rhunk.snapenhance.storage.addRepo
+<a href="#l28" class="line" id="l28">     28</a> import me.rhunk.snapenhance.storage.getRepositories
+<a href="#l29" class="line" id="l29">     29</a> import me.rhunk.snapenhance.storage.removeRepo
+<a href="#l30" class="line" id="l30">     30</a> import me.rhunk.snapenhance.ui.manager.Routes
+<a href="#l31" class="line" id="l31">     31</a> import okhttp3.OkHttpClient
+<a href="#l32" class="line" id="l32">     32</a> 
+<a href="#l33" class="line" id="l33">     33</a> class ManageReposSection: Routes.Route() {
+<a href="#l34" class="line" id="l34">     34</a>     private val updateDispatcher = AsyncUpdateDispatcher()
+<a href="#l35" class="line" id="l35">     35</a>     private val okHttpClient by lazy { OkHttpClient() }
+<a href="#l36" class="line" id="l36">     36</a> 
+<a href="#l37" class="line" id="l37">     37</a>     override val floatingActionButton: @Composable () -&gt; Unit = {
+<a href="#l38" class="line" id="l38">     38</a>         var showAddDialog by remember { mutableStateOf(false) }
+<a href="#l39" class="line" id="l39">     39</a>         ExtendedFloatingActionButton(onClick = {
+<a href="#l40" class="line" id="l40">     40</a>             showAddDialog = true
+<a href="#l41" class="line" id="l41">     41</a>         }) {
+<a href="#l42" class="line" id="l42">     42</a>             Text(&quot;Add Repository&quot;)
+<a href="#l43" class="line" id="l43">     43</a>         }
+<a href="#l44" class="line" id="l44">     44</a> 
+<a href="#l45" class="line" id="l45">     45</a>         if (showAddDialog) {
+<a href="#l46" class="line" id="l46">     46</a>             val coroutineScope = rememberCoroutineScope { Dispatchers.IO }
+<a href="#l47" class="line" id="l47">     47</a> 
+<a href="#l48" class="line" id="l48">     48</a>             suspend fun addRepo(url: String) {
+<a href="#l49" class="line" id="l49">     49</a>                 var modifiedUrl = url;
+<a href="#l50" class="line" id="l50">     50</a> 
+<a href="#l51" class="line" id="l51">     51</a>                 if (url.startsWith(&quot;https://github.com/&quot;)) {
+<a href="#l52" class="line" id="l52">     52</a>                     val splitUrl = modifiedUrl.removePrefix(&quot;https://github.com/&quot;).split(&quot;/&quot;)
+<a href="#l53" class="line" id="l53">     53</a>                     val repoName = splitUrl[0] + &quot;/&quot; + splitUrl[1]
+<a href="#l54" class="line" id="l54">     54</a>                     // fetch default branch
+<a href="#l55" class="line" id="l55">     55</a>                     okHttpClient.newCall(
+<a href="#l56" class="line" id="l56">     56</a>                         okhttp3.Request.Builder().url(&quot;https://api.github.com/repos/$repoName&quot;).build()
+<a href="#l57" class="line" id="l57">     57</a>                     ).execute().use { response -&gt;
+<a href="#l58" class="line" id="l58">     58</a>                         if (!response.isSuccessful) {
+<a href="#l59" class="line" id="l59">     59</a>                             throw Exception(&quot;Failed to fetch default branch: ${response.code}&quot;)
+<a href="#l60" class="line" id="l60">     60</a>                         }
+<a href="#l61" class="line" id="l61">     61</a>                         val json = response.body.string()
+<a href="#l62" class="line" id="l62">     62</a>                         val defaultBranch = context.gson.fromJson(json, Map::class.java)[&quot;default_branch&quot;] as String
+<a href="#l63" class="line" id="l63">     63</a>                         context.log.info(&quot;Default branch for $repoName is $defaultBranch&quot;)
+<a href="#l64" class="line" id="l64">     64</a>                         modifiedUrl = &quot;https://raw.githubusercontent.com/$repoName/$defaultBranch/&quot;
+<a href="#l65" class="line" id="l65">     65</a>                     }
+<a href="#l66" class="line" id="l66">     66</a>                 }
+<a href="#l67" class="line" id="l67">     67</a> 
+<a href="#l68" class="line" id="l68">     68</a>                 val indexUri = modifiedUrl.toUri().buildUpon().appendPath(&quot;index.json&quot;).build()
+<a href="#l69" class="line" id="l69">     69</a>                 okHttpClient.newCall(
+<a href="#l70" class="line" id="l70">     70</a>                     okhttp3.Request.Builder().url(indexUri.toString()).build()
+<a href="#l71" class="line" id="l71">     71</a>                 ).execute().use { response -&gt;
+<a href="#l72" class="line" id="l72">     72</a>                     if (!response.isSuccessful) {
+<a href="#l73" class="line" id="l73">     73</a>                         throw Exception(&quot;Failed to fetch index from $indexUri: ${response.code}&quot;)
+<a href="#l74" class="line" id="l74">     74</a>                     }
+<a href="#l75" class="line" id="l75">     75</a>                     runCatching {
+<a href="#l76" class="line" id="l76">     76</a>                         val repoIndex = context.gson.fromJson(response.body.charStream(), RepositoryIndex::class.java).also {
+<a href="#l77" class="line" id="l77">     77</a>                             context.log.info(&quot;repository index: $it&quot;)
+<a href="#l78" class="line" id="l78">     78</a>                         }
+<a href="#l79" class="line" id="l79">     79</a> 
+<a href="#l80" class="line" id="l80">     80</a>                         context.database.addRepo(modifiedUrl)
+<a href="#l81" class="line" id="l81">     81</a>                         context.shortToast(&quot;Repository added successfully! $repoIndex&quot;)
+<a href="#l82" class="line" id="l82">     82</a>                         showAddDialog = false
+<a href="#l83" class="line" id="l83">     83</a>                         updateDispatcher.dispatch()
+<a href="#l84" class="line" id="l84">     84</a>                     }.onFailure {
+<a href="#l85" class="line" id="l85">     85</a>                         throw Exception(&quot;Failed to parse index from $indexUri&quot;)
+<a href="#l86" class="line" id="l86">     86</a>                     }
+<a href="#l87" class="line" id="l87">     87</a>                 }
+<a href="#l88" class="line" id="l88">     88</a>             }
+<a href="#l89" class="line" id="l89">     89</a> 
+<a href="#l90" class="line" id="l90">     90</a>             var url by remember { mutableStateOf(&quot;&quot;) }
+<a href="#l91" class="line" id="l91">     91</a>             var loading by remember { mutableStateOf(false) }
+<a href="#l92" class="line" id="l92">     92</a> 
+<a href="#l93" class="line" id="l93">     93</a>             AlertDialog(onDismissRequest = {
+<a href="#l94" class="line" id="l94">     94</a>                 showAddDialog = false
+<a href="#l95" class="line" id="l95">     95</a>             }, title = {
+<a href="#l96" class="line" id="l96">     96</a>                 Text(&quot;Add Repository URL&quot;)
+<a href="#l97" class="line" id="l97">     97</a>             }, text = {
+<a href="#l98" class="line" id="l98">     98</a>                 val focusRequester = remember { FocusRequester() }
+<a href="#l99" class="line" id="l99">     99</a>                 OutlinedTextField(
+<a href="#l100" class="line" id="l100">    100</a>                     modifier = Modifier
+<a href="#l101" class="line" id="l101">    101</a>                         .fillMaxWidth()
+<a href="#l102" class="line" id="l102">    102</a>                         .focusRequester(focusRequester)
+<a href="#l103" class="line" id="l103">    103</a>                         .onGloballyPositioned {
+<a href="#l104" class="line" id="l104">    104</a>                             focusRequester.requestFocus()
+<a href="#l105" class="line" id="l105">    105</a>                         },
+<a href="#l106" class="line" id="l106">    106</a>                     value = url,
+<a href="#l107" class="line" id="l107">    107</a>                     onValueChange = {
+<a href="#l108" class="line" id="l108">    108</a>                         url = it
+<a href="#l109" class="line" id="l109">    109</a>                     }, label = {
+<a href="#l110" class="line" id="l110">    110</a>                         Text(&quot;Repository URL&quot;)
+<a href="#l111" class="line" id="l111">    111</a>                     }
+<a href="#l112" class="line" id="l112">    112</a>                 )
+<a href="#l113" class="line" id="l113">    113</a>                 LaunchedEffect(Unit) {
+<a href="#l114" class="line" id="l114">    114</a>                     context.androidContext.getUrlFromClipboard()?.let {
+<a href="#l115" class="line" id="l115">    115</a>                         url = it
+<a href="#l116" class="line" id="l116">    116</a>                     }
+<a href="#l117" class="line" id="l117">    117</a>                 }
+<a href="#l118" class="line" id="l118">    118</a>             }, confirmButton = {
+<a href="#l119" class="line" id="l119">    119</a>                 Button(
+<a href="#l120" class="line" id="l120">    120</a>                     enabled = !loading,
+<a href="#l121" class="line" id="l121">    121</a>                     onClick = {
+<a href="#l122" class="line" id="l122">    122</a>                         loading = true;
+<a href="#l123" class="line" id="l123">    123</a>                         coroutineScope.launch {
+<a href="#l124" class="line" id="l124">    124</a>                             runCatching {
+<a href="#l125" class="line" id="l125">    125</a>                                 addRepo(url)
+<a href="#l126" class="line" id="l126">    126</a>                             }.onFailure {
+<a href="#l127" class="line" id="l127">    127</a>                                 context.log.error(&quot;Failed to add repository&quot;, it)
+<a href="#l128" class="line" id="l128">    128</a>                                 context.shortToast(&quot;Failed to add repository: ${it.message}&quot;)
+<a href="#l129" class="line" id="l129">    129</a>                             }
+<a href="#l130" class="line" id="l130">    130</a>                             loading = false
+<a href="#l131" class="line" id="l131">    131</a>                         }
+<a href="#l132" class="line" id="l132">    132</a>                     }
+<a href="#l133" class="line" id="l133">    133</a>                 ) {
+<a href="#l134" class="line" id="l134">    134</a>                     if (loading) {
+<a href="#l135" class="line" id="l135">    135</a>                         CircularProgressIndicator(modifier = Modifier.size(24.dp))
+<a href="#l136" class="line" id="l136">    136</a>                     } else {
+<a href="#l137" class="line" id="l137">    137</a>                         Text(&quot;Add&quot;)
+<a href="#l138" class="line" id="l138">    138</a>                     }
+<a href="#l139" class="line" id="l139">    139</a>                 }
+<a href="#l140" class="line" id="l140">    140</a>             })
+<a href="#l141" class="line" id="l141">    141</a>         }
+<a href="#l142" class="line" id="l142">    142</a>     }
+<a href="#l143" class="line" id="l143">    143</a> 
+<a href="#l144" class="line" id="l144">    144</a>     override val content: @Composable (NavBackStackEntry) -&gt; Unit = {
+<a href="#l145" class="line" id="l145">    145</a>         val coroutineScope = rememberCoroutineScope()
+<a href="#l146" class="line" id="l146">    146</a>         val repositories = rememberAsyncMutableStateList(defaultValue = listOf(), updateDispatcher = updateDispatcher) {
+<a href="#l147" class="line" id="l147">    147</a>             context.database.getRepositories()
+<a href="#l148" class="line" id="l148">    148</a>         }
+<a href="#l149" class="line" id="l149">    149</a> 
+<a href="#l150" class="line" id="l150">    150</a>         LazyColumn(
+<a href="#l151" class="line" id="l151">    151</a>             modifier = Modifier.fillMaxSize(),
+<a href="#l152" class="line" id="l152">    152</a>             contentPadding = PaddingValues(8.dp),
+<a href="#l153" class="line" id="l153">    153</a>         ) {
+<a href="#l154" class="line" id="l154">    154</a>             item {
+<a href="#l155" class="line" id="l155">    155</a>                 if (repositories.isEmpty()) {
+<a href="#l156" class="line" id="l156">    156</a>                     Text(&quot;No repositories added&quot;, modifier = Modifier
+<a href="#l157" class="line" id="l157">    157</a>                         .padding(16.dp)
+<a href="#l158" class="line" id="l158">    158</a>                         .fillMaxWidth(), fontSize = 15.sp, fontWeight = FontWeight.Light, textAlign = TextAlign.Center)
+<a href="#l159" class="line" id="l159">    159</a>                 }
+<a href="#l160" class="line" id="l160">    160</a>             }
+<a href="#l161" class="line" id="l161">    161</a>             items(repositories) { url -&gt;
+<a href="#l162" class="line" id="l162">    162</a>                 ElevatedCard(onClick = {}) {
+<a href="#l163" class="line" id="l163">    163</a>                     Row(
+<a href="#l164" class="line" id="l164">    164</a>                         modifier = Modifier
+<a href="#l165" class="line" id="l165">    165</a>                             .fillMaxWidth()
+<a href="#l166" class="line" id="l166">    166</a>                             .padding(8.dp),
+<a href="#l167" class="line" id="l167">    167</a>                         horizontalArrangement = Arrangement.spacedBy(4.dp),
+<a href="#l168" class="line" id="l168">    168</a>                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+<a href="#l169" class="line" id="l169">    169</a>                     ) {
+<a href="#l170" class="line" id="l170">    170</a>                         Icon(Icons.Default.Public, contentDescription = null)
+<a href="#l171" class="line" id="l171">    171</a>                         Text(text = url, modifier = Modifier.weight(1f), overflow = TextOverflow.Ellipsis, maxLines = 1)
+<a href="#l172" class="line" id="l172">    172</a>                         Button(
+<a href="#l173" class="line" id="l173">    173</a>                             onClick = {
+<a href="#l174" class="line" id="l174">    174</a>                                 context.database.removeRepo(url)
+<a href="#l175" class="line" id="l175">    175</a>                                 coroutineScope.launch {
+<a href="#l176" class="line" id="l176">    176</a>                                     updateDispatcher.dispatch()
+<a href="#l177" class="line" id="l177">    177</a>                                 }
+<a href="#l178" class="line" id="l178">    178</a>                             }
+<a href="#l179" class="line" id="l179">    179</a>                         ) {
+<a href="#l180" class="line" id="l180">    180</a>                             Text(&quot;Remove&quot;)
+<a href="#l181" class="line" id="l181">    181</a>                         }
+<a href="#l182" class="line" id="l182">    182</a>                     }
+<a href="#l183" class="line" id="l183">    183</a>                 }
+<a href="#l184" class="line" id="l184">    184</a>             }
+<a href="#l185" class="line" id="l185">    185</a>         }
+<a href="#l186" class="line" id="l186">    186</a>     }
+<a href="#l187" class="line" id="l187">    187</a> }</pre>
+</div>
+</body>
+</html>

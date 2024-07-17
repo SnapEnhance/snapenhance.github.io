@@ -29,10 +29,7 @@ import androidx.navigation.compose.rememberNavController
 import me.rhunk.snapenhance.SharedContextHolder
 import me.rhunk.snapenhance.common.ui.AppMaterialTheme
 import me.rhunk.snapenhance.ui.setup.screens.SetupScreen
-import me.rhunk.snapenhance.ui.setup.screens.impl.MappingsScreen
-import me.rhunk.snapenhance.ui.setup.screens.impl.PermissionsScreen
-import me.rhunk.snapenhance.ui.setup.screens.impl.PickLanguageScreen
-import me.rhunk.snapenhance.ui.setup.screens.impl.SaveFolderScreen
+import me.rhunk.snapenhance.ui.setup.screens.impl.*
 
 
 class SetupActivity : ComponentActivity() {
@@ -68,6 +65,9 @@ class SetupActivity : ComponentActivity() {
             }
             if (isFirstRun || hasRequirement(Requirements.MAPPINGS)) {
                 add(MappingsScreen().apply { route = "mappings" })
+            }
+            if (isFirstRun || hasRequirement(Requirements.SIF)) {
+                add(SecurityScreen().apply { route = "security" })
             }
         }
 
