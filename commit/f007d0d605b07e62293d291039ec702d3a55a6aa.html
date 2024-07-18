@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix: config state listener restart - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/f007d0d605b07e62293d291039ec702d3a55a6aa.html">f007d0d605b07e62293d291039ec702d3a55a6aa</a>
+<b>parent</b> <a href="../commit/23d74bd8c54126f603c113ec66b76570ec584c98.html">23d74bd8c54126f603c113ec66b76570ec584c98</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu, 18 Jul 2024 15:08:47 +0200
+
+fix: config state listener restart
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSharedLibraryManager.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/ModConfig.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></td><td> | </td><td class="num">17</td><td><span class="i">+++++++++++++</span><span class="d">----</span></td></tr>
+</table></pre><pre>3 files changed, 19 insertions(+), 6 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSharedLibraryManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSharedLibraryManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSharedLibraryManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSharedLibraryManager.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,5 +1,6 @@
+</a> package me.rhunk.snapenhance
+ 
+<a href="#h0-0-2" id="h0-0-2" class="i">+import android.annotation.SuppressLint
+</a> import android.os.Build
+ import me.rhunk.snapenhance.common.bridge.InternalFileHandleType
+ import okhttp3.OkHttpClient
+<a href="#h0-1" id="h0-1" class="h">@@ -49,6 +50,7 @@ class RemoteSharedLibraryManager(
+</a>         return false
+     }
+ 
+<a href="#h0-1-3" id="h0-1-3" class="i">+    @SuppressLint(&quot;ApplySharedPref&quot;)
+</a>     fun init() {
+         val libraryFile = InternalFileHandleType.SIF.resolve(remoteSideContext.androidContext)
+         val currentVersion = remoteSideContext.sharedPreferences.getString(&quot;sif&quot;, null)?.trim()
+<a href="#h0-2" id="h0-2" class="h">@@ -72,7 +74,9 @@ class RemoteSharedLibraryManager(
+</a>             remoteSideContext.sharedPreferences.edit().putString(&quot;sif&quot;, latestVersion).commit()
+             remoteSideContext.shortToast(&quot;SIF updated to $latestVersion!&quot;)
+             // force restart snapchat
+<a href="#h0-2-3" id="h0-2-3" class="d">-            remoteSideContext.bridgeService?.stopSelf()
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+            runCatching {
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+                remoteSideContext.config.configStateListener?.takeIf { it.asBinder().pingBinder() }?.onRestartRequired()
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+            }
+</a>         } else {
+             remoteSideContext.log.warn(&quot;Failed to download latest sif&quot;)
+         }
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/ModConfig.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/ModConfig.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/ModConfig.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/ModConfig.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -113,7 +113,7 @@ class ModConfig(
+</a>         val oldConfig = runCatching { fileWrapper.readBytes().toString(Charsets.UTF_8) }.getOrNull()
+         fileWrapper.writeBytes(exportToString(config = config).toByteArray(Charsets.UTF_8))
+ 
+<a href="#h1-0-3" id="h1-0-3" class="d">-        configStateListener?.also {
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+        configStateListener?.takeIf { it.asBinder().pingBinder() }?.also {
+</a>             runCatching {
+                 compareDiff(createRootConfig().apply {
+                     fromJson(gson.fromJson(oldConfig ?: return@runCatching, JsonObject::class.java))
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -180,7 +180,11 @@ class SnapEnhance {
+</a>                 actionManager.onActivityCreate()
+ 
+                 if (safeMode) {
+<a href="#h2-0-3" id="h2-0-3" class="d">-                    appContext.inAppOverlay.showStatusToast(Icons.Outlined.Cancel, &quot;Failed to load security features! Snapchat may not work properly.&quot;, durationMs = 5000)
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+                    appContext.inAppOverlay.showStatusToast(
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+                        Icons.Outlined.Cancel,
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+                        &quot;Failed to load security features! Snapchat may not work properly.&quot;,
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+                        durationMs = 3000
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+                    )
+</a>                 }
+             }
+         }.also { time -&gt;
+<a href="#h2-1" id="h2-1" class="h">@@ -227,15 +231,20 @@ class SnapEnhance {
+</a>             if (safeMode) {
+                 hook(HookStage.BEFORE) { param -&gt;
+                     if (param.arg&lt;String&gt;(1) != &quot;scplugin&quot;) return@hook
+<a href="#h2-1-3" id="h2-1-3" class="i">+                    param.setResult(null)
+</a>                     appContext.log.warn(&quot;Can&#39;t load scplugin in safe mode&quot;)
+<a href="#h2-1-5" id="h2-1-5" class="d">-                    Thread.sleep(Long.MAX_VALUE)
+</a><a href="#h2-1-6" id="h2-1-6" class="i">+                    runCatching {
+</a><a href="#h2-1-7" id="h2-1-7" class="i">+                        Thread.sleep(Long.MAX_VALUE)
+</a><a href="#h2-1-8" id="h2-1-8" class="i">+                    }.onFailure {
+</a><a href="#h2-1-9" id="h2-1-9" class="i">+                        appContext.log.error(it)
+</a><a href="#h2-1-10" id="h2-1-10" class="i">+                    }
+</a><a href="#h2-1-11" id="h2-1-11" class="i">+                    exitProcess(1)
+</a>                 }
+             }
+ 
+             lateinit var unhook: () -&gt; Unit
+             hook(HookStage.AFTER) { param -&gt;
+<a href="#h2-1-17" id="h2-1-17" class="d">-                val libName = param.arg&lt;String&gt;(1)
+</a><a href="#h2-1-18" id="h2-1-18" class="d">-                if (libName != &quot;client&quot;) return@hook
+</a><a href="#h2-1-19" id="h2-1-19" class="i">+                if (param.arg&lt;String&gt;(1) != &quot;client&quot;) return@hook
+</a>                 unhook()
+                 appContext.log.verbose(&quot;libclient lateInit&quot;)
+                 lateInit()
+</pre>
+</div>
+</body>
+</html>
