@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(ui/sif): download indicator - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/.gitmodules.html">Submodules</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/b2bc23d0e0d519905dfed97fc486eab984a91fd6.html">b2bc23d0e0d519905dfed97fc486eab984a91fd6</a>
+<b>parent</b> <a href="../commit/de0342fdac51e4ffcae1e2df28a12030594bec0b.html">de0342fdac51e4ffcae1e2df28a12030594bec0b</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 21 Jul 2024 00:15:17 +0200
+
+feat(ui/sif): download indicator
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSharedLibraryManager.kt</a></td><td> | </td><td class="num">47</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/SetupActivity.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SecurityScreen.kt</a></td><td> | </td><td class="num">58</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">common/build.gradle.kts</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+</table></pre><pre>5 files changed, 103 insertions(+), 13 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSharedLibraryManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSharedLibraryManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSharedLibraryManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSharedLibraryManager.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,7 +1,14 @@
+</a> package me.rhunk.snapenhance
+ 
+ import android.annotation.SuppressLint
+<a href="#h0-0-3" id="h0-0-3" class="i">+import android.app.Notification
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+import android.app.NotificationChannel
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+import android.app.NotificationManager
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+import android.app.PendingIntent
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+import android.content.Intent
+</a> import android.os.Build
+<a href="#h0-0-9" id="h0-0-9" class="i">+import androidx.core.net.toUri
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+import me.rhunk.snapenhance.common.BuildConfig
+</a> import me.rhunk.snapenhance.common.bridge.InternalFileHandleType
+ import okhttp3.OkHttpClient
+ import okhttp3.Request
+<a href="#h0-1" id="h0-1" class="h">@@ -16,7 +23,7 @@ class RemoteSharedLibraryManager(
+</a>         return runCatching {
+             okHttpClient.newCall(
+                 Request.Builder()
+<a href="#h0-1-3" id="h0-1-3" class="d">-                    .url(&quot;https://raw.githubusercontent.com/SnapEnhance/resources/main/sif/version&quot;)
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+                    .url(&quot;${BuildConfig.SIF_ENDPOINT}/version&quot;)
+</a>                     .build()
+             ).execute().use { response -&gt;
+                 if (!response.isSuccessful) {
+<a href="#h0-2" id="h0-2" class="h">@@ -30,7 +37,7 @@ class RemoteSharedLibraryManager(
+</a>     private fun downloadLatest(outputFile: File): Boolean {
+         val abi = Build.SUPPORTED_ABIS.firstOrNull() ?: return false
+         val request = Request.Builder()
+<a href="#h0-2-3" id="h0-2-3" class="d">-            .url(&quot;https://raw.githubusercontent.com/SnapEnhance/resources/main/sif/$abi.so&quot;)
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+            .url(&quot;${BuildConfig.SIF_ENDPOINT}/$abi.so&quot;)
+</a>             .build()
+         runCatching {
+             okHttpClient.newCall(request).execute().use { response -&gt;
+<a href="#h0-3" id="h0-3" class="h">@@ -60,8 +67,7 @@ class RemoteSharedLibraryManager(
+</a>             return
+         }
+         val latestVersion = getVersion()?.trim() ?: run {
+<a href="#h0-3-3" id="h0-3-3" class="d">-            remoteSideContext.log.warn(&quot;Failed to get latest sif version&quot;)
+</a><a href="#h0-3-4" id="h0-3-4" class="d">-            return
+</a><a href="#h0-3-5" id="h0-3-5" class="i">+            throw Exception(&quot;Failed to get latest sif version&quot;)
+</a>         }
+ 
+         if (currentVersion == latestVersion) {
+<a href="#h0-4" id="h0-4" class="h">@@ -73,12 +79,45 @@ class RemoteSharedLibraryManager(
+</a>         if (downloadLatest(libraryFile)) {
+             remoteSideContext.sharedPreferences.edit().putString(&quot;sif&quot;, latestVersion).commit()
+             remoteSideContext.shortToast(&quot;SIF updated to $latestVersion!&quot;)
+<a href="#h0-4-3" id="h0-4-3" class="i">+
+</a><a href="#h0-4-4" id="h0-4-4" class="i">+            if (currentVersion.isNotEmpty()) {
+</a><a href="#h0-4-5" id="h0-4-5" class="i">+                val notificationManager = remoteSideContext.androidContext.getSystemService(NotificationManager::class.java)
+</a><a href="#h0-4-6" id="h0-4-6" class="i">+                val channelId = &quot;sif_update&quot;
+</a><a href="#h0-4-7" id="h0-4-7" class="i">+
+</a><a href="#h0-4-8" id="h0-4-8" class="i">+                notificationManager.createNotificationChannel(
+</a><a href="#h0-4-9" id="h0-4-9" class="i">+                    NotificationChannel(
+</a><a href="#h0-4-10" id="h0-4-10" class="i">+                        channelId,
+</a><a href="#h0-4-11" id="h0-4-11" class="i">+                        &quot;SIF Updates&quot;,
+</a><a href="#h0-4-12" id="h0-4-12" class="i">+                        NotificationManager.IMPORTANCE_DEFAULT
+</a><a href="#h0-4-13" id="h0-4-13" class="i">+                    )
+</a><a href="#h0-4-14" id="h0-4-14" class="i">+                )
+</a><a href="#h0-4-15" id="h0-4-15" class="i">+
+</a><a href="#h0-4-16" id="h0-4-16" class="i">+                notificationManager.notify(
+</a><a href="#h0-4-17" id="h0-4-17" class="i">+                    System.nanoTime().toInt(),
+</a><a href="#h0-4-18" id="h0-4-18" class="i">+                    Notification.Builder(remoteSideContext.androidContext, channelId)
+</a><a href="#h0-4-19" id="h0-4-19" class="i">+                        .setContentTitle(&quot;SnapEnhance&quot;)
+</a><a href="#h0-4-20" id="h0-4-20" class="i">+                        .setContentText(&quot;Security Features have been updated to version $latestVersion&quot;)
+</a><a href="#h0-4-21" id="h0-4-21" class="i">+                        .setSmallIcon(android.R.drawable.stat_sys_download_done)
+</a><a href="#h0-4-22" id="h0-4-22" class="i">+                        .setContentIntent(PendingIntent.getActivity(
+</a><a href="#h0-4-23" id="h0-4-23" class="i">+                            remoteSideContext.androidContext,
+</a><a href="#h0-4-24" id="h0-4-24" class="i">+                            0,
+</a><a href="#h0-4-25" id="h0-4-25" class="i">+                            Intent().apply {
+</a><a href="#h0-4-26" id="h0-4-26" class="i">+                                action = Intent.ACTION_VIEW
+</a><a href="#h0-4-27" id="h0-4-27" class="i">+                                data = &quot;https://github.com/SnapEnhance/resources&quot;.toUri()
+</a><a href="#h0-4-28" id="h0-4-28" class="i">+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+</a><a href="#h0-4-29" id="h0-4-29" class="i">+                            },
+</a><a href="#h0-4-30" id="h0-4-30" class="i">+                            PendingIntent.FLAG_UPDATE_CURRENT
+</a><a href="#h0-4-31" id="h0-4-31" class="i">+                        )).build()
+</a><a href="#h0-4-32" id="h0-4-32" class="i">+                )
+</a><a href="#h0-4-33" id="h0-4-33" class="i">+            }
+</a><a href="#h0-4-34" id="h0-4-34" class="i">+
+</a>             // force restart snapchat
+             runCatching {
+                 remoteSideContext.config.configStateListener?.takeIf { it.asBinder().pingBinder() }?.onRestartRequired()
+             }
+         } else {
+             remoteSideContext.log.warn(&quot;Failed to download latest sif&quot;)
+<a href="#h0-4-41" id="h0-4-41" class="i">+            throw Exception(&quot;Failed to download latest sif&quot;)
+</a>         }
+     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -133,7 +133,11 @@ class RemoteSideContext(
+</a>                     }
+                 }
+                 coroutineScope.launch {
+<a href="#h1-0-3" id="h1-0-3" class="d">-                    remoteSharedLibraryManager.init()
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+                    runCatching {
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+                        remoteSharedLibraryManager.init()
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+                    }.onFailure {
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+                        log.error(&quot;Failed to init RemoteSharedLibraryManager&quot;, it)
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+                    }
+</a>                 }
+             }
+         }.onFailure {
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/SetupActivity.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/SetupActivity.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/SetupActivity.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/SetupActivity.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -66,9 +66,9 @@ class SetupActivity : ComponentActivity() {
+</a>             if (isFirstRun || hasRequirement(Requirements.MAPPINGS)) {
+                 add(MappingsScreen().apply { route = &quot;mappings&quot; })
+             }
+<a href="#h2-0-3" id="h2-0-3" class="d">-            /*if (isFirstRun || hasRequirement(Requirements.SIF)) {
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+            if (hasRequirement(Requirements.SIF)) {
+</a>                 add(SecurityScreen().apply { route = &quot;security&quot; })
+<a href="#h2-0-6" id="h2-0-6" class="d">-            }*/
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+            }
+</a>         }
+ 
+         // If there are no required screens, we can just finish the activity
+<b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SecurityScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SecurityScreen.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SecurityScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SecurityScreen.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -1,6 +1,9 @@
+</a> package me.rhunk.snapenhance.ui.setup.screens.impl
+ 
+<a href="#h3-0-2" id="h3-0-2" class="i">+import android.annotation.SuppressLint
+</a> import androidx.compose.foundation.layout.*
+<a href="#h3-0-4" id="h3-0-4" class="i">+import androidx.compose.foundation.rememberScrollState
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+import androidx.compose.foundation.verticalScroll
+</a> import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.filled.WarningAmber
+ import androidx.compose.material3.*
+<a href="#h3-1" id="h3-1" class="h">@@ -10,16 +13,22 @@ import androidx.compose.ui.Modifier
+</a> import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+<a href="#h3-1-3" id="h3-1-3" class="i">+import kotlinx.coroutines.Dispatchers
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+import kotlinx.coroutines.Job
+</a> import kotlinx.coroutines.launch
+<a href="#h3-1-6" id="h3-1-6" class="i">+import kotlinx.coroutines.withContext
+</a> import me.rhunk.snapenhance.ui.setup.screens.SetupScreen
+ 
+ class SecurityScreen : SetupScreen() {
+<a href="#h3-1-10" id="h3-1-10" class="i">+    @SuppressLint(&quot;ApplySharedPref&quot;)
+</a>     @Composable
+     override fun Content() {
+         Icon(
+             imageVector = Icons.Default.WarningAmber,
+             contentDescription = null,
+<a href="#h3-1-16" id="h3-1-16" class="d">-            modifier = Modifier.padding(16.dp).size(30.dp),
+</a><a href="#h3-1-17" id="h3-1-17" class="i">+            modifier = Modifier
+</a><a href="#h3-1-18" id="h3-1-18" class="i">+                .padding(16.dp)
+</a><a href="#h3-1-19" id="h3-1-19" class="i">+                .size(30.dp),
+</a>         )
+ 
+         DialogText(
+<a href="#h3-2" id="h3-2" class="h">@@ -57,6 +66,47 @@ class SecurityScreen : SetupScreen() {
+</a>             )
+         }
+ 
+<a href="#h3-2-3" id="h3-2-3" class="i">+        var downloadJob by remember { mutableStateOf(null as Job?) }
+</a><a href="#h3-2-4" id="h3-2-4" class="i">+        var jobError by remember { mutableStateOf(null as Throwable?) }
+</a><a href="#h3-2-5" id="h3-2-5" class="i">+
+</a><a href="#h3-2-6" id="h3-2-6" class="i">+        if (downloadJob != null) {
+</a><a href="#h3-2-7" id="h3-2-7" class="i">+            AlertDialog(onDismissRequest = {
+</a><a href="#h3-2-8" id="h3-2-8" class="i">+                downloadJob?.cancel()
+</a><a href="#h3-2-9" id="h3-2-9" class="i">+                downloadJob = null
+</a><a href="#h3-2-10" id="h3-2-10" class="i">+            }, confirmButton = {}, text = {
+</a><a href="#h3-2-11" id="h3-2-11" class="i">+                Column(
+</a><a href="#h3-2-12" id="h3-2-12" class="i">+                    modifier = Modifier.verticalScroll(rememberScrollState()).fillMaxWidth(),
+</a><a href="#h3-2-13" id="h3-2-13" class="i">+                    horizontalAlignment = Alignment.CenterHorizontally,
+</a><a href="#h3-2-14" id="h3-2-14" class="i">+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+</a><a href="#h3-2-15" id="h3-2-15" class="i">+                ) {
+</a><a href="#h3-2-16" id="h3-2-16" class="i">+                    if (jobError != null) {
+</a><a href="#h3-2-17" id="h3-2-17" class="i">+                        Text(&quot;Failed to download the required files.\n\n${jobError?.message}&quot;)
+</a><a href="#h3-2-18" id="h3-2-18" class="i">+                    } else {
+</a><a href="#h3-2-19" id="h3-2-19" class="i">+                        Text(&quot;Downloading the required files...&quot;)
+</a><a href="#h3-2-20" id="h3-2-20" class="i">+                        CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+</a><a href="#h3-2-21" id="h3-2-21" class="i">+                    }
+</a><a href="#h3-2-22" id="h3-2-22" class="i">+                }
+</a><a href="#h3-2-23" id="h3-2-23" class="i">+            })
+</a><a href="#h3-2-24" id="h3-2-24" class="i">+        }
+</a><a href="#h3-2-25" id="h3-2-25" class="i">+
+</a><a href="#h3-2-26" id="h3-2-26" class="i">+        fun newDownloadJob() {
+</a><a href="#h3-2-27" id="h3-2-27" class="i">+            downloadJob?.cancel()
+</a><a href="#h3-2-28" id="h3-2-28" class="i">+            downloadJob = context.coroutineScope.launch {
+</a><a href="#h3-2-29" id="h3-2-29" class="i">+                context.sharedPreferences.edit().putString(&quot;sif&quot;, &quot;&quot;).commit()
+</a><a href="#h3-2-30" id="h3-2-30" class="i">+                runCatching {
+</a><a href="#h3-2-31" id="h3-2-31" class="i">+                    context.remoteSharedLibraryManager.init()
+</a><a href="#h3-2-32" id="h3-2-32" class="i">+                }.onFailure {
+</a><a href="#h3-2-33" id="h3-2-33" class="i">+                    jobError = it
+</a><a href="#h3-2-34" id="h3-2-34" class="i">+                    context.log.error(&quot;Failed to download the required files&quot;, it)
+</a><a href="#h3-2-35" id="h3-2-35" class="i">+                }.onSuccess {
+</a><a href="#h3-2-36" id="h3-2-36" class="i">+                    downloadJob = null
+</a><a href="#h3-2-37" id="h3-2-37" class="i">+                    withContext(Dispatchers.Main) {
+</a><a href="#h3-2-38" id="h3-2-38" class="i">+                        goNext()
+</a><a href="#h3-2-39" id="h3-2-39" class="i">+                    }
+</a><a href="#h3-2-40" id="h3-2-40" class="i">+                }
+</a><a href="#h3-2-41" id="h3-2-41" class="i">+            }
+</a><a href="#h3-2-42" id="h3-2-42" class="i">+        }
+</a><a href="#h3-2-43" id="h3-2-43" class="i">+
+</a>         Column (
+             modifier = Modifier.padding(16.dp),
+             horizontalAlignment = Alignment.CenterHorizontally,
+<a href="#h3-3" id="h3-3" class="h">@@ -64,11 +114,7 @@ class SecurityScreen : SetupScreen() {
+</a>         ) {
+             Button(
+                 onClick = {
+<a href="#h3-3-3" id="h3-3-3" class="d">-                    context.coroutineScope.launch {
+</a><a href="#h3-3-4" id="h3-3-4" class="d">-                        context.sharedPreferences.edit().putString(&quot;sif&quot;, &quot;&quot;).commit()
+</a><a href="#h3-3-5" id="h3-3-5" class="d">-                        context.remoteSharedLibraryManager.init()
+</a><a href="#h3-3-6" id="h3-3-6" class="d">-                    }
+</a><a href="#h3-3-7" id="h3-3-7" class="d">-                    goNext()
+</a><a href="#h3-3-8" id="h3-3-8" class="i">+                    newDownloadJob()
+</a>                 }
+             ) {
+                 Text(&quot;Accept and continue&quot;, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+<b>diff --git a/<a id="h4" href="../file/common/build.gradle.kts.html">common/build.gradle.kts</a> b/<a href="../file/common/build.gradle.kts.html">common/build.gradle.kts</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -30,6 +30,7 @@ android {
+</a>             standardOutput = gitHash
+         }
+         buildConfigField(&quot;String&quot;, &quot;GIT_HASH&quot;, &quot;\&quot;${gitHash.toString(Charsets.UTF_8).trim()}\&quot;&quot;)
+<a href="#h4-0-3" id="h4-0-3" class="i">+        buildConfigField(&quot;String&quot;, &quot;SIF_ENDPOINT&quot;, &quot;\&quot;${properties[&quot;debug_sif_endpoint&quot;]?.toString() ?: &quot;https://raw.githubusercontent.com/SnapEnhance/resources/main/sif&quot;}\&quot;&quot;)
+</a>     }
+ 
+     compileOptions {
+</pre>
+</div>
+</body>
+</html>
