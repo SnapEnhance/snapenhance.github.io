@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(native): custom font hook - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/d3f9d03dcfd8631d79903abe46b1dc93c46e79b6.html">d3f9d03dcfd8631d79903abe46b1dc93c46e79b6</a>
+<b>parent</b> <a href="../commit/b18c96912524e433cb1877120b492c8d212bfa98.html">b18c96912524e433cb1877120b492c8d212bfa98</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 27 Jul 2024 19:51:41 +0200
+
+feat(native): custom font hook
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">native/rust/src/lib.rs</a></td><td> | </td><td class="num">5</td><td><span class="i">+++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">native/rust/src/modules/custom_font_hook.rs</a></td><td> | </td><td class="num">32</td><td><span class="i">++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">native/rust/src/modules/linker_hook.rs</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">native/rust/src/modules/mod.rs</a></td><td> | </td><td class="num">5</td><td><span class="i">+++</span><span class="d">--</span></td></tr>
+</table></pre><pre>4 files changed, 39 insertions(+), 5 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/native/rust/src/lib.rs.html">native/rust/src/lib.rs</a> b/<a href="../file/native/rust/src/lib.rs.html">native/rust/src/lib.rs</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -13,7 +13,7 @@ mod modules;
+</a> 
+ use android_logger::Config;
+ use log::LevelFilter;
+<a href="#h0-0-3" id="h0-0-3" class="d">-use modules::{composer_hook, duplex_hook, fstat_hook, linker_hook, sqlite_hook, unary_call_hook};
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+use modules::{composer_hook, custom_font_hook, duplex_hook, fstat_hook, linker_hook, sqlite_hook, unary_call_hook};
+</a> 
+ use jni::objects::{JObject, JString};
+ use jni::sys::{jint, jstring, JNI_VERSION_1_6};
+<a href="#h0-1" id="h0-1" class="h">@@ -67,7 +67,8 @@ fn init(mut env: JNIEnv, _class: JObject, signature_cache: JString) -&gt; jstring {
+</a>         unary_call_hook::init(),
+         composer_hook::init(),
+         fstat_hook::init(),
+<a href="#h0-1-3" id="h0-1-3" class="d">-        sqlite_hook::init()
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+        sqlite_hook::init(),
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+        custom_font_hook::init()
+</a>     );
+     
+     threads.into_iter().for_each(|t| t.join().unwrap());
+<b>diff --git a/<a id="h1" href="../file/native/rust/src/modules/custom_font_hook.rs.html">native/rust/src/modules/custom_font_hook.rs</a> b/<a href="../file/native/rust/src/modules/custom_font_hook.rs.html">native/rust/src/modules/custom_font_hook.rs</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -0,0 +1,31 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="i">+use std::{ffi::CStr, fs};
+</a><a href="#h1-0-1" id="h1-0-1" class="i">+
+</a><a href="#h1-0-2" id="h1-0-2" class="i">+use crate::{config, def_hook, dobby_hook_sym};
+</a><a href="#h1-0-3" id="h1-0-3" class="i">+
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+def_hook!(
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+    open_hook,
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+    i32,
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+    |path: *const u8, flags: i32| {
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+        let mut path = path;
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+        
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+        if let Ok(pathname) = CStr::from_ptr(path).to_str() {
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+            if pathname == &quot;/system/fonts/NotoColorEmoji.ttf&quot;  {
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+                if let Some(font_path) = config::native_config().custom_emoji_font_path {
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+                    if fs::metadata(&amp;font_path).is_ok() {
+</a><a href="#h1-0-14" id="h1-0-14" class="i">+                        path = (font_path.to_owned() + &quot;\0&quot;).as_ptr();
+</a><a href="#h1-0-15" id="h1-0-15" class="i">+                        debug!(&quot;open {}&quot;, font_path);
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+                    } else {
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+                        warn!(&quot;custom emoji font path does not exist: {}&quot;, font_path);
+</a><a href="#h1-0-18" id="h1-0-18" class="i">+                    }
+</a><a href="#h1-0-19" id="h1-0-19" class="i">+                }
+</a><a href="#h1-0-20" id="h1-0-20" class="i">+            }
+</a><a href="#h1-0-21" id="h1-0-21" class="i">+        }
+</a><a href="#h1-0-22" id="h1-0-22" class="i">+
+</a><a href="#h1-0-23" id="h1-0-23" class="i">+        open_hook_original.unwrap()(path, flags)
+</a><a href="#h1-0-24" id="h1-0-24" class="i">+    }
+</a><a href="#h1-0-25" id="h1-0-25" class="i">+);
+</a><a href="#h1-0-26" id="h1-0-26" class="i">+
+</a><a href="#h1-0-27" id="h1-0-27" class="i">+
+</a><a href="#h1-0-28" id="h1-0-28" class="i">+pub fn init() {
+</a><a href="#h1-0-29" id="h1-0-29" class="i">+    dobby_hook_sym!(&quot;libc.so&quot;, &quot;open&quot;, open_hook);
+</a><a href="#h1-0-30" id="h1-0-30" class="i">+}</a><a href="#h1-0-31" id="h1-0-31" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h2" href="../file/native/rust/src/modules/linker_hook.rs.html">native/rust/src/modules/linker_hook.rs</a> b/<a href="../file/native/rust/src/modules/linker_hook.rs.html">native/rust/src/modules/linker_hook.rs</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -15,7 +15,7 @@ def_hook!(
+</a>         let pathname_str = CStr::from_ptr(pathname).to_str().unwrap().to_string();
+ 
+         if let Some(content) = SHARED_LIBRARIES.lock().unwrap().remove(&amp;pathname_str) {
+<a href="#h2-0-3" id="h2-0-3" class="d">-            let memfd = libc::syscall(libc::SYS_memfd_create, &quot;me.rhunk.snapenhance\0&quot;.as_ptr(), 0) as i32;
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+            let memfd = libc::syscall(libc::SYS_memfd_create, &quot;jit-cache\0&quot;.as_ptr(), 0) as i32;
+</a>             let content = content.into_boxed_slice();
+             
+             if libc::write(memfd, content.as_ptr() as *const c_void, content.len() as libc::size_t) == -1 {
+<b>diff --git a/<a id="h3" href="../file/native/rust/src/modules/mod.rs.html">native/rust/src/modules/mod.rs</a> b/<a href="../file/native/rust/src/modules/mod.rs.html">native/rust/src/modules/mod.rs</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -3,4 +3,5 @@ pub mod duplex_hook;
+</a> pub mod sqlite_hook;
+ pub mod fstat_hook;
+ pub mod unary_call_hook;
+<a href="#h3-0-3" id="h3-0-3" class="d">-pub mod composer_hook;</a><a href="#h3-0-4" id="h3-0-4" class="d">-
+\ No newline at end of file
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+pub mod composer_hook;
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+pub mod custom_font_hook;</a><a href="#h3-0-7" id="h3-0-7" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

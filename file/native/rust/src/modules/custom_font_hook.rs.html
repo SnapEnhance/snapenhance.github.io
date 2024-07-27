@@ -20,8 +20,38 @@
 </div>
 <hr/>
 <div id="content">
-<p> custom_font_hook.rs (0B) - <a href="../../../../../raw/native/rust/src/modules/custom_font_hook.rs">raw</a></p><hr/><pre id="blob">
-</pre>
+<p> custom_font_hook.rs (893B) - <a href="../../../../../raw/native/rust/src/modules/custom_font_hook.rs">raw</a></p><hr/><pre id="blob">
+<a href="#l1" class="line" id="l1">      1</a> use std::{ffi::CStr, fs};
+<a href="#l2" class="line" id="l2">      2</a> 
+<a href="#l3" class="line" id="l3">      3</a> use crate::{config, def_hook, dobby_hook_sym};
+<a href="#l4" class="line" id="l4">      4</a> 
+<a href="#l5" class="line" id="l5">      5</a> def_hook!(
+<a href="#l6" class="line" id="l6">      6</a>     open_hook,
+<a href="#l7" class="line" id="l7">      7</a>     i32,
+<a href="#l8" class="line" id="l8">      8</a>     |path: *const u8, flags: i32| {
+<a href="#l9" class="line" id="l9">      9</a>         let mut path = path;
+<a href="#l10" class="line" id="l10">     10</a>         
+<a href="#l11" class="line" id="l11">     11</a>         if let Ok(pathname) = CStr::from_ptr(path).to_str() {
+<a href="#l12" class="line" id="l12">     12</a>             if pathname == &quot;/system/fonts/NotoColorEmoji.ttf&quot;  {
+<a href="#l13" class="line" id="l13">     13</a>                 if let Some(font_path) = config::native_config().custom_emoji_font_path {
+<a href="#l14" class="line" id="l14">     14</a>                     if fs::metadata(&amp;font_path).is_ok() {
+<a href="#l15" class="line" id="l15">     15</a>                         path = (font_path.to_owned() + &quot;\0&quot;).as_ptr();
+<a href="#l16" class="line" id="l16">     16</a>                         debug!(&quot;open {}&quot;, font_path);
+<a href="#l17" class="line" id="l17">     17</a>                     } else {
+<a href="#l18" class="line" id="l18">     18</a>                         warn!(&quot;custom emoji font path does not exist: {}&quot;, font_path);
+<a href="#l19" class="line" id="l19">     19</a>                     }
+<a href="#l20" class="line" id="l20">     20</a>                 }
+<a href="#l21" class="line" id="l21">     21</a>             }
+<a href="#l22" class="line" id="l22">     22</a>         }
+<a href="#l23" class="line" id="l23">     23</a> 
+<a href="#l24" class="line" id="l24">     24</a>         open_hook_original.unwrap()(path, flags)
+<a href="#l25" class="line" id="l25">     25</a>     }
+<a href="#l26" class="line" id="l26">     26</a> );
+<a href="#l27" class="line" id="l27">     27</a> 
+<a href="#l28" class="line" id="l28">     28</a> 
+<a href="#l29" class="line" id="l29">     29</a> pub fn init() {
+<a href="#l30" class="line" id="l30">     30</a>     dobby_hook_sym!(&quot;libc.so&quot;, &quot;open&quot;, open_hook);
+<a href="#l31" class="line" id="l31">     31</a> }</pre>
 </div>
 </body>
 </html>
