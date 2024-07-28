@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(native): composer loader hook - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/bcec1f5651e9c9c5971bef9f7f02aef481418198.html">bcec1f5651e9c9c5971bef9f7f02aef481418198</a>
+<b>parent</b> <a href="../commit/bc9af4105c60c4b7a5a4a6ed0e1ac0c583a35890.html">bc9af4105c60c4b7a5a4a6ed0e1ac0c583a35890</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 28 Jul 2024 20:13:27 +0200
+
+fix(native): composer loader hook
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">composer/src/main/ts/main.ts</a></td><td> | </td><td class="num">26</td><td><span class="i">+++++++++++</span><span class="d">---------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">composer/src/main/ts/types.ts</a></td><td> | </td><td class="num">3</td><td><span class="i">+++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/Feature.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a></td><td> | </td><td class="num">32</td><td><span class="i">+++++++++++++++++++++++</span><span class="d">---------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">native/rust/Cargo.lock</a></td><td> | </td><td class="num">48</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">native/rust/Cargo.toml</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">native/rust/src/modules/composer_hook.rs</a></td><td> | </td><td class="num">239</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">native/rust/src/modules/mod.rs</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h8">native/rust/src/modules/util/composer_utils.rs</a></td><td> | </td><td class="num">141</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h9">native/rust/src/modules/util/mod.rs</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+</table></pre><pre>10 files changed, 380 insertions(+), 115 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/composer/src/main/ts/main.ts.html">composer/src/main/ts/main.ts</a> b/<a href="../file/composer/src/main/ts/main.ts.html">composer/src/main/ts/main.ts</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,9 +1,9 @@
+</a> import { getConfig, log } from &quot;./imports&quot;;
+<a href="#h0-0-1" id="h0-0-1" class="d">-import { Module } from &quot;./types&quot;;
+</a><a href="#h0-0-2" id="h0-0-2" class="i">+import { Module, modules } from &quot;./types&quot;;
+</a> 
+<a href="#h0-0-4" id="h0-0-4" class="d">-import operaDownloadButton from &quot;./modules/operaDownloadButton&quot;;
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-import firstCreatedUsername from &quot;./modules/firstCreatedUsername&quot;;
+</a><a href="#h0-0-6" id="h0-0-6" class="d">-import bypassCameraRollSelectionLimit from &quot;./modules/bypassCameraRollSelectionLimit&quot;;
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+import  &quot;./modules/operaDownloadButton&quot;;
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+import  &quot;./modules/firstCreatedUsername&quot;;
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+import  &quot;./modules/bypassCameraRollSelectionLimit&quot;;
+</a> 
+ 
+ try {
+<a href="#h0-1" id="h0-1" class="h">@@ -15,22 +15,18 @@ try {
+</a>         })
+     }
+ 
+<a href="#h0-1-3" id="h0-1-3" class="d">-    const modules: Module[] = [
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-        operaDownloadButton, 
+</a><a href="#h0-1-5" id="h0-1-5" class="d">-        firstCreatedUsername,
+</a><a href="#h0-1-6" id="h0-1-6" class="d">-        bypassCameraRollSelectionLimit
+</a><a href="#h0-1-7" id="h0-1-7" class="d">-    ];
+</a><a href="#h0-1-8" id="h0-1-8" class="d">-
+</a><a href="#h0-1-9" id="h0-1-9" class="d">-    modules.forEach(module =&gt; {
+</a><a href="#h0-1-10" id="h0-1-10" class="d">-        if (!module.enabled(config)) return
+</a><a href="#h0-1-11" id="h0-1-11" class="i">+    modules.forEach(m =&gt; {
+</a><a href="#h0-1-12" id="h0-1-12" class="i">+        if (!m.enabled(config)) {
+</a><a href="#h0-1-13" id="h0-1-13" class="i">+            return
+</a><a href="#h0-1-14" id="h0-1-14" class="i">+        }
+</a>         try {
+<a href="#h0-1-16" id="h0-1-16" class="d">-            module.init();
+</a><a href="#h0-1-17" id="h0-1-17" class="i">+            m.init();
+</a>         } catch (e) {
+<a href="#h0-1-19" id="h0-1-19" class="d">-            console.error(`failed to initialize module ${module.name}`, e, e.stack);
+</a><a href="#h0-1-20" id="h0-1-20" class="i">+            console.error(`failed to initialize module ${m.name}`, e, e.stack);
+</a>         }
+     });
+ 
+<a href="#h0-1-24" id="h0-1-24" class="d">-    console.log(&quot;composer modules loaded!&quot;);
+</a><a href="#h0-1-25" id="h0-1-25" class="i">+    console.log(&quot;modules loaded!&quot;);
+</a> } catch (e) {
+     log(&quot;error&quot;, &quot;Failed to load composer modules\n&quot; + e + &quot;\n&quot; + e.stack)
+ }
+<b>diff --git a/<a id="h1" href="../file/composer/src/main/ts/types.ts.html">composer/src/main/ts/types.ts</a> b/<a href="../file/composer/src/main/ts/types.ts.html">composer/src/main/ts/types.ts</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -39,6 +39,9 @@ export interface Module {
+</a>     init: () =&gt; void
+ }
+ 
+<a href="#h1-0-3" id="h1-0-3" class="i">+export const modules: Module[] = []
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+
+</a> export function defineModule&lt;T extends Module&gt;(module: T &amp; Record&lt;string, any&gt;): T {
+<a href="#h1-0-6" id="h1-0-6" class="i">+    modules.push(module)
+</a>     return module
+ }
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/Feature.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/Feature.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/Feature.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/Feature.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -15,7 +15,7 @@ abstract class Feature(
+</a>             runCatching {
+                 block()
+             }.onFailure {
+<a href="#h2-0-3" id="h2-0-3" class="d">-                context.log.error(&quot;Failed to run onNextActivityCreate callback&quot;, it)
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+                context.log.error(&quot;Failed to run defer callback&quot;, it)
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -1,14 +1,22 @@
+</a> package me.rhunk.snapenhance.core.features.impl.experiments
+ 
+<a href="#h3-0-2" id="h3-0-2" class="d">-import android.os.ParcelFileDescriptor
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+import android.app.Activity
+</a> import android.view.View
+ import android.widget.FrameLayout
+<a href="#h3-0-6" id="h3-0-6" class="d">-import androidx.compose.foundation.layout.*
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+import androidx.compose.foundation.layout.Arrangement
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+import androidx.compose.foundation.layout.Column
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+import androidx.compose.foundation.layout.fillMaxSize
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+import androidx.compose.foundation.layout.fillMaxWidth
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+import androidx.compose.foundation.layout.padding
+</a> import androidx.compose.foundation.rememberScrollState
+ import androidx.compose.foundation.verticalScroll
+ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.filled.BugReport
+<a href="#h3-0-16" id="h3-0-16" class="d">-import androidx.compose.material3.*
+</a><a href="#h3-0-17" id="h3-0-17" class="i">+import androidx.compose.material3.Button
+</a><a href="#h3-0-18" id="h3-0-18" class="i">+import androidx.compose.material3.FilledIconButton
+</a><a href="#h3-0-19" id="h3-0-19" class="i">+import androidx.compose.material3.Icon
+</a><a href="#h3-0-20" id="h3-0-20" class="i">+import androidx.compose.material3.Text
+</a><a href="#h3-0-21" id="h3-0-21" class="i">+import androidx.compose.material3.TextField
+</a> import androidx.compose.runtime.getValue
+ import androidx.compose.runtime.mutableStateOf
+ import androidx.compose.runtime.remember
+<a href="#h3-1" id="h3-1" class="h">@@ -48,7 +56,7 @@ class ComposerHooks: Feature(&quot;ComposerHooks&quot;) {
+</a>                 verticalArrangement = Arrangement.spacedBy(16.dp)
+             ) {
+                 var result by remember { mutableStateOf(&quot;&quot;) }
+<a href="#h3-1-3" id="h3-1-3" class="d">-                var codeContent by remember { mutableStateOf(&quot;&quot;) }
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+                var codeContent by remember { mutableStateOf(&quot;return 1 + 2&quot;) }
+</a> 
+                 Text(&quot;Composer Console&quot;, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+ 
+<a href="#h3-2" id="h3-2" class="h">@@ -95,8 +103,11 @@ class ComposerHooks: Feature(&quot;ComposerHooks&quot;) {
+</a> 
+     private val composerConsoleTag = Random.nextLong().toString()
+ 
+<a href="#h3-2-3" id="h3-2-3" class="d">-    private fun injectConsole() {
+</a><a href="#h3-2-4" id="h3-2-4" class="d">-        val root = context.mainActivity!!.findViewById&lt;FrameLayout&gt;(android.R.id.content)
+</a><a href="#h3-2-5" id="h3-2-5" class="i">+    private fun injectConsole(activity: Activity) {
+</a><a href="#h3-2-6" id="h3-2-6" class="i">+        val root = activity.findViewById&lt;FrameLayout&gt;(android.R.id.content) ?: run {
+</a><a href="#h3-2-7" id="h3-2-7" class="i">+            context.log.warn(&quot;Unable to find root view. Can&#39;t inject console.&quot;)
+</a><a href="#h3-2-8" id="h3-2-8" class="i">+            return
+</a><a href="#h3-2-9" id="h3-2-9" class="i">+        }
+</a>         root.post {
+             if (root.findViewWithTag&lt;View&gt;(composerConsoleTag) != null) return@post
+             root.addView(createComposeView(root.context) {
+<a href="#h3-3" id="h3-3" class="h">@@ -202,16 +213,20 @@ class ComposerHooks: Feature(&quot;ComposerHooks&quot;) {
+</a>             context.native.setComposerLoader(&quot;&quot;&quot;
+                 (() =&gt; { const _getImportsFunctionName = &quot;$getImportsFunctionName&quot;; $loaderScript })();
+             &quot;&quot;&quot;.trimIndent().trim())
+<a href="#h3-3-3" id="h3-3-3" class="i">+        }
+</a><a href="#h3-3-4" id="h3-3-4" class="i">+
+</a><a href="#h3-3-5" id="h3-3-5" class="i">+        loadHooks()
+</a> 
+<a href="#h3-3-7" id="h3-3-7" class="i">+        onNextActivityCreate { activity -&gt;
+</a>             if (config.composerConsole.get()) {
+<a href="#h3-3-9" id="h3-3-9" class="d">-                injectConsole()
+</a><a href="#h3-3-10" id="h3-3-10" class="i">+                injectConsole(activity)
+</a>             }
+         }
+ 
+         findClass(&quot;com.snapchat.client.composer.NativeBridge&quot;).apply {
+             hook(&quot;registerNativeModuleFactory&quot;, HookStage.BEFORE) { param -&gt;
+                 val moduleFactory = param.argNullable&lt;Any&gt;(1) ?: return@hook
+<a href="#h3-3-17" id="h3-3-17" class="d">-                if (moduleFactory.javaClass.getMethod(&quot;getModulePath&quot;).invoke(moduleFactory)?.toString() != &quot;DeviceBridge&quot;) return@hook
+</a><a href="#h3-3-18" id="h3-3-18" class="i">+                if (moduleFactory.javaClass.getMethod(&quot;getModulePath&quot;).invoke(moduleFactory)?.toString()?.contains(&quot;DeviceBridge&quot;) != true) return@hook
+</a>                 Hooker.ephemeralHookObjectMethod(moduleFactory.javaClass, moduleFactory, &quot;loadModule&quot;, HookStage.AFTER) { methodParam -&gt;
+                     val result = methodParam.getResult() as? MutableMap&lt;String, Any?&gt; ?: return@ephemeralHookObjectMethod
+                     result[getImportsFunctionName] = newComposerFunction {
+<a href="#h3-4" id="h3-4" class="h">@@ -219,7 +234,6 @@ class ComposerHooks: Feature(&quot;ComposerHooks&quot;) {
+</a>                         true
+                     }
+                 }
+<a href="#h3-4-3" id="h3-4-3" class="d">-                loadHooks()
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h4" href="../file/native/rust/Cargo.lock.html">native/rust/Cargo.lock</a> b/<a href="../file/native/rust/Cargo.lock.html">native/rust/Cargo.lock</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -78,6 +78,10 @@ name = &quot;cc&quot;
+</a> version = &quot;1.1.6&quot;
+ source = &quot;registry+https://github.com/rust-lang/crates.io-index&quot;
+ checksum = &quot;2aba8f4e9906c7ce3c73463f62a7f0c65183ada1a2d47e397cc8810827f9694f&quot;
+<a href="#h4-0-3" id="h4-0-3" class="i">+dependencies = [
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+ &quot;jobserver&quot;,
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+ &quot;libc&quot;,
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+]
+</a> 
+ [[package]]
+ name = &quot;cesu8&quot;
+<a href="#h4-1" id="h4-1" class="h">@@ -238,6 +242,15 @@ source = &quot;registry+https://github.com/rust-lang/crates.io-index&quot;
+</a> checksum = &quot;8eaf4bc02d17cbdd7ff4c7438cafcdf7fb9a4613313ad11b4f8fefe7d3fa0130&quot;
+ 
+ [[package]]
+<a href="#h4-1-3" id="h4-1-3" class="i">+name = &quot;jobserver&quot;
+</a><a href="#h4-1-4" id="h4-1-4" class="i">+version = &quot;0.1.32&quot;
+</a><a href="#h4-1-5" id="h4-1-5" class="i">+source = &quot;registry+https://github.com/rust-lang/crates.io-index&quot;
+</a><a href="#h4-1-6" id="h4-1-6" class="i">+checksum = &quot;48d1dbcbbeb6a7fec7e059840aa538bd62aaccf972c7346c4d9d2059312853d0&quot;
+</a><a href="#h4-1-7" id="h4-1-7" class="i">+dependencies = [
+</a><a href="#h4-1-8" id="h4-1-8" class="i">+ &quot;libc&quot;,
+</a><a href="#h4-1-9" id="h4-1-9" class="i">+]
+</a><a href="#h4-1-10" id="h4-1-10" class="i">+
+</a><a href="#h4-1-11" id="h4-1-11" class="i">+[[package]]
+</a> name = &quot;js-sys&quot;
+ version = &quot;0.3.69&quot;
+ source = &quot;registry+https://github.com/rust-lang/crates.io-index&quot;
+<a href="#h4-2" id="h4-2" class="h">@@ -319,6 +332,12 @@ source = &quot;registry+https://github.com/rust-lang/crates.io-index&quot;
+</a> checksum = &quot;57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a&quot;
+ 
+ [[package]]
+<a href="#h4-2-3" id="h4-2-3" class="i">+name = &quot;pkg-config&quot;
+</a><a href="#h4-2-4" id="h4-2-4" class="i">+version = &quot;0.3.30&quot;
+</a><a href="#h4-2-5" id="h4-2-5" class="i">+source = &quot;registry+https://github.com/rust-lang/crates.io-index&quot;
+</a><a href="#h4-2-6" id="h4-2-6" class="i">+checksum = &quot;d231b230927b5e4ad203db57bbcbee2802f6bce620b1e4a9024a07d94e2907ec&quot;
+</a><a href="#h4-2-7" id="h4-2-7" class="i">+
+</a><a href="#h4-2-8" id="h4-2-8" class="i">+[[package]]
+</a> name = &quot;proc-macro2&quot;
+ version = &quot;1.0.86&quot;
+ source = &quot;registry+https://github.com/rust-lang/crates.io-index&quot;
+<a href="#h4-3" id="h4-3" class="h">@@ -463,6 +482,7 @@ dependencies = [
+</a>  &quot;paste&quot;,
+  &quot;procfs&quot;,
+  &quot;serde_json&quot;,
+<a href="#h4-3-3" id="h4-3-3" class="i">+ &quot;zstd&quot;,
+</a> ]
+ 
+ [[package]]
+<a href="#h4-4" id="h4-4" class="h">@@ -722,3 +742,31 @@ name = &quot;windows_x86_64_msvc&quot;
+</a> version = &quot;0.52.6&quot;
+ source = &quot;registry+https://github.com/rust-lang/crates.io-index&quot;
+ checksum = &quot;589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec&quot;
+<a href="#h4-4-3" id="h4-4-3" class="i">+
+</a><a href="#h4-4-4" id="h4-4-4" class="i">+[[package]]
+</a><a href="#h4-4-5" id="h4-4-5" class="i">+name = &quot;zstd&quot;
+</a><a href="#h4-4-6" id="h4-4-6" class="i">+version = &quot;0.13.2&quot;
+</a><a href="#h4-4-7" id="h4-4-7" class="i">+source = &quot;registry+https://github.com/rust-lang/crates.io-index&quot;
+</a><a href="#h4-4-8" id="h4-4-8" class="i">+checksum = &quot;fcf2b778a664581e31e389454a7072dab1647606d44f7feea22cd5abb9c9f3f9&quot;
+</a><a href="#h4-4-9" id="h4-4-9" class="i">+dependencies = [
+</a><a href="#h4-4-10" id="h4-4-10" class="i">+ &quot;zstd-safe&quot;,
+</a><a href="#h4-4-11" id="h4-4-11" class="i">+]
+</a><a href="#h4-4-12" id="h4-4-12" class="i">+
+</a><a href="#h4-4-13" id="h4-4-13" class="i">+[[package]]
+</a><a href="#h4-4-14" id="h4-4-14" class="i">+name = &quot;zstd-safe&quot;
+</a><a href="#h4-4-15" id="h4-4-15" class="i">+version = &quot;7.2.0&quot;
+</a><a href="#h4-4-16" id="h4-4-16" class="i">+source = &quot;registry+https://github.com/rust-lang/crates.io-index&quot;
+</a><a href="#h4-4-17" id="h4-4-17" class="i">+checksum = &quot;fa556e971e7b568dc775c136fc9de8c779b1c2fc3a63defaafadffdbd3181afa&quot;
+</a><a href="#h4-4-18" id="h4-4-18" class="i">+dependencies = [
+</a><a href="#h4-4-19" id="h4-4-19" class="i">+ &quot;zstd-sys&quot;,
+</a><a href="#h4-4-20" id="h4-4-20" class="i">+]
+</a><a href="#h4-4-21" id="h4-4-21" class="i">+
+</a><a href="#h4-4-22" id="h4-4-22" class="i">+[[package]]
+</a><a href="#h4-4-23" id="h4-4-23" class="i">+name = &quot;zstd-sys&quot;
+</a><a href="#h4-4-24" id="h4-4-24" class="i">+version = &quot;2.0.12+zstd.1.5.6&quot;
+</a><a href="#h4-4-25" id="h4-4-25" class="i">+source = &quot;registry+https://github.com/rust-lang/crates.io-index&quot;
+</a><a href="#h4-4-26" id="h4-4-26" class="i">+checksum = &quot;0a4e40c320c3cb459d9a9ff6de98cff88f4751ee9275d140e2be94a2b74e4c13&quot;
+</a><a href="#h4-4-27" id="h4-4-27" class="i">+dependencies = [
+</a><a href="#h4-4-28" id="h4-4-28" class="i">+ &quot;cc&quot;,
+</a><a href="#h4-4-29" id="h4-4-29" class="i">+ &quot;pkg-config&quot;,
+</a><a href="#h4-4-30" id="h4-4-30" class="i">+]
+</a><b>diff --git a/<a id="h5" href="../file/native/rust/Cargo.toml.html">native/rust/Cargo.toml</a> b/<a href="../file/native/rust/Cargo.toml.html">native/rust/Cargo.toml</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -17,3 +17,4 @@ once_cell = &quot;1.19.0&quot;
+</a> paste = &quot;1.0.15&quot;
+ procfs = &quot;0.16.0&quot;
+ serde_json = &quot;1.0.120&quot;
+<a href="#h5-0-3" id="h5-0-3" class="i">+zstd = &quot;0.13.2&quot;
+</a><b>diff --git a/<a id="h6" href="../file/native/rust/src/modules/composer_hook.rs.html">native/rust/src/modules/composer_hook.rs</a> b/<a href="../file/native/rust/src/modules/composer_hook.rs.html">native/rust/src/modules/composer_hook.rs</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -1,8 +1,10 @@
+</a><a href="#h6-0-0" id="h6-0-0" class="d">-#![allow(dead_code, unused_mut)] 
+</a><a href="#h6-0-1" id="h6-0-1" class="i">+#![allow(dead_code, unused_imports)]
+</a> 
+<a href="#h6-0-3" id="h6-0-3" class="d">-use std::{cell::Cell, ffi::{c_void, CStr}, sync::Mutex};
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+use super::util::composer_utils::ComposerModule;
+</a><a href="#h6-0-5" id="h6-0-5" class="i">+use std::{collections::HashMap, ffi::{c_void, CStr}, sync::Mutex};
+</a> use jni::{objects::JString, sys::jobject, JNIEnv};
+<a href="#h6-0-7" id="h6-0-7" class="d">-use crate::{common, config, def_hook, dobby_hook, sig, util::get_jni_string};
+</a><a href="#h6-0-8" id="h6-0-8" class="i">+use once_cell::sync::Lazy;
+</a><a href="#h6-0-9" id="h6-0-9" class="i">+use crate::{common, config, def_hook, dobby_hook, dobby_hook_sym, sig, util::get_jni_string};
+</a> 
+ const JS_TAG_BIG_DECIMAL: i64 = -11;
+ const JS_TAG_BIG_INT: i64 = -10;
+<a href="#h6-1" id="h6-1" class="h">@@ -61,124 +63,181 @@ struct JsValue {
+</a>     tag: i64,
+ }
+ 
+<a href="#h6-1-3" id="h6-1-3" class="i">+static AASSET_MAP: Lazy&lt;Mutex&lt;HashMap&lt;usize, Vec&lt;u8&gt;&gt;&gt;&gt; = Lazy::new(|| Mutex::new(HashMap::new()));
+</a><a href="#h6-1-4" id="h6-1-4" class="i">+static COMPOSER_LOADER_DATA: Mutex&lt;Option&lt;String&gt;&gt; = Mutex::new(None);
+</a><a href="#h6-1-5" id="h6-1-5" class="i">+
+</a><a href="#h6-1-6" id="h6-1-6" class="i">+def_hook!(
+</a><a href="#h6-1-7" id="h6-1-7" class="i">+    aasset_get_length,
+</a><a href="#h6-1-8" id="h6-1-8" class="i">+    i32,
+</a><a href="#h6-1-9" id="h6-1-9" class="i">+    |arg0: *mut c_void| {
+</a><a href="#h6-1-10" id="h6-1-10" class="i">+        if let Some(buffer) = AASSET_MAP.lock().unwrap().get(&amp;(arg0 as usize)) {
+</a><a href="#h6-1-11" id="h6-1-11" class="i">+            return buffer.len() as i32;
+</a><a href="#h6-1-12" id="h6-1-12" class="i">+        }
+</a><a href="#h6-1-13" id="h6-1-13" class="i">+        aasset_get_length_original.unwrap()(arg0)
+</a><a href="#h6-1-14" id="h6-1-14" class="i">+    }
+</a><a href="#h6-1-15" id="h6-1-15" class="i">+);
+</a><a href="#h6-1-16" id="h6-1-16" class="i">+
+</a><a href="#h6-1-17" id="h6-1-17" class="i">+def_hook!(
+</a><a href="#h6-1-18" id="h6-1-18" class="i">+    aasset_get_buffer,
+</a><a href="#h6-1-19" id="h6-1-19" class="i">+    *const c_void,
+</a><a href="#h6-1-20" id="h6-1-20" class="i">+    |arg0: *mut c_void| {
+</a><a href="#h6-1-21" id="h6-1-21" class="i">+        if let Some(buffer) = AASSET_MAP.lock().unwrap().get(&amp;(arg0 as usize)) {
+</a><a href="#h6-1-22" id="h6-1-22" class="i">+            return buffer.as_ptr() as *const c_void;
+</a><a href="#h6-1-23" id="h6-1-23" class="i">+        }
+</a><a href="#h6-1-24" id="h6-1-24" class="i">+        aasset_get_buffer_original.unwrap()(arg0)
+</a><a href="#h6-1-25" id="h6-1-25" class="i">+    }
+</a><a href="#h6-1-26" id="h6-1-26" class="i">+);
+</a><a href="#h6-1-27" id="h6-1-27" class="i">+
+</a><a href="#h6-1-28" id="h6-1-28" class="i">+def_hook!(
+</a><a href="#h6-1-29" id="h6-1-29" class="i">+    aasset_manager_open,
+</a><a href="#h6-1-30" id="h6-1-30" class="i">+    *mut c_void,
+</a><a href="#h6-1-31" id="h6-1-31" class="i">+    |arg0: *mut c_void, arg1: *const u8, arg2: i32| {
+</a><a href="#h6-1-32" id="h6-1-32" class="i">+        let handle = aasset_manager_open_original.unwrap()(arg0, arg1, arg2);
+</a><a href="#h6-1-33" id="h6-1-33" class="i">+
+</a><a href="#h6-1-34" id="h6-1-34" class="i">+        if !handle.is_null() &amp;&amp; CStr::from_ptr(arg1).to_str().unwrap().ends_with(&quot;blizzard.composermodule&quot;) {
+</a><a href="#h6-1-35" id="h6-1-35" class="i">+            let asset_buffer = aasset_get_buffer_original.unwrap()(handle);
+</a><a href="#h6-1-36" id="h6-1-36" class="i">+            let asset_length = aasset_get_length_original.unwrap()(handle);
+</a><a href="#h6-1-37" id="h6-1-37" class="i">+            debug!(&quot;asset buffer: {:p}, length: {}&quot;, asset_buffer, asset_length);
+</a><a href="#h6-1-38" id="h6-1-38" class="i">+
+</a><a href="#h6-1-39" id="h6-1-39" class="i">+            let composer_loader = COMPOSER_LOADER_DATA.lock().unwrap().clone().expect(&quot;No composer loader data&quot;);
+</a><a href="#h6-1-40" id="h6-1-40" class="i">+
+</a><a href="#h6-1-41" id="h6-1-41" class="i">+            let archive_buffer: Vec&lt;u8&gt; = std::slice::from_raw_parts(asset_buffer as *const u8, asset_length as usize).to_vec();
+</a><a href="#h6-1-42" id="h6-1-42" class="i">+            let decompressed = zstd::stream::decode_all(&amp;archive_buffer[..]).expect(&quot;Failed to decompress composer archive&quot;);
+</a><a href="#h6-1-43" id="h6-1-43" class="i">+            let mut composer_module = ComposerModule::parse(decompressed).expect(&quot;Failed to parse composer module&quot;);
+</a><a href="#h6-1-44" id="h6-1-44" class="i">+
+</a><a href="#h6-1-45" id="h6-1-45" class="i">+            let mut tags = composer_module.get_tags();
+</a><a href="#h6-1-46" id="h6-1-46" class="i">+
+</a><a href="#h6-1-47" id="h6-1-47" class="i">+            for (tag1, tag2) in tags.iter_mut() {
+</a><a href="#h6-1-48" id="h6-1-48" class="i">+                if tag1.to_string().unwrap().ends_with(&quot;BlizzardEventLogger.js&quot;) {
+</a><a href="#h6-1-49" id="h6-1-49" class="i">+                    let mut buffer = Vec::new();
+</a><a href="#h6-1-50" id="h6-1-50" class="i">+                    buffer.extend(composer_loader.as_bytes());
+</a><a href="#h6-1-51" id="h6-1-51" class="i">+                    buffer.extend(tag2.get_buffer());
+</a><a href="#h6-1-52" id="h6-1-52" class="i">+                    tag2.set_buffer(buffer);
+</a><a href="#h6-1-53" id="h6-1-53" class="i">+                    debug!(&quot;composer loader injected in {}&quot;, tag1.to_string().unwrap());
+</a><a href="#h6-1-54" id="h6-1-54" class="i">+                }
+</a><a href="#h6-1-55" id="h6-1-55" class="i">+            }
+</a><a href="#h6-1-56" id="h6-1-56" class="i">+
+</a><a href="#h6-1-57" id="h6-1-57" class="i">+            composer_module.set_tags(tags);
+</a><a href="#h6-1-58" id="h6-1-58" class="i">+
+</a><a href="#h6-1-59" id="h6-1-59" class="i">+            let compressed = composer_module.to_bytes();
+</a><a href="#h6-1-60" id="h6-1-60" class="i">+            let compressed = zstd::stream::encode_all(&amp;compressed[..], 3).expect(&quot;Failed to compress&quot;);
+</a><a href="#h6-1-61" id="h6-1-61" class="i">+
+</a><a href="#h6-1-62" id="h6-1-62" class="i">+            AASSET_MAP.lock().unwrap().insert(handle as usize, compressed);
+</a><a href="#h6-1-63" id="h6-1-63" class="i">+        }
+</a><a href="#h6-1-64" id="h6-1-64" class="i">+        handle
+</a><a href="#h6-1-65" id="h6-1-65" class="i">+    }
+</a><a href="#h6-1-66" id="h6-1-66" class="i">+);
+</a><a href="#h6-1-67" id="h6-1-67" class="i">+
+</a><a href="#h6-1-68" id="h6-1-68" class="i">+def_hook!(
+</a><a href="#h6-1-69" id="h6-1-69" class="i">+    aasset_close,
+</a><a href="#h6-1-70" id="h6-1-70" class="i">+    c_void,
+</a><a href="#h6-1-71" id="h6-1-71" class="i">+    |handle: *mut c_void| {
+</a><a href="#h6-1-72" id="h6-1-72" class="i">+        AASSET_MAP.lock().unwrap().remove(&amp;(handle as usize));
+</a><a href="#h6-1-73" id="h6-1-73" class="i">+        aasset_close_original.unwrap()(handle)
+</a><a href="#h6-1-74" id="h6-1-74" class="i">+    }
+</a><a href="#h6-1-75" id="h6-1-75" class="i">+);
+</a><a href="#h6-1-76" id="h6-1-76" class="i">+    
+</a><a href="#h6-1-77" id="h6-1-77" class="i">+#[cfg(target_arch = &quot;aarch64&quot;)]
+</a> static mut GLOBAL_INSTANCE: Option&lt;*mut c_void&gt; = None;
+<a href="#h6-1-79" id="h6-1-79" class="i">+#[cfg(target_arch = &quot;aarch64&quot;)]
+</a> static mut GLOBAL_CTX: Option&lt;*mut c_void&gt; = None;
+<a href="#h6-1-81" id="h6-1-81" class="d">-static COMPOSER_LOADER_DATA: Mutex&lt;Cell&lt;Option&lt;Box&lt;String&gt;&gt;&gt;&gt; = Mutex::new(Cell::new(None));
+</a> 
+<a href="#h6-1-83" id="h6-1-83" class="i">+#[cfg(target_arch = &quot;aarch64&quot;)]
+</a> static mut JS_EVAL_ORIGINAL2: Option&lt;unsafe extern &quot;C&quot; fn(*mut c_void, *mut c_void, *mut c_void, *mut u8, usize, *const u8, u32) -&gt; JsValue&gt; = None;
+ 
+ def_hook!(
+     js_eval,
+     *mut c_void,
+     |arg0: *mut c_void, arg1: *mut c_void, arg2: *mut c_void, arg3: *const u8, arg4: *const u8, arg5: *const u8, arg6: *mut c_void, arg7: u32| {
+<a href="#h6-1-90" id="h6-1-90" class="d">-        let mut arg3 = arg3;
+</a><a href="#h6-1-91" id="h6-1-91" class="d">-        let mut arg4 = arg4;
+</a><a href="#h6-1-92" id="h6-1-92" class="d">-        let mut arg5 = arg5;
+</a><a href="#h6-1-93" id="h6-1-93" class="d">-
+</a><a href="#h6-1-94" id="h6-1-94" class="d">-        if GLOBAL_INSTANCE.is_none() || GLOBAL_CTX.is_none() {
+</a><a href="#h6-1-95" id="h6-1-95" class="d">-            GLOBAL_INSTANCE = Some(arg0);
+</a><a href="#h6-1-96" id="h6-1-96" class="d">-            GLOBAL_CTX = Some(arg1);
+</a><a href="#h6-1-97" id="h6-1-97" class="d">-
+</a><a href="#h6-1-98" id="h6-1-98" class="d">-            let mut loader_data = COMPOSER_LOADER_DATA.lock().unwrap();
+</a><a href="#h6-1-99" id="h6-1-99" class="d">-            let mut loader_data = loader_data.get_mut();
+</a><a href="#h6-1-100" id="h6-1-100" class="d">-
+</a><a href="#h6-1-101" id="h6-1-101" class="d">-            let loader_data = loader_data.as_mut().unwrap();
+</a><a href="#h6-1-102" id="h6-1-102" class="d">-            loader_data.push_str(&quot;\n&quot;);
+</a><a href="#h6-1-103" id="h6-1-103" class="d">-            #[cfg(target_arch = &quot;aarch64&quot;)]
+</a><a href="#h6-1-104" id="h6-1-104" class="d">-            {
+</a><a href="#h6-1-105" id="h6-1-105" class="d">-                loader_data.push_str(CStr::from_ptr(arg3).to_str().unwrap());
+</a><a href="#h6-1-106" id="h6-1-106" class="d">-                arg3 = loader_data.as_mut_ptr();
+</a><a href="#h6-1-107" id="h6-1-107" class="d">-                arg4 = loader_data.len() as *const u8;
+</a><a href="#h6-1-108" id="h6-1-108" class="d">-            }
+</a><a href="#h6-1-109" id="h6-1-109" class="d">-
+</a><a href="#h6-1-110" id="h6-1-110" class="d">-            // On arm the original JS_Eval function is inlined so the arguments are shifted
+</a><a href="#h6-1-111" id="h6-1-111" class="d">-            #[cfg(target_arch = &quot;arm&quot;)]
+</a><a href="#h6-1-112" id="h6-1-112" class="d">-            {
+</a><a href="#h6-1-113" id="h6-1-113" class="d">-                loader_data.push_str(CStr::from_ptr(arg4).to_str().unwrap());
+</a><a href="#h6-1-114" id="h6-1-114" class="d">-                arg4 = loader_data.as_mut_ptr();
+</a><a href="#h6-1-115" id="h6-1-115" class="d">-                arg5 = loader_data.len() as *const u8;
+</a><a href="#h6-1-116" id="h6-1-116" class="i">+        #[cfg(target_arch = &quot;aarch64&quot;)]
+</a><a href="#h6-1-117" id="h6-1-117" class="i">+        {
+</a><a href="#h6-1-118" id="h6-1-118" class="i">+            if GLOBAL_INSTANCE.is_none() || GLOBAL_CTX.is_none() {
+</a><a href="#h6-1-119" id="h6-1-119" class="i">+                GLOBAL_INSTANCE = Some(arg0);
+</a><a href="#h6-1-120" id="h6-1-120" class="i">+                GLOBAL_CTX = Some(arg1);
+</a>             }
+<a href="#h6-1-122" id="h6-1-122" class="d">-
+</a><a href="#h6-1-123" id="h6-1-123" class="d">-            debug!(&quot;injected composer loader!&quot;);
+</a><a href="#h6-1-124" id="h6-1-124" class="d">-        } else {
+</a><a href="#h6-1-125" id="h6-1-125" class="d">-            COMPOSER_LOADER_DATA.lock().unwrap().take();
+</a>         }
+<a href="#h6-1-127" id="h6-1-127" class="d">-
+</a>         js_eval_original.unwrap()(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+     }
+ );
+ 
+ pub fn set_composer_loader(mut env: JNIEnv, _: *mut c_void, code: JString) {
+<a href="#h6-1-133" id="h6-1-133" class="d">-    let new_code = get_jni_string(&amp;mut env, code).expect(&quot;Failed to get code&quot;);
+</a><a href="#h6-1-134" id="h6-1-134" class="d">-   
+</a><a href="#h6-1-135" id="h6-1-135" class="d">-    COMPOSER_LOADER_DATA.lock().unwrap().replace(Some(Box::new(new_code)));
+</a><a href="#h6-1-136" id="h6-1-136" class="i">+    let new_code = get_jni_string(&amp;mut env, code).expect(&quot;Failed to get composer loader code&quot;);
+</a><a href="#h6-1-137" id="h6-1-137" class="i">+    COMPOSER_LOADER_DATA.lock().unwrap().replace(new_code);
+</a> }
+ 
+ #[allow(unreachable_code, unused_variables)]
+ pub unsafe fn composer_eval(env: JNIEnv, _: *mut c_void, script: JString) -&gt; jobject {
+<a href="#h6-1-142" id="h6-1-142" class="d">-    #[cfg(not(target_arch = &quot;aarch64&quot;))]
+</a><a href="#h6-1-143" id="h6-1-143" class="i">+    #[cfg(target_arch = &quot;aarch64&quot;)]
+</a>     {
+<a href="#h6-1-145" id="h6-1-145" class="d">-        return env.new_string(&quot;Architecture not supported&quot;).unwrap().into_raw();
+</a><a href="#h6-1-146" id="h6-1-146" class="d">-    }
+</a><a href="#h6-1-147" id="h6-1-147" class="i">+        let mut env = env;
+</a> 
+<a href="#h6-1-149" id="h6-1-149" class="d">-    let mut env = env;
+</a><a href="#h6-1-150" id="h6-1-150" class="d">-
+</a><a href="#h6-1-151" id="h6-1-151" class="d">-    let script_str = get_jni_string(&amp;mut env, script).expect(&quot;Failed to get script&quot;);
+</a><a href="#h6-1-152" id="h6-1-152" class="d">-    let script_length = script_str.len();
+</a><a href="#h6-1-153" id="h6-1-153" class="d">-
+</a><a href="#h6-1-154" id="h6-1-154" class="d">-    let js_value = JS_EVAL_ORIGINAL2.expect(&quot;No js eval found&quot;)(
+</a><a href="#h6-1-155" id="h6-1-155" class="d">-        GLOBAL_INSTANCE.expect(&quot;No global instance found&quot;), 
+</a><a href="#h6-1-156" id="h6-1-156" class="d">-        GLOBAL_CTX.expect(&quot;No global context found&quot;),
+</a><a href="#h6-1-157" id="h6-1-157" class="d">-        std::ptr::null_mut(),
+</a><a href="#h6-1-158" id="h6-1-158" class="d">-        (script_str + &quot;\0&quot;).as_ptr() as *mut u8, 
+</a><a href="#h6-1-159" id="h6-1-159" class="d">-        script_length, 
+</a><a href="#h6-1-160" id="h6-1-160" class="d">-        &quot;&lt;eval&gt;\0&quot;.as_ptr(), 
+</a><a href="#h6-1-161" id="h6-1-161" class="d">-        0
+</a><a href="#h6-1-162" id="h6-1-162" class="d">-    );
+</a><a href="#h6-1-163" id="h6-1-163" class="d">-
+</a><a href="#h6-1-164" id="h6-1-164" class="d">-    let result: String =  if js_value.tag == JS_TAG_STRING {
+</a><a href="#h6-1-165" id="h6-1-165" class="d">-        let string = js_value.u.ptr as *mut JsString;
+</a><a href="#h6-1-166" id="h6-1-166" class="d">-        CStr::from_ptr((*string).str8.as_ptr() as *const u8).to_str().unwrap().into()
+</a><a href="#h6-1-167" id="h6-1-167" class="d">-    } else if js_value.tag == JS_TAG_INT {
+</a><a href="#h6-1-168" id="h6-1-168" class="d">-        js_value.u.int32.to_string()
+</a><a href="#h6-1-169" id="h6-1-169" class="d">-    } else if js_value.tag == JS_TAG_BOOL {
+</a><a href="#h6-1-170" id="h6-1-170" class="d">-        if js_value.u.int32 == 1 { &quot;true&quot; } else { &quot;false&quot; }.into()
+</a><a href="#h6-1-171" id="h6-1-171" class="d">-    } else if js_value.tag == JS_TAG_NULL {
+</a><a href="#h6-1-172" id="h6-1-172" class="d">-        &quot;null&quot;.into()
+</a><a href="#h6-1-173" id="h6-1-173" class="d">-    } else if js_value.tag == JS_TAG_UNDEFINED {
+</a><a href="#h6-1-174" id="h6-1-174" class="d">-        &quot;undefined&quot;.into()
+</a><a href="#h6-1-175" id="h6-1-175" class="d">-    } else if js_value.tag == JS_TAG_OBJECT {
+</a><a href="#h6-1-176" id="h6-1-176" class="d">-        &quot;[object]&quot;.into()
+</a><a href="#h6-1-177" id="h6-1-177" class="d">-    } else if js_value.tag == JS_TAG_FLOAT64 {
+</a><a href="#h6-1-178" id="h6-1-178" class="d">-        js_value.u.float64.to_string()
+</a><a href="#h6-1-179" id="h6-1-179" class="d">-    } else if js_value.tag == JS_TAG_EXCEPTION {
+</a><a href="#h6-1-180" id="h6-1-180" class="d">-        &quot;Failed to evaluate script&quot;.into()
+</a><a href="#h6-1-181" id="h6-1-181" class="d">-    } else {
+</a><a href="#h6-1-182" id="h6-1-182" class="d">-        &quot;[unknown tag &quot;.to_owned() + &amp;js_value.tag.to_string() + &quot;]&quot;.into()
+</a><a href="#h6-1-183" id="h6-1-183" class="d">-    };
+</a><a href="#h6-1-184" id="h6-1-184" class="i">+        let script_str = get_jni_string(&amp;mut env, script).expect(&quot;Failed to get script&quot;);
+</a><a href="#h6-1-185" id="h6-1-185" class="i">+        let script_length = script_str.len();
+</a>     
+<a href="#h6-1-187" id="h6-1-187" class="d">-    env.new_string(result).unwrap().into_raw()
+</a><a href="#h6-1-188" id="h6-1-188" class="i">+        let js_value = JS_EVAL_ORIGINAL2.expect(&quot;No js eval found&quot;)(
+</a><a href="#h6-1-189" id="h6-1-189" class="i">+            GLOBAL_INSTANCE.expect(&quot;No global instance found&quot;), 
+</a><a href="#h6-1-190" id="h6-1-190" class="i">+            GLOBAL_CTX.expect(&quot;No global context found&quot;),
+</a><a href="#h6-1-191" id="h6-1-191" class="i">+            std::ptr::null_mut(),
+</a><a href="#h6-1-192" id="h6-1-192" class="i">+            (script_str + &quot;\0&quot;).as_ptr() as *mut u8, 
+</a><a href="#h6-1-193" id="h6-1-193" class="i">+            script_length, 
+</a><a href="#h6-1-194" id="h6-1-194" class="i">+            &quot;&lt;eval&gt;\0&quot;.as_ptr(), 
+</a><a href="#h6-1-195" id="h6-1-195" class="i">+            0
+</a><a href="#h6-1-196" id="h6-1-196" class="i">+        );
+</a><a href="#h6-1-197" id="h6-1-197" class="i">+    
+</a><a href="#h6-1-198" id="h6-1-198" class="i">+        let result: String =  if js_value.tag == JS_TAG_STRING {
+</a><a href="#h6-1-199" id="h6-1-199" class="i">+            let string = js_value.u.ptr as *mut JsString;
+</a><a href="#h6-1-200" id="h6-1-200" class="i">+            CStr::from_ptr((*string).str8.as_ptr() as *const u8).to_str().unwrap().into()
+</a><a href="#h6-1-201" id="h6-1-201" class="i">+        } else if js_value.tag == JS_TAG_INT {
+</a><a href="#h6-1-202" id="h6-1-202" class="i">+            js_value.u.int32.to_string()
+</a><a href="#h6-1-203" id="h6-1-203" class="i">+        } else if js_value.tag == JS_TAG_BOOL {
+</a><a href="#h6-1-204" id="h6-1-204" class="i">+            if js_value.u.int32 == 1 { &quot;true&quot; } else { &quot;false&quot; }.into()
+</a><a href="#h6-1-205" id="h6-1-205" class="i">+        } else if js_value.tag == JS_TAG_NULL {
+</a><a href="#h6-1-206" id="h6-1-206" class="i">+            &quot;null&quot;.into()
+</a><a href="#h6-1-207" id="h6-1-207" class="i">+        } else if js_value.tag == JS_TAG_UNDEFINED {
+</a><a href="#h6-1-208" id="h6-1-208" class="i">+            &quot;undefined&quot;.into()
+</a><a href="#h6-1-209" id="h6-1-209" class="i">+        } else if js_value.tag == JS_TAG_OBJECT {
+</a><a href="#h6-1-210" id="h6-1-210" class="i">+            &quot;[object]&quot;.into()
+</a><a href="#h6-1-211" id="h6-1-211" class="i">+        } else if js_value.tag == JS_TAG_FLOAT64 {
+</a><a href="#h6-1-212" id="h6-1-212" class="i">+            js_value.u.float64.to_string()
+</a><a href="#h6-1-213" id="h6-1-213" class="i">+        } else if js_value.tag == JS_TAG_EXCEPTION {
+</a><a href="#h6-1-214" id="h6-1-214" class="i">+            &quot;Failed to evaluate script&quot;.into()
+</a><a href="#h6-1-215" id="h6-1-215" class="i">+        } else {
+</a><a href="#h6-1-216" id="h6-1-216" class="i">+            &quot;[unknown tag &quot;.to_owned() + &amp;js_value.tag.to_string() + &quot;]&quot;.into()
+</a><a href="#h6-1-217" id="h6-1-217" class="i">+        };
+</a><a href="#h6-1-218" id="h6-1-218" class="i">+        
+</a><a href="#h6-1-219" id="h6-1-219" class="i">+        return env.new_string(result).unwrap().into_raw()
+</a><a href="#h6-1-220" id="h6-1-220" class="i">+    }
+</a><a href="#h6-1-221" id="h6-1-221" class="i">+
+</a><a href="#h6-1-222" id="h6-1-222" class="i">+    return env.new_string(&quot;Architecture not supported&quot;).unwrap().into_raw();
+</a> }
+ 
+ pub fn init() {
+     if !config::native_config().composer_hooks {
+         return
+     }
+<a href="#h6-1-229" id="h6-1-229" class="i">+
+</a><a href="#h6-1-230" id="h6-1-230" class="i">+    dobby_hook_sym!(&quot;libandroid.so&quot;, &quot;AAsset_getBuffer&quot;, aasset_get_buffer);
+</a><a href="#h6-1-231" id="h6-1-231" class="i">+    dobby_hook_sym!(&quot;libandroid.so&quot;, &quot;AAsset_getLength&quot;, aasset_get_length);
+</a><a href="#h6-1-232" id="h6-1-232" class="i">+    dobby_hook_sym!(&quot;libandroid.so&quot;, &quot;AAsset_close&quot;, aasset_close);
+</a><a href="#h6-1-233" id="h6-1-233" class="i">+    dobby_hook_sym!(&quot;libandroid.so&quot;, &quot;AAssetManager_open&quot;, aasset_manager_open);
+</a>     
+<a href="#h6-1-235" id="h6-1-235" class="d">-    if let Some(signature) = sig::find_signature(
+</a><a href="#h6-1-236" id="h6-1-236" class="d">-        &amp;common::CLIENT_MODULE,
+</a><a href="#h6-1-237" id="h6-1-237" class="d">-        &quot;00 E4 00 6F 29 00 80 52 76 00 04 8B&quot;, -0x28,
+</a><a href="#h6-1-238" id="h6-1-238" class="d">-        &quot;A1 B0 07 92 81 46&quot;, -0x7
+</a><a href="#h6-1-239" id="h6-1-239" class="d">-    ) {
+</a><a href="#h6-1-240" id="h6-1-240" class="d">-        dobby_hook!(signature as *mut c_void, js_eval);
+</a><a href="#h6-1-241" id="h6-1-241" class="d">-        
+</a><a href="#h6-1-242" id="h6-1-242" class="d">-        unsafe { 
+</a><a href="#h6-1-243" id="h6-1-243" class="d">-            JS_EVAL_ORIGINAL2 = Some(std::mem::transmute(js_eval_original.unwrap()));
+</a><a href="#h6-1-244" id="h6-1-244" class="i">+    #[cfg(target_arch = &quot;aarch64&quot;)]
+</a><a href="#h6-1-245" id="h6-1-245" class="i">+    {
+</a><a href="#h6-1-246" id="h6-1-246" class="i">+        if let Some(signature) = sig::find_signature(
+</a><a href="#h6-1-247" id="h6-1-247" class="i">+            &amp;common::CLIENT_MODULE,
+</a><a href="#h6-1-248" id="h6-1-248" class="i">+            &quot;00 E4 00 6F 29 00 80 52 76 00 04 8B&quot;, -0x28,
+</a><a href="#h6-1-249" id="h6-1-249" class="i">+            &quot;A1 B0 07 92 81 46&quot;, -0x7
+</a><a href="#h6-1-250" id="h6-1-250" class="i">+        ) {
+</a><a href="#h6-1-251" id="h6-1-251" class="i">+            dobby_hook!(signature as *mut c_void, js_eval);
+</a><a href="#h6-1-252" id="h6-1-252" class="i">+            
+</a><a href="#h6-1-253" id="h6-1-253" class="i">+            unsafe { 
+</a><a href="#h6-1-254" id="h6-1-254" class="i">+                JS_EVAL_ORIGINAL2 = Some(std::mem::transmute(js_eval_original.unwrap()));
+</a><a href="#h6-1-255" id="h6-1-255" class="i">+            }
+</a><a href="#h6-1-256" id="h6-1-256" class="i">+    
+</a><a href="#h6-1-257" id="h6-1-257" class="i">+            debug!(&quot;js_eval {:#x}&quot;, signature);
+</a><a href="#h6-1-258" id="h6-1-258" class="i">+        } else {
+</a><a href="#h6-1-259" id="h6-1-259" class="i">+            warn!(&quot;Unable to find js_eval signature&quot;);
+</a>         }
+<a href="#h6-1-261" id="h6-1-261" class="d">-
+</a><a href="#h6-1-262" id="h6-1-262" class="d">-        debug!(&quot;js_eval {:#x}&quot;, signature);
+</a><a href="#h6-1-263" id="h6-1-263" class="d">-    } else {
+</a><a href="#h6-1-264" id="h6-1-264" class="d">-        warn!(&quot;Unable to find js_eval signature&quot;);
+</a>     }
+ }
+ 
+<b>diff --git a/<a id="h7" href="../file/native/rust/src/modules/mod.rs.html">native/rust/src/modules/mod.rs</a> b/<a href="../file/native/rust/src/modules/mod.rs.html">native/rust/src/modules/mod.rs</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -1,3 +1,4 @@
+</a><a href="#h7-0-0" id="h7-0-0" class="i">+pub mod util;
+</a> pub mod linker_hook;
+ pub mod duplex_hook;
+ pub mod sqlite_hook;
+<b>diff --git a/<a id="h8" href="../file/native/rust/src/modules/util/composer_utils.rs.html">native/rust/src/modules/util/composer_utils.rs</a> b/<a href="../file/native/rust/src/modules/util/composer_utils.rs.html">native/rust/src/modules/util/composer_utils.rs</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -0,0 +1,141 @@
+</a><a href="#h8-0-0" id="h8-0-0" class="i">+use std::{io::Error, string::FromUtf8Error};
+</a><a href="#h8-0-1" id="h8-0-1" class="i">+
+</a><a href="#h8-0-2" id="h8-0-2" class="i">+#[derive(Debug, Clone)]
+</a><a href="#h8-0-3" id="h8-0-3" class="i">+pub struct ModuleTag {
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+    tag_type: u8,
+</a><a href="#h8-0-5" id="h8-0-5" class="i">+    buffer: Vec&lt;u8&gt;,
+</a><a href="#h8-0-6" id="h8-0-6" class="i">+}
+</a><a href="#h8-0-7" id="h8-0-7" class="i">+
+</a><a href="#h8-0-8" id="h8-0-8" class="i">+impl ModuleTag {
+</a><a href="#h8-0-9" id="h8-0-9" class="i">+    pub fn new(module_type: u8, buffer: Vec&lt;u8&gt;) -&gt; ModuleTag {
+</a><a href="#h8-0-10" id="h8-0-10" class="i">+        ModuleTag {
+</a><a href="#h8-0-11" id="h8-0-11" class="i">+            tag_type: module_type,
+</a><a href="#h8-0-12" id="h8-0-12" class="i">+            buffer,
+</a><a href="#h8-0-13" id="h8-0-13" class="i">+        }
+</a><a href="#h8-0-14" id="h8-0-14" class="i">+    }
+</a><a href="#h8-0-15" id="h8-0-15" class="i">+
+</a><a href="#h8-0-16" id="h8-0-16" class="i">+    pub fn to_string(&amp;self) -&gt; Result&lt;String, FromUtf8Error&gt; {
+</a><a href="#h8-0-17" id="h8-0-17" class="i">+        Ok(String::from_utf8(self.buffer.clone())?)
+</a><a href="#h8-0-18" id="h8-0-18" class="i">+    }
+</a><a href="#h8-0-19" id="h8-0-19" class="i">+
+</a><a href="#h8-0-20" id="h8-0-20" class="i">+    pub fn get_tag_type(&amp;self) -&gt; u8 {
+</a><a href="#h8-0-21" id="h8-0-21" class="i">+        self.tag_type
+</a><a href="#h8-0-22" id="h8-0-22" class="i">+    }
+</a><a href="#h8-0-23" id="h8-0-23" class="i">+
+</a><a href="#h8-0-24" id="h8-0-24" class="i">+    pub fn get_size(&amp;self) -&gt; usize {
+</a><a href="#h8-0-25" id="h8-0-25" class="i">+        self.buffer.len()
+</a><a href="#h8-0-26" id="h8-0-26" class="i">+    }
+</a><a href="#h8-0-27" id="h8-0-27" class="i">+
+</a><a href="#h8-0-28" id="h8-0-28" class="i">+    pub fn get_buffer(&amp;self) -&gt; &amp;Vec&lt;u8&gt; {
+</a><a href="#h8-0-29" id="h8-0-29" class="i">+        &amp;self.buffer
+</a><a href="#h8-0-30" id="h8-0-30" class="i">+    }
+</a><a href="#h8-0-31" id="h8-0-31" class="i">+
+</a><a href="#h8-0-32" id="h8-0-32" class="i">+    pub fn set_buffer(&amp;mut self, buffer: Vec&lt;u8&gt;) {
+</a><a href="#h8-0-33" id="h8-0-33" class="i">+        self.buffer = buffer;
+</a><a href="#h8-0-34" id="h8-0-34" class="i">+    }
+</a><a href="#h8-0-35" id="h8-0-35" class="i">+}
+</a><a href="#h8-0-36" id="h8-0-36" class="i">+
+</a><a href="#h8-0-37" id="h8-0-37" class="i">+#[derive(Debug, Clone)]
+</a><a href="#h8-0-38" id="h8-0-38" class="i">+pub struct ComposerModule {
+</a><a href="#h8-0-39" id="h8-0-39" class="i">+    tags: Vec&lt;(ModuleTag, ModuleTag)&gt;, // file name =&gt; file content
+</a><a href="#h8-0-40" id="h8-0-40" class="i">+}
+</a><a href="#h8-0-41" id="h8-0-41" class="i">+
+</a><a href="#h8-0-42" id="h8-0-42" class="i">+impl ComposerModule {
+</a><a href="#h8-0-43" id="h8-0-43" class="i">+    pub fn parse(buffer: Vec&lt;u8&gt;) -&gt; Result&lt;ComposerModule, Error&gt; {
+</a><a href="#h8-0-44" id="h8-0-44" class="i">+        let mut offset = 0;
+</a><a href="#h8-0-45" id="h8-0-45" class="i">+        let magic = u32::from_be_bytes([buffer[offset], buffer[offset + 1], buffer[offset + 2], buffer[offset + 3]]);
+</a><a href="#h8-0-46" id="h8-0-46" class="i">+
+</a><a href="#h8-0-47" id="h8-0-47" class="i">+        offset += 4;
+</a><a href="#h8-0-48" id="h8-0-48" class="i">+
+</a><a href="#h8-0-49" id="h8-0-49" class="i">+        if magic != 0x33c60001 {
+</a><a href="#h8-0-50" id="h8-0-50" class="i">+            return Err(Error::new(std::io::ErrorKind::InvalidData, &quot;Invalid magic&quot;));
+</a><a href="#h8-0-51" id="h8-0-51" class="i">+        }
+</a><a href="#h8-0-52" id="h8-0-52" class="i">+
+</a><a href="#h8-0-53" id="h8-0-53" class="i">+        // skip content length
+</a><a href="#h8-0-54" id="h8-0-54" class="i">+        offset += 4;
+</a><a href="#h8-0-55" id="h8-0-55" class="i">+
+</a><a href="#h8-0-56" id="h8-0-56" class="i">+        let mut tags = Vec::new();
+</a><a href="#h8-0-57" id="h8-0-57" class="i">+
+</a><a href="#h8-0-58" id="h8-0-58" class="i">+        loop {
+</a><a href="#h8-0-59" id="h8-0-59" class="i">+            if offset &gt;= buffer.len() {
+</a><a href="#h8-0-60" id="h8-0-60" class="i">+                break;
+</a><a href="#h8-0-61" id="h8-0-61" class="i">+            }
+</a><a href="#h8-0-62" id="h8-0-62" class="i">+
+</a><a href="#h8-0-63" id="h8-0-63" class="i">+            fn read_u24(buffer: &amp;Vec&lt;u8&gt;, offset: &amp;mut usize) -&gt; Result&lt;u32, Error&gt; {
+</a><a href="#h8-0-64" id="h8-0-64" class="i">+                let b1 = buffer[*offset] as u32;
+</a><a href="#h8-0-65" id="h8-0-65" class="i">+                let b2 = buffer[*offset + 1] as u32;
+</a><a href="#h8-0-66" id="h8-0-66" class="i">+                let b3 = buffer[*offset + 2] as u32;
+</a><a href="#h8-0-67" id="h8-0-67" class="i">+                *offset += 3;
+</a><a href="#h8-0-68" id="h8-0-68" class="i">+                Ok(b1 | (b2 &lt;&lt; 8) | (b3 &lt;&lt; 16))
+</a><a href="#h8-0-69" id="h8-0-69" class="i">+            }
+</a><a href="#h8-0-70" id="h8-0-70" class="i">+
+</a><a href="#h8-0-71" id="h8-0-71" class="i">+            let tag_size = read_u24(&amp;buffer, &amp;mut offset)?;
+</a><a href="#h8-0-72" id="h8-0-72" class="i">+            let tag_type = buffer[offset];
+</a><a href="#h8-0-73" id="h8-0-73" class="i">+            offset += 1;
+</a><a href="#h8-0-74" id="h8-0-74" class="i">+            let tag_buffer = buffer[offset..offset + tag_size as usize].to_vec();
+</a><a href="#h8-0-75" id="h8-0-75" class="i">+            offset += tag_size as usize;
+</a><a href="#h8-0-76" id="h8-0-76" class="i">+
+</a><a href="#h8-0-77" id="h8-0-77" class="i">+            let padding = 4 - (tag_size % 4);
+</a><a href="#h8-0-78" id="h8-0-78" class="i">+
+</a><a href="#h8-0-79" id="h8-0-79" class="i">+            if padding != 4 {
+</a><a href="#h8-0-80" id="h8-0-80" class="i">+                offset += padding as usize;
+</a><a href="#h8-0-81" id="h8-0-81" class="i">+            }
+</a><a href="#h8-0-82" id="h8-0-82" class="i">+
+</a><a href="#h8-0-83" id="h8-0-83" class="i">+            tags.push(ModuleTag::new(tag_type, tag_buffer));
+</a><a href="#h8-0-84" id="h8-0-84" class="i">+        }
+</a><a href="#h8-0-85" id="h8-0-85" class="i">+
+</a><a href="#h8-0-86" id="h8-0-86" class="i">+        let tags = tags.chunks(2).map(|chunk| {
+</a><a href="#h8-0-87" id="h8-0-87" class="i">+            (chunk[0].clone(), chunk[1].clone())
+</a><a href="#h8-0-88" id="h8-0-88" class="i">+        }).collect();
+</a><a href="#h8-0-89" id="h8-0-89" class="i">+
+</a><a href="#h8-0-90" id="h8-0-90" class="i">+        Ok(ComposerModule {
+</a><a href="#h8-0-91" id="h8-0-91" class="i">+            tags,
+</a><a href="#h8-0-92" id="h8-0-92" class="i">+        })
+</a><a href="#h8-0-93" id="h8-0-93" class="i">+    }
+</a><a href="#h8-0-94" id="h8-0-94" class="i">+
+</a><a href="#h8-0-95" id="h8-0-95" class="i">+    pub fn to_bytes(&amp;self) -&gt; Vec&lt;u8&gt; {
+</a><a href="#h8-0-96" id="h8-0-96" class="i">+        let mut tag_buffer = Vec::new();
+</a><a href="#h8-0-97" id="h8-0-97" class="i">+
+</a><a href="#h8-0-98" id="h8-0-98" class="i">+        fn write_u24(buffer: &amp;mut Vec&lt;u8&gt;, value: u32) {
+</a><a href="#h8-0-99" id="h8-0-99" class="i">+            buffer.push((value &amp; 0xff) as u8);
+</a><a href="#h8-0-100" id="h8-0-100" class="i">+            buffer.push(((value &gt;&gt; 8) &amp; 0xff) as u8);
+</a><a href="#h8-0-101" id="h8-0-101" class="i">+            buffer.push(((value &gt;&gt; 16) &amp; 0xff) as u8);
+</a><a href="#h8-0-102" id="h8-0-102" class="i">+        }
+</a><a href="#h8-0-103" id="h8-0-103" class="i">+
+</a><a href="#h8-0-104" id="h8-0-104" class="i">+        fn write_tag(buffer: &amp;mut Vec&lt;u8&gt;, tag: ModuleTag) {
+</a><a href="#h8-0-105" id="h8-0-105" class="i">+            write_u24(buffer, tag.get_size() as u32);
+</a><a href="#h8-0-106" id="h8-0-106" class="i">+            buffer.push(tag.get_tag_type());
+</a><a href="#h8-0-107" id="h8-0-107" class="i">+            buffer.extend(tag.get_buffer());
+</a><a href="#h8-0-108" id="h8-0-108" class="i">+
+</a><a href="#h8-0-109" id="h8-0-109" class="i">+            let padding = 4 - (tag.get_size() % 4);
+</a><a href="#h8-0-110" id="h8-0-110" class="i">+
+</a><a href="#h8-0-111" id="h8-0-111" class="i">+            if padding != 4 {
+</a><a href="#h8-0-112" id="h8-0-112" class="i">+                for _ in 0..padding {
+</a><a href="#h8-0-113" id="h8-0-113" class="i">+                    buffer.push(0);
+</a><a href="#h8-0-114" id="h8-0-114" class="i">+                }
+</a><a href="#h8-0-115" id="h8-0-115" class="i">+            }
+</a><a href="#h8-0-116" id="h8-0-116" class="i">+        }
+</a><a href="#h8-0-117" id="h8-0-117" class="i">+
+</a><a href="#h8-0-118" id="h8-0-118" class="i">+        for (tag1, tag2) in &amp;self.tags {
+</a><a href="#h8-0-119" id="h8-0-119" class="i">+            write_tag(&amp;mut tag_buffer, tag1.clone());
+</a><a href="#h8-0-120" id="h8-0-120" class="i">+            write_tag(&amp;mut tag_buffer, tag2.clone());
+</a><a href="#h8-0-121" id="h8-0-121" class="i">+        }
+</a><a href="#h8-0-122" id="h8-0-122" class="i">+
+</a><a href="#h8-0-123" id="h8-0-123" class="i">+        let mut buffer = Vec::new();
+</a><a href="#h8-0-124" id="h8-0-124" class="i">+
+</a><a href="#h8-0-125" id="h8-0-125" class="i">+        buffer.extend_from_slice(&amp;[0x33, 0xc6, 0, 1]);
+</a><a href="#h8-0-126" id="h8-0-126" class="i">+        buffer.extend_from_slice(&amp;(tag_buffer.len() as u32).to_le_bytes());
+</a><a href="#h8-0-127" id="h8-0-127" class="i">+        buffer.extend(tag_buffer);
+</a><a href="#h8-0-128" id="h8-0-128" class="i">+
+</a><a href="#h8-0-129" id="h8-0-129" class="i">+        buffer
+</a><a href="#h8-0-130" id="h8-0-130" class="i">+    }
+</a><a href="#h8-0-131" id="h8-0-131" class="i">+
+</a><a href="#h8-0-132" id="h8-0-132" class="i">+    pub fn get_tags(&amp;self) -&gt; Vec&lt;(ModuleTag, ModuleTag)&gt; {
+</a><a href="#h8-0-133" id="h8-0-133" class="i">+        self.tags.clone()
+</a><a href="#h8-0-134" id="h8-0-134" class="i">+    }
+</a><a href="#h8-0-135" id="h8-0-135" class="i">+
+</a><a href="#h8-0-136" id="h8-0-136" class="i">+    pub fn set_tags(&amp;mut self, tags: Vec&lt;(ModuleTag, ModuleTag)&gt;) {
+</a><a href="#h8-0-137" id="h8-0-137" class="i">+        self.tags = tags;
+</a><a href="#h8-0-138" id="h8-0-138" class="i">+    }
+</a><a href="#h8-0-139" id="h8-0-139" class="i">+}
+</a><a href="#h8-0-140" id="h8-0-140" class="i">+
+</a><b>diff --git a/<a id="h9" href="../file/native/rust/src/modules/util/mod.rs.html">native/rust/src/modules/util/mod.rs</a> b/<a href="../file/native/rust/src/modules/util/mod.rs.html">native/rust/src/modules/util/mod.rs</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -0,0 +1 @@
+</a><a href="#h9-0-0" id="h9-0-0" class="i">+pub mod composer_utils;</a><a href="#h9-0-1" id="h9-0-1" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

@@ -20,233 +20,247 @@
 </div>
 <hr/>
 <div id="content">
-<p> ComposerHooks.kt (9537B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt">raw</a></p><hr/><pre id="blob">
+<p> ComposerHooks.kt (10126B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core.features.impl.experiments
 <a href="#l2" class="line" id="l2">      2</a> 
-<a href="#l3" class="line" id="l3">      3</a> import android.os.ParcelFileDescriptor
+<a href="#l3" class="line" id="l3">      3</a> import android.app.Activity
 <a href="#l4" class="line" id="l4">      4</a> import android.view.View
 <a href="#l5" class="line" id="l5">      5</a> import android.widget.FrameLayout
-<a href="#l6" class="line" id="l6">      6</a> import androidx.compose.foundation.layout.*
-<a href="#l7" class="line" id="l7">      7</a> import androidx.compose.foundation.rememberScrollState
-<a href="#l8" class="line" id="l8">      8</a> import androidx.compose.foundation.verticalScroll
-<a href="#l9" class="line" id="l9">      9</a> import androidx.compose.material.icons.Icons
-<a href="#l10" class="line" id="l10">     10</a> import androidx.compose.material.icons.filled.BugReport
-<a href="#l11" class="line" id="l11">     11</a> import androidx.compose.material3.*
-<a href="#l12" class="line" id="l12">     12</a> import androidx.compose.runtime.getValue
-<a href="#l13" class="line" id="l13">     13</a> import androidx.compose.runtime.mutableStateOf
-<a href="#l14" class="line" id="l14">     14</a> import androidx.compose.runtime.remember
-<a href="#l15" class="line" id="l15">     15</a> import androidx.compose.runtime.setValue
-<a href="#l16" class="line" id="l16">     16</a> import androidx.compose.ui.Modifier
-<a href="#l17" class="line" id="l17">     17</a> import androidx.compose.ui.text.TextStyle
-<a href="#l18" class="line" id="l18">     18</a> import androidx.compose.ui.text.font.FontWeight
-<a href="#l19" class="line" id="l19">     19</a> import androidx.compose.ui.unit.dp
-<a href="#l20" class="line" id="l20">     20</a> import androidx.compose.ui.unit.sp
-<a href="#l21" class="line" id="l21">     21</a> import kotlinx.coroutines.launch
-<a href="#l22" class="line" id="l22">     22</a> import me.rhunk.snapenhance.common.bridge.FileHandleScope
-<a href="#l23" class="line" id="l23">     23</a> import me.rhunk.snapenhance.common.bridge.toWrapper
-<a href="#l24" class="line" id="l24">     24</a> import me.rhunk.snapenhance.common.ui.AppMaterialTheme
-<a href="#l25" class="line" id="l25">     25</a> import me.rhunk.snapenhance.common.ui.createComposeAlertDialog
-<a href="#l26" class="line" id="l26">     26</a> import me.rhunk.snapenhance.common.ui.createComposeView
-<a href="#l27" class="line" id="l27">     27</a> import me.rhunk.snapenhance.core.features.Feature
-<a href="#l28" class="line" id="l28">     28</a> import me.rhunk.snapenhance.core.features.impl.downloader.MediaDownloader
-<a href="#l29" class="line" id="l29">     29</a> import me.rhunk.snapenhance.core.util.hook.HookStage
-<a href="#l30" class="line" id="l30">     30</a> import me.rhunk.snapenhance.core.util.hook.Hooker
-<a href="#l31" class="line" id="l31">     31</a> import me.rhunk.snapenhance.core.util.hook.hook
-<a href="#l32" class="line" id="l32">     32</a> import me.rhunk.snapenhance.core.wrapper.impl.composer.ComposerMarshaller
-<a href="#l33" class="line" id="l33">     33</a> import me.rhunk.snapenhance.nativelib.NativeLib
-<a href="#l34" class="line" id="l34">     34</a> import java.lang.reflect.Proxy
-<a href="#l35" class="line" id="l35">     35</a> import kotlin.math.absoluteValue
-<a href="#l36" class="line" id="l36">     36</a> import kotlin.random.Random
-<a href="#l37" class="line" id="l37">     37</a> 
-<a href="#l38" class="line" id="l38">     38</a> class ComposerHooks: Feature(&quot;ComposerHooks&quot;) {
-<a href="#l39" class="line" id="l39">     39</a>     private val config by lazy { context.config.experimental.nativeHooks.composerHooks }
-<a href="#l40" class="line" id="l40">     40</a>     private val getImportsFunctionName = Random.nextLong().absoluteValue.toString(16)
-<a href="#l41" class="line" id="l41">     41</a> 
-<a href="#l42" class="line" id="l42">     42</a>     private val composerConsole by lazy {
-<a href="#l43" class="line" id="l43">     43</a>         createComposeAlertDialog(context.mainActivity!!) {
-<a href="#l44" class="line" id="l44">     44</a>             Column(
-<a href="#l45" class="line" id="l45">     45</a>                 modifier = Modifier
-<a href="#l46" class="line" id="l46">     46</a>                     .fillMaxSize()
-<a href="#l47" class="line" id="l47">     47</a>                     .padding(16.dp),
-<a href="#l48" class="line" id="l48">     48</a>                 verticalArrangement = Arrangement.spacedBy(16.dp)
-<a href="#l49" class="line" id="l49">     49</a>             ) {
-<a href="#l50" class="line" id="l50">     50</a>                 var result by remember { mutableStateOf(&quot;&quot;) }
-<a href="#l51" class="line" id="l51">     51</a>                 var codeContent by remember { mutableStateOf(&quot;&quot;) }
-<a href="#l52" class="line" id="l52">     52</a> 
-<a href="#l53" class="line" id="l53">     53</a>                 Text(&quot;Composer Console&quot;, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-<a href="#l54" class="line" id="l54">     54</a> 
-<a href="#l55" class="line" id="l55">     55</a>                 TextField(
-<a href="#l56" class="line" id="l56">     56</a>                     modifier = Modifier.fillMaxWidth(),
-<a href="#l57" class="line" id="l57">     57</a>                     textStyle = TextStyle.Default.copy(fontSize = 12.sp),
-<a href="#l58" class="line" id="l58">     58</a>                     value = codeContent,
-<a href="#l59" class="line" id="l59">     59</a>                     placeholder = { Text(&quot;Enter your JS code here:&quot;) },
-<a href="#l60" class="line" id="l60">     60</a>                     onValueChange = {
-<a href="#l61" class="line" id="l61">     61</a>                         codeContent = it
-<a href="#l62" class="line" id="l62">     62</a>                     }
-<a href="#l63" class="line" id="l63">     63</a>                 )
-<a href="#l64" class="line" id="l64">     64</a>                 Button(
-<a href="#l65" class="line" id="l65">     65</a>                     modifier = Modifier.fillMaxWidth(),
-<a href="#l66" class="line" id="l66">     66</a>                     onClick = {
-<a href="#l67" class="line" id="l67">     67</a>                         context.log.verbose(&quot;input: $codeContent&quot;, &quot;ComposerConsole&quot;)
-<a href="#l68" class="line" id="l68">     68</a>                         result = &quot;Running...&quot;
-<a href="#l69" class="line" id="l69">     69</a>                         context.coroutineScope.launch {
-<a href="#l70" class="line" id="l70">     70</a>                             result = (context.native.composerEval(&quot;&quot;&quot;
-<a href="#l71" class="line" id="l71">     71</a>                                 (() =&gt; {
-<a href="#l72" class="line" id="l72">     72</a>                                     try {
-<a href="#l73" class="line" id="l73">     73</a>                                         $codeContent
-<a href="#l74" class="line" id="l74">     74</a>                                     } catch (e) {
-<a href="#l75" class="line" id="l75">     75</a>                                         return e.toString()
-<a href="#l76" class="line" id="l76">     76</a>                                     }
-<a href="#l77" class="line" id="l77">     77</a>                                 })()
-<a href="#l78" class="line" id="l78">     78</a>                             &quot;&quot;&quot;.trimIndent()) ?: &quot;(no result)&quot;).also {
-<a href="#l79" class="line" id="l79">     79</a>                                 context.log.verbose(&quot;result: $it&quot;, &quot;ComposerConsole&quot;)
-<a href="#l80" class="line" id="l80">     80</a>                             }
-<a href="#l81" class="line" id="l81">     81</a>                         }
-<a href="#l82" class="line" id="l82">     82</a>                     }
-<a href="#l83" class="line" id="l83">     83</a>                 ) {
-<a href="#l84" class="line" id="l84">     84</a>                     Text(&quot;Run&quot;)
-<a href="#l85" class="line" id="l85">     85</a>                 }
-<a href="#l86" class="line" id="l86">     86</a> 
-<a href="#l87" class="line" id="l87">     87</a>                 Column(
-<a href="#l88" class="line" id="l88">     88</a>                     modifier = Modifier.verticalScroll(rememberScrollState())
-<a href="#l89" class="line" id="l89">     89</a>                 ) {
-<a href="#l90" class="line" id="l90">     90</a>                     Text(result)
-<a href="#l91" class="line" id="l91">     91</a>                 }
-<a href="#l92" class="line" id="l92">     92</a>             }
-<a href="#l93" class="line" id="l93">     93</a>         }
-<a href="#l94" class="line" id="l94">     94</a>     }
-<a href="#l95" class="line" id="l95">     95</a> 
-<a href="#l96" class="line" id="l96">     96</a>     private val composerConsoleTag = Random.nextLong().toString()
-<a href="#l97" class="line" id="l97">     97</a> 
-<a href="#l98" class="line" id="l98">     98</a>     private fun injectConsole() {
-<a href="#l99" class="line" id="l99">     99</a>         val root = context.mainActivity!!.findViewById&lt;FrameLayout&gt;(android.R.id.content)
-<a href="#l100" class="line" id="l100">    100</a>         root.post {
-<a href="#l101" class="line" id="l101">    101</a>             if (root.findViewWithTag&lt;View&gt;(composerConsoleTag) != null) return@post
-<a href="#l102" class="line" id="l102">    102</a>             root.addView(createComposeView(root.context) {
-<a href="#l103" class="line" id="l103">    103</a>                 AppMaterialTheme {
-<a href="#l104" class="line" id="l104">    104</a>                     FilledIconButton(
-<a href="#l105" class="line" id="l105">    105</a>                         onClick = {
-<a href="#l106" class="line" id="l106">    106</a>                             composerConsole.show()
-<a href="#l107" class="line" id="l107">    107</a>                         },
-<a href="#l108" class="line" id="l108">    108</a>                         modifier = Modifier.padding(top = 100.dp, end = 16.dp)
-<a href="#l109" class="line" id="l109">    109</a>                     ) {
-<a href="#l110" class="line" id="l110">    110</a>                         Icon(Icons.Default.BugReport, contentDescription = &quot;Debug Console&quot;)
-<a href="#l111" class="line" id="l111">    111</a>                     }
-<a href="#l112" class="line" id="l112">    112</a>                 }
-<a href="#l113" class="line" id="l113">    113</a>             }.apply {
-<a href="#l114" class="line" id="l114">    114</a>                 tag = composerConsoleTag
-<a href="#l115" class="line" id="l115">    115</a>                 layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
-<a href="#l116" class="line" id="l116">    116</a>                     gravity = android.view.Gravity.TOP or android.view.Gravity.END
-<a href="#l117" class="line" id="l117">    117</a>                 }
-<a href="#l118" class="line" id="l118">    118</a>             })
-<a href="#l119" class="line" id="l119">    119</a>         }
-<a href="#l120" class="line" id="l120">    120</a>     }
-<a href="#l121" class="line" id="l121">    121</a> 
-<a href="#l122" class="line" id="l122">    122</a>     private fun newComposerFunction(block: ComposerMarshaller.() -&gt; Boolean): Any? {
-<a href="#l123" class="line" id="l123">    123</a>         val composerFunctionClass = findClass(&quot;com.snap.composer.callable.ComposerFunction&quot;)
-<a href="#l124" class="line" id="l124">    124</a>         return Proxy.newProxyInstance(
-<a href="#l125" class="line" id="l125">    125</a>             composerFunctionClass.classLoader,
-<a href="#l126" class="line" id="l126">    126</a>             arrayOf(composerFunctionClass)
-<a href="#l127" class="line" id="l127">    127</a>         ) { _, method, args -&gt;
-<a href="#l128" class="line" id="l128">    128</a>             if (method.name != &quot;perform&quot;) return@newProxyInstance null
-<a href="#l129" class="line" id="l129">    129</a>             block(ComposerMarshaller(args?.get(0) ?: return@newProxyInstance false))
+<a href="#l6" class="line" id="l6">      6</a> import androidx.compose.foundation.layout.Arrangement
+<a href="#l7" class="line" id="l7">      7</a> import androidx.compose.foundation.layout.Column
+<a href="#l8" class="line" id="l8">      8</a> import androidx.compose.foundation.layout.fillMaxSize
+<a href="#l9" class="line" id="l9">      9</a> import androidx.compose.foundation.layout.fillMaxWidth
+<a href="#l10" class="line" id="l10">     10</a> import androidx.compose.foundation.layout.padding
+<a href="#l11" class="line" id="l11">     11</a> import androidx.compose.foundation.rememberScrollState
+<a href="#l12" class="line" id="l12">     12</a> import androidx.compose.foundation.verticalScroll
+<a href="#l13" class="line" id="l13">     13</a> import androidx.compose.material.icons.Icons
+<a href="#l14" class="line" id="l14">     14</a> import androidx.compose.material.icons.filled.BugReport
+<a href="#l15" class="line" id="l15">     15</a> import androidx.compose.material3.Button
+<a href="#l16" class="line" id="l16">     16</a> import androidx.compose.material3.FilledIconButton
+<a href="#l17" class="line" id="l17">     17</a> import androidx.compose.material3.Icon
+<a href="#l18" class="line" id="l18">     18</a> import androidx.compose.material3.Text
+<a href="#l19" class="line" id="l19">     19</a> import androidx.compose.material3.TextField
+<a href="#l20" class="line" id="l20">     20</a> import androidx.compose.runtime.getValue
+<a href="#l21" class="line" id="l21">     21</a> import androidx.compose.runtime.mutableStateOf
+<a href="#l22" class="line" id="l22">     22</a> import androidx.compose.runtime.remember
+<a href="#l23" class="line" id="l23">     23</a> import androidx.compose.runtime.setValue
+<a href="#l24" class="line" id="l24">     24</a> import androidx.compose.ui.Modifier
+<a href="#l25" class="line" id="l25">     25</a> import androidx.compose.ui.text.TextStyle
+<a href="#l26" class="line" id="l26">     26</a> import androidx.compose.ui.text.font.FontWeight
+<a href="#l27" class="line" id="l27">     27</a> import androidx.compose.ui.unit.dp
+<a href="#l28" class="line" id="l28">     28</a> import androidx.compose.ui.unit.sp
+<a href="#l29" class="line" id="l29">     29</a> import kotlinx.coroutines.launch
+<a href="#l30" class="line" id="l30">     30</a> import me.rhunk.snapenhance.common.bridge.FileHandleScope
+<a href="#l31" class="line" id="l31">     31</a> import me.rhunk.snapenhance.common.bridge.toWrapper
+<a href="#l32" class="line" id="l32">     32</a> import me.rhunk.snapenhance.common.ui.AppMaterialTheme
+<a href="#l33" class="line" id="l33">     33</a> import me.rhunk.snapenhance.common.ui.createComposeAlertDialog
+<a href="#l34" class="line" id="l34">     34</a> import me.rhunk.snapenhance.common.ui.createComposeView
+<a href="#l35" class="line" id="l35">     35</a> import me.rhunk.snapenhance.core.features.Feature
+<a href="#l36" class="line" id="l36">     36</a> import me.rhunk.snapenhance.core.features.impl.downloader.MediaDownloader
+<a href="#l37" class="line" id="l37">     37</a> import me.rhunk.snapenhance.core.util.hook.HookStage
+<a href="#l38" class="line" id="l38">     38</a> import me.rhunk.snapenhance.core.util.hook.Hooker
+<a href="#l39" class="line" id="l39">     39</a> import me.rhunk.snapenhance.core.util.hook.hook
+<a href="#l40" class="line" id="l40">     40</a> import me.rhunk.snapenhance.core.wrapper.impl.composer.ComposerMarshaller
+<a href="#l41" class="line" id="l41">     41</a> import me.rhunk.snapenhance.nativelib.NativeLib
+<a href="#l42" class="line" id="l42">     42</a> import java.lang.reflect.Proxy
+<a href="#l43" class="line" id="l43">     43</a> import kotlin.math.absoluteValue
+<a href="#l44" class="line" id="l44">     44</a> import kotlin.random.Random
+<a href="#l45" class="line" id="l45">     45</a> 
+<a href="#l46" class="line" id="l46">     46</a> class ComposerHooks: Feature(&quot;ComposerHooks&quot;) {
+<a href="#l47" class="line" id="l47">     47</a>     private val config by lazy { context.config.experimental.nativeHooks.composerHooks }
+<a href="#l48" class="line" id="l48">     48</a>     private val getImportsFunctionName = Random.nextLong().absoluteValue.toString(16)
+<a href="#l49" class="line" id="l49">     49</a> 
+<a href="#l50" class="line" id="l50">     50</a>     private val composerConsole by lazy {
+<a href="#l51" class="line" id="l51">     51</a>         createComposeAlertDialog(context.mainActivity!!) {
+<a href="#l52" class="line" id="l52">     52</a>             Column(
+<a href="#l53" class="line" id="l53">     53</a>                 modifier = Modifier
+<a href="#l54" class="line" id="l54">     54</a>                     .fillMaxSize()
+<a href="#l55" class="line" id="l55">     55</a>                     .padding(16.dp),
+<a href="#l56" class="line" id="l56">     56</a>                 verticalArrangement = Arrangement.spacedBy(16.dp)
+<a href="#l57" class="line" id="l57">     57</a>             ) {
+<a href="#l58" class="line" id="l58">     58</a>                 var result by remember { mutableStateOf(&quot;&quot;) }
+<a href="#l59" class="line" id="l59">     59</a>                 var codeContent by remember { mutableStateOf(&quot;return 1 + 2&quot;) }
+<a href="#l60" class="line" id="l60">     60</a> 
+<a href="#l61" class="line" id="l61">     61</a>                 Text(&quot;Composer Console&quot;, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+<a href="#l62" class="line" id="l62">     62</a> 
+<a href="#l63" class="line" id="l63">     63</a>                 TextField(
+<a href="#l64" class="line" id="l64">     64</a>                     modifier = Modifier.fillMaxWidth(),
+<a href="#l65" class="line" id="l65">     65</a>                     textStyle = TextStyle.Default.copy(fontSize = 12.sp),
+<a href="#l66" class="line" id="l66">     66</a>                     value = codeContent,
+<a href="#l67" class="line" id="l67">     67</a>                     placeholder = { Text(&quot;Enter your JS code here:&quot;) },
+<a href="#l68" class="line" id="l68">     68</a>                     onValueChange = {
+<a href="#l69" class="line" id="l69">     69</a>                         codeContent = it
+<a href="#l70" class="line" id="l70">     70</a>                     }
+<a href="#l71" class="line" id="l71">     71</a>                 )
+<a href="#l72" class="line" id="l72">     72</a>                 Button(
+<a href="#l73" class="line" id="l73">     73</a>                     modifier = Modifier.fillMaxWidth(),
+<a href="#l74" class="line" id="l74">     74</a>                     onClick = {
+<a href="#l75" class="line" id="l75">     75</a>                         context.log.verbose(&quot;input: $codeContent&quot;, &quot;ComposerConsole&quot;)
+<a href="#l76" class="line" id="l76">     76</a>                         result = &quot;Running...&quot;
+<a href="#l77" class="line" id="l77">     77</a>                         context.coroutineScope.launch {
+<a href="#l78" class="line" id="l78">     78</a>                             result = (context.native.composerEval(&quot;&quot;&quot;
+<a href="#l79" class="line" id="l79">     79</a>                                 (() =&gt; {
+<a href="#l80" class="line" id="l80">     80</a>                                     try {
+<a href="#l81" class="line" id="l81">     81</a>                                         $codeContent
+<a href="#l82" class="line" id="l82">     82</a>                                     } catch (e) {
+<a href="#l83" class="line" id="l83">     83</a>                                         return e.toString()
+<a href="#l84" class="line" id="l84">     84</a>                                     }
+<a href="#l85" class="line" id="l85">     85</a>                                 })()
+<a href="#l86" class="line" id="l86">     86</a>                             &quot;&quot;&quot;.trimIndent()) ?: &quot;(no result)&quot;).also {
+<a href="#l87" class="line" id="l87">     87</a>                                 context.log.verbose(&quot;result: $it&quot;, &quot;ComposerConsole&quot;)
+<a href="#l88" class="line" id="l88">     88</a>                             }
+<a href="#l89" class="line" id="l89">     89</a>                         }
+<a href="#l90" class="line" id="l90">     90</a>                     }
+<a href="#l91" class="line" id="l91">     91</a>                 ) {
+<a href="#l92" class="line" id="l92">     92</a>                     Text(&quot;Run&quot;)
+<a href="#l93" class="line" id="l93">     93</a>                 }
+<a href="#l94" class="line" id="l94">     94</a> 
+<a href="#l95" class="line" id="l95">     95</a>                 Column(
+<a href="#l96" class="line" id="l96">     96</a>                     modifier = Modifier.verticalScroll(rememberScrollState())
+<a href="#l97" class="line" id="l97">     97</a>                 ) {
+<a href="#l98" class="line" id="l98">     98</a>                     Text(result)
+<a href="#l99" class="line" id="l99">     99</a>                 }
+<a href="#l100" class="line" id="l100">    100</a>             }
+<a href="#l101" class="line" id="l101">    101</a>         }
+<a href="#l102" class="line" id="l102">    102</a>     }
+<a href="#l103" class="line" id="l103">    103</a> 
+<a href="#l104" class="line" id="l104">    104</a>     private val composerConsoleTag = Random.nextLong().toString()
+<a href="#l105" class="line" id="l105">    105</a> 
+<a href="#l106" class="line" id="l106">    106</a>     private fun injectConsole(activity: Activity) {
+<a href="#l107" class="line" id="l107">    107</a>         val root = activity.findViewById&lt;FrameLayout&gt;(android.R.id.content) ?: run {
+<a href="#l108" class="line" id="l108">    108</a>             context.log.warn(&quot;Unable to find root view. Can&#39;t inject console.&quot;)
+<a href="#l109" class="line" id="l109">    109</a>             return
+<a href="#l110" class="line" id="l110">    110</a>         }
+<a href="#l111" class="line" id="l111">    111</a>         root.post {
+<a href="#l112" class="line" id="l112">    112</a>             if (root.findViewWithTag&lt;View&gt;(composerConsoleTag) != null) return@post
+<a href="#l113" class="line" id="l113">    113</a>             root.addView(createComposeView(root.context) {
+<a href="#l114" class="line" id="l114">    114</a>                 AppMaterialTheme {
+<a href="#l115" class="line" id="l115">    115</a>                     FilledIconButton(
+<a href="#l116" class="line" id="l116">    116</a>                         onClick = {
+<a href="#l117" class="line" id="l117">    117</a>                             composerConsole.show()
+<a href="#l118" class="line" id="l118">    118</a>                         },
+<a href="#l119" class="line" id="l119">    119</a>                         modifier = Modifier.padding(top = 100.dp, end = 16.dp)
+<a href="#l120" class="line" id="l120">    120</a>                     ) {
+<a href="#l121" class="line" id="l121">    121</a>                         Icon(Icons.Default.BugReport, contentDescription = &quot;Debug Console&quot;)
+<a href="#l122" class="line" id="l122">    122</a>                     }
+<a href="#l123" class="line" id="l123">    123</a>                 }
+<a href="#l124" class="line" id="l124">    124</a>             }.apply {
+<a href="#l125" class="line" id="l125">    125</a>                 tag = composerConsoleTag
+<a href="#l126" class="line" id="l126">    126</a>                 layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
+<a href="#l127" class="line" id="l127">    127</a>                     gravity = android.view.Gravity.TOP or android.view.Gravity.END
+<a href="#l128" class="line" id="l128">    128</a>                 }
+<a href="#l129" class="line" id="l129">    129</a>             })
 <a href="#l130" class="line" id="l130">    130</a>         }
 <a href="#l131" class="line" id="l131">    131</a>     }
 <a href="#l132" class="line" id="l132">    132</a> 
-<a href="#l133" class="line" id="l133">    133</a>     @Suppress(&quot;UNCHECKED_CAST&quot;)
-<a href="#l134" class="line" id="l134">    134</a>     override fun init() {
-<a href="#l135" class="line" id="l135">    135</a>         if (config.globalState != true) return
-<a href="#l136" class="line" id="l136">    136</a> 
-<a href="#l137" class="line" id="l137">    137</a>         val importedFunctions = mutableMapOf&lt;String, Any?&gt;()
-<a href="#l138" class="line" id="l138">    138</a> 
-<a href="#l139" class="line" id="l139">    139</a>         fun composerFunction(name: String, block: ComposerMarshaller.() -&gt; Unit) {
-<a href="#l140" class="line" id="l140">    140</a>             importedFunctions[name] = newComposerFunction {
-<a href="#l141" class="line" id="l141">    141</a>                 block(this)
-<a href="#l142" class="line" id="l142">    142</a>                 true
-<a href="#l143" class="line" id="l143">    143</a>             }
-<a href="#l144" class="line" id="l144">    144</a>         }
-<a href="#l145" class="line" id="l145">    145</a> 
-<a href="#l146" class="line" id="l146">    146</a>         composerFunction(&quot;getConfig&quot;) {
-<a href="#l147" class="line" id="l147">    147</a>             pushUntyped(mapOf&lt;String, Any&gt;(
-<a href="#l148" class="line" id="l148">    148</a>                 &quot;operaDownloadButton&quot; to context.config.downloader.operaDownloadButton.get(),
-<a href="#l149" class="line" id="l149">    149</a>                 &quot;bypassCameraRollLimit&quot; to config.bypassCameraRollLimit.get(),
-<a href="#l150" class="line" id="l150">    150</a>                 &quot;showFirstCreatedUsername&quot; to config.showFirstCreatedUsername.get(),
-<a href="#l151" class="line" id="l151">    151</a>                 &quot;composerLogs&quot; to config.composerLogs.get()
-<a href="#l152" class="line" id="l152">    152</a>             ))
-<a href="#l153" class="line" id="l153">    153</a>         }
-<a href="#l154" class="line" id="l154">    154</a> 
-<a href="#l155" class="line" id="l155">    155</a>         composerFunction(&quot;showToast&quot;) {
-<a href="#l156" class="line" id="l156">    156</a>             if (getSize() &lt; 1) return@composerFunction
-<a href="#l157" class="line" id="l157">    157</a>             context.shortToast(getUntyped(0) as? String ?: return@composerFunction)
-<a href="#l158" class="line" id="l158">    158</a>         }
-<a href="#l159" class="line" id="l159">    159</a> 
-<a href="#l160" class="line" id="l160">    160</a>         composerFunction(&quot;downloadLastOperaMedia&quot;) {
-<a href="#l161" class="line" id="l161">    161</a>             context.feature(MediaDownloader::class).downloadLastOperaMediaAsync(getUntyped(0) == true)
-<a href="#l162" class="line" id="l162">    162</a>         }
-<a href="#l163" class="line" id="l163">    163</a> 
-<a href="#l164" class="line" id="l164">    164</a>         composerFunction(&quot;getFriendInfoByUsername&quot;) {
-<a href="#l165" class="line" id="l165">    165</a>             if (getSize() &lt; 1) return@composerFunction
-<a href="#l166" class="line" id="l166">    166</a>             val username = getUntyped(0) as? String ?: return@composerFunction
-<a href="#l167" class="line" id="l167">    167</a>             runCatching {
-<a href="#l168" class="line" id="l168">    168</a>                 pushUntyped(context.database.getFriendInfoByUsername(username)?.let {
-<a href="#l169" class="line" id="l169">    169</a>                     context.gson.toJson(it)
-<a href="#l170" class="line" id="l170">    170</a>                 })
-<a href="#l171" class="line" id="l171">    171</a>             }.onFailure {
-<a href="#l172" class="line" id="l172">    172</a>                 pushUntyped(null)
-<a href="#l173" class="line" id="l173">    173</a>             }
-<a href="#l174" class="line" id="l174">    174</a>         }
-<a href="#l175" class="line" id="l175">    175</a> 
-<a href="#l176" class="line" id="l176">    176</a>         composerFunction(&quot;log&quot;) {
-<a href="#l177" class="line" id="l177">    177</a>             if (getSize() &lt; 2) return@composerFunction
-<a href="#l178" class="line" id="l178">    178</a>             val logLevel = getUntyped(0) as? String ?: return@composerFunction
-<a href="#l179" class="line" id="l179">    179</a>             val message = getUntyped(1) as? String ?: return@composerFunction
-<a href="#l180" class="line" id="l180">    180</a> 
-<a href="#l181" class="line" id="l181">    181</a>             val tag = &quot;ComposerLogs&quot;
-<a href="#l182" class="line" id="l182">    182</a> 
-<a href="#l183" class="line" id="l183">    183</a>             when (logLevel) {
-<a href="#l184" class="line" id="l184">    184</a>                 &quot;log&quot; -&gt; context.log.verbose(message, tag)
-<a href="#l185" class="line" id="l185">    185</a>                 &quot;debug&quot; -&gt; context.log.debug(message, tag)
-<a href="#l186" class="line" id="l186">    186</a>                 &quot;info&quot; -&gt; context.log.info(message, tag)
-<a href="#l187" class="line" id="l187">    187</a>                 &quot;warn&quot; -&gt; context.log.warn(message, tag)
-<a href="#l188" class="line" id="l188">    188</a>                 &quot;error&quot; -&gt; context.log.error(message, tag)
-<a href="#l189" class="line" id="l189">    189</a>             }
-<a href="#l190" class="line" id="l190">    190</a>         }
+<a href="#l133" class="line" id="l133">    133</a>     private fun newComposerFunction(block: ComposerMarshaller.() -&gt; Boolean): Any? {
+<a href="#l134" class="line" id="l134">    134</a>         val composerFunctionClass = findClass(&quot;com.snap.composer.callable.ComposerFunction&quot;)
+<a href="#l135" class="line" id="l135">    135</a>         return Proxy.newProxyInstance(
+<a href="#l136" class="line" id="l136">    136</a>             composerFunctionClass.classLoader,
+<a href="#l137" class="line" id="l137">    137</a>             arrayOf(composerFunctionClass)
+<a href="#l138" class="line" id="l138">    138</a>         ) { _, method, args -&gt;
+<a href="#l139" class="line" id="l139">    139</a>             if (method.name != &quot;perform&quot;) return@newProxyInstance null
+<a href="#l140" class="line" id="l140">    140</a>             block(ComposerMarshaller(args?.get(0) ?: return@newProxyInstance false))
+<a href="#l141" class="line" id="l141">    141</a>         }
+<a href="#l142" class="line" id="l142">    142</a>     }
+<a href="#l143" class="line" id="l143">    143</a> 
+<a href="#l144" class="line" id="l144">    144</a>     @Suppress(&quot;UNCHECKED_CAST&quot;)
+<a href="#l145" class="line" id="l145">    145</a>     override fun init() {
+<a href="#l146" class="line" id="l146">    146</a>         if (config.globalState != true) return
+<a href="#l147" class="line" id="l147">    147</a> 
+<a href="#l148" class="line" id="l148">    148</a>         val importedFunctions = mutableMapOf&lt;String, Any?&gt;()
+<a href="#l149" class="line" id="l149">    149</a> 
+<a href="#l150" class="line" id="l150">    150</a>         fun composerFunction(name: String, block: ComposerMarshaller.() -&gt; Unit) {
+<a href="#l151" class="line" id="l151">    151</a>             importedFunctions[name] = newComposerFunction {
+<a href="#l152" class="line" id="l152">    152</a>                 block(this)
+<a href="#l153" class="line" id="l153">    153</a>                 true
+<a href="#l154" class="line" id="l154">    154</a>             }
+<a href="#l155" class="line" id="l155">    155</a>         }
+<a href="#l156" class="line" id="l156">    156</a> 
+<a href="#l157" class="line" id="l157">    157</a>         composerFunction(&quot;getConfig&quot;) {
+<a href="#l158" class="line" id="l158">    158</a>             pushUntyped(mapOf&lt;String, Any&gt;(
+<a href="#l159" class="line" id="l159">    159</a>                 &quot;operaDownloadButton&quot; to context.config.downloader.operaDownloadButton.get(),
+<a href="#l160" class="line" id="l160">    160</a>                 &quot;bypassCameraRollLimit&quot; to config.bypassCameraRollLimit.get(),
+<a href="#l161" class="line" id="l161">    161</a>                 &quot;showFirstCreatedUsername&quot; to config.showFirstCreatedUsername.get(),
+<a href="#l162" class="line" id="l162">    162</a>                 &quot;composerLogs&quot; to config.composerLogs.get()
+<a href="#l163" class="line" id="l163">    163</a>             ))
+<a href="#l164" class="line" id="l164">    164</a>         }
+<a href="#l165" class="line" id="l165">    165</a> 
+<a href="#l166" class="line" id="l166">    166</a>         composerFunction(&quot;showToast&quot;) {
+<a href="#l167" class="line" id="l167">    167</a>             if (getSize() &lt; 1) return@composerFunction
+<a href="#l168" class="line" id="l168">    168</a>             context.shortToast(getUntyped(0) as? String ?: return@composerFunction)
+<a href="#l169" class="line" id="l169">    169</a>         }
+<a href="#l170" class="line" id="l170">    170</a> 
+<a href="#l171" class="line" id="l171">    171</a>         composerFunction(&quot;downloadLastOperaMedia&quot;) {
+<a href="#l172" class="line" id="l172">    172</a>             context.feature(MediaDownloader::class).downloadLastOperaMediaAsync(getUntyped(0) == true)
+<a href="#l173" class="line" id="l173">    173</a>         }
+<a href="#l174" class="line" id="l174">    174</a> 
+<a href="#l175" class="line" id="l175">    175</a>         composerFunction(&quot;getFriendInfoByUsername&quot;) {
+<a href="#l176" class="line" id="l176">    176</a>             if (getSize() &lt; 1) return@composerFunction
+<a href="#l177" class="line" id="l177">    177</a>             val username = getUntyped(0) as? String ?: return@composerFunction
+<a href="#l178" class="line" id="l178">    178</a>             runCatching {
+<a href="#l179" class="line" id="l179">    179</a>                 pushUntyped(context.database.getFriendInfoByUsername(username)?.let {
+<a href="#l180" class="line" id="l180">    180</a>                     context.gson.toJson(it)
+<a href="#l181" class="line" id="l181">    181</a>                 })
+<a href="#l182" class="line" id="l182">    182</a>             }.onFailure {
+<a href="#l183" class="line" id="l183">    183</a>                 pushUntyped(null)
+<a href="#l184" class="line" id="l184">    184</a>             }
+<a href="#l185" class="line" id="l185">    185</a>         }
+<a href="#l186" class="line" id="l186">    186</a> 
+<a href="#l187" class="line" id="l187">    187</a>         composerFunction(&quot;log&quot;) {
+<a href="#l188" class="line" id="l188">    188</a>             if (getSize() &lt; 2) return@composerFunction
+<a href="#l189" class="line" id="l189">    189</a>             val logLevel = getUntyped(0) as? String ?: return@composerFunction
+<a href="#l190" class="line" id="l190">    190</a>             val message = getUntyped(1) as? String ?: return@composerFunction
 <a href="#l191" class="line" id="l191">    191</a> 
-<a href="#l192" class="line" id="l192">    192</a>         fun loadHooks() {
-<a href="#l193" class="line" id="l193">    193</a>             if (!NativeLib.initialized) {
-<a href="#l194" class="line" id="l194">    194</a>                 context.log.error(&quot;ComposerHooks cannot be loaded without NativeLib&quot;)
-<a href="#l195" class="line" id="l195">    195</a>                 return
-<a href="#l196" class="line" id="l196">    196</a>             }
-<a href="#l197" class="line" id="l197">    197</a>             val loaderScript = runCatching {
-<a href="#l198" class="line" id="l198">    198</a>                 context.fileHandlerManager.getFileHandle(FileHandleScope.COMPOSER.key, &quot;loader.js&quot;).toWrapper().readBytes().toString(Charsets.UTF_8)
-<a href="#l199" class="line" id="l199">    199</a>             }.onFailure {
-<a href="#l200" class="line" id="l200">    200</a>                 context.log.error(&quot;Failed to load composer loader script&quot;, it)
-<a href="#l201" class="line" id="l201">    201</a>             }.getOrNull() ?: return
-<a href="#l202" class="line" id="l202">    202</a>             context.native.setComposerLoader(&quot;&quot;&quot;
-<a href="#l203" class="line" id="l203">    203</a>                 (() =&gt; { const _getImportsFunctionName = &quot;$getImportsFunctionName&quot;; $loaderScript })();
-<a href="#l204" class="line" id="l204">    204</a>             &quot;&quot;&quot;.trimIndent().trim())
-<a href="#l205" class="line" id="l205">    205</a> 
-<a href="#l206" class="line" id="l206">    206</a>             if (config.composerConsole.get()) {
-<a href="#l207" class="line" id="l207">    207</a>                 injectConsole()
-<a href="#l208" class="line" id="l208">    208</a>             }
-<a href="#l209" class="line" id="l209">    209</a>         }
-<a href="#l210" class="line" id="l210">    210</a> 
-<a href="#l211" class="line" id="l211">    211</a>         findClass(&quot;com.snapchat.client.composer.NativeBridge&quot;).apply {
-<a href="#l212" class="line" id="l212">    212</a>             hook(&quot;registerNativeModuleFactory&quot;, HookStage.BEFORE) { param -&gt;
-<a href="#l213" class="line" id="l213">    213</a>                 val moduleFactory = param.argNullable&lt;Any&gt;(1) ?: return@hook
-<a href="#l214" class="line" id="l214">    214</a>                 if (moduleFactory.javaClass.getMethod(&quot;getModulePath&quot;).invoke(moduleFactory)?.toString() != &quot;DeviceBridge&quot;) return@hook
-<a href="#l215" class="line" id="l215">    215</a>                 Hooker.ephemeralHookObjectMethod(moduleFactory.javaClass, moduleFactory, &quot;loadModule&quot;, HookStage.AFTER) { methodParam -&gt;
-<a href="#l216" class="line" id="l216">    216</a>                     val result = methodParam.getResult() as? MutableMap&lt;String, Any?&gt; ?: return@ephemeralHookObjectMethod
-<a href="#l217" class="line" id="l217">    217</a>                     result[getImportsFunctionName] = newComposerFunction {
-<a href="#l218" class="line" id="l218">    218</a>                         pushUntyped(importedFunctions)
-<a href="#l219" class="line" id="l219">    219</a>                         true
-<a href="#l220" class="line" id="l220">    220</a>                     }
-<a href="#l221" class="line" id="l221">    221</a>                 }
-<a href="#l222" class="line" id="l222">    222</a>                 loadHooks()
+<a href="#l192" class="line" id="l192">    192</a>             val tag = &quot;ComposerLogs&quot;
+<a href="#l193" class="line" id="l193">    193</a> 
+<a href="#l194" class="line" id="l194">    194</a>             when (logLevel) {
+<a href="#l195" class="line" id="l195">    195</a>                 &quot;log&quot; -&gt; context.log.verbose(message, tag)
+<a href="#l196" class="line" id="l196">    196</a>                 &quot;debug&quot; -&gt; context.log.debug(message, tag)
+<a href="#l197" class="line" id="l197">    197</a>                 &quot;info&quot; -&gt; context.log.info(message, tag)
+<a href="#l198" class="line" id="l198">    198</a>                 &quot;warn&quot; -&gt; context.log.warn(message, tag)
+<a href="#l199" class="line" id="l199">    199</a>                 &quot;error&quot; -&gt; context.log.error(message, tag)
+<a href="#l200" class="line" id="l200">    200</a>             }
+<a href="#l201" class="line" id="l201">    201</a>         }
+<a href="#l202" class="line" id="l202">    202</a> 
+<a href="#l203" class="line" id="l203">    203</a>         fun loadHooks() {
+<a href="#l204" class="line" id="l204">    204</a>             if (!NativeLib.initialized) {
+<a href="#l205" class="line" id="l205">    205</a>                 context.log.error(&quot;ComposerHooks cannot be loaded without NativeLib&quot;)
+<a href="#l206" class="line" id="l206">    206</a>                 return
+<a href="#l207" class="line" id="l207">    207</a>             }
+<a href="#l208" class="line" id="l208">    208</a>             val loaderScript = runCatching {
+<a href="#l209" class="line" id="l209">    209</a>                 context.fileHandlerManager.getFileHandle(FileHandleScope.COMPOSER.key, &quot;loader.js&quot;).toWrapper().readBytes().toString(Charsets.UTF_8)
+<a href="#l210" class="line" id="l210">    210</a>             }.onFailure {
+<a href="#l211" class="line" id="l211">    211</a>                 context.log.error(&quot;Failed to load composer loader script&quot;, it)
+<a href="#l212" class="line" id="l212">    212</a>             }.getOrNull() ?: return
+<a href="#l213" class="line" id="l213">    213</a>             context.native.setComposerLoader(&quot;&quot;&quot;
+<a href="#l214" class="line" id="l214">    214</a>                 (() =&gt; { const _getImportsFunctionName = &quot;$getImportsFunctionName&quot;; $loaderScript })();
+<a href="#l215" class="line" id="l215">    215</a>             &quot;&quot;&quot;.trimIndent().trim())
+<a href="#l216" class="line" id="l216">    216</a>         }
+<a href="#l217" class="line" id="l217">    217</a> 
+<a href="#l218" class="line" id="l218">    218</a>         loadHooks()
+<a href="#l219" class="line" id="l219">    219</a> 
+<a href="#l220" class="line" id="l220">    220</a>         onNextActivityCreate { activity -&gt;
+<a href="#l221" class="line" id="l221">    221</a>             if (config.composerConsole.get()) {
+<a href="#l222" class="line" id="l222">    222</a>                 injectConsole(activity)
 <a href="#l223" class="line" id="l223">    223</a>             }
 <a href="#l224" class="line" id="l224">    224</a>         }
-<a href="#l225" class="line" id="l225">    225</a>     }
-<a href="#l226" class="line" id="l226">    226</a> }</pre>
+<a href="#l225" class="line" id="l225">    225</a> 
+<a href="#l226" class="line" id="l226">    226</a>         findClass(&quot;com.snapchat.client.composer.NativeBridge&quot;).apply {
+<a href="#l227" class="line" id="l227">    227</a>             hook(&quot;registerNativeModuleFactory&quot;, HookStage.BEFORE) { param -&gt;
+<a href="#l228" class="line" id="l228">    228</a>                 val moduleFactory = param.argNullable&lt;Any&gt;(1) ?: return@hook
+<a href="#l229" class="line" id="l229">    229</a>                 if (moduleFactory.javaClass.getMethod(&quot;getModulePath&quot;).invoke(moduleFactory)?.toString()?.contains(&quot;DeviceBridge&quot;) != true) return@hook
+<a href="#l230" class="line" id="l230">    230</a>                 Hooker.ephemeralHookObjectMethod(moduleFactory.javaClass, moduleFactory, &quot;loadModule&quot;, HookStage.AFTER) { methodParam -&gt;
+<a href="#l231" class="line" id="l231">    231</a>                     val result = methodParam.getResult() as? MutableMap&lt;String, Any?&gt; ?: return@ephemeralHookObjectMethod
+<a href="#l232" class="line" id="l232">    232</a>                     result[getImportsFunctionName] = newComposerFunction {
+<a href="#l233" class="line" id="l233">    233</a>                         pushUntyped(importedFunctions)
+<a href="#l234" class="line" id="l234">    234</a>                         true
+<a href="#l235" class="line" id="l235">    235</a>                     }
+<a href="#l236" class="line" id="l236">    236</a>                 }
+<a href="#l237" class="line" id="l237">    237</a>             }
+<a href="#l238" class="line" id="l238">    238</a>         }
+<a href="#l239" class="line" id="l239">    239</a>     }
+<a href="#l240" class="line" id="l240">    240</a> }</pre>
 </div>
 </body>
 </html>
