@@ -20,10 +20,10 @@
 </div>
 <hr/>
 <div id="content">
-<p> composer_hook.rs (8195B) - <a href="../../../../../raw/native/rust/src/modules/composer_hook.rs">raw</a></p><hr/><pre id="blob">
+<p> composer_hook.rs (8777B) - <a href="../../../../../raw/native/rust/src/modules/composer_hook.rs">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> #![allow(dead_code, unused_imports)]
 <a href="#l2" class="line" id="l2">      2</a> 
-<a href="#l3" class="line" id="l3">      3</a> use super::util::composer_utils::ComposerModule;
+<a href="#l3" class="line" id="l3">      3</a> use super::util::composer_utils::{ComposerModule, ModuleTag};
 <a href="#l4" class="line" id="l4">      4</a> use std::{collections::HashMap, ffi::{c_void, CStr}, sync::Mutex};
 <a href="#l5" class="line" id="l5">      5</a> use jni::{objects::JString, sys::jobject, JNIEnv};
 <a href="#l6" class="line" id="l6">      6</a> use once_cell::sync::Lazy;
@@ -117,153 +117,167 @@
 <a href="#l94" class="line" id="l94">     94</a>     |arg0: *mut c_void, arg1: *const u8, arg2: i32| {
 <a href="#l95" class="line" id="l95">     95</a>         let handle = aasset_manager_open_original.unwrap()(arg0, arg1, arg2);
 <a href="#l96" class="line" id="l96">     96</a> 
-<a href="#l97" class="line" id="l97">     97</a>         if !handle.is_null() &amp;&amp; CStr::from_ptr(arg1).to_str().unwrap().ends_with(&quot;blizzard.composermodule&quot;) {
-<a href="#l98" class="line" id="l98">     98</a>             let asset_buffer = aasset_get_buffer_original.unwrap()(handle);
-<a href="#l99" class="line" id="l99">     99</a>             let asset_length = aasset_get_length_original.unwrap()(handle);
-<a href="#l100" class="line" id="l100">    100</a>             debug!(&quot;asset buffer: {:p}, length: {}&quot;, asset_buffer, asset_length);
-<a href="#l101" class="line" id="l101">    101</a> 
-<a href="#l102" class="line" id="l102">    102</a>             let composer_loader = COMPOSER_LOADER_DATA.lock().unwrap().clone().expect(&quot;No composer loader data&quot;);
-<a href="#l103" class="line" id="l103">    103</a> 
-<a href="#l104" class="line" id="l104">    104</a>             let archive_buffer: Vec&lt;u8&gt; = std::slice::from_raw_parts(asset_buffer as *const u8, asset_length as usize).to_vec();
-<a href="#l105" class="line" id="l105">    105</a>             let decompressed = zstd::stream::decode_all(&amp;archive_buffer[..]).expect(&quot;Failed to decompress composer archive&quot;);
-<a href="#l106" class="line" id="l106">    106</a>             let mut composer_module = ComposerModule::parse(decompressed).expect(&quot;Failed to parse composer module&quot;);
-<a href="#l107" class="line" id="l107">    107</a> 
-<a href="#l108" class="line" id="l108">    108</a>             let mut tags = composer_module.get_tags();
-<a href="#l109" class="line" id="l109">    109</a> 
-<a href="#l110" class="line" id="l110">    110</a>             for (tag1, tag2) in tags.iter_mut() {
-<a href="#l111" class="line" id="l111">    111</a>                 if tag1.to_string().unwrap().ends_with(&quot;BlizzardEventLogger.js&quot;) {
-<a href="#l112" class="line" id="l112">    112</a>                     let mut buffer = Vec::new();
-<a href="#l113" class="line" id="l113">    113</a>                     buffer.extend(composer_loader.as_bytes());
-<a href="#l114" class="line" id="l114">    114</a>                     buffer.extend(tag2.get_buffer());
-<a href="#l115" class="line" id="l115">    115</a>                     tag2.set_buffer(buffer);
-<a href="#l116" class="line" id="l116">    116</a>                     debug!(&quot;composer loader injected in {}&quot;, tag1.to_string().unwrap());
-<a href="#l117" class="line" id="l117">    117</a>                 }
-<a href="#l118" class="line" id="l118">    118</a>             }
-<a href="#l119" class="line" id="l119">    119</a> 
-<a href="#l120" class="line" id="l120">    120</a>             composer_module.set_tags(tags);
+<a href="#l97" class="line" id="l97">     97</a>         let path = Lazy::new(|| CStr::from_ptr(arg1).to_str().unwrap());
+<a href="#l98" class="line" id="l98">     98</a>         if !handle.is_null() &amp;&amp; path.starts_with(&quot;bridge_observables&quot;) {
+<a href="#l99" class="line" id="l99">     99</a>             let asset_buffer = aasset_get_buffer_original.unwrap()(handle);
+<a href="#l100" class="line" id="l100">    100</a>             let asset_length = aasset_get_length_original.unwrap()(handle);
+<a href="#l101" class="line" id="l101">    101</a>             debug!(&quot;asset buffer: {:p}, length: {}&quot;, asset_buffer, asset_length);
+<a href="#l102" class="line" id="l102">    102</a> 
+<a href="#l103" class="line" id="l103">    103</a>             let composer_loader = COMPOSER_LOADER_DATA.lock().unwrap().clone().expect(&quot;No composer loader data&quot;);
+<a href="#l104" class="line" id="l104">    104</a> 
+<a href="#l105" class="line" id="l105">    105</a>             let archive_buffer: Vec&lt;u8&gt; = std::slice::from_raw_parts(asset_buffer as *const u8, asset_length as usize).to_vec();
+<a href="#l106" class="line" id="l106">    106</a>             let decompressed = zstd::stream::decode_all(&amp;archive_buffer[..]).expect(&quot;Failed to decompress composer archive&quot;);
+<a href="#l107" class="line" id="l107">    107</a>             let mut composer_module = ComposerModule::parse(decompressed).expect(&quot;Failed to parse composer module&quot;);
+<a href="#l108" class="line" id="l108">    108</a> 
+<a href="#l109" class="line" id="l109">    109</a>             let mut tags = composer_module.get_tags();
+<a href="#l110" class="line" id="l110">    110</a>             let mut new_tags = Vec::new();
+<a href="#l111" class="line" id="l111">    111</a> 
+<a href="#l112" class="line" id="l112">    112</a>             for (tag1, _) in tags.iter_mut() {
+<a href="#l113" class="line" id="l113">    113</a>                 let name = tag1.to_string().unwrap();
+<a href="#l114" class="line" id="l114">    114</a>                 if !name.ends_with(&quot;src/utils/converter.js&quot;) {
+<a href="#l115" class="line" id="l115">    115</a>                     continue;
+<a href="#l116" class="line" id="l116">    116</a>                 }
+<a href="#l117" class="line" id="l117">    117</a> 
+<a href="#l118" class="line" id="l118">    118</a>                 let old_file_name = name.split_once(&quot;.&quot;).unwrap().0.to_owned() + rand::random::&lt;u32&gt;().to_string().as_str();
+<a href="#l119" class="line" id="l119">    119</a>                 tag1.set_buffer((old_file_name.to_owned() + &quot;.js&quot;).as_bytes().to_vec());
+<a href="#l120" class="line" id="l120">    120</a>                 let original_module_path = path.split_once(&quot;.&quot;).unwrap().0.to_owned() + &quot;/&quot; + &amp;old_file_name;
 <a href="#l121" class="line" id="l121">    121</a> 
-<a href="#l122" class="line" id="l122">    122</a>             let compressed = composer_module.to_bytes();
-<a href="#l123" class="line" id="l123">    123</a>             let compressed = zstd::stream::encode_all(&amp;compressed[..], 3).expect(&quot;Failed to compress&quot;);
-<a href="#l124" class="line" id="l124">    124</a> 
-<a href="#l125" class="line" id="l125">    125</a>             AASSET_MAP.lock().unwrap().insert(handle as usize, compressed);
-<a href="#l126" class="line" id="l126">    126</a>         }
-<a href="#l127" class="line" id="l127">    127</a>         handle
-<a href="#l128" class="line" id="l128">    128</a>     }
-<a href="#l129" class="line" id="l129">    129</a> );
+<a href="#l122" class="line" id="l122">    122</a>                 let hooked_module = format!(&quot;{};module.exports = require(\&quot;{}\&quot;);&quot;, composer_loader, original_module_path);
+<a href="#l123" class="line" id="l123">    123</a> 
+<a href="#l124" class="line" id="l124">    124</a>                 new_tags.push(
+<a href="#l125" class="line" id="l125">    125</a>                     (
+<a href="#l126" class="line" id="l126">    126</a>                         ModuleTag::new(128, name.as_bytes().to_vec()),
+<a href="#l127" class="line" id="l127">    127</a>                         ModuleTag::new(128, hooked_module.as_bytes().to_vec())
+<a href="#l128" class="line" id="l128">    128</a>                     )
+<a href="#l129" class="line" id="l129">    129</a>                 );
 <a href="#l130" class="line" id="l130">    130</a> 
-<a href="#l131" class="line" id="l131">    131</a> def_hook!(
-<a href="#l132" class="line" id="l132">    132</a>     aasset_close,
-<a href="#l133" class="line" id="l133">    133</a>     c_void,
-<a href="#l134" class="line" id="l134">    134</a>     |handle: *mut c_void| {
-<a href="#l135" class="line" id="l135">    135</a>         AASSET_MAP.lock().unwrap().remove(&amp;(handle as usize));
-<a href="#l136" class="line" id="l136">    136</a>         aasset_close_original.unwrap()(handle)
-<a href="#l137" class="line" id="l137">    137</a>     }
-<a href="#l138" class="line" id="l138">    138</a> );
-<a href="#l139" class="line" id="l139">    139</a>     
-<a href="#l140" class="line" id="l140">    140</a> #[cfg(target_arch = &quot;aarch64&quot;)]
-<a href="#l141" class="line" id="l141">    141</a> static mut GLOBAL_INSTANCE: Option&lt;*mut c_void&gt; = None;
-<a href="#l142" class="line" id="l142">    142</a> #[cfg(target_arch = &quot;aarch64&quot;)]
-<a href="#l143" class="line" id="l143">    143</a> static mut GLOBAL_CTX: Option&lt;*mut c_void&gt; = None;
-<a href="#l144" class="line" id="l144">    144</a> 
-<a href="#l145" class="line" id="l145">    145</a> #[cfg(target_arch = &quot;aarch64&quot;)]
-<a href="#l146" class="line" id="l146">    146</a> static mut JS_EVAL_ORIGINAL2: Option&lt;unsafe extern &quot;C&quot; fn(*mut c_void, *mut c_void, *mut c_void, *mut u8, usize, *const u8, u32) -&gt; JsValue&gt; = None;
-<a href="#l147" class="line" id="l147">    147</a> 
-<a href="#l148" class="line" id="l148">    148</a> def_hook!(
-<a href="#l149" class="line" id="l149">    149</a>     js_eval,
-<a href="#l150" class="line" id="l150">    150</a>     *mut c_void,
-<a href="#l151" class="line" id="l151">    151</a>     |arg0: *mut c_void, arg1: *mut c_void, arg2: *mut c_void, arg3: *const u8, arg4: *const u8, arg5: *const u8, arg6: *mut c_void, arg7: u32| {
-<a href="#l152" class="line" id="l152">    152</a>         #[cfg(target_arch = &quot;aarch64&quot;)]
-<a href="#l153" class="line" id="l153">    153</a>         {
-<a href="#l154" class="line" id="l154">    154</a>             if GLOBAL_INSTANCE.is_none() || GLOBAL_CTX.is_none() {
-<a href="#l155" class="line" id="l155">    155</a>                 GLOBAL_INSTANCE = Some(arg0);
-<a href="#l156" class="line" id="l156">    156</a>                 GLOBAL_CTX = Some(arg1);
-<a href="#l157" class="line" id="l157">    157</a>             }
-<a href="#l158" class="line" id="l158">    158</a>         }
-<a href="#l159" class="line" id="l159">    159</a>         js_eval_original.unwrap()(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
-<a href="#l160" class="line" id="l160">    160</a>     }
-<a href="#l161" class="line" id="l161">    161</a> );
-<a href="#l162" class="line" id="l162">    162</a> 
-<a href="#l163" class="line" id="l163">    163</a> pub fn set_composer_loader(mut env: JNIEnv, _: *mut c_void, code: JString) {
-<a href="#l164" class="line" id="l164">    164</a>     let new_code = get_jni_string(&amp;mut env, code).expect(&quot;Failed to get composer loader code&quot;);
-<a href="#l165" class="line" id="l165">    165</a>     COMPOSER_LOADER_DATA.lock().unwrap().replace(new_code);
-<a href="#l166" class="line" id="l166">    166</a> }
-<a href="#l167" class="line" id="l167">    167</a> 
-<a href="#l168" class="line" id="l168">    168</a> #[allow(unreachable_code, unused_variables)]
-<a href="#l169" class="line" id="l169">    169</a> pub unsafe fn composer_eval(env: JNIEnv, _: *mut c_void, script: JString) -&gt; jobject {
-<a href="#l170" class="line" id="l170">    170</a>     #[cfg(target_arch = &quot;aarch64&quot;)]
-<a href="#l171" class="line" id="l171">    171</a>     {
-<a href="#l172" class="line" id="l172">    172</a>         let mut env = env;
-<a href="#l173" class="line" id="l173">    173</a> 
-<a href="#l174" class="line" id="l174">    174</a>         let script_str = get_jni_string(&amp;mut env, script).expect(&quot;Failed to get script&quot;);
-<a href="#l175" class="line" id="l175">    175</a>         let script_length = script_str.len();
-<a href="#l176" class="line" id="l176">    176</a>     
-<a href="#l177" class="line" id="l177">    177</a>         let js_value = JS_EVAL_ORIGINAL2.expect(&quot;No js eval found&quot;)(
-<a href="#l178" class="line" id="l178">    178</a>             GLOBAL_INSTANCE.expect(&quot;No global instance found&quot;), 
-<a href="#l179" class="line" id="l179">    179</a>             GLOBAL_CTX.expect(&quot;No global context found&quot;),
-<a href="#l180" class="line" id="l180">    180</a>             std::ptr::null_mut(),
-<a href="#l181" class="line" id="l181">    181</a>             (script_str + &quot;\0&quot;).as_ptr() as *mut u8, 
-<a href="#l182" class="line" id="l182">    182</a>             script_length, 
-<a href="#l183" class="line" id="l183">    183</a>             &quot;&lt;eval&gt;\0&quot;.as_ptr(), 
-<a href="#l184" class="line" id="l184">    184</a>             0
-<a href="#l185" class="line" id="l185">    185</a>         );
-<a href="#l186" class="line" id="l186">    186</a>     
-<a href="#l187" class="line" id="l187">    187</a>         let result: String =  if js_value.tag == JS_TAG_STRING {
-<a href="#l188" class="line" id="l188">    188</a>             let string = js_value.u.ptr as *mut JsString;
-<a href="#l189" class="line" id="l189">    189</a>             CStr::from_ptr((*string).str8.as_ptr() as *const u8).to_str().unwrap().into()
-<a href="#l190" class="line" id="l190">    190</a>         } else if js_value.tag == JS_TAG_INT {
-<a href="#l191" class="line" id="l191">    191</a>             js_value.u.int32.to_string()
-<a href="#l192" class="line" id="l192">    192</a>         } else if js_value.tag == JS_TAG_BOOL {
-<a href="#l193" class="line" id="l193">    193</a>             if js_value.u.int32 == 1 { &quot;true&quot; } else { &quot;false&quot; }.into()
-<a href="#l194" class="line" id="l194">    194</a>         } else if js_value.tag == JS_TAG_NULL {
-<a href="#l195" class="line" id="l195">    195</a>             &quot;null&quot;.into()
-<a href="#l196" class="line" id="l196">    196</a>         } else if js_value.tag == JS_TAG_UNDEFINED {
-<a href="#l197" class="line" id="l197">    197</a>             &quot;undefined&quot;.into()
-<a href="#l198" class="line" id="l198">    198</a>         } else if js_value.tag == JS_TAG_OBJECT {
-<a href="#l199" class="line" id="l199">    199</a>             &quot;[object]&quot;.into()
-<a href="#l200" class="line" id="l200">    200</a>         } else if js_value.tag == JS_TAG_FLOAT64 {
-<a href="#l201" class="line" id="l201">    201</a>             js_value.u.float64.to_string()
-<a href="#l202" class="line" id="l202">    202</a>         } else if js_value.tag == JS_TAG_EXCEPTION {
-<a href="#l203" class="line" id="l203">    203</a>             &quot;Failed to evaluate script&quot;.into()
-<a href="#l204" class="line" id="l204">    204</a>         } else {
-<a href="#l205" class="line" id="l205">    205</a>             &quot;[unknown tag &quot;.to_owned() + &amp;js_value.tag.to_string() + &quot;]&quot;.into()
-<a href="#l206" class="line" id="l206">    206</a>         };
-<a href="#l207" class="line" id="l207">    207</a>         
-<a href="#l208" class="line" id="l208">    208</a>         return env.new_string(result).unwrap().into_raw()
-<a href="#l209" class="line" id="l209">    209</a>     }
-<a href="#l210" class="line" id="l210">    210</a> 
-<a href="#l211" class="line" id="l211">    211</a>     return env.new_string(&quot;Architecture not supported&quot;).unwrap().into_raw();
-<a href="#l212" class="line" id="l212">    212</a> }
-<a href="#l213" class="line" id="l213">    213</a> 
-<a href="#l214" class="line" id="l214">    214</a> pub fn init() {
-<a href="#l215" class="line" id="l215">    215</a>     if !config::native_config().composer_hooks {
-<a href="#l216" class="line" id="l216">    216</a>         return
-<a href="#l217" class="line" id="l217">    217</a>     }
-<a href="#l218" class="line" id="l218">    218</a> 
-<a href="#l219" class="line" id="l219">    219</a>     dobby_hook_sym!(&quot;libandroid.so&quot;, &quot;AAsset_getBuffer&quot;, aasset_get_buffer);
-<a href="#l220" class="line" id="l220">    220</a>     dobby_hook_sym!(&quot;libandroid.so&quot;, &quot;AAsset_getLength&quot;, aasset_get_length);
-<a href="#l221" class="line" id="l221">    221</a>     dobby_hook_sym!(&quot;libandroid.so&quot;, &quot;AAsset_close&quot;, aasset_close);
-<a href="#l222" class="line" id="l222">    222</a>     dobby_hook_sym!(&quot;libandroid.so&quot;, &quot;AAssetManager_open&quot;, aasset_manager_open);
-<a href="#l223" class="line" id="l223">    223</a>     
-<a href="#l224" class="line" id="l224">    224</a>     #[cfg(target_arch = &quot;aarch64&quot;)]
-<a href="#l225" class="line" id="l225">    225</a>     {
-<a href="#l226" class="line" id="l226">    226</a>         if let Some(signature) = sig::find_signature(
-<a href="#l227" class="line" id="l227">    227</a>             &amp;common::CLIENT_MODULE,
-<a href="#l228" class="line" id="l228">    228</a>             &quot;00 E4 00 6F 29 00 80 52 76 00 04 8B&quot;, -0x28,
-<a href="#l229" class="line" id="l229">    229</a>             &quot;A1 B0 07 92 81 46&quot;, -0x7
-<a href="#l230" class="line" id="l230">    230</a>         ) {
-<a href="#l231" class="line" id="l231">    231</a>             dobby_hook!(signature as *mut c_void, js_eval);
-<a href="#l232" class="line" id="l232">    232</a>             
-<a href="#l233" class="line" id="l233">    233</a>             unsafe { 
-<a href="#l234" class="line" id="l234">    234</a>                 JS_EVAL_ORIGINAL2 = Some(std::mem::transmute(js_eval_original.unwrap()));
-<a href="#l235" class="line" id="l235">    235</a>             }
-<a href="#l236" class="line" id="l236">    236</a>     
-<a href="#l237" class="line" id="l237">    237</a>             debug!(&quot;js_eval {:#x}&quot;, signature);
-<a href="#l238" class="line" id="l238">    238</a>         } else {
-<a href="#l239" class="line" id="l239">    239</a>             warn!(&quot;Unable to find js_eval signature&quot;);
-<a href="#l240" class="line" id="l240">    240</a>         }
-<a href="#l241" class="line" id="l241">    241</a>     }
-<a href="#l242" class="line" id="l242">    242</a> }
-<a href="#l243" class="line" id="l243">    243</a> 
+<a href="#l131" class="line" id="l131">    131</a>                 debug!(&quot;composer loader injected in {}&quot;, name);
+<a href="#l132" class="line" id="l132">    132</a>                 break;
+<a href="#l133" class="line" id="l133">    133</a>             }
+<a href="#l134" class="line" id="l134">    134</a> 
+<a href="#l135" class="line" id="l135">    135</a>             tags.extend(new_tags);
+<a href="#l136" class="line" id="l136">    136</a>             composer_module.set_tags(tags);
+<a href="#l137" class="line" id="l137">    137</a> 
+<a href="#l138" class="line" id="l138">    138</a>             let compressed = composer_module.to_bytes();
+<a href="#l139" class="line" id="l139">    139</a>             let compressed = zstd::stream::encode_all(&amp;compressed[..], 3).expect(&quot;Failed to compress&quot;);
+<a href="#l140" class="line" id="l140">    140</a> 
+<a href="#l141" class="line" id="l141">    141</a>             AASSET_MAP.lock().unwrap().insert(handle as usize, compressed);
+<a href="#l142" class="line" id="l142">    142</a>         }
+<a href="#l143" class="line" id="l143">    143</a>         handle
+<a href="#l144" class="line" id="l144">    144</a>     }
+<a href="#l145" class="line" id="l145">    145</a> );
+<a href="#l146" class="line" id="l146">    146</a> 
+<a href="#l147" class="line" id="l147">    147</a> def_hook!(
+<a href="#l148" class="line" id="l148">    148</a>     aasset_close,
+<a href="#l149" class="line" id="l149">    149</a>     c_void,
+<a href="#l150" class="line" id="l150">    150</a>     |handle: *mut c_void| {
+<a href="#l151" class="line" id="l151">    151</a>         AASSET_MAP.lock().unwrap().remove(&amp;(handle as usize));
+<a href="#l152" class="line" id="l152">    152</a>         aasset_close_original.unwrap()(handle)
+<a href="#l153" class="line" id="l153">    153</a>     }
+<a href="#l154" class="line" id="l154">    154</a> );
+<a href="#l155" class="line" id="l155">    155</a>     
+<a href="#l156" class="line" id="l156">    156</a> #[cfg(target_arch = &quot;aarch64&quot;)]
+<a href="#l157" class="line" id="l157">    157</a> static mut GLOBAL_INSTANCE: Option&lt;*mut c_void&gt; = None;
+<a href="#l158" class="line" id="l158">    158</a> #[cfg(target_arch = &quot;aarch64&quot;)]
+<a href="#l159" class="line" id="l159">    159</a> static mut GLOBAL_CTX: Option&lt;*mut c_void&gt; = None;
+<a href="#l160" class="line" id="l160">    160</a> 
+<a href="#l161" class="line" id="l161">    161</a> #[cfg(target_arch = &quot;aarch64&quot;)]
+<a href="#l162" class="line" id="l162">    162</a> static mut JS_EVAL_ORIGINAL2: Option&lt;unsafe extern &quot;C&quot; fn(*mut c_void, *mut c_void, *mut c_void, *mut u8, usize, *const u8, u32) -&gt; JsValue&gt; = None;
+<a href="#l163" class="line" id="l163">    163</a> 
+<a href="#l164" class="line" id="l164">    164</a> def_hook!(
+<a href="#l165" class="line" id="l165">    165</a>     js_eval,
+<a href="#l166" class="line" id="l166">    166</a>     *mut c_void,
+<a href="#l167" class="line" id="l167">    167</a>     |arg0: *mut c_void, arg1: *mut c_void, arg2: *mut c_void, arg3: *const u8, arg4: *const u8, arg5: *const u8, arg6: *mut c_void, arg7: u32| {
+<a href="#l168" class="line" id="l168">    168</a>         #[cfg(target_arch = &quot;aarch64&quot;)]
+<a href="#l169" class="line" id="l169">    169</a>         {
+<a href="#l170" class="line" id="l170">    170</a>             GLOBAL_INSTANCE = Some(arg0);
+<a href="#l171" class="line" id="l171">    171</a>             GLOBAL_CTX = Some(arg1);
+<a href="#l172" class="line" id="l172">    172</a>         }
+<a href="#l173" class="line" id="l173">    173</a>         js_eval_original.unwrap()(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+<a href="#l174" class="line" id="l174">    174</a>     }
+<a href="#l175" class="line" id="l175">    175</a> );
+<a href="#l176" class="line" id="l176">    176</a> 
+<a href="#l177" class="line" id="l177">    177</a> pub fn set_composer_loader(mut env: JNIEnv, _: *mut c_void, code: JString) {
+<a href="#l178" class="line" id="l178">    178</a>     let new_code = get_jni_string(&amp;mut env, code).expect(&quot;Failed to get composer loader code&quot;);
+<a href="#l179" class="line" id="l179">    179</a>     COMPOSER_LOADER_DATA.lock().unwrap().replace(new_code);
+<a href="#l180" class="line" id="l180">    180</a> }
+<a href="#l181" class="line" id="l181">    181</a> 
+<a href="#l182" class="line" id="l182">    182</a> #[allow(unreachable_code, unused_variables)]
+<a href="#l183" class="line" id="l183">    183</a> pub unsafe fn composer_eval(env: JNIEnv, _: *mut c_void, script: JString) -&gt; jobject {
+<a href="#l184" class="line" id="l184">    184</a>     #[cfg(target_arch = &quot;aarch64&quot;)]
+<a href="#l185" class="line" id="l185">    185</a>     {
+<a href="#l186" class="line" id="l186">    186</a>         let mut env = env;
+<a href="#l187" class="line" id="l187">    187</a> 
+<a href="#l188" class="line" id="l188">    188</a>         let script_str = get_jni_string(&amp;mut env, script).expect(&quot;Failed to get script&quot;);
+<a href="#l189" class="line" id="l189">    189</a>         let script_length = script_str.len();
+<a href="#l190" class="line" id="l190">    190</a>     
+<a href="#l191" class="line" id="l191">    191</a>         let js_value = JS_EVAL_ORIGINAL2.expect(&quot;No js eval found&quot;)(
+<a href="#l192" class="line" id="l192">    192</a>             GLOBAL_INSTANCE.expect(&quot;No global instance found&quot;), 
+<a href="#l193" class="line" id="l193">    193</a>             GLOBAL_CTX.expect(&quot;No global context found&quot;),
+<a href="#l194" class="line" id="l194">    194</a>             std::ptr::null_mut(),
+<a href="#l195" class="line" id="l195">    195</a>             (script_str + &quot;\0&quot;).as_ptr() as *mut u8, 
+<a href="#l196" class="line" id="l196">    196</a>             script_length, 
+<a href="#l197" class="line" id="l197">    197</a>             &quot;&lt;eval&gt;\0&quot;.as_ptr(), 
+<a href="#l198" class="line" id="l198">    198</a>             0
+<a href="#l199" class="line" id="l199">    199</a>         );
+<a href="#l200" class="line" id="l200">    200</a>     
+<a href="#l201" class="line" id="l201">    201</a>         let result: String =  if js_value.tag == JS_TAG_STRING {
+<a href="#l202" class="line" id="l202">    202</a>             let string = js_value.u.ptr as *mut JsString;
+<a href="#l203" class="line" id="l203">    203</a>             CStr::from_ptr((*string).str8.as_ptr() as *const u8).to_str().unwrap().into()
+<a href="#l204" class="line" id="l204">    204</a>         } else if js_value.tag == JS_TAG_INT {
+<a href="#l205" class="line" id="l205">    205</a>             js_value.u.int32.to_string()
+<a href="#l206" class="line" id="l206">    206</a>         } else if js_value.tag == JS_TAG_BOOL {
+<a href="#l207" class="line" id="l207">    207</a>             if js_value.u.int32 == 1 { &quot;true&quot; } else { &quot;false&quot; }.into()
+<a href="#l208" class="line" id="l208">    208</a>         } else if js_value.tag == JS_TAG_NULL {
+<a href="#l209" class="line" id="l209">    209</a>             &quot;null&quot;.into()
+<a href="#l210" class="line" id="l210">    210</a>         } else if js_value.tag == JS_TAG_UNDEFINED {
+<a href="#l211" class="line" id="l211">    211</a>             &quot;undefined&quot;.into()
+<a href="#l212" class="line" id="l212">    212</a>         } else if js_value.tag == JS_TAG_OBJECT {
+<a href="#l213" class="line" id="l213">    213</a>             &quot;[object]&quot;.into()
+<a href="#l214" class="line" id="l214">    214</a>         } else if js_value.tag == JS_TAG_FLOAT64 {
+<a href="#l215" class="line" id="l215">    215</a>             js_value.u.float64.to_string()
+<a href="#l216" class="line" id="l216">    216</a>         } else if js_value.tag == JS_TAG_EXCEPTION {
+<a href="#l217" class="line" id="l217">    217</a>             &quot;Failed to evaluate script&quot;.into()
+<a href="#l218" class="line" id="l218">    218</a>         } else {
+<a href="#l219" class="line" id="l219">    219</a>             &quot;[unknown tag &quot;.to_owned() + &amp;js_value.tag.to_string() + &quot;]&quot;.into()
+<a href="#l220" class="line" id="l220">    220</a>         };
+<a href="#l221" class="line" id="l221">    221</a>         
+<a href="#l222" class="line" id="l222">    222</a>         return env.new_string(result).unwrap().into_raw()
+<a href="#l223" class="line" id="l223">    223</a>     }
+<a href="#l224" class="line" id="l224">    224</a> 
+<a href="#l225" class="line" id="l225">    225</a>     return env.new_string(&quot;Architecture not supported&quot;).unwrap().into_raw();
+<a href="#l226" class="line" id="l226">    226</a> }
+<a href="#l227" class="line" id="l227">    227</a> 
+<a href="#l228" class="line" id="l228">    228</a> pub fn init() {
+<a href="#l229" class="line" id="l229">    229</a>     if !config::native_config().composer_hooks {
+<a href="#l230" class="line" id="l230">    230</a>         return
+<a href="#l231" class="line" id="l231">    231</a>     }
+<a href="#l232" class="line" id="l232">    232</a> 
+<a href="#l233" class="line" id="l233">    233</a>     dobby_hook_sym!(&quot;libandroid.so&quot;, &quot;AAsset_getBuffer&quot;, aasset_get_buffer);
+<a href="#l234" class="line" id="l234">    234</a>     dobby_hook_sym!(&quot;libandroid.so&quot;, &quot;AAsset_getLength&quot;, aasset_get_length);
+<a href="#l235" class="line" id="l235">    235</a>     dobby_hook_sym!(&quot;libandroid.so&quot;, &quot;AAsset_close&quot;, aasset_close);
+<a href="#l236" class="line" id="l236">    236</a>     dobby_hook_sym!(&quot;libandroid.so&quot;, &quot;AAssetManager_open&quot;, aasset_manager_open);
+<a href="#l237" class="line" id="l237">    237</a>     
+<a href="#l238" class="line" id="l238">    238</a>     #[cfg(target_arch = &quot;aarch64&quot;)]
+<a href="#l239" class="line" id="l239">    239</a>     {
+<a href="#l240" class="line" id="l240">    240</a>         if let Some(signature) = sig::find_signature(
+<a href="#l241" class="line" id="l241">    241</a>             &amp;common::CLIENT_MODULE,
+<a href="#l242" class="line" id="l242">    242</a>             &quot;00 E4 00 6F 29 00 80 52 76 00 04 8B&quot;, -0x28,
+<a href="#l243" class="line" id="l243">    243</a>             &quot;A1 B0 07 92 81 46&quot;, -0x7
+<a href="#l244" class="line" id="l244">    244</a>         ) {
+<a href="#l245" class="line" id="l245">    245</a>             dobby_hook!(signature as *mut c_void, js_eval);
+<a href="#l246" class="line" id="l246">    246</a>             
+<a href="#l247" class="line" id="l247">    247</a>             unsafe { 
+<a href="#l248" class="line" id="l248">    248</a>                 JS_EVAL_ORIGINAL2 = Some(std::mem::transmute(js_eval_original.unwrap()));
+<a href="#l249" class="line" id="l249">    249</a>             }
+<a href="#l250" class="line" id="l250">    250</a>     
+<a href="#l251" class="line" id="l251">    251</a>             debug!(&quot;js_eval {:#x}&quot;, signature);
+<a href="#l252" class="line" id="l252">    252</a>         } else {
+<a href="#l253" class="line" id="l253">    253</a>             warn!(&quot;Unable to find js_eval signature&quot;);
+<a href="#l254" class="line" id="l254">    254</a>         }
+<a href="#l255" class="line" id="l255">    255</a>     }
+<a href="#l256" class="line" id="l256">    256</a> }
+<a href="#l257" class="line" id="l257">    257</a> 
 </pre>
 </div>
 </body>

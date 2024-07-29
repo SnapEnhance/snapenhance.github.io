@@ -211,7 +211,13 @@ class ComposerHooks: Feature("ComposerHooks") {
                 context.log.error("Failed to load composer loader script", it)
             }.getOrNull() ?: return
             context.native.setComposerLoader("""
-                (() => { const _getImportsFunctionName = "$getImportsFunctionName"; $loaderScript })();
+                const i = setInterval(() => {
+                    try {
+                        require('composer_core/src/DeviceBridge').toString();
+                        clearInterval(i);
+                        (() => { const _getImportsFunctionName = "$getImportsFunctionName"; $loaderScript })();
+                    } catch (e) {}
+                }, 200)
             """.trimIndent().trim())
         }
 

@@ -1,6 +1,6 @@
 #![allow(dead_code, unused_imports)]
 
-use super::util::composer_utils::ComposerModule;
+use super::util::composer_utils::{ComposerModule, ModuleTag};
 use std::{collections::HashMap, ffi::{c_void, CStr}, sync::Mutex};
 use jni::{objects::JString, sys::jobject, JNIEnv};
 use once_cell::sync::Lazy;
@@ -94,7 +94,8 @@ def_hook!(
     |arg0: *mut c_void, arg1: *const u8, arg2: i32| {
         let handle = aasset_manager_open_original.unwrap()(arg0, arg1, arg2);
 
-        if !handle.is_null() && CStr::from_ptr(arg1).to_str().unwrap().ends_with("blizzard.composermodule") {
+        let path = Lazy::new(|| CStr::from_ptr(arg1).to_str().unwrap());
+        if !handle.is_null() && path.starts_with("bridge_observables") {
             let asset_buffer = aasset_get_buffer_original.unwrap()(handle);
             let asset_length = aasset_get_length_original.unwrap()(handle);
             debug!("asset buffer: {:p}, length: {}", asset_buffer, asset_length);
@@ -106,17 +107,32 @@ def_hook!(
             let mut composer_module = ComposerModule::parse(decompressed).expect("Failed to parse composer module");
 
             let mut tags = composer_module.get_tags();
+            let mut new_tags = Vec::new();
 
-            for (tag1, tag2) in tags.iter_mut() {
-                if tag1.to_string().unwrap().ends_with("BlizzardEventLogger.js") {
-                    let mut buffer = Vec::new();
-                    buffer.extend(composer_loader.as_bytes());
-                    buffer.extend(tag2.get_buffer());
-                    tag2.set_buffer(buffer);
-                    debug!("composer loader injected in {}", tag1.to_string().unwrap());
+            for (tag1, _) in tags.iter_mut() {
+                let name = tag1.to_string().unwrap();
+                if !name.ends_with("src/utils/converter.js") {
+                    continue;
                 }
+
+                let old_file_name = name.split_once(".").unwrap().0.to_owned() + rand::random::<u32>().to_string().as_str();
+                tag1.set_buffer((old_file_name.to_owned() + ".js").as_bytes().to_vec());
+                let original_module_path = path.split_once(".").unwrap().0.to_owned() + "/" + &old_file_name;
+
+                let hooked_module = format!("{};module.exports = require(\"{}\");", composer_loader, original_module_path);
+
+                new_tags.push(
+                    (
+                        ModuleTag::new(128, name.as_bytes().to_vec()),
+                        ModuleTag::new(128, hooked_module.as_bytes().to_vec())
+                    )
+                );
+
+                debug!("composer loader injected in {}", name);
+                break;
             }
 
+            tags.extend(new_tags);
             composer_module.set_tags(tags);
 
             let compressed = composer_module.to_bytes();
@@ -151,10 +167,8 @@ def_hook!(
     |arg0: *mut c_void, arg1: *mut c_void, arg2: *mut c_void, arg3: *const u8, arg4: *const u8, arg5: *const u8, arg6: *mut c_void, arg7: u32| {
         #[cfg(target_arch = "aarch64")]
         {
-            if GLOBAL_INSTANCE.is_none() || GLOBAL_CTX.is_none() {
-                GLOBAL_INSTANCE = Some(arg0);
-                GLOBAL_CTX = Some(arg1);
-            }
+            GLOBAL_INSTANCE = Some(arg0);
+            GLOBAL_CTX = Some(arg1);
         }
         js_eval_original.unwrap()(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
     }
