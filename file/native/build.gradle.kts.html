@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> build.gradle.kts (1612B) - <a href="../../raw/native/build.gradle.kts">raw</a></p><hr/><pre id="blob">
+<p> build.gradle.kts (1710B) - <a href="../../raw/native/build.gradle.kts">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> plugins {
 <a href="#l2" class="line" id="l2">      2</a>     alias(libs.plugins.rust.android)
 <a href="#l3" class="line" id="l3">      3</a>     alias(libs.plugins.androidLibrary)
@@ -67,26 +67,32 @@
 <a href="#l44" class="line" id="l44">     44</a>     abiFolder.takeIf { it.isDirectory }?.listFiles()?.toList() ?: emptyList()
 <a href="#l45" class="line" id="l45">     45</a> }
 <a href="#l46" class="line" id="l46">     46</a> 
-<a href="#l47" class="line" id="l47">     47</a> tasks.register(&quot;cleanNatives&quot;) {
-<a href="#l48" class="line" id="l48">     48</a>     doLast {
-<a href="#l49" class="line" id="l49">     49</a>         println(&quot;Cleaning native files&quot;)
-<a href="#l50" class="line" id="l50">     50</a>         getNativeFiles()?.forEach { file -&gt;
-<a href="#l51" class="line" id="l51">     51</a>             file.deleteRecursively()
-<a href="#l52" class="line" id="l52">     52</a>         }
-<a href="#l53" class="line" id="l53">     53</a>     }
-<a href="#l54" class="line" id="l54">     54</a> }
-<a href="#l55" class="line" id="l55">     55</a> 
-<a href="#l56" class="line" id="l56">     56</a> tasks.named(&quot;preBuild&quot;).configure {
-<a href="#l57" class="line" id="l57">     57</a>     dependsOn(&quot;cleanNatives&quot;, &quot;cargoBuild&quot;)
-<a href="#l58" class="line" id="l58">     58</a>     doLast {
-<a href="#l59" class="line" id="l59">     59</a>         getNativeFiles()?.forEach { file -&gt;
-<a href="#l60" class="line" id="l60">     60</a>             if (file.name.endsWith(&quot;.so&quot;)) {
-<a href="#l61" class="line" id="l61">     61</a>                 println(&quot;Renaming ${file.absolutePath}&quot;)
-<a href="#l62" class="line" id="l62">     62</a>                 file.renameTo(File(file.parent, &quot;lib$nativeName.so&quot;))
-<a href="#l63" class="line" id="l63">     63</a>             }
-<a href="#l64" class="line" id="l64">     64</a>         }
-<a href="#l65" class="line" id="l65">     65</a>     }
-<a href="#l66" class="line" id="l66">     66</a> }
+<a href="#l47" class="line" id="l47">     47</a> 
+<a href="#l48" class="line" id="l48">     48</a> val buildAndRename by tasks.registering {
+<a href="#l49" class="line" id="l49">     49</a>     dependsOn(&quot;cargoBuild&quot;)
+<a href="#l50" class="line" id="l50">     50</a>     doLast {
+<a href="#l51" class="line" id="l51">     51</a>         getNativeFiles()?.forEach { file -&gt;
+<a href="#l52" class="line" id="l52">     52</a>             if (file.name.endsWith(&quot;.so&quot;)) {
+<a href="#l53" class="line" id="l53">     53</a>                 println(&quot;Renaming ${file.absolutePath}&quot;)
+<a href="#l54" class="line" id="l54">     54</a>                 file.renameTo(File(file.parent, &quot;lib$nativeName.so&quot;))
+<a href="#l55" class="line" id="l55">     55</a>             }
+<a href="#l56" class="line" id="l56">     56</a>         }
+<a href="#l57" class="line" id="l57">     57</a>     }
+<a href="#l58" class="line" id="l58">     58</a> }
+<a href="#l59" class="line" id="l59">     59</a> 
+<a href="#l60" class="line" id="l60">     60</a> val cleanNatives by tasks.registering {
+<a href="#l61" class="line" id="l61">     61</a>     finalizedBy(buildAndRename)
+<a href="#l62" class="line" id="l62">     62</a>     doFirst {
+<a href="#l63" class="line" id="l63">     63</a>         println(&quot;Cleaning native files&quot;)
+<a href="#l64" class="line" id="l64">     64</a>         getNativeFiles()?.forEach { file -&gt;
+<a href="#l65" class="line" id="l65">     65</a>             file.deleteRecursively()
+<a href="#l66" class="line" id="l66">     66</a>         }
+<a href="#l67" class="line" id="l67">     67</a>     }
+<a href="#l68" class="line" id="l68">     68</a> }
+<a href="#l69" class="line" id="l69">     69</a> 
+<a href="#l70" class="line" id="l70">     70</a> tasks.named(&quot;preBuild&quot;).configure {
+<a href="#l71" class="line" id="l71">     71</a>     dependsOn(cleanNatives)
+<a href="#l72" class="line" id="l72">     72</a> }
 </pre>
 </div>
 </body>
