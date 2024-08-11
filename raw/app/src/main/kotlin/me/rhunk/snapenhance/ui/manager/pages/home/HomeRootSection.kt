@@ -201,7 +201,7 @@ class HomeRootSection : Routes.Route() {
             }
 
             val latestUpdate by rememberAsyncMutableState(defaultValue = null) {
-                if (!BuildConfig.DEBUG) Updater.checkForLatestRelease() else null
+                if (!BuildConfig.DEBUG) Updater.latestRelease else null
             }
 
             if (latestUpdate != null) {

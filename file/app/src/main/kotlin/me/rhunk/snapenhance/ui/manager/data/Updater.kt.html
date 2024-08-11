@@ -20,38 +20,45 @@
 </div>
 <hr/>
 <div id="content">
-<p> Updater.kt (1138B) - <a href="../../../../../../../../../../../raw/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/data/Updater.kt">raw</a></p><hr/><pre id="blob">
+<p> Updater.kt (1374B) - <a href="../../../../../../../../../../../raw/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/data/Updater.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.ui.manager.data
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import com.google.gson.JsonParser
 <a href="#l4" class="line" id="l4">      4</a> import me.rhunk.snapenhance.common.BuildConfig
-<a href="#l5" class="line" id="l5">      5</a> import okhttp3.OkHttpClient
-<a href="#l6" class="line" id="l6">      6</a> import okhttp3.Request
-<a href="#l7" class="line" id="l7">      7</a> 
+<a href="#l5" class="line" id="l5">      5</a> import me.rhunk.snapenhance.common.logger.AbstractLogger
+<a href="#l6" class="line" id="l6">      6</a> import okhttp3.OkHttpClient
+<a href="#l7" class="line" id="l7">      7</a> import okhttp3.Request
 <a href="#l8" class="line" id="l8">      8</a> 
-<a href="#l9" class="line" id="l9">      9</a> object Updater {
-<a href="#l10" class="line" id="l10">     10</a>     data class LatestRelease(
-<a href="#l11" class="line" id="l11">     11</a>         val versionName: String,
-<a href="#l12" class="line" id="l12">     12</a>         val releaseUrl: String
-<a href="#l13" class="line" id="l13">     13</a>     )
-<a href="#l14" class="line" id="l14">     14</a> 
-<a href="#l15" class="line" id="l15">     15</a>     fun checkForLatestRelease(): LatestRelease? {
-<a href="#l16" class="line" id="l16">     16</a>         val endpoint = Request.Builder().url(&quot;https://api.github.com/repos/rhunk/SnapEnhance/releases&quot;).build()
-<a href="#l17" class="line" id="l17">     17</a>         val response = OkHttpClient().newCall(endpoint).execute()
-<a href="#l18" class="line" id="l18">     18</a> 
-<a href="#l19" class="line" id="l19">     19</a>         if (!response.isSuccessful) throw Throwable(&quot;Failed to fetch releases: ${response.code}&quot;)
-<a href="#l20" class="line" id="l20">     20</a> 
-<a href="#l21" class="line" id="l21">     21</a>         val releases = JsonParser.parseString(response.body.string()).asJsonArray.also {
-<a href="#l22" class="line" id="l22">     22</a>             if (it.size() == 0) throw Throwable(&quot;No releases found&quot;)
-<a href="#l23" class="line" id="l23">     23</a>         }
-<a href="#l24" class="line" id="l24">     24</a> 
-<a href="#l25" class="line" id="l25">     25</a>         val latestRelease = releases.get(0).asJsonObject
-<a href="#l26" class="line" id="l26">     26</a>         val latestVersion = latestRelease.getAsJsonPrimitive(&quot;tag_name&quot;).asString
-<a href="#l27" class="line" id="l27">     27</a>         if (latestVersion.removePrefix(&quot;v&quot;) == BuildConfig.VERSION_NAME) return null
-<a href="#l28" class="line" id="l28">     28</a> 
-<a href="#l29" class="line" id="l29">     29</a>         return LatestRelease(latestVersion, endpoint.url.toString().replace(&quot;api.&quot;, &quot;&quot;).replace(&quot;repos/&quot;, &quot;&quot;))
-<a href="#l30" class="line" id="l30">     30</a>     }
-<a href="#l31" class="line" id="l31">     31</a> }</pre>
+<a href="#l9" class="line" id="l9">      9</a> 
+<a href="#l10" class="line" id="l10">     10</a> object Updater {
+<a href="#l11" class="line" id="l11">     11</a>     data class LatestRelease(
+<a href="#l12" class="line" id="l12">     12</a>         val versionName: String,
+<a href="#l13" class="line" id="l13">     13</a>         val releaseUrl: String
+<a href="#l14" class="line" id="l14">     14</a>     )
+<a href="#l15" class="line" id="l15">     15</a> 
+<a href="#l16" class="line" id="l16">     16</a>     private fun fetchLatestRelease() = runCatching {
+<a href="#l17" class="line" id="l17">     17</a>         val endpoint = Request.Builder().url(&quot;https://api.github.com/repos/rhunk/SnapEnhance/releases&quot;).build()
+<a href="#l18" class="line" id="l18">     18</a>         val response = OkHttpClient().newCall(endpoint).execute()
+<a href="#l19" class="line" id="l19">     19</a> 
+<a href="#l20" class="line" id="l20">     20</a>         if (!response.isSuccessful) throw Throwable(&quot;Failed to fetch releases: ${response.code}&quot;)
+<a href="#l21" class="line" id="l21">     21</a> 
+<a href="#l22" class="line" id="l22">     22</a>         val releases = JsonParser.parseString(response.body.string()).asJsonArray.also {
+<a href="#l23" class="line" id="l23">     23</a>             if (it.size() == 0) throw Throwable(&quot;No releases found&quot;)
+<a href="#l24" class="line" id="l24">     24</a>         }
+<a href="#l25" class="line" id="l25">     25</a> 
+<a href="#l26" class="line" id="l26">     26</a>         val latestRelease = releases.get(0).asJsonObject
+<a href="#l27" class="line" id="l27">     27</a>         val latestVersion = latestRelease.getAsJsonPrimitive(&quot;tag_name&quot;).asString
+<a href="#l28" class="line" id="l28">     28</a>         if (latestVersion.removePrefix(&quot;v&quot;) == BuildConfig.VERSION_NAME) return@runCatching null
+<a href="#l29" class="line" id="l29">     29</a> 
+<a href="#l30" class="line" id="l30">     30</a>         LatestRelease(latestVersion, endpoint.url.toString().replace(&quot;api.&quot;, &quot;&quot;).replace(&quot;repos/&quot;, &quot;&quot;))
+<a href="#l31" class="line" id="l31">     31</a>     }.onFailure {
+<a href="#l32" class="line" id="l32">     32</a>         AbstractLogger.directError(&quot;Failed to fetch latest release&quot;, it)
+<a href="#l33" class="line" id="l33">     33</a>     }.getOrNull()
+<a href="#l34" class="line" id="l34">     34</a> 
+<a href="#l35" class="line" id="l35">     35</a>     val latestRelease by lazy {
+<a href="#l36" class="line" id="l36">     36</a>         fetchLatestRelease()
+<a href="#l37" class="line" id="l37">     37</a>     }
+<a href="#l38" class="line" id="l38">     38</a> }</pre>
 </div>
 </body>
 </html>
