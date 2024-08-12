@@ -24,6 +24,7 @@ import me.rhunk.snapenhance.core.SnapEnhance
 import me.rhunk.snapenhance.core.util.ktx.getDimens
 import me.rhunk.snapenhance.core.util.ktx.getDimensFloat
 import me.rhunk.snapenhance.core.util.ktx.getIdentifier
+import me.rhunk.snapenhance.core.wrapper.impl.composer.ComposerContext
 import me.rhunk.snapenhance.core.wrapper.impl.composer.ComposerViewNode
 import kotlin.random.Random
 
@@ -115,6 +116,14 @@ fun View.getComposerViewNode(): ComposerViewNode? {
     return ComposerViewNode(composerViewNode::class.java.methods.firstOrNull {
         it.name == "getNativeHandle"
     }?.invoke(composerViewNode) as? Long ?: return null)
+}
+
+fun View.getComposerContext(): ComposerContext? {
+    if (!this::class.java.isAssignableFrom(SnapEnhance.classCache.composerView)) return null
+
+    return ComposerContext(this::class.java.methods.firstOrNull {
+        it.name == "getComposerContext"
+    }?.invoke(this) ?: return null)
 }
 
 object ViewAppearanceHelper {

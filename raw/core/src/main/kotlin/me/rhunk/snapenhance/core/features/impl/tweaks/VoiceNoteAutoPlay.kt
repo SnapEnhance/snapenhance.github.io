@@ -118,7 +118,7 @@ class VoiceNoteAutoPlay: Feature("Voice Note Auto Play") {
         onNextActivityCreate {
             context.event.subscribe(BindViewEvent::class) { event ->
                 if (!event.prevModel.toString().contains("audio_note")) return@subscribe
-                event.chatMessage { _, messageId ->
+                event.chatMessage { _, _ ->
                     // find view model of the audio note
                     val viewModelField = event.prevModel.javaClass.fields.firstOrNull { field ->
                         field.type.constructors.firstOrNull()?.parameterTypes?.takeIf { it.size == 3 }?.let { args ->
@@ -143,7 +143,7 @@ class VoiceNoteAutoPlay: Feature("Voice Note Auto Play") {
                     }
 
                     context.coroutineScope.launch {
-                        val serverMessageId = context.database.getConversationMessageFromId(messageId.toLong())?.serverMessageId?.toLong() ?: return@launch
+                        val serverMessageId = event.databaseMessage?.serverMessageId?.toLong() ?: return@launch
 
                         withContext(Dispatchers.Main) {
                             playbackMap.computeIfAbsent(serverMessageId) { mutableListOf() }.add(playbackViewComponentContext)
