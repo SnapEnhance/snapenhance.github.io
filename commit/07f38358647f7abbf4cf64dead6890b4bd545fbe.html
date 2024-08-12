@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core/bridge): connection retry - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/07f38358647f7abbf4cf64dead6890b4bd545fbe.html">07f38358647f7abbf4cf64dead6890b4bd545fbe</a>
+<b>parent</b> <a href="../commit/ae1aee3ce0f662db447021d51901630000d5e884.html">ae1aee3ce0f662db447021d51901630000d5e884</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Mon, 12 Aug 2024 01:14:40 +0200
+
+fix(core/bridge): connection retry
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></td><td> | </td><td class="num">92</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">----------------------------------</span></td></tr>
+</table></pre><pre>1 file changed, 52 insertions(+), 40 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -64,52 +64,64 @@ class BridgeClient(
+</a>             return true
+         }
+ 
+<a href="#h0-0-3" id="h0-0-3" class="d">-        return withTimeoutOrNull(10000L) {
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-            suspendCancellableCoroutine { cancellableContinuation -&gt;
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-                continuation = cancellableContinuation
+</a><a href="#h0-0-6" id="h0-0-6" class="d">-                with(context.androidContext) {
+</a><a href="#h0-0-7" id="h0-0-7" class="d">-                    //ensure the remote process is running
+</a><a href="#h0-0-8" id="h0-0-8" class="d">-                    runCatching {
+</a><a href="#h0-0-9" id="h0-0-9" class="d">-                        startActivity(Intent()
+</a><a href="#h0-0-10" id="h0-0-10" class="d">-                            .setClassName(Constants.SE_PACKAGE_NAME, &quot;me.rhunk.snapenhance.bridge.ForceStartActivity&quot;)
+</a><a href="#h0-0-11" id="h0-0-11" class="d">-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+</a><a href="#h0-0-12" id="h0-0-12" class="d">-                        )
+</a><a href="#h0-0-13" id="h0-0-13" class="d">-                    }
+</a><a href="#h0-0-14" id="h0-0-14" class="i">+        val connectionTimeout = 15000L
+</a><a href="#h0-0-15" id="h0-0-15" class="i">+        val retryDelay = 3000L
+</a><a href="#h0-0-16" id="h0-0-16" class="i">+
+</a><a href="#h0-0-17" id="h0-0-17" class="i">+        return withTimeoutOrNull(connectionTimeout) {
+</a><a href="#h0-0-18" id="h0-0-18" class="i">+            var result: Boolean? = null
+</a><a href="#h0-0-19" id="h0-0-19" class="i">+
+</a><a href="#h0-0-20" id="h0-0-20" class="i">+            for (retry in 0.. (connectionTimeout / retryDelay).toInt()) {
+</a><a href="#h0-0-21" id="h0-0-21" class="i">+                result = withTimeoutOrNull(retryDelay) {
+</a><a href="#h0-0-22" id="h0-0-22" class="i">+                    suspendCancellableCoroutine { cancellableContinuation -&gt;
+</a><a href="#h0-0-23" id="h0-0-23" class="i">+                        continuation = cancellableContinuation
+</a><a href="#h0-0-24" id="h0-0-24" class="i">+                        with(context.androidContext) {
+</a><a href="#h0-0-25" id="h0-0-25" class="i">+                            //ensure the remote process is running
+</a><a href="#h0-0-26" id="h0-0-26" class="i">+                            runCatching {
+</a><a href="#h0-0-27" id="h0-0-27" class="i">+                                startActivity(Intent()
+</a><a href="#h0-0-28" id="h0-0-28" class="i">+                                    .setClassName(Constants.SE_PACKAGE_NAME, &quot;me.rhunk.snapenhance.bridge.ForceStartActivity&quot;)
+</a><a href="#h0-0-29" id="h0-0-29" class="i">+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+</a><a href="#h0-0-30" id="h0-0-30" class="i">+                                )
+</a><a href="#h0-0-31" id="h0-0-31" class="i">+                            }
+</a> 
+<a href="#h0-0-33" id="h0-0-33" class="d">-                    runCatching {
+</a><a href="#h0-0-34" id="h0-0-34" class="d">-                        val intent = Intent()
+</a><a href="#h0-0-35" id="h0-0-35" class="d">-                            .setClassName(Constants.SE_PACKAGE_NAME, &quot;me.rhunk.snapenhance.bridge.BridgeService&quot;)
+</a><a href="#h0-0-36" id="h0-0-36" class="d">-                        runCatching {
+</a><a href="#h0-0-37" id="h0-0-37" class="d">-                            if (this@BridgeClient::service.isInitialized) {
+</a><a href="#h0-0-38" id="h0-0-38" class="d">-                                unbindService(this@BridgeClient)
+</a><a href="#h0-0-39" id="h0-0-39" class="i">+                            runCatching {
+</a><a href="#h0-0-40" id="h0-0-40" class="i">+                                val intent = Intent()
+</a><a href="#h0-0-41" id="h0-0-41" class="i">+                                    .setClassName(Constants.SE_PACKAGE_NAME, &quot;me.rhunk.snapenhance.bridge.BridgeService&quot;)
+</a><a href="#h0-0-42" id="h0-0-42" class="i">+                                runCatching {
+</a><a href="#h0-0-43" id="h0-0-43" class="i">+                                    if (this@BridgeClient::service.isInitialized) {
+</a><a href="#h0-0-44" id="h0-0-44" class="i">+                                        unbindService(this@BridgeClient)
+</a><a href="#h0-0-45" id="h0-0-45" class="i">+                                    }
+</a><a href="#h0-0-46" id="h0-0-46" class="i">+                                }
+</a><a href="#h0-0-47" id="h0-0-47" class="i">+                                if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.Q) {
+</a><a href="#h0-0-48" id="h0-0-48" class="i">+                                    bindService(
+</a><a href="#h0-0-49" id="h0-0-49" class="i">+                                        intent,
+</a><a href="#h0-0-50" id="h0-0-50" class="i">+                                        Context.BIND_AUTO_CREATE,
+</a><a href="#h0-0-51" id="h0-0-51" class="i">+                                        Executors.newSingleThreadExecutor(),
+</a><a href="#h0-0-52" id="h0-0-52" class="i">+                                        this@BridgeClient
+</a><a href="#h0-0-53" id="h0-0-53" class="i">+                                    )
+</a><a href="#h0-0-54" id="h0-0-54" class="i">+                                } else {
+</a><a href="#h0-0-55" id="h0-0-55" class="i">+                                    XposedHelpers.callMethod(
+</a><a href="#h0-0-56" id="h0-0-56" class="i">+                                        this,
+</a><a href="#h0-0-57" id="h0-0-57" class="i">+                                        &quot;bindServiceAsUser&quot;,
+</a><a href="#h0-0-58" id="h0-0-58" class="i">+                                        intent,
+</a><a href="#h0-0-59" id="h0-0-59" class="i">+                                        this@BridgeClient,
+</a><a href="#h0-0-60" id="h0-0-60" class="i">+                                        Context.BIND_AUTO_CREATE,
+</a><a href="#h0-0-61" id="h0-0-61" class="i">+                                        Handler(HandlerThread(&quot;BridgeClient&quot;).apply {
+</a><a href="#h0-0-62" id="h0-0-62" class="i">+                                            start()
+</a><a href="#h0-0-63" id="h0-0-63" class="i">+                                        }.looper),
+</a><a href="#h0-0-64" id="h0-0-64" class="i">+                                        Process.myUserHandle()
+</a><a href="#h0-0-65" id="h0-0-65" class="i">+                                    )
+</a><a href="#h0-0-66" id="h0-0-66" class="i">+                                }
+</a><a href="#h0-0-67" id="h0-0-67" class="i">+                            }.onFailure {
+</a><a href="#h0-0-68" id="h0-0-68" class="i">+                                onFailure(it)
+</a><a href="#h0-0-69" id="h0-0-69" class="i">+                                resumeContinuation(false)
+</a>                             }
+                         }
+<a href="#h0-0-72" id="h0-0-72" class="d">-                        if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.Q) {
+</a><a href="#h0-0-73" id="h0-0-73" class="d">-                            bindService(
+</a><a href="#h0-0-74" id="h0-0-74" class="d">-                                intent,
+</a><a href="#h0-0-75" id="h0-0-75" class="d">-                                Context.BIND_AUTO_CREATE,
+</a><a href="#h0-0-76" id="h0-0-76" class="d">-                                Executors.newSingleThreadExecutor(),
+</a><a href="#h0-0-77" id="h0-0-77" class="d">-                                this@BridgeClient
+</a><a href="#h0-0-78" id="h0-0-78" class="d">-                            )
+</a><a href="#h0-0-79" id="h0-0-79" class="d">-                        } else {
+</a><a href="#h0-0-80" id="h0-0-80" class="d">-                            XposedHelpers.callMethod(
+</a><a href="#h0-0-81" id="h0-0-81" class="d">-                                this,
+</a><a href="#h0-0-82" id="h0-0-82" class="d">-                                &quot;bindServiceAsUser&quot;,
+</a><a href="#h0-0-83" id="h0-0-83" class="d">-                                intent,
+</a><a href="#h0-0-84" id="h0-0-84" class="d">-                                this@BridgeClient,
+</a><a href="#h0-0-85" id="h0-0-85" class="d">-                                Context.BIND_AUTO_CREATE,
+</a><a href="#h0-0-86" id="h0-0-86" class="d">-                                Handler(HandlerThread(&quot;BridgeClient&quot;).apply {
+</a><a href="#h0-0-87" id="h0-0-87" class="d">-                                    start()
+</a><a href="#h0-0-88" id="h0-0-88" class="d">-                                }.looper),
+</a><a href="#h0-0-89" id="h0-0-89" class="d">-                                Process.myUserHandle()
+</a><a href="#h0-0-90" id="h0-0-90" class="d">-                            )
+</a><a href="#h0-0-91" id="h0-0-91" class="d">-                        }
+</a><a href="#h0-0-92" id="h0-0-92" class="d">-                    }.onFailure {
+</a><a href="#h0-0-93" id="h0-0-93" class="d">-                        onFailure(it)
+</a><a href="#h0-0-94" id="h0-0-94" class="d">-                        resumeContinuation(false)
+</a>                     }
+                 }
+<a href="#h0-0-97" id="h0-0-97" class="i">+                if (result != null) break
+</a>             }
+<a href="#h0-0-99" id="h0-0-99" class="i">+
+</a><a href="#h0-0-100" id="h0-0-100" class="i">+            result
+</a>         }
+     }
+ 
+</pre>
+</div>
+</body>
+</html>
