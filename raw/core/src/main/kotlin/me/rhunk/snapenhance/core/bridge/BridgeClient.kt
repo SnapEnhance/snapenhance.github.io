@@ -193,7 +193,7 @@ class BridgeClient(
 
     fun broadcastLog(tag: String, level: String, message: String) {
         message.chunked(1024 * 256).forEach {
-            safeServiceCall {
+            runCatching {
                 service.broadcastLog(tag, level, it)
             }
         }
