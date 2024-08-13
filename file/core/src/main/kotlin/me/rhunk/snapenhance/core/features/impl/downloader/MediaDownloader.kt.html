@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> MediaDownloader.kt (36430B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt">raw</a></p><hr/><pre id="blob">
+<p> MediaDownloader.kt (36747B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core.features.impl.downloader
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import android.annotation.SuppressLint
@@ -77,733 +77,738 @@
 <a href="#l54" class="line" id="l54">     54</a> import java.nio.file.Paths
 <a href="#l55" class="line" id="l55">     55</a> import java.util.UUID
 <a href="#l56" class="line" id="l56">     56</a> import kotlin.coroutines.suspendCoroutine
-<a href="#l57" class="line" id="l57">     57</a> import kotlin.io.encoding.ExperimentalEncodingApi
-<a href="#l58" class="line" id="l58">     58</a> import kotlin.math.absoluteValue
-<a href="#l59" class="line" id="l59">     59</a> 
-<a href="#l60" class="line" id="l60">     60</a> class SnapChapterInfo(
-<a href="#l61" class="line" id="l61">     61</a>     val offset: Long,
-<a href="#l62" class="line" id="l62">     62</a>     val duration: Long?
-<a href="#l63" class="line" id="l63">     63</a> )
+<a href="#l57" class="line" id="l57">     57</a> import kotlin.math.absoluteValue
+<a href="#l58" class="line" id="l58">     58</a> 
+<a href="#l59" class="line" id="l59">     59</a> class SnapChapterInfo(
+<a href="#l60" class="line" id="l60">     60</a>     val offset: Long,
+<a href="#l61" class="line" id="l61">     61</a>     val duration: Long?
+<a href="#l62" class="line" id="l62">     62</a> )
+<a href="#l63" class="line" id="l63">     63</a> 
 <a href="#l64" class="line" id="l64">     64</a> 
-<a href="#l65" class="line" id="l65">     65</a> 
-<a href="#l66" class="line" id="l66">     66</a> class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleType.AUTO_DOWNLOAD) {
-<a href="#l67" class="line" id="l67">     67</a>     private var lastSeenMediaInfoMap: MutableMap&lt;SplitMediaAssetType, MediaInfo&gt;? = null
-<a href="#l68" class="line" id="l68">     68</a>     var lastSeenMapParams: ParamMap? = null
-<a href="#l69" class="line" id="l69">     69</a>         private set
-<a href="#l70" class="line" id="l70">     70</a>     private val translations by lazy {
-<a href="#l71" class="line" id="l71">     71</a>         context.translation.getCategory(&quot;download_processor&quot;)
-<a href="#l72" class="line" id="l72">     72</a>     }
-<a href="#l73" class="line" id="l73">     73</a> 
-<a href="#l74" class="line" id="l74">     74</a>     fun provideDownloadManagerClient(
-<a href="#l75" class="line" id="l75">     75</a>         mediaIdentifier: String,
-<a href="#l76" class="line" id="l76">     76</a>         mediaAuthor: String,
-<a href="#l77" class="line" id="l77">     77</a>         creationTimestamp: Long? = null,
-<a href="#l78" class="line" id="l78">     78</a>         downloadSource: MediaDownloadSource,
-<a href="#l79" class="line" id="l79">     79</a>         friendInfo: FriendInfo? = null,
-<a href="#l80" class="line" id="l80">     80</a>         forceAllowDuplicate: Boolean = false
-<a href="#l81" class="line" id="l81">     81</a>     ): DownloadManagerClient {
-<a href="#l82" class="line" id="l82">     82</a>         val generatedHash = (
-<a href="#l83" class="line" id="l83">     83</a>             if (!context.config.downloader.allowDuplicate.get() &amp;&amp; !forceAllowDuplicate) mediaIdentifier
-<a href="#l84" class="line" id="l84">     84</a>             else UUID.randomUUID().toString()
-<a href="#l85" class="line" id="l85">     85</a>         ).longHashCode().absoluteValue.toString(16)
-<a href="#l86" class="line" id="l86">     86</a> 
-<a href="#l87" class="line" id="l87">     87</a>         val iconUrl = BitmojiSelfie.getBitmojiSelfie(friendInfo?.bitmojiSelfieId, friendInfo?.bitmojiAvatarId, BitmojiSelfie.BitmojiSelfieType.THREE_D)
-<a href="#l88" class="line" id="l88">     88</a> 
-<a href="#l89" class="line" id="l89">     89</a>         val downloadLogging by context.config.downloader.logging
-<a href="#l90" class="line" id="l90">     90</a>         if (downloadLogging.contains(&quot;started&quot;)) {
-<a href="#l91" class="line" id="l91">     91</a>             context.shortToast(translations[&quot;download_started_toast&quot;])
-<a href="#l92" class="line" id="l92">     92</a>         }
-<a href="#l93" class="line" id="l93">     93</a> 
-<a href="#l94" class="line" id="l94">     94</a>         val outputPath = createNewFilePath(
-<a href="#l95" class="line" id="l95">     95</a>             context.config,
-<a href="#l96" class="line" id="l96">     96</a>             generatedHash.substring(0, generatedHash.length.coerceAtMost(8)),
-<a href="#l97" class="line" id="l97">     97</a>             downloadSource,
-<a href="#l98" class="line" id="l98">     98</a>             mediaAuthor,
-<a href="#l99" class="line" id="l99">     99</a>             creationTimestamp?.takeIf { it &gt; 0L }
-<a href="#l100" class="line" id="l100">    100</a>         )
-<a href="#l101" class="line" id="l101">    101</a> 
-<a href="#l102" class="line" id="l102">    102</a>         return DownloadManagerClient(
-<a href="#l103" class="line" id="l103">    103</a>             context = context,
-<a href="#l104" class="line" id="l104">    104</a>             metadata = DownloadMetadata(
-<a href="#l105" class="line" id="l105">    105</a>                 mediaIdentifier = generatedHash,
-<a href="#l106" class="line" id="l106">    106</a>                 mediaAuthor = mediaAuthor,
-<a href="#l107" class="line" id="l107">    107</a>                 downloadSource = downloadSource.translate(context.translation),
-<a href="#l108" class="line" id="l108">    108</a>                 iconUrl = iconUrl,
-<a href="#l109" class="line" id="l109">    109</a>                 outputPath = outputPath
-<a href="#l110" class="line" id="l110">    110</a>             ),
-<a href="#l111" class="line" id="l111">    111</a>             callback = object: DownloadCallback.Stub() {
-<a href="#l112" class="line" id="l112">    112</a>                 override fun onSuccess(outputFile: String) {
-<a href="#l113" class="line" id="l113">    113</a>                     if (!downloadLogging.contains(&quot;success&quot;)) return
-<a href="#l114" class="line" id="l114">    114</a>                     context.log.verbose(&quot;onSuccess: outputFile=$outputFile&quot;)
-<a href="#l115" class="line" id="l115">    115</a>                     context.inAppOverlay.showStatusToast(
-<a href="#l116" class="line" id="l116">    116</a>                         icon = Icons.Outlined.CheckCircle,
-<a href="#l117" class="line" id="l117">    117</a>                         text = translations.format(&quot;saved_toast&quot;, &quot;path&quot; to outputFile.split(&quot;/&quot;).takeLast(2).joinToString(&quot;/&quot;)).also {
-<a href="#l118" class="line" id="l118">    118</a>                             if (context.isMainActivityPaused) {
-<a href="#l119" class="line" id="l119">    119</a>                                 context.shortToast(it)
-<a href="#l120" class="line" id="l120">    120</a>                             }
-<a href="#l121" class="line" id="l121">    121</a>                         },
-<a href="#l122" class="line" id="l122">    122</a>                     )
-<a href="#l123" class="line" id="l123">    123</a>                 }
-<a href="#l124" class="line" id="l124">    124</a> 
-<a href="#l125" class="line" id="l125">    125</a>                 override fun onProgress(message: String) {
-<a href="#l126" class="line" id="l126">    126</a>                     if (!downloadLogging.contains(&quot;progress&quot;)) return
-<a href="#l127" class="line" id="l127">    127</a>                     context.log.verbose(&quot;onProgress: message=$message&quot;)
-<a href="#l128" class="line" id="l128">    128</a>                     context.inAppOverlay.showStatusToast(
-<a href="#l129" class="line" id="l129">    129</a>                         icon = Icons.Outlined.Info,
-<a href="#l130" class="line" id="l130">    130</a>                         text = message,
-<a href="#l131" class="line" id="l131">    131</a>                     )
-<a href="#l132" class="line" id="l132">    132</a>                     if (context.isMainActivityPaused) {
-<a href="#l133" class="line" id="l133">    133</a>                         context.shortToast(message)
-<a href="#l134" class="line" id="l134">    134</a>                     }
-<a href="#l135" class="line" id="l135">    135</a>                 }
-<a href="#l136" class="line" id="l136">    136</a> 
-<a href="#l137" class="line" id="l137">    137</a>                 override fun onFailure(message: String, throwable: String?) {
-<a href="#l138" class="line" id="l138">    138</a>                     if (!downloadLogging.contains(&quot;failure&quot;)) return
-<a href="#l139" class="line" id="l139">    139</a>                     context.log.verbose(&quot;onFailure: message=$message, throwable=$throwable&quot;)
-<a href="#l140" class="line" id="l140">    140</a>                     if (context.isMainActivityPaused) {
-<a href="#l141" class="line" id="l141">    141</a>                         context.shortToast(message)
-<a href="#l142" class="line" id="l142">    142</a>                     }
-<a href="#l143" class="line" id="l143">    143</a>                     throwable?.let { t -&gt;
-<a href="#l144" class="line" id="l144">    144</a>                         context.inAppOverlay.showStatusToast(
-<a href="#l145" class="line" id="l145">    145</a>                             icon = Icons.Outlined.Error,
-<a href="#l146" class="line" id="l146">    146</a>                             text = message + t.takeIf { it.isNotEmpty() }?.let { &quot; $it&quot; }.orEmpty(),
-<a href="#l147" class="line" id="l147">    147</a>                         )
-<a href="#l148" class="line" id="l148">    148</a>                         return
-<a href="#l149" class="line" id="l149">    149</a>                     }
-<a href="#l150" class="line" id="l150">    150</a> 
-<a href="#l151" class="line" id="l151">    151</a>                     context.inAppOverlay.showStatusToast(
-<a href="#l152" class="line" id="l152">    152</a>                         icon = Icons.Outlined.Warning,
-<a href="#l153" class="line" id="l153">    153</a>                         text = message,
-<a href="#l154" class="line" id="l154">    154</a>                     )
-<a href="#l155" class="line" id="l155">    155</a>                 }
-<a href="#l156" class="line" id="l156">    156</a>             }
-<a href="#l157" class="line" id="l157">    157</a>         )
-<a href="#l158" class="line" id="l158">    158</a>     }
-<a href="#l159" class="line" id="l159">    159</a> 
-<a href="#l160" class="line" id="l160">    160</a>     /*
-<a href="#l161" class="line" id="l161">    161</a>      * Download the last seen media
-<a href="#l162" class="line" id="l162">    162</a>      */
-<a href="#l163" class="line" id="l163">    163</a>     fun downloadLastOperaMediaAsync(allowDuplicate: Boolean) {
-<a href="#l164" class="line" id="l164">    164</a>         if (lastSeenMapParams == null || lastSeenMediaInfoMap == null) return
-<a href="#l165" class="line" id="l165">    165</a>         context.executeAsync {
-<a href="#l166" class="line" id="l166">    166</a>             handleOperaMedia(lastSeenMapParams!!, lastSeenMediaInfoMap!!, true, allowDuplicate)
-<a href="#l167" class="line" id="l167">    167</a>         }
-<a href="#l168" class="line" id="l168">    168</a>     }
-<a href="#l169" class="line" id="l169">    169</a> 
-<a href="#l170" class="line" id="l170">    170</a>     fun showLastOperaDebugMediaInfo() {
-<a href="#l171" class="line" id="l171">    171</a>         if (lastSeenMapParams == null || lastSeenMediaInfoMap == null) return
-<a href="#l172" class="line" id="l172">    172</a> 
-<a href="#l173" class="line" id="l173">    173</a>         context.runOnUiThread {
-<a href="#l174" class="line" id="l174">    174</a>             val mediaInfoText = lastSeenMapParams?.concurrentHashMap?.map { (key, value) -&gt;
-<a href="#l175" class="line" id="l175">    175</a>                 val transformedValue = value.let {
-<a href="#l176" class="line" id="l176">    176</a>                     if (it::class.java == SnapEnhance.classCache.snapUUID) {
-<a href="#l177" class="line" id="l177">    177</a>                         SnapUUID(it).toString()
-<a href="#l178" class="line" id="l178">    178</a>                     }
-<a href="#l179" class="line" id="l179">    179</a>                     it
-<a href="#l180" class="line" id="l180">    180</a>                 }
-<a href="#l181" class="line" id="l181">    181</a>                 &quot;- $key: $transformedValue&quot;
-<a href="#l182" class="line" id="l182">    182</a>             }?.joinToString(&quot;\n&quot;) ?: &quot;No media info found&quot;
-<a href="#l183" class="line" id="l183">    183</a> 
-<a href="#l184" class="line" id="l184">    184</a>             ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity!!).apply {
-<a href="#l185" class="line" id="l185">    185</a>                 setTitle(&quot;Debug Media Info&quot;)
-<a href="#l186" class="line" id="l186">    186</a>                 setView(debugEditText(context, mediaInfoText))
-<a href="#l187" class="line" id="l187">    187</a>                 setNeutralButton(&quot;Copy&quot;) { _, _ -&gt;
-<a href="#l188" class="line" id="l188">    188</a>                     context.copyToClipboard(mediaInfoText)
-<a href="#l189" class="line" id="l189">    189</a>                 }
-<a href="#l190" class="line" id="l190">    190</a>                 setNegativeButton(&quot;Cancel&quot;) { dialog, _ -&gt; dialog.dismiss() }
-<a href="#l191" class="line" id="l191">    191</a>             }.show()
-<a href="#l192" class="line" id="l192">    192</a>         }
-<a href="#l193" class="line" id="l193">    193</a>     }
-<a href="#l194" class="line" id="l194">    194</a> 
-<a href="#l195" class="line" id="l195">    195</a>     private fun handleLocalReferences(path: String) = runBlocking {
-<a href="#l196" class="line" id="l196">    196</a>         Uri.parse(path).let { uri -&gt;
-<a href="#l197" class="line" id="l197">    197</a>             if (uri.scheme == &quot;file&quot; || uri.scheme == null) {
-<a href="#l198" class="line" id="l198">    198</a>                 return@let suspendCoroutine&lt;String&gt; { continuation -&gt;
-<a href="#l199" class="line" id="l199">    199</a>                     context.httpServer.ensureServerStarted()?.let { server -&gt;
-<a href="#l200" class="line" id="l200">    200</a>                         val file = Paths.get(uri.path).toFile()
-<a href="#l201" class="line" id="l201">    201</a>                         val url = server.putDownloadableContent(file.inputStream(), file.length())
-<a href="#l202" class="line" id="l202">    202</a>                         continuation.resumeWith(Result.success(url))
-<a href="#l203" class="line" id="l203">    203</a>                     } ?: run {
-<a href="#l204" class="line" id="l204">    204</a>                         continuation.resumeWith(Result.failure(Exception(&quot;Failed to start http server&quot;)))
-<a href="#l205" class="line" id="l205">    205</a>                     }
-<a href="#l206" class="line" id="l206">    206</a>                 }
-<a href="#l207" class="line" id="l207">    207</a>             }
-<a href="#l208" class="line" id="l208">    208</a>             path
-<a href="#l209" class="line" id="l209">    209</a>         }
-<a href="#l210" class="line" id="l210">    210</a>     }
-<a href="#l211" class="line" id="l211">    211</a> 
-<a href="#l212" class="line" id="l212">    212</a>     private fun downloadOperaMedia(downloadManagerClient: DownloadManagerClient, mediaInfoMap: Map&lt;SplitMediaAssetType, MediaInfo&gt;) {
-<a href="#l213" class="line" id="l213">    213</a>         if (mediaInfoMap.isEmpty()) return
-<a href="#l214" class="line" id="l214">    214</a> 
-<a href="#l215" class="line" id="l215">    215</a>         val originalMediaInfo = mediaInfoMap[SplitMediaAssetType.ORIGINAL]!!
-<a href="#l216" class="line" id="l216">    216</a>         val originalMediaInfoReference = handleLocalReferences(originalMediaInfo.uri)
-<a href="#l217" class="line" id="l217">    217</a> 
-<a href="#l218" class="line" id="l218">    218</a>         mediaInfoMap[SplitMediaAssetType.OVERLAY]?.let { overlay -&gt;
-<a href="#l219" class="line" id="l219">    219</a>             val overlayReference = handleLocalReferences(overlay.uri)
-<a href="#l220" class="line" id="l220">    220</a> 
-<a href="#l221" class="line" id="l221">    221</a>             downloadManagerClient.downloadMediaWithOverlay(
-<a href="#l222" class="line" id="l222">    222</a>                 original = InputMedia(
-<a href="#l223" class="line" id="l223">    223</a>                     originalMediaInfoReference,
-<a href="#l224" class="line" id="l224">    224</a>                     DownloadMediaType.fromUri(Uri.parse(originalMediaInfoReference)),
-<a href="#l225" class="line" id="l225">    225</a>                     originalMediaInfo.encryption?.toKeyPair()
-<a href="#l226" class="line" id="l226">    226</a>                 ),
-<a href="#l227" class="line" id="l227">    227</a>                 overlay = InputMedia(
-<a href="#l228" class="line" id="l228">    228</a>                     overlayReference,
-<a href="#l229" class="line" id="l229">    229</a>                     DownloadMediaType.fromUri(Uri.parse(overlayReference)),
-<a href="#l230" class="line" id="l230">    230</a>                     overlay.encryption?.toKeyPair(),
-<a href="#l231" class="line" id="l231">    231</a>                     isOverlay = true
-<a href="#l232" class="line" id="l232">    232</a>                 )
-<a href="#l233" class="line" id="l233">    233</a>             )
-<a href="#l234" class="line" id="l234">    234</a>             return
-<a href="#l235" class="line" id="l235">    235</a>         }
-<a href="#l236" class="line" id="l236">    236</a> 
-<a href="#l237" class="line" id="l237">    237</a>         downloadManagerClient.downloadSingleMedia(
-<a href="#l238" class="line" id="l238">    238</a>             originalMediaInfoReference,
-<a href="#l239" class="line" id="l239">    239</a>             DownloadMediaType.fromUri(Uri.parse(originalMediaInfoReference)),
-<a href="#l240" class="line" id="l240">    240</a>             originalMediaInfo.encryption?.toKeyPair()
-<a href="#l241" class="line" id="l241">    241</a>         )
-<a href="#l242" class="line" id="l242">    242</a>     }
-<a href="#l243" class="line" id="l243">    243</a> 
-<a href="#l244" class="line" id="l244">    244</a>     /**
-<a href="#l245" class="line" id="l245">    245</a>      * Handles the media from the opera viewer
-<a href="#l246" class="line" id="l246">    246</a>      *
-<a href="#l247" class="line" id="l247">    247</a>      * @param paramMap      the parameters from the opera viewer
-<a href="#l248" class="line" id="l248">    248</a>      * @param mediaInfoMap  the media info map
-<a href="#l249" class="line" id="l249">    249</a>      * @param forceDownload if the media should be downloaded
-<a href="#l250" class="line" id="l250">    250</a>      */
-<a href="#l251" class="line" id="l251">    251</a>     private fun handleOperaMedia(
-<a href="#l252" class="line" id="l252">    252</a>         paramMap: ParamMap,
-<a href="#l253" class="line" id="l253">    253</a>         mediaInfoMap: Map&lt;SplitMediaAssetType, MediaInfo&gt;,
-<a href="#l254" class="line" id="l254">    254</a>         forceDownload: Boolean,
-<a href="#l255" class="line" id="l255">    255</a>         forceAllowDuplicate: Boolean = false
-<a href="#l256" class="line" id="l256">    256</a>     ) {
-<a href="#l257" class="line" id="l257">    257</a>         //messages
-<a href="#l258" class="line" id="l258">    258</a>         paramMap[&quot;MESSAGE_ID&quot;]?.toString()?.takeIf { forceDownload || canAutoDownload(&quot;friend_snaps&quot;) }?.let { id -&gt;
-<a href="#l259" class="line" id="l259">    259</a>             val messageId = id.substring(id.lastIndexOf(&quot;:&quot;) + 1).toLong()
-<a href="#l260" class="line" id="l260">    260</a>             val conversationMessage = context.database.getConversationMessageFromId(messageId)!!
-<a href="#l261" class="line" id="l261">    261</a> 
-<a href="#l262" class="line" id="l262">    262</a>             val conversationId = conversationMessage.clientConversationId!!
-<a href="#l263" class="line" id="l263">    263</a> 
-<a href="#l264" class="line" id="l264">    264</a>             if (!forceDownload &amp;&amp; !canUseRule(conversationId)) {
-<a href="#l265" class="line" id="l265">    265</a>                 return
-<a href="#l266" class="line" id="l266">    266</a>             }
+<a href="#l65" class="line" id="l65">     65</a> class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleType.AUTO_DOWNLOAD) {
+<a href="#l66" class="line" id="l66">     66</a>     private var lastSeenMediaInfoMap: MutableMap&lt;SplitMediaAssetType, MediaInfo&gt;? = null
+<a href="#l67" class="line" id="l67">     67</a>     var lastSeenMapParams: ParamMap? = null
+<a href="#l68" class="line" id="l68">     68</a>         private set
+<a href="#l69" class="line" id="l69">     69</a>     private val translations by lazy {
+<a href="#l70" class="line" id="l70">     70</a>         context.translation.getCategory(&quot;download_processor&quot;)
+<a href="#l71" class="line" id="l71">     71</a>     }
+<a href="#l72" class="line" id="l72">     72</a> 
+<a href="#l73" class="line" id="l73">     73</a>     fun provideDownloadManagerClient(
+<a href="#l74" class="line" id="l74">     74</a>         mediaIdentifier: String,
+<a href="#l75" class="line" id="l75">     75</a>         mediaAuthor: String,
+<a href="#l76" class="line" id="l76">     76</a>         creationTimestamp: Long? = null,
+<a href="#l77" class="line" id="l77">     77</a>         downloadSource: MediaDownloadSource,
+<a href="#l78" class="line" id="l78">     78</a>         friendInfo: FriendInfo? = null,
+<a href="#l79" class="line" id="l79">     79</a>         forceAllowDuplicate: Boolean = false
+<a href="#l80" class="line" id="l80">     80</a>     ): DownloadManagerClient {
+<a href="#l81" class="line" id="l81">     81</a>         val generatedHash = (
+<a href="#l82" class="line" id="l82">     82</a>             if (!context.config.downloader.allowDuplicate.get() &amp;&amp; !forceAllowDuplicate) mediaIdentifier
+<a href="#l83" class="line" id="l83">     83</a>             else UUID.randomUUID().toString()
+<a href="#l84" class="line" id="l84">     84</a>         ).longHashCode().absoluteValue.toString(16)
+<a href="#l85" class="line" id="l85">     85</a> 
+<a href="#l86" class="line" id="l86">     86</a>         val iconUrl = BitmojiSelfie.getBitmojiSelfie(friendInfo?.bitmojiSelfieId, friendInfo?.bitmojiAvatarId, BitmojiSelfie.BitmojiSelfieType.THREE_D)
+<a href="#l87" class="line" id="l87">     87</a> 
+<a href="#l88" class="line" id="l88">     88</a>         val downloadLogging by context.config.downloader.logging
+<a href="#l89" class="line" id="l89">     89</a>         if (downloadLogging.contains(&quot;started&quot;)) {
+<a href="#l90" class="line" id="l90">     90</a>             context.shortToast(translations[&quot;download_started_toast&quot;])
+<a href="#l91" class="line" id="l91">     91</a>         }
+<a href="#l92" class="line" id="l92">     92</a> 
+<a href="#l93" class="line" id="l93">     93</a>         val outputPath = createNewFilePath(
+<a href="#l94" class="line" id="l94">     94</a>             context.config,
+<a href="#l95" class="line" id="l95">     95</a>             generatedHash.substring(0, generatedHash.length.coerceAtMost(8)),
+<a href="#l96" class="line" id="l96">     96</a>             downloadSource,
+<a href="#l97" class="line" id="l97">     97</a>             mediaAuthor,
+<a href="#l98" class="line" id="l98">     98</a>             creationTimestamp?.takeIf { it &gt; 0L }
+<a href="#l99" class="line" id="l99">     99</a>         )
+<a href="#l100" class="line" id="l100">    100</a> 
+<a href="#l101" class="line" id="l101">    101</a>         return DownloadManagerClient(
+<a href="#l102" class="line" id="l102">    102</a>             context = context,
+<a href="#l103" class="line" id="l103">    103</a>             metadata = DownloadMetadata(
+<a href="#l104" class="line" id="l104">    104</a>                 mediaIdentifier = generatedHash,
+<a href="#l105" class="line" id="l105">    105</a>                 mediaAuthor = mediaAuthor,
+<a href="#l106" class="line" id="l106">    106</a>                 downloadSource = downloadSource.translate(context.translation),
+<a href="#l107" class="line" id="l107">    107</a>                 iconUrl = iconUrl,
+<a href="#l108" class="line" id="l108">    108</a>                 outputPath = outputPath
+<a href="#l109" class="line" id="l109">    109</a>             ),
+<a href="#l110" class="line" id="l110">    110</a>             callback = object: DownloadCallback.Stub() {
+<a href="#l111" class="line" id="l111">    111</a>                 override fun onSuccess(outputFile: String) {
+<a href="#l112" class="line" id="l112">    112</a>                     if (!downloadLogging.contains(&quot;success&quot;)) return
+<a href="#l113" class="line" id="l113">    113</a>                     context.log.verbose(&quot;onSuccess: outputFile=$outputFile&quot;)
+<a href="#l114" class="line" id="l114">    114</a>                     context.inAppOverlay.showStatusToast(
+<a href="#l115" class="line" id="l115">    115</a>                         icon = Icons.Outlined.CheckCircle,
+<a href="#l116" class="line" id="l116">    116</a>                         text = translations.format(&quot;saved_toast&quot;, &quot;path&quot; to outputFile.split(&quot;/&quot;).takeLast(2).joinToString(&quot;/&quot;)).also {
+<a href="#l117" class="line" id="l117">    117</a>                             if (context.isMainActivityPaused) {
+<a href="#l118" class="line" id="l118">    118</a>                                 context.shortToast(it)
+<a href="#l119" class="line" id="l119">    119</a>                             }
+<a href="#l120" class="line" id="l120">    120</a>                         },
+<a href="#l121" class="line" id="l121">    121</a>                     )
+<a href="#l122" class="line" id="l122">    122</a>                 }
+<a href="#l123" class="line" id="l123">    123</a> 
+<a href="#l124" class="line" id="l124">    124</a>                 override fun onProgress(message: String) {
+<a href="#l125" class="line" id="l125">    125</a>                     if (!downloadLogging.contains(&quot;progress&quot;)) return
+<a href="#l126" class="line" id="l126">    126</a>                     context.log.verbose(&quot;onProgress: message=$message&quot;)
+<a href="#l127" class="line" id="l127">    127</a>                     context.inAppOverlay.showStatusToast(
+<a href="#l128" class="line" id="l128">    128</a>                         icon = Icons.Outlined.Info,
+<a href="#l129" class="line" id="l129">    129</a>                         text = message,
+<a href="#l130" class="line" id="l130">    130</a>                     )
+<a href="#l131" class="line" id="l131">    131</a>                     if (context.isMainActivityPaused) {
+<a href="#l132" class="line" id="l132">    132</a>                         context.shortToast(message)
+<a href="#l133" class="line" id="l133">    133</a>                     }
+<a href="#l134" class="line" id="l134">    134</a>                 }
+<a href="#l135" class="line" id="l135">    135</a> 
+<a href="#l136" class="line" id="l136">    136</a>                 override fun onFailure(message: String, throwable: String?) {
+<a href="#l137" class="line" id="l137">    137</a>                     if (!downloadLogging.contains(&quot;failure&quot;)) return
+<a href="#l138" class="line" id="l138">    138</a>                     context.log.verbose(&quot;onFailure: message=$message, throwable=$throwable&quot;)
+<a href="#l139" class="line" id="l139">    139</a>                     if (context.isMainActivityPaused) {
+<a href="#l140" class="line" id="l140">    140</a>                         context.shortToast(message)
+<a href="#l141" class="line" id="l141">    141</a>                     }
+<a href="#l142" class="line" id="l142">    142</a>                     throwable?.let { t -&gt;
+<a href="#l143" class="line" id="l143">    143</a>                         context.inAppOverlay.showStatusToast(
+<a href="#l144" class="line" id="l144">    144</a>                             icon = Icons.Outlined.Error,
+<a href="#l145" class="line" id="l145">    145</a>                             text = message + t.takeIf { it.isNotEmpty() }?.let { &quot; $it&quot; }.orEmpty(),
+<a href="#l146" class="line" id="l146">    146</a>                         )
+<a href="#l147" class="line" id="l147">    147</a>                         return
+<a href="#l148" class="line" id="l148">    148</a>                     }
+<a href="#l149" class="line" id="l149">    149</a> 
+<a href="#l150" class="line" id="l150">    150</a>                     context.inAppOverlay.showStatusToast(
+<a href="#l151" class="line" id="l151">    151</a>                         icon = Icons.Outlined.Warning,
+<a href="#l152" class="line" id="l152">    152</a>                         text = message,
+<a href="#l153" class="line" id="l153">    153</a>                     )
+<a href="#l154" class="line" id="l154">    154</a>                 }
+<a href="#l155" class="line" id="l155">    155</a>             }
+<a href="#l156" class="line" id="l156">    156</a>         )
+<a href="#l157" class="line" id="l157">    157</a>     }
+<a href="#l158" class="line" id="l158">    158</a> 
+<a href="#l159" class="line" id="l159">    159</a>     /*
+<a href="#l160" class="line" id="l160">    160</a>      * Download the last seen media
+<a href="#l161" class="line" id="l161">    161</a>      */
+<a href="#l162" class="line" id="l162">    162</a>     fun downloadLastOperaMediaAsync(allowDuplicate: Boolean) {
+<a href="#l163" class="line" id="l163">    163</a>         if (lastSeenMapParams == null || lastSeenMediaInfoMap == null) return
+<a href="#l164" class="line" id="l164">    164</a>         context.executeAsync {
+<a href="#l165" class="line" id="l165">    165</a>             handleOperaMedia(lastSeenMapParams!!, lastSeenMediaInfoMap!!, true, allowDuplicate)
+<a href="#l166" class="line" id="l166">    166</a>         }
+<a href="#l167" class="line" id="l167">    167</a>     }
+<a href="#l168" class="line" id="l168">    168</a> 
+<a href="#l169" class="line" id="l169">    169</a>     fun showLastOperaDebugMediaInfo() {
+<a href="#l170" class="line" id="l170">    170</a>         if (lastSeenMapParams == null || lastSeenMediaInfoMap == null) return
+<a href="#l171" class="line" id="l171">    171</a> 
+<a href="#l172" class="line" id="l172">    172</a>         context.runOnUiThread {
+<a href="#l173" class="line" id="l173">    173</a>             val mediaInfoText = lastSeenMapParams?.concurrentHashMap?.map { (key, value) -&gt;
+<a href="#l174" class="line" id="l174">    174</a>                 val transformedValue = value.let {
+<a href="#l175" class="line" id="l175">    175</a>                     if (it::class.java == SnapEnhance.classCache.snapUUID) {
+<a href="#l176" class="line" id="l176">    176</a>                         SnapUUID(it).toString()
+<a href="#l177" class="line" id="l177">    177</a>                     }
+<a href="#l178" class="line" id="l178">    178</a>                     it
+<a href="#l179" class="line" id="l179">    179</a>                 }
+<a href="#l180" class="line" id="l180">    180</a>                 &quot;- $key: $transformedValue&quot;
+<a href="#l181" class="line" id="l181">    181</a>             }?.joinToString(&quot;\n&quot;) ?: &quot;No media info found&quot;
+<a href="#l182" class="line" id="l182">    182</a> 
+<a href="#l183" class="line" id="l183">    183</a>             ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity!!).apply {
+<a href="#l184" class="line" id="l184">    184</a>                 setTitle(&quot;Debug Media Info&quot;)
+<a href="#l185" class="line" id="l185">    185</a>                 setView(debugEditText(context, mediaInfoText))
+<a href="#l186" class="line" id="l186">    186</a>                 setNeutralButton(&quot;Copy&quot;) { _, _ -&gt;
+<a href="#l187" class="line" id="l187">    187</a>                     context.copyToClipboard(mediaInfoText)
+<a href="#l188" class="line" id="l188">    188</a>                 }
+<a href="#l189" class="line" id="l189">    189</a>                 setNegativeButton(&quot;Cancel&quot;) { dialog, _ -&gt; dialog.dismiss() }
+<a href="#l190" class="line" id="l190">    190</a>             }.show()
+<a href="#l191" class="line" id="l191">    191</a>         }
+<a href="#l192" class="line" id="l192">    192</a>     }
+<a href="#l193" class="line" id="l193">    193</a> 
+<a href="#l194" class="line" id="l194">    194</a>     private fun handleLocalReferences(path: String) = runBlocking {
+<a href="#l195" class="line" id="l195">    195</a>         Uri.parse(path).let { uri -&gt;
+<a href="#l196" class="line" id="l196">    196</a>             if (uri.scheme == &quot;file&quot; || uri.scheme == null) {
+<a href="#l197" class="line" id="l197">    197</a>                 return@let suspendCoroutine&lt;String&gt; { continuation -&gt;
+<a href="#l198" class="line" id="l198">    198</a>                     context.httpServer.ensureServerStarted()?.let { server -&gt;
+<a href="#l199" class="line" id="l199">    199</a>                         val file = Paths.get(uri.path).toFile()
+<a href="#l200" class="line" id="l200">    200</a>                         val url = server.putDownloadableContent(file.inputStream(), file.length())
+<a href="#l201" class="line" id="l201">    201</a>                         continuation.resumeWith(Result.success(url))
+<a href="#l202" class="line" id="l202">    202</a>                     } ?: run {
+<a href="#l203" class="line" id="l203">    203</a>                         continuation.resumeWith(Result.failure(Exception(&quot;Failed to start http server&quot;)))
+<a href="#l204" class="line" id="l204">    204</a>                     }
+<a href="#l205" class="line" id="l205">    205</a>                 }
+<a href="#l206" class="line" id="l206">    206</a>             }
+<a href="#l207" class="line" id="l207">    207</a>             path
+<a href="#l208" class="line" id="l208">    208</a>         }
+<a href="#l209" class="line" id="l209">    209</a>     }
+<a href="#l210" class="line" id="l210">    210</a> 
+<a href="#l211" class="line" id="l211">    211</a>     private fun downloadOperaMedia(downloadManagerClient: DownloadManagerClient, mediaInfoMap: Map&lt;SplitMediaAssetType, MediaInfo&gt;) {
+<a href="#l212" class="line" id="l212">    212</a>         if (mediaInfoMap.isEmpty()) return
+<a href="#l213" class="line" id="l213">    213</a> 
+<a href="#l214" class="line" id="l214">    214</a>         val originalMediaInfo = mediaInfoMap[SplitMediaAssetType.ORIGINAL]!!
+<a href="#l215" class="line" id="l215">    215</a>         val originalMediaInfoReference = handleLocalReferences(originalMediaInfo.uri)
+<a href="#l216" class="line" id="l216">    216</a> 
+<a href="#l217" class="line" id="l217">    217</a>         mediaInfoMap[SplitMediaAssetType.OVERLAY]?.let { overlay -&gt;
+<a href="#l218" class="line" id="l218">    218</a>             val overlayReference = handleLocalReferences(overlay.uri)
+<a href="#l219" class="line" id="l219">    219</a> 
+<a href="#l220" class="line" id="l220">    220</a>             downloadManagerClient.downloadMediaWithOverlay(
+<a href="#l221" class="line" id="l221">    221</a>                 original = InputMedia(
+<a href="#l222" class="line" id="l222">    222</a>                     originalMediaInfoReference,
+<a href="#l223" class="line" id="l223">    223</a>                     DownloadMediaType.fromUri(Uri.parse(originalMediaInfoReference)),
+<a href="#l224" class="line" id="l224">    224</a>                     originalMediaInfo.encryption?.toKeyPair()
+<a href="#l225" class="line" id="l225">    225</a>                 ),
+<a href="#l226" class="line" id="l226">    226</a>                 overlay = InputMedia(
+<a href="#l227" class="line" id="l227">    227</a>                     overlayReference,
+<a href="#l228" class="line" id="l228">    228</a>                     DownloadMediaType.fromUri(Uri.parse(overlayReference)),
+<a href="#l229" class="line" id="l229">    229</a>                     overlay.encryption?.toKeyPair(),
+<a href="#l230" class="line" id="l230">    230</a>                     isOverlay = true
+<a href="#l231" class="line" id="l231">    231</a>                 )
+<a href="#l232" class="line" id="l232">    232</a>             )
+<a href="#l233" class="line" id="l233">    233</a>             return
+<a href="#l234" class="line" id="l234">    234</a>         }
+<a href="#l235" class="line" id="l235">    235</a> 
+<a href="#l236" class="line" id="l236">    236</a>         downloadManagerClient.downloadSingleMedia(
+<a href="#l237" class="line" id="l237">    237</a>             originalMediaInfoReference,
+<a href="#l238" class="line" id="l238">    238</a>             DownloadMediaType.fromUri(Uri.parse(originalMediaInfoReference)),
+<a href="#l239" class="line" id="l239">    239</a>             originalMediaInfo.encryption?.toKeyPair()
+<a href="#l240" class="line" id="l240">    240</a>         )
+<a href="#l241" class="line" id="l241">    241</a>     }
+<a href="#l242" class="line" id="l242">    242</a> 
+<a href="#l243" class="line" id="l243">    243</a>     fun canAutoDownloadMessage(databaseMessage: ConversationMessage): Boolean {
+<a href="#l244" class="line" id="l244">    244</a>         if (context.config.downloader.preventSelfAutoDownload.get() &amp;&amp; databaseMessage.senderId == context.database.myUserId) return false
+<a href="#l245" class="line" id="l245">    245</a>         return canUseRule(databaseMessage.clientConversationId!!)
+<a href="#l246" class="line" id="l246">    246</a>     }
+<a href="#l247" class="line" id="l247">    247</a> 
+<a href="#l248" class="line" id="l248">    248</a>     /**
+<a href="#l249" class="line" id="l249">    249</a>      * Handles the media from the opera viewer
+<a href="#l250" class="line" id="l250">    250</a>      *
+<a href="#l251" class="line" id="l251">    251</a>      * @param paramMap      the parameters from the opera viewer
+<a href="#l252" class="line" id="l252">    252</a>      * @param mediaInfoMap  the media info map
+<a href="#l253" class="line" id="l253">    253</a>      * @param forceDownload if the media should be downloaded
+<a href="#l254" class="line" id="l254">    254</a>      */
+<a href="#l255" class="line" id="l255">    255</a>     private fun handleOperaMedia(
+<a href="#l256" class="line" id="l256">    256</a>         paramMap: ParamMap,
+<a href="#l257" class="line" id="l257">    257</a>         mediaInfoMap: Map&lt;SplitMediaAssetType, MediaInfo&gt;,
+<a href="#l258" class="line" id="l258">    258</a>         forceDownload: Boolean,
+<a href="#l259" class="line" id="l259">    259</a>         forceAllowDuplicate: Boolean = false
+<a href="#l260" class="line" id="l260">    260</a>     ) {
+<a href="#l261" class="line" id="l261">    261</a>         //messages
+<a href="#l262" class="line" id="l262">    262</a>         paramMap[&quot;MESSAGE_ID&quot;]?.toString()?.takeIf { forceDownload || canAutoDownload(&quot;friend_snaps&quot;) }?.let { id -&gt;
+<a href="#l263" class="line" id="l263">    263</a>             val messageId = id.substring(id.lastIndexOf(&quot;:&quot;) + 1).toLong()
+<a href="#l264" class="line" id="l264">    264</a>             val conversationMessage = context.database.getConversationMessageFromId(messageId)!!
+<a href="#l265" class="line" id="l265">    265</a> 
+<a href="#l266" class="line" id="l266">    266</a>             val conversationId = conversationMessage.clientConversationId!!
 <a href="#l267" class="line" id="l267">    267</a> 
-<a href="#l268" class="line" id="l268">    268</a>             val senderId = conversationMessage.senderId!!
-<a href="#l269" class="line" id="l269">    269</a> 
-<a href="#l270" class="line" id="l270">    270</a>             if (!forceDownload &amp;&amp; context.config.downloader.preventSelfAutoDownload.get() &amp;&amp; senderId == context.database.myUserId) return
+<a href="#l268" class="line" id="l268">    268</a>             if (!forceDownload &amp;&amp; !canUseRule(conversationId)) {
+<a href="#l269" class="line" id="l269">    269</a>                 return
+<a href="#l270" class="line" id="l270">    270</a>             }
 <a href="#l271" class="line" id="l271">    271</a> 
-<a href="#l272" class="line" id="l272">    272</a>             val author = context.database.getFriendInfo(senderId) ?: return
-<a href="#l273" class="line" id="l273">    273</a>             val authorUsername = author.usernameForSorting!!
-<a href="#l274" class="line" id="l274">    274</a>             val mediaId = paramMap[&quot;MEDIA_ID&quot;]?.toString()?.let {
-<a href="#l275" class="line" id="l275">    275</a>                 if (it.contains(&quot;-&quot;)) it.substringAfter(&quot;-&quot;)
-<a href="#l276" class="line" id="l276">    276</a>                 else it
-<a href="#l277" class="line" id="l277">    277</a>             }?.substringBefore(&quot;.&quot;)
-<a href="#l278" class="line" id="l278">    278</a> 
-<a href="#l279" class="line" id="l279">    279</a>             downloadOperaMedia(provideDownloadManagerClient(
-<a href="#l280" class="line" id="l280">    280</a>                 mediaIdentifier = &quot;$conversationId$senderId${conversationMessage.serverMessageId}$mediaId&quot;,
-<a href="#l281" class="line" id="l281">    281</a>                 mediaAuthor = authorUsername,
-<a href="#l282" class="line" id="l282">    282</a>                 creationTimestamp = conversationMessage.creationTimestamp,
-<a href="#l283" class="line" id="l283">    283</a>                 downloadSource = MediaDownloadSource.CHAT_MEDIA,
-<a href="#l284" class="line" id="l284">    284</a>                 friendInfo = author,
-<a href="#l285" class="line" id="l285">    285</a>                 forceAllowDuplicate = forceAllowDuplicate
-<a href="#l286" class="line" id="l286">    286</a>             ), mediaInfoMap)
-<a href="#l287" class="line" id="l287">    287</a> 
-<a href="#l288" class="line" id="l288">    288</a>             return
-<a href="#l289" class="line" id="l289">    289</a>         }
-<a href="#l290" class="line" id="l290">    290</a> 
-<a href="#l291" class="line" id="l291">    291</a>         //private stories
-<a href="#l292" class="line" id="l292">    292</a>         paramMap[&quot;PLAYLIST_V2_GROUP&quot;]?.takeIf {
-<a href="#l293" class="line" id="l293">    293</a>             forceDownload || canAutoDownload(&quot;friend_stories&quot;)
-<a href="#l294" class="line" id="l294">    294</a>         }?.let { playlistGroup -&gt;
-<a href="#l295" class="line" id="l295">    295</a>             val playlistGroupString = playlistGroup.toString()
-<a href="#l296" class="line" id="l296">    296</a> 
-<a href="#l297" class="line" id="l297">    297</a>             val storyUserId = paramMap[&quot;TOPIC_SNAP_CREATOR_USER_ID&quot;]?.toString() ?: paramMap[&quot;PLAYABLE_STORY_SNAP_RECORD&quot;]?.toString()?.let {
-<a href="#l298" class="line" id="l298">    298</a>                 if (it.contains(&quot;userId=&quot;)) it.substringAfter(&quot;userId=&quot;).substringBefore(&quot;,&quot;) else null
-<a href="#l299" class="line" id="l299">    299</a>             } ?: if (playlistGroupString.contains(&quot;storyUserId=&quot;)) {
-<a href="#l300" class="line" id="l300">    300</a>                 playlistGroupString.substringAfter(&quot;storyUserId=&quot;).substringBefore(&quot;,&quot;)
-<a href="#l301" class="line" id="l301">    301</a>             } else {
-<a href="#l302" class="line" id="l302">    302</a>                 //story replies
-<a href="#l303" class="line" id="l303">    303</a>                 val arroyoMessageId = playlistGroup::class.java.methods.firstOrNull { it.name == &quot;getId&quot; }
-<a href="#l304" class="line" id="l304">    304</a>                     ?.invoke(playlistGroup)?.toString()
-<a href="#l305" class="line" id="l305">    305</a>                     ?.split(&quot;:&quot;)?.getOrNull(2) ?: return@let
-<a href="#l306" class="line" id="l306">    306</a> 
-<a href="#l307" class="line" id="l307">    307</a>                 val conversationMessage = context.database.getConversationMessageFromId(arroyoMessageId.toLong()) ?: return@let
-<a href="#l308" class="line" id="l308">    308</a>                 val conversationParticipants = context.database.getConversationParticipants(conversationMessage.clientConversationId.toString()) ?: return@let
-<a href="#l309" class="line" id="l309">    309</a> 
-<a href="#l310" class="line" id="l310">    310</a>                 conversationParticipants.firstOrNull { it != conversationMessage.senderId }
-<a href="#l311" class="line" id="l311">    311</a>             }
-<a href="#l312" class="line" id="l312">    312</a> 
-<a href="#l313" class="line" id="l313">    313</a>             val author = context.database.getFriendInfo(
-<a href="#l314" class="line" id="l314">    314</a>                 if (storyUserId == null || storyUserId == &quot;null&quot;)
-<a href="#l315" class="line" id="l315">    315</a>                     context.database.myUserId
-<a href="#l316" class="line" id="l316">    316</a>                 else storyUserId
-<a href="#l317" class="line" id="l317">    317</a>             ) ?: throw Exception(&quot;Friend not found in database&quot;)
-<a href="#l318" class="line" id="l318">    318</a>             val authorName = author.usernameForSorting!!
-<a href="#l319" class="line" id="l319">    319</a> 
-<a href="#l320" class="line" id="l320">    320</a>             if (!forceDownload) {
-<a href="#l321" class="line" id="l321">    321</a>                 if (context.config.downloader.preventSelfAutoDownload.get() &amp;&amp; author.userId == context.database.myUserId) return
-<a href="#l322" class="line" id="l322">    322</a>                 if (!canUseRule(author.userId!!)) return
-<a href="#l323" class="line" id="l323">    323</a>             }
-<a href="#l324" class="line" id="l324">    324</a> 
-<a href="#l325" class="line" id="l325">    325</a>             downloadOperaMedia(provideDownloadManagerClient(
-<a href="#l326" class="line" id="l326">    326</a>                 mediaIdentifier = paramMap[&quot;MEDIA_ID&quot;].toString(),
-<a href="#l327" class="line" id="l327">    327</a>                 mediaAuthor = authorName,
-<a href="#l328" class="line" id="l328">    328</a>                 creationTimestamp = paramMap[&quot;PLAYABLE_STORY_SNAP_RECORD&quot;]?.toString()?.substringAfter(&quot;timestamp=&quot;)
-<a href="#l329" class="line" id="l329">    329</a>                     ?.substringBefore(&quot;,&quot;)?.toLongOrNull(),
-<a href="#l330" class="line" id="l330">    330</a>                 downloadSource = MediaDownloadSource.STORY,
-<a href="#l331" class="line" id="l331">    331</a>                 friendInfo = author,
-<a href="#l332" class="line" id="l332">    332</a>                 forceAllowDuplicate = forceAllowDuplicate,
-<a href="#l333" class="line" id="l333">    333</a>             ), mediaInfoMap)
-<a href="#l334" class="line" id="l334">    334</a>             return
-<a href="#l335" class="line" id="l335">    335</a>         }
-<a href="#l336" class="line" id="l336">    336</a> 
-<a href="#l337" class="line" id="l337">    337</a>         val snapSource = paramMap[&quot;SNAP_SOURCE&quot;].toString()
-<a href="#l338" class="line" id="l338">    338</a> 
-<a href="#l339" class="line" id="l339">    339</a>         //public stories
-<a href="#l340" class="line" id="l340">    340</a>         if ((snapSource == &quot;PUBLIC_USER&quot; || snapSource == &quot;SAVED_STORY&quot;) &amp;&amp;
-<a href="#l341" class="line" id="l341">    341</a>             (forceDownload || canAutoDownload(&quot;public_stories&quot;))) {
+<a href="#l272" class="line" id="l272">    272</a>             val senderId = conversationMessage.senderId!!
+<a href="#l273" class="line" id="l273">    273</a> 
+<a href="#l274" class="line" id="l274">    274</a>             if (!forceDownload &amp;&amp; context.config.downloader.preventSelfAutoDownload.get() &amp;&amp; senderId == context.database.myUserId) return
+<a href="#l275" class="line" id="l275">    275</a> 
+<a href="#l276" class="line" id="l276">    276</a>             val author = context.database.getFriendInfo(senderId) ?: return
+<a href="#l277" class="line" id="l277">    277</a>             val authorUsername = author.usernameForSorting!!
+<a href="#l278" class="line" id="l278">    278</a>             val mediaId = paramMap[&quot;MEDIA_ID&quot;]?.toString()?.let {
+<a href="#l279" class="line" id="l279">    279</a>                 if (it.contains(&quot;-&quot;)) it.substringAfter(&quot;-&quot;)
+<a href="#l280" class="line" id="l280">    280</a>                 else it
+<a href="#l281" class="line" id="l281">    281</a>             }?.substringBefore(&quot;.&quot;)
+<a href="#l282" class="line" id="l282">    282</a> 
+<a href="#l283" class="line" id="l283">    283</a>             downloadOperaMedia(provideDownloadManagerClient(
+<a href="#l284" class="line" id="l284">    284</a>                 mediaIdentifier = &quot;$conversationId$senderId${conversationMessage.serverMessageId}$mediaId&quot;,
+<a href="#l285" class="line" id="l285">    285</a>                 mediaAuthor = authorUsername,
+<a href="#l286" class="line" id="l286">    286</a>                 creationTimestamp = conversationMessage.creationTimestamp,
+<a href="#l287" class="line" id="l287">    287</a>                 downloadSource = MediaDownloadSource.CHAT_MEDIA,
+<a href="#l288" class="line" id="l288">    288</a>                 friendInfo = author,
+<a href="#l289" class="line" id="l289">    289</a>                 forceAllowDuplicate = forceAllowDuplicate
+<a href="#l290" class="line" id="l290">    290</a>             ), mediaInfoMap)
+<a href="#l291" class="line" id="l291">    291</a> 
+<a href="#l292" class="line" id="l292">    292</a>             return
+<a href="#l293" class="line" id="l293">    293</a>         }
+<a href="#l294" class="line" id="l294">    294</a> 
+<a href="#l295" class="line" id="l295">    295</a>         //private stories
+<a href="#l296" class="line" id="l296">    296</a>         paramMap[&quot;PLAYLIST_V2_GROUP&quot;]?.takeIf {
+<a href="#l297" class="line" id="l297">    297</a>             forceDownload || canAutoDownload(&quot;friend_stories&quot;)
+<a href="#l298" class="line" id="l298">    298</a>         }?.let { playlistGroup -&gt;
+<a href="#l299" class="line" id="l299">    299</a>             val playlistGroupString = playlistGroup.toString()
+<a href="#l300" class="line" id="l300">    300</a> 
+<a href="#l301" class="line" id="l301">    301</a>             val storyUserId = paramMap[&quot;TOPIC_SNAP_CREATOR_USER_ID&quot;]?.toString() ?: paramMap[&quot;PLAYABLE_STORY_SNAP_RECORD&quot;]?.toString()?.let {
+<a href="#l302" class="line" id="l302">    302</a>                 if (it.contains(&quot;userId=&quot;)) it.substringAfter(&quot;userId=&quot;).substringBefore(&quot;,&quot;) else null
+<a href="#l303" class="line" id="l303">    303</a>             } ?: if (playlistGroupString.contains(&quot;storyUserId=&quot;)) {
+<a href="#l304" class="line" id="l304">    304</a>                 playlistGroupString.substringAfter(&quot;storyUserId=&quot;).substringBefore(&quot;,&quot;)
+<a href="#l305" class="line" id="l305">    305</a>             } else {
+<a href="#l306" class="line" id="l306">    306</a>                 //story replies
+<a href="#l307" class="line" id="l307">    307</a>                 val arroyoMessageId = playlistGroup::class.java.methods.firstOrNull { it.name == &quot;getId&quot; }
+<a href="#l308" class="line" id="l308">    308</a>                     ?.invoke(playlistGroup)?.toString()
+<a href="#l309" class="line" id="l309">    309</a>                     ?.split(&quot;:&quot;)?.getOrNull(2) ?: return@let
+<a href="#l310" class="line" id="l310">    310</a> 
+<a href="#l311" class="line" id="l311">    311</a>                 val conversationMessage = context.database.getConversationMessageFromId(arroyoMessageId.toLong()) ?: return@let
+<a href="#l312" class="line" id="l312">    312</a>                 val conversationParticipants = context.database.getConversationParticipants(conversationMessage.clientConversationId.toString()) ?: return@let
+<a href="#l313" class="line" id="l313">    313</a> 
+<a href="#l314" class="line" id="l314">    314</a>                 conversationParticipants.firstOrNull { it != conversationMessage.senderId }
+<a href="#l315" class="line" id="l315">    315</a>             }
+<a href="#l316" class="line" id="l316">    316</a> 
+<a href="#l317" class="line" id="l317">    317</a>             val author = context.database.getFriendInfo(
+<a href="#l318" class="line" id="l318">    318</a>                 if (storyUserId == null || storyUserId == &quot;null&quot;)
+<a href="#l319" class="line" id="l319">    319</a>                     context.database.myUserId
+<a href="#l320" class="line" id="l320">    320</a>                 else storyUserId
+<a href="#l321" class="line" id="l321">    321</a>             ) ?: throw Exception(&quot;Friend not found in database&quot;)
+<a href="#l322" class="line" id="l322">    322</a>             val authorName = author.usernameForSorting!!
+<a href="#l323" class="line" id="l323">    323</a> 
+<a href="#l324" class="line" id="l324">    324</a>             if (!forceDownload) {
+<a href="#l325" class="line" id="l325">    325</a>                 if (context.config.downloader.preventSelfAutoDownload.get() &amp;&amp; author.userId == context.database.myUserId) return
+<a href="#l326" class="line" id="l326">    326</a>                 if (!canUseRule(author.userId!!)) return
+<a href="#l327" class="line" id="l327">    327</a>             }
+<a href="#l328" class="line" id="l328">    328</a> 
+<a href="#l329" class="line" id="l329">    329</a>             downloadOperaMedia(provideDownloadManagerClient(
+<a href="#l330" class="line" id="l330">    330</a>                 mediaIdentifier = paramMap[&quot;MEDIA_ID&quot;].toString(),
+<a href="#l331" class="line" id="l331">    331</a>                 mediaAuthor = authorName,
+<a href="#l332" class="line" id="l332">    332</a>                 creationTimestamp = paramMap[&quot;PLAYABLE_STORY_SNAP_RECORD&quot;]?.toString()?.substringAfter(&quot;timestamp=&quot;)
+<a href="#l333" class="line" id="l333">    333</a>                     ?.substringBefore(&quot;,&quot;)?.toLongOrNull(),
+<a href="#l334" class="line" id="l334">    334</a>                 downloadSource = MediaDownloadSource.STORY,
+<a href="#l335" class="line" id="l335">    335</a>                 friendInfo = author,
+<a href="#l336" class="line" id="l336">    336</a>                 forceAllowDuplicate = forceAllowDuplicate,
+<a href="#l337" class="line" id="l337">    337</a>             ), mediaInfoMap)
+<a href="#l338" class="line" id="l338">    338</a>             return
+<a href="#l339" class="line" id="l339">    339</a>         }
+<a href="#l340" class="line" id="l340">    340</a> 
+<a href="#l341" class="line" id="l341">    341</a>         val snapSource = paramMap[&quot;SNAP_SOURCE&quot;].toString()
 <a href="#l342" class="line" id="l342">    342</a> 
-<a href="#l343" class="line" id="l343">    343</a>             val author = (
-<a href="#l344" class="line" id="l344">    344</a>                 paramMap[&quot;USER_ID&quot;]?.let { context.database.getFriendInfo(it.toString())?.mutableUsername } // only for following users
-<a href="#l345" class="line" id="l345">    345</a>                 ?: paramMap[&quot;USERNAME&quot;]?.toString()?.takeIf {
-<a href="#l346" class="line" id="l346">    346</a>                     it.contains(&quot;value=&quot;)
-<a href="#l347" class="line" id="l347">    347</a>                 }?.substringAfter(&quot;value=&quot;)?.substringBefore(&quot;)&quot;)?.substringBefore(&quot;,&quot;)
-<a href="#l348" class="line" id="l348">    348</a>                 ?: paramMap[&quot;CONTEXT_USER_IDENTITY&quot;]?.toString()?.takeIf {
-<a href="#l349" class="line" id="l349">    349</a>                     it.contains(&quot;username=&quot;)
-<a href="#l350" class="line" id="l350">    350</a>                 }?.substringAfter(&quot;username=&quot;)?.substringBefore(&quot;,&quot;)
-<a href="#l351" class="line" id="l351">    351</a>                 // fallback display name
-<a href="#l352" class="line" id="l352">    352</a>                 ?: paramMap[&quot;USER_DISPLAY_NAME&quot;]?.toString()?.takeIf { it.isNotEmpty() }
-<a href="#l353" class="line" id="l353">    353</a>                 ?: paramMap[&quot;TIME_STAMP&quot;]?.toString()
-<a href="#l354" class="line" id="l354">    354</a>                 ?: &quot;unknown&quot;
-<a href="#l355" class="line" id="l355">    355</a>             ).sanitizeForPath()
-<a href="#l356" class="line" id="l356">    356</a> 
-<a href="#l357" class="line" id="l357">    357</a>             downloadOperaMedia(provideDownloadManagerClient(
-<a href="#l358" class="line" id="l358">    358</a>                 mediaIdentifier = paramMap[&quot;SNAP_ID&quot;].toString(),
-<a href="#l359" class="line" id="l359">    359</a>                 mediaAuthor = author,
-<a href="#l360" class="line" id="l360">    360</a>                 downloadSource = MediaDownloadSource.PUBLIC_STORY,
-<a href="#l361" class="line" id="l361">    361</a>                 creationTimestamp = paramMap[&quot;SNAP_TIMESTAMP&quot;]?.toString()?.toLongOrNull(),
-<a href="#l362" class="line" id="l362">    362</a>                 forceAllowDuplicate = forceAllowDuplicate,
-<a href="#l363" class="line" id="l363">    363</a>             ), mediaInfoMap)
-<a href="#l364" class="line" id="l364">    364</a>             return
-<a href="#l365" class="line" id="l365">    365</a>         }
-<a href="#l366" class="line" id="l366">    366</a> 
-<a href="#l367" class="line" id="l367">    367</a>         //spotlight
-<a href="#l368" class="line" id="l368">    368</a>         if (snapSource == &quot;SINGLE_SNAP_STORY&quot; &amp;&amp; (forceDownload || canAutoDownload(&quot;spotlight&quot;))) {
-<a href="#l369" class="line" id="l369">    369</a>             downloadOperaMedia(provideDownloadManagerClient(
-<a href="#l370" class="line" id="l370">    370</a>                 mediaIdentifier = paramMap[&quot;SNAP_ID&quot;].toString(),
-<a href="#l371" class="line" id="l371">    371</a>                 downloadSource = MediaDownloadSource.SPOTLIGHT,
-<a href="#l372" class="line" id="l372">    372</a>                 mediaAuthor = paramMap[&quot;CREATOR_DISPLAY_NAME&quot;].toString(),
-<a href="#l373" class="line" id="l373">    373</a>                 creationTimestamp = paramMap[&quot;SNAP_TIMESTAMP&quot;]?.toString()?.toLongOrNull(),
-<a href="#l374" class="line" id="l374">    374</a>                 forceAllowDuplicate = forceAllowDuplicate,
-<a href="#l375" class="line" id="l375">    375</a>             ), mediaInfoMap)
-<a href="#l376" class="line" id="l376">    376</a>             return
-<a href="#l377" class="line" id="l377">    377</a>         }
-<a href="#l378" class="line" id="l378">    378</a> 
-<a href="#l379" class="line" id="l379">    379</a>         //stories with mpeg dash media
-<a href="#l380" class="line" id="l380">    380</a>         if (paramMap.containsKey(&quot;LONGFORM_VIDEO_PLAYLIST_ITEM&quot;) &amp;&amp; forceDownload) {
-<a href="#l381" class="line" id="l381">    381</a>             val storyName = paramMap[&quot;STORY_NAME&quot;].toString().sanitizeForPath()
-<a href="#l382" class="line" id="l382">    382</a>             //get the position of the media in the playlist and the duration
-<a href="#l383" class="line" id="l383">    383</a>             val snapItem = SnapPlaylistItem(paramMap[&quot;SNAP_PLAYLIST_ITEM&quot;]!!)
-<a href="#l384" class="line" id="l384">    384</a>             val snapChapterList = LongformVideoPlaylistItem(paramMap[&quot;LONGFORM_VIDEO_PLAYLIST_ITEM&quot;]!!).chapters
-<a href="#l385" class="line" id="l385">    385</a>             val currentChapterIndex = snapChapterList.indexOfFirst { it.snapId == snapItem.snapId }
-<a href="#l386" class="line" id="l386">    386</a> 
-<a href="#l387" class="line" id="l387">    387</a>             if (snapChapterList.isEmpty()) {
-<a href="#l388" class="line" id="l388">    388</a>                 context.shortToast(translations[&quot;dash_no_chapter&quot;])
-<a href="#l389" class="line" id="l389">    389</a>                 return
-<a href="#l390" class="line" id="l390">    390</a>             }
-<a href="#l391" class="line" id="l391">    391</a> 
-<a href="#l392" class="line" id="l392">    392</a>             fun prettyPrintTime(time: Long): String {
-<a href="#l393" class="line" id="l393">    393</a>                 val seconds = time / 1000
-<a href="#l394" class="line" id="l394">    394</a>                 val minutes = seconds / 60
-<a href="#l395" class="line" id="l395">    395</a>                 val hours = minutes / 60
-<a href="#l396" class="line" id="l396">    396</a>                 return &quot;${(hours % 24).toString().padStart(2, &#39;0&#39;)}:${(minutes % 60).toString().padStart(2, &#39;0&#39;)}:${(seconds % 60).toString().padStart(2, &#39;0&#39;)}&quot;
-<a href="#l397" class="line" id="l397">    397</a>             }
-<a href="#l398" class="line" id="l398">    398</a> 
-<a href="#l399" class="line" id="l399">    399</a>             val playlistUrl = paramMap[&quot;MEDIA_ID&quot;].toString().let {
-<a href="#l400" class="line" id="l400">    400</a>                 val urlIndexes = arrayOf(it.indexOf(&quot;https://cf-st.sc-cdn.net&quot;), it.indexOf(&quot;https://bolt-gcdn.sc-cdn.net&quot;))
-<a href="#l401" class="line" id="l401">    401</a> 
-<a href="#l402" class="line" id="l402">    402</a>                 urlIndexes.firstOrNull { index -&gt; index != -1 }?.let { validIndex -&gt;
-<a href="#l403" class="line" id="l403">    403</a>                     it.substring(validIndex)
-<a href="#l404" class="line" id="l404">    404</a>                 } ?: &quot;${RemoteMediaResolver.CF_ST_CDN_D}$it&quot;
-<a href="#l405" class="line" id="l405">    405</a>             }
-<a href="#l406" class="line" id="l406">    406</a> 
-<a href="#l407" class="line" id="l407">    407</a>             context.runOnUiThread {
-<a href="#l408" class="line" id="l408">    408</a>                 val selectedChapters = mutableListOf&lt;Int&gt;()
-<a href="#l409" class="line" id="l409">    409</a>                 val dialogTranslation = translations.getCategory(&quot;dash_dialog&quot;)
-<a href="#l410" class="line" id="l410">    410</a>                 val chapters = snapChapterList.mapIndexed { index, snapChapter -&gt;
-<a href="#l411" class="line" id="l411">    411</a>                     val nextChapter = snapChapterList.getOrNull(index + 1)
-<a href="#l412" class="line" id="l412">    412</a>                     val duration = nextChapter?.startTimeMs?.minus(snapChapter.startTimeMs)
-<a href="#l413" class="line" id="l413">    413</a>                     SnapChapterInfo(snapChapter.startTimeMs, duration)
-<a href="#l414" class="line" id="l414">    414</a>                 }
-<a href="#l415" class="line" id="l415">    415</a>                 ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity!!).apply {
-<a href="#l416" class="line" id="l416">    416</a>                     setTitle(dialogTranslation[&quot;title&quot;])
-<a href="#l417" class="line" id="l417">    417</a>                     setMultiChoiceItems(
-<a href="#l418" class="line" id="l418">    418</a>                         chapters.map { dialogTranslation.format(&quot;segment_text&quot;, &quot;from&quot; to prettyPrintTime(it.offset), &quot;to&quot; to prettyPrintTime(it.offset + (it.duration ?: 0))) }.toTypedArray(),
-<a href="#l419" class="line" id="l419">    419</a>                         List(chapters.size) { index -&gt;
-<a href="#l420" class="line" id="l420">    420</a>                             if (currentChapterIndex == index) {
-<a href="#l421" class="line" id="l421">    421</a>                                 selectedChapters.add(index)
-<a href="#l422" class="line" id="l422">    422</a>                                 true
-<a href="#l423" class="line" id="l423">    423</a>                             } else false
-<a href="#l424" class="line" id="l424">    424</a>                         }.toBooleanArray()
-<a href="#l425" class="line" id="l425">    425</a>                     ) { _, which, isChecked -&gt;
-<a href="#l426" class="line" id="l426">    426</a>                         if (isChecked) {
-<a href="#l427" class="line" id="l427">    427</a>                             selectedChapters.add(which)
-<a href="#l428" class="line" id="l428">    428</a>                         } else if (selectedChapters.contains(which)) {
-<a href="#l429" class="line" id="l429">    429</a>                             selectedChapters.remove(which)
-<a href="#l430" class="line" id="l430">    430</a>                         }
-<a href="#l431" class="line" id="l431">    431</a>                     }
-<a href="#l432" class="line" id="l432">    432</a>                     setNegativeButton(this@MediaDownloader.context.translation[&quot;button.cancel&quot;]) { dialog, _ -&gt; dialog.dismiss() }
-<a href="#l433" class="line" id="l433">    433</a>                     setNeutralButton(dialogTranslation[&quot;download_all&quot;]) { _, _ -&gt;
-<a href="#l434" class="line" id="l434">    434</a>                         provideDownloadManagerClient(
-<a href="#l435" class="line" id="l435">    435</a>                             mediaIdentifier = paramMap[&quot;STORY_ID&quot;].toString(),
-<a href="#l436" class="line" id="l436">    436</a>                             downloadSource = MediaDownloadSource.PUBLIC_STORY,
-<a href="#l437" class="line" id="l437">    437</a>                             mediaAuthor = storyName
-<a href="#l438" class="line" id="l438">    438</a>                         ).downloadDashMedia(playlistUrl, 0, null)
-<a href="#l439" class="line" id="l439">    439</a>                     }
-<a href="#l440" class="line" id="l440">    440</a>                     setPositiveButton(this@MediaDownloader.context.translation[&quot;button.download&quot;]) { _, _ -&gt;
-<a href="#l441" class="line" id="l441">    441</a>                         val groups = mutableListOf&lt;MutableList&lt;SnapChapterInfo&gt;&gt;()
-<a href="#l442" class="line" id="l442">    442</a> 
-<a href="#l443" class="line" id="l443">    443</a>                         var lastChapterIndex = -1
-<a href="#l444" class="line" id="l444">    444</a>                         // group consecutive chapters
-<a href="#l445" class="line" id="l445">    445</a>                         chapters.forEachIndexed { index, snapChapter -&gt;
-<a href="#l446" class="line" id="l446">    446</a>                             lastChapterIndex = if (selectedChapters.contains(index)) {
-<a href="#l447" class="line" id="l447">    447</a>                                 if (lastChapterIndex == -1) {
-<a href="#l448" class="line" id="l448">    448</a>                                     groups.add(mutableListOf())
-<a href="#l449" class="line" id="l449">    449</a>                                 }
-<a href="#l450" class="line" id="l450">    450</a>                                 groups.last().add(snapChapter)
-<a href="#l451" class="line" id="l451">    451</a>                                 index
-<a href="#l452" class="line" id="l452">    452</a>                             } else {
-<a href="#l453" class="line" id="l453">    453</a>                                 -1
-<a href="#l454" class="line" id="l454">    454</a>                             }
-<a href="#l455" class="line" id="l455">    455</a>                         }
-<a href="#l456" class="line" id="l456">    456</a> 
-<a href="#l457" class="line" id="l457">    457</a>                         groups.forEach { group -&gt;
-<a href="#l458" class="line" id="l458">    458</a>                             val firstChapter = group.first()
-<a href="#l459" class="line" id="l459">    459</a>                             val lastChapter = group.last()
-<a href="#l460" class="line" id="l460">    460</a>                             val duration = if (firstChapter == lastChapter) {
-<a href="#l461" class="line" id="l461">    461</a>                                 firstChapter.duration
-<a href="#l462" class="line" id="l462">    462</a>                             } else {
-<a href="#l463" class="line" id="l463">    463</a>                                 lastChapter.duration?.let { lastChapter.offset - firstChapter.offset + it }
-<a href="#l464" class="line" id="l464">    464</a>                             }
-<a href="#l465" class="line" id="l465">    465</a> 
-<a href="#l466" class="line" id="l466">    466</a>                             provideDownloadManagerClient(
-<a href="#l467" class="line" id="l467">    467</a>                                 mediaIdentifier = &quot;${paramMap[&quot;STORY_ID&quot;]}-${firstChapter.offset}-${lastChapter.offset}&quot;,
-<a href="#l468" class="line" id="l468">    468</a>                                 downloadSource = MediaDownloadSource.PUBLIC_STORY,
-<a href="#l469" class="line" id="l469">    469</a>                                 mediaAuthor = storyName,
-<a href="#l470" class="line" id="l470">    470</a>                                 forceAllowDuplicate = forceAllowDuplicate,
-<a href="#l471" class="line" id="l471">    471</a>                             ).downloadDashMedia(
-<a href="#l472" class="line" id="l472">    472</a>                                 playlistUrl,
-<a href="#l473" class="line" id="l473">    473</a>                                 firstChapter.offset.plus(100),
-<a href="#l474" class="line" id="l474">    474</a>                                 duration
-<a href="#l475" class="line" id="l475">    475</a>                             )
-<a href="#l476" class="line" id="l476">    476</a>                         }
-<a href="#l477" class="line" id="l477">    477</a>                     }
-<a href="#l478" class="line" id="l478">    478</a>                 }.show()
-<a href="#l479" class="line" id="l479">    479</a>             }
-<a href="#l480" class="line" id="l480">    480</a>         }
-<a href="#l481" class="line" id="l481">    481</a>     }
-<a href="#l482" class="line" id="l482">    482</a> 
-<a href="#l483" class="line" id="l483">    483</a>     private fun canAutoDownload(keyFilter: String? = null): Boolean {
-<a href="#l484" class="line" id="l484">    484</a>         val options by context.config.downloader.autoDownloadSources
-<a href="#l485" class="line" id="l485">    485</a>         return options.any { keyFilter == null || it.contains(keyFilter, true) }
-<a href="#l486" class="line" id="l486">    486</a>     }
-<a href="#l487" class="line" id="l487">    487</a> 
-<a href="#l488" class="line" id="l488">    488</a>     override fun init() {
-<a href="#l489" class="line" id="l489">    489</a>         onNextActivityCreate {
-<a href="#l490" class="line" id="l490">    490</a>             context.mappings.useMapper(OperaPageViewControllerMapper::class) {
-<a href="#l491" class="line" id="l491">    491</a>                 val onOperaViewStateCallback: (HookAdapter) -&gt; Unit = onOperaViewStateCallback@{ param -&gt;
-<a href="#l492" class="line" id="l492">    492</a>                     val viewState = (param.thisObject() as Any).getObjectField(viewStateField.get()!!).toString()
-<a href="#l493" class="line" id="l493">    493</a>                     if (viewState != &quot;FULLY_DISPLAYED&quot;) {
-<a href="#l494" class="line" id="l494">    494</a>                         return@onOperaViewStateCallback
-<a href="#l495" class="line" id="l495">    495</a>                     }
-<a href="#l496" class="line" id="l496">    496</a>                     val operaLayerList = (param.thisObject() as Any).getObjectField(layerListField.get()!!) as ArrayList&lt;*&gt;
-<a href="#l497" class="line" id="l497">    497</a>                     val mediaParamMap: ParamMap = operaLayerList.map { Layer(it) }.first().paramMap
-<a href="#l498" class="line" id="l498">    498</a> 
-<a href="#l499" class="line" id="l499">    499</a>                     if (!mediaParamMap.containsKey(&quot;image_media_info&quot;) &amp;&amp; !mediaParamMap.containsKey(&quot;video_media_info_list&quot;))
-<a href="#l500" class="line" id="l500">    500</a>                         return@onOperaViewStateCallback
-<a href="#l501" class="line" id="l501">    501</a> 
-<a href="#l502" class="line" id="l502">    502</a>                     val mediaInfoMap = mutableMapOf&lt;SplitMediaAssetType, MediaInfo&gt;()
-<a href="#l503" class="line" id="l503">    503</a>                     val isVideo = mediaParamMap.containsKey(&quot;video_media_info_list&quot;)
-<a href="#l504" class="line" id="l504">    504</a> 
-<a href="#l505" class="line" id="l505">    505</a>                     mediaInfoMap[SplitMediaAssetType.ORIGINAL] = MediaInfo(
-<a href="#l506" class="line" id="l506">    506</a>                         (if (isVideo) mediaParamMap[&quot;video_media_info_list&quot;] else mediaParamMap[&quot;image_media_info&quot;])!!
-<a href="#l507" class="line" id="l507">    507</a>                     )
+<a href="#l343" class="line" id="l343">    343</a>         //public stories
+<a href="#l344" class="line" id="l344">    344</a>         if ((snapSource == &quot;PUBLIC_USER&quot; || snapSource == &quot;SAVED_STORY&quot;) &amp;&amp;
+<a href="#l345" class="line" id="l345">    345</a>             (forceDownload || canAutoDownload(&quot;public_stories&quot;))) {
+<a href="#l346" class="line" id="l346">    346</a> 
+<a href="#l347" class="line" id="l347">    347</a>             val author = (
+<a href="#l348" class="line" id="l348">    348</a>                 paramMap[&quot;USER_ID&quot;]?.let { context.database.getFriendInfo(it.toString())?.mutableUsername } // only for following users
+<a href="#l349" class="line" id="l349">    349</a>                 ?: paramMap[&quot;USERNAME&quot;]?.toString()?.takeIf {
+<a href="#l350" class="line" id="l350">    350</a>                     it.contains(&quot;value=&quot;)
+<a href="#l351" class="line" id="l351">    351</a>                 }?.substringAfter(&quot;value=&quot;)?.substringBefore(&quot;)&quot;)?.substringBefore(&quot;,&quot;)
+<a href="#l352" class="line" id="l352">    352</a>                 ?: paramMap[&quot;CONTEXT_USER_IDENTITY&quot;]?.toString()?.takeIf {
+<a href="#l353" class="line" id="l353">    353</a>                     it.contains(&quot;username=&quot;)
+<a href="#l354" class="line" id="l354">    354</a>                 }?.substringAfter(&quot;username=&quot;)?.substringBefore(&quot;,&quot;)
+<a href="#l355" class="line" id="l355">    355</a>                 // fallback display name
+<a href="#l356" class="line" id="l356">    356</a>                 ?: paramMap[&quot;USER_DISPLAY_NAME&quot;]?.toString()?.takeIf { it.isNotEmpty() }
+<a href="#l357" class="line" id="l357">    357</a>                 ?: paramMap[&quot;TIME_STAMP&quot;]?.toString()
+<a href="#l358" class="line" id="l358">    358</a>                 ?: &quot;unknown&quot;
+<a href="#l359" class="line" id="l359">    359</a>             ).sanitizeForPath()
+<a href="#l360" class="line" id="l360">    360</a> 
+<a href="#l361" class="line" id="l361">    361</a>             downloadOperaMedia(provideDownloadManagerClient(
+<a href="#l362" class="line" id="l362">    362</a>                 mediaIdentifier = paramMap[&quot;SNAP_ID&quot;].toString(),
+<a href="#l363" class="line" id="l363">    363</a>                 mediaAuthor = author,
+<a href="#l364" class="line" id="l364">    364</a>                 downloadSource = MediaDownloadSource.PUBLIC_STORY,
+<a href="#l365" class="line" id="l365">    365</a>                 creationTimestamp = paramMap[&quot;SNAP_TIMESTAMP&quot;]?.toString()?.toLongOrNull(),
+<a href="#l366" class="line" id="l366">    366</a>                 forceAllowDuplicate = forceAllowDuplicate,
+<a href="#l367" class="line" id="l367">    367</a>             ), mediaInfoMap)
+<a href="#l368" class="line" id="l368">    368</a>             return
+<a href="#l369" class="line" id="l369">    369</a>         }
+<a href="#l370" class="line" id="l370">    370</a> 
+<a href="#l371" class="line" id="l371">    371</a>         //spotlight
+<a href="#l372" class="line" id="l372">    372</a>         if (snapSource == &quot;SINGLE_SNAP_STORY&quot; &amp;&amp; (forceDownload || canAutoDownload(&quot;spotlight&quot;))) {
+<a href="#l373" class="line" id="l373">    373</a>             downloadOperaMedia(provideDownloadManagerClient(
+<a href="#l374" class="line" id="l374">    374</a>                 mediaIdentifier = paramMap[&quot;SNAP_ID&quot;].toString(),
+<a href="#l375" class="line" id="l375">    375</a>                 downloadSource = MediaDownloadSource.SPOTLIGHT,
+<a href="#l376" class="line" id="l376">    376</a>                 mediaAuthor = paramMap[&quot;CREATOR_DISPLAY_NAME&quot;].toString(),
+<a href="#l377" class="line" id="l377">    377</a>                 creationTimestamp = paramMap[&quot;SNAP_TIMESTAMP&quot;]?.toString()?.toLongOrNull(),
+<a href="#l378" class="line" id="l378">    378</a>                 forceAllowDuplicate = forceAllowDuplicate,
+<a href="#l379" class="line" id="l379">    379</a>             ), mediaInfoMap)
+<a href="#l380" class="line" id="l380">    380</a>             return
+<a href="#l381" class="line" id="l381">    381</a>         }
+<a href="#l382" class="line" id="l382">    382</a> 
+<a href="#l383" class="line" id="l383">    383</a>         //stories with mpeg dash media
+<a href="#l384" class="line" id="l384">    384</a>         if (paramMap.containsKey(&quot;LONGFORM_VIDEO_PLAYLIST_ITEM&quot;) &amp;&amp; forceDownload) {
+<a href="#l385" class="line" id="l385">    385</a>             val storyName = paramMap[&quot;STORY_NAME&quot;].toString().sanitizeForPath()
+<a href="#l386" class="line" id="l386">    386</a>             //get the position of the media in the playlist and the duration
+<a href="#l387" class="line" id="l387">    387</a>             val snapItem = SnapPlaylistItem(paramMap[&quot;SNAP_PLAYLIST_ITEM&quot;]!!)
+<a href="#l388" class="line" id="l388">    388</a>             val snapChapterList = LongformVideoPlaylistItem(paramMap[&quot;LONGFORM_VIDEO_PLAYLIST_ITEM&quot;]!!).chapters
+<a href="#l389" class="line" id="l389">    389</a>             val currentChapterIndex = snapChapterList.indexOfFirst { it.snapId == snapItem.snapId }
+<a href="#l390" class="line" id="l390">    390</a> 
+<a href="#l391" class="line" id="l391">    391</a>             if (snapChapterList.isEmpty()) {
+<a href="#l392" class="line" id="l392">    392</a>                 context.shortToast(translations[&quot;dash_no_chapter&quot;])
+<a href="#l393" class="line" id="l393">    393</a>                 return
+<a href="#l394" class="line" id="l394">    394</a>             }
+<a href="#l395" class="line" id="l395">    395</a> 
+<a href="#l396" class="line" id="l396">    396</a>             fun prettyPrintTime(time: Long): String {
+<a href="#l397" class="line" id="l397">    397</a>                 val seconds = time / 1000
+<a href="#l398" class="line" id="l398">    398</a>                 val minutes = seconds / 60
+<a href="#l399" class="line" id="l399">    399</a>                 val hours = minutes / 60
+<a href="#l400" class="line" id="l400">    400</a>                 return &quot;${(hours % 24).toString().padStart(2, &#39;0&#39;)}:${(minutes % 60).toString().padStart(2, &#39;0&#39;)}:${(seconds % 60).toString().padStart(2, &#39;0&#39;)}&quot;
+<a href="#l401" class="line" id="l401">    401</a>             }
+<a href="#l402" class="line" id="l402">    402</a> 
+<a href="#l403" class="line" id="l403">    403</a>             val playlistUrl = paramMap[&quot;MEDIA_ID&quot;].toString().let {
+<a href="#l404" class="line" id="l404">    404</a>                 val urlIndexes = arrayOf(it.indexOf(&quot;https://cf-st.sc-cdn.net&quot;), it.indexOf(&quot;https://bolt-gcdn.sc-cdn.net&quot;))
+<a href="#l405" class="line" id="l405">    405</a> 
+<a href="#l406" class="line" id="l406">    406</a>                 urlIndexes.firstOrNull { index -&gt; index != -1 }?.let { validIndex -&gt;
+<a href="#l407" class="line" id="l407">    407</a>                     it.substring(validIndex)
+<a href="#l408" class="line" id="l408">    408</a>                 } ?: &quot;${RemoteMediaResolver.CF_ST_CDN_D}$it&quot;
+<a href="#l409" class="line" id="l409">    409</a>             }
+<a href="#l410" class="line" id="l410">    410</a> 
+<a href="#l411" class="line" id="l411">    411</a>             context.runOnUiThread {
+<a href="#l412" class="line" id="l412">    412</a>                 val selectedChapters = mutableListOf&lt;Int&gt;()
+<a href="#l413" class="line" id="l413">    413</a>                 val dialogTranslation = translations.getCategory(&quot;dash_dialog&quot;)
+<a href="#l414" class="line" id="l414">    414</a>                 val chapters = snapChapterList.mapIndexed { index, snapChapter -&gt;
+<a href="#l415" class="line" id="l415">    415</a>                     val nextChapter = snapChapterList.getOrNull(index + 1)
+<a href="#l416" class="line" id="l416">    416</a>                     val duration = nextChapter?.startTimeMs?.minus(snapChapter.startTimeMs)
+<a href="#l417" class="line" id="l417">    417</a>                     SnapChapterInfo(snapChapter.startTimeMs, duration)
+<a href="#l418" class="line" id="l418">    418</a>                 }
+<a href="#l419" class="line" id="l419">    419</a>                 ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity!!).apply {
+<a href="#l420" class="line" id="l420">    420</a>                     setTitle(dialogTranslation[&quot;title&quot;])
+<a href="#l421" class="line" id="l421">    421</a>                     setMultiChoiceItems(
+<a href="#l422" class="line" id="l422">    422</a>                         chapters.map { dialogTranslation.format(&quot;segment_text&quot;, &quot;from&quot; to prettyPrintTime(it.offset), &quot;to&quot; to prettyPrintTime(it.offset + (it.duration ?: 0))) }.toTypedArray(),
+<a href="#l423" class="line" id="l423">    423</a>                         List(chapters.size) { index -&gt;
+<a href="#l424" class="line" id="l424">    424</a>                             if (currentChapterIndex == index) {
+<a href="#l425" class="line" id="l425">    425</a>                                 selectedChapters.add(index)
+<a href="#l426" class="line" id="l426">    426</a>                                 true
+<a href="#l427" class="line" id="l427">    427</a>                             } else false
+<a href="#l428" class="line" id="l428">    428</a>                         }.toBooleanArray()
+<a href="#l429" class="line" id="l429">    429</a>                     ) { _, which, isChecked -&gt;
+<a href="#l430" class="line" id="l430">    430</a>                         if (isChecked) {
+<a href="#l431" class="line" id="l431">    431</a>                             selectedChapters.add(which)
+<a href="#l432" class="line" id="l432">    432</a>                         } else if (selectedChapters.contains(which)) {
+<a href="#l433" class="line" id="l433">    433</a>                             selectedChapters.remove(which)
+<a href="#l434" class="line" id="l434">    434</a>                         }
+<a href="#l435" class="line" id="l435">    435</a>                     }
+<a href="#l436" class="line" id="l436">    436</a>                     setNegativeButton(this@MediaDownloader.context.translation[&quot;button.cancel&quot;]) { dialog, _ -&gt; dialog.dismiss() }
+<a href="#l437" class="line" id="l437">    437</a>                     setNeutralButton(dialogTranslation[&quot;download_all&quot;]) { _, _ -&gt;
+<a href="#l438" class="line" id="l438">    438</a>                         provideDownloadManagerClient(
+<a href="#l439" class="line" id="l439">    439</a>                             mediaIdentifier = paramMap[&quot;STORY_ID&quot;].toString(),
+<a href="#l440" class="line" id="l440">    440</a>                             downloadSource = MediaDownloadSource.PUBLIC_STORY,
+<a href="#l441" class="line" id="l441">    441</a>                             mediaAuthor = storyName
+<a href="#l442" class="line" id="l442">    442</a>                         ).downloadDashMedia(playlistUrl, 0, null)
+<a href="#l443" class="line" id="l443">    443</a>                     }
+<a href="#l444" class="line" id="l444">    444</a>                     setPositiveButton(this@MediaDownloader.context.translation[&quot;button.download&quot;]) { _, _ -&gt;
+<a href="#l445" class="line" id="l445">    445</a>                         val groups = mutableListOf&lt;MutableList&lt;SnapChapterInfo&gt;&gt;()
+<a href="#l446" class="line" id="l446">    446</a> 
+<a href="#l447" class="line" id="l447">    447</a>                         var lastChapterIndex = -1
+<a href="#l448" class="line" id="l448">    448</a>                         // group consecutive chapters
+<a href="#l449" class="line" id="l449">    449</a>                         chapters.forEachIndexed { index, snapChapter -&gt;
+<a href="#l450" class="line" id="l450">    450</a>                             lastChapterIndex = if (selectedChapters.contains(index)) {
+<a href="#l451" class="line" id="l451">    451</a>                                 if (lastChapterIndex == -1) {
+<a href="#l452" class="line" id="l452">    452</a>                                     groups.add(mutableListOf())
+<a href="#l453" class="line" id="l453">    453</a>                                 }
+<a href="#l454" class="line" id="l454">    454</a>                                 groups.last().add(snapChapter)
+<a href="#l455" class="line" id="l455">    455</a>                                 index
+<a href="#l456" class="line" id="l456">    456</a>                             } else {
+<a href="#l457" class="line" id="l457">    457</a>                                 -1
+<a href="#l458" class="line" id="l458">    458</a>                             }
+<a href="#l459" class="line" id="l459">    459</a>                         }
+<a href="#l460" class="line" id="l460">    460</a> 
+<a href="#l461" class="line" id="l461">    461</a>                         groups.forEach { group -&gt;
+<a href="#l462" class="line" id="l462">    462</a>                             val firstChapter = group.first()
+<a href="#l463" class="line" id="l463">    463</a>                             val lastChapter = group.last()
+<a href="#l464" class="line" id="l464">    464</a>                             val duration = if (firstChapter == lastChapter) {
+<a href="#l465" class="line" id="l465">    465</a>                                 firstChapter.duration
+<a href="#l466" class="line" id="l466">    466</a>                             } else {
+<a href="#l467" class="line" id="l467">    467</a>                                 lastChapter.duration?.let { lastChapter.offset - firstChapter.offset + it }
+<a href="#l468" class="line" id="l468">    468</a>                             }
+<a href="#l469" class="line" id="l469">    469</a> 
+<a href="#l470" class="line" id="l470">    470</a>                             provideDownloadManagerClient(
+<a href="#l471" class="line" id="l471">    471</a>                                 mediaIdentifier = &quot;${paramMap[&quot;STORY_ID&quot;]}-${firstChapter.offset}-${lastChapter.offset}&quot;,
+<a href="#l472" class="line" id="l472">    472</a>                                 downloadSource = MediaDownloadSource.PUBLIC_STORY,
+<a href="#l473" class="line" id="l473">    473</a>                                 mediaAuthor = storyName,
+<a href="#l474" class="line" id="l474">    474</a>                                 forceAllowDuplicate = forceAllowDuplicate,
+<a href="#l475" class="line" id="l475">    475</a>                             ).downloadDashMedia(
+<a href="#l476" class="line" id="l476">    476</a>                                 playlistUrl,
+<a href="#l477" class="line" id="l477">    477</a>                                 firstChapter.offset.plus(100),
+<a href="#l478" class="line" id="l478">    478</a>                                 duration
+<a href="#l479" class="line" id="l479">    479</a>                             )
+<a href="#l480" class="line" id="l480">    480</a>                         }
+<a href="#l481" class="line" id="l481">    481</a>                     }
+<a href="#l482" class="line" id="l482">    482</a>                 }.show()
+<a href="#l483" class="line" id="l483">    483</a>             }
+<a href="#l484" class="line" id="l484">    484</a>         }
+<a href="#l485" class="line" id="l485">    485</a>     }
+<a href="#l486" class="line" id="l486">    486</a> 
+<a href="#l487" class="line" id="l487">    487</a>     private fun canAutoDownload(keyFilter: String? = null): Boolean {
+<a href="#l488" class="line" id="l488">    488</a>         val options by context.config.downloader.autoDownloadSources
+<a href="#l489" class="line" id="l489">    489</a>         return options.any { keyFilter == null || it.contains(keyFilter, true) }
+<a href="#l490" class="line" id="l490">    490</a>     }
+<a href="#l491" class="line" id="l491">    491</a> 
+<a href="#l492" class="line" id="l492">    492</a>     override fun init() {
+<a href="#l493" class="line" id="l493">    493</a>         onNextActivityCreate {
+<a href="#l494" class="line" id="l494">    494</a>             context.mappings.useMapper(OperaPageViewControllerMapper::class) {
+<a href="#l495" class="line" id="l495">    495</a>                 val onOperaViewStateCallback: (HookAdapter) -&gt; Unit = onOperaViewStateCallback@{ param -&gt;
+<a href="#l496" class="line" id="l496">    496</a>                     val viewState = (param.thisObject() as Any).getObjectField(viewStateField.get()!!).toString()
+<a href="#l497" class="line" id="l497">    497</a>                     if (viewState != &quot;FULLY_DISPLAYED&quot;) {
+<a href="#l498" class="line" id="l498">    498</a>                         return@onOperaViewStateCallback
+<a href="#l499" class="line" id="l499">    499</a>                     }
+<a href="#l500" class="line" id="l500">    500</a>                     val operaLayerList = (param.thisObject() as Any).getObjectField(layerListField.get()!!) as ArrayList&lt;*&gt;
+<a href="#l501" class="line" id="l501">    501</a>                     val mediaParamMap: ParamMap = operaLayerList.map { Layer(it) }.first().paramMap
+<a href="#l502" class="line" id="l502">    502</a> 
+<a href="#l503" class="line" id="l503">    503</a>                     if (!mediaParamMap.containsKey(&quot;image_media_info&quot;) &amp;&amp; !mediaParamMap.containsKey(&quot;video_media_info_list&quot;))
+<a href="#l504" class="line" id="l504">    504</a>                         return@onOperaViewStateCallback
+<a href="#l505" class="line" id="l505">    505</a> 
+<a href="#l506" class="line" id="l506">    506</a>                     val mediaInfoMap = mutableMapOf&lt;SplitMediaAssetType, MediaInfo&gt;()
+<a href="#l507" class="line" id="l507">    507</a>                     val isVideo = mediaParamMap.containsKey(&quot;video_media_info_list&quot;)
 <a href="#l508" class="line" id="l508">    508</a> 
-<a href="#l509" class="line" id="l509">    509</a>                     if (context.config.downloader.mergeOverlays.get() &amp;&amp; mediaParamMap.containsKey(&quot;overlay_image_media_info&quot;)) {
-<a href="#l510" class="line" id="l510">    510</a>                         mediaInfoMap[SplitMediaAssetType.OVERLAY] =
-<a href="#l511" class="line" id="l511">    511</a>                             MediaInfo(mediaParamMap[&quot;overlay_image_media_info&quot;]!!)
-<a href="#l512" class="line" id="l512">    512</a>                     }
-<a href="#l513" class="line" id="l513">    513</a>                     lastSeenMapParams = mediaParamMap
-<a href="#l514" class="line" id="l514">    514</a>                     lastSeenMediaInfoMap = mediaInfoMap
-<a href="#l515" class="line" id="l515">    515</a> 
-<a href="#l516" class="line" id="l516">    516</a>                     if (!canAutoDownload()) return@onOperaViewStateCallback
-<a href="#l517" class="line" id="l517">    517</a> 
-<a href="#l518" class="line" id="l518">    518</a>                     context.executeAsync {
-<a href="#l519" class="line" id="l519">    519</a>                         runCatching {
-<a href="#l520" class="line" id="l520">    520</a>                             handleOperaMedia(mediaParamMap, mediaInfoMap, false)
-<a href="#l521" class="line" id="l521">    521</a>                         }.onFailure {
-<a href="#l522" class="line" id="l522">    522</a>                             context.log.error(&quot;Failed to handle opera media&quot;, it)
-<a href="#l523" class="line" id="l523">    523</a>                             context.longToast(it.message)
-<a href="#l524" class="line" id="l524">    524</a>                         }
-<a href="#l525" class="line" id="l525">    525</a>                     }
-<a href="#l526" class="line" id="l526">    526</a>                 }
-<a href="#l527" class="line" id="l527">    527</a> 
-<a href="#l528" class="line" id="l528">    528</a>                 arrayOf(onDisplayStateChange, onDisplayStateChangeGesture).forEach { methodName -&gt;
-<a href="#l529" class="line" id="l529">    529</a>                     classReference.get()?.hook(
-<a href="#l530" class="line" id="l530">    530</a>                         methodName.get() ?: return@forEach,
-<a href="#l531" class="line" id="l531">    531</a>                         HookStage.AFTER, onOperaViewStateCallback
-<a href="#l532" class="line" id="l532">    532</a>                     )
-<a href="#l533" class="line" id="l533">    533</a>                 }
-<a href="#l534" class="line" id="l534">    534</a>             }
-<a href="#l535" class="line" id="l535">    535</a>         }
-<a href="#l536" class="line" id="l536">    536</a>     }
-<a href="#l537" class="line" id="l537">    537</a> 
-<a href="#l538" class="line" id="l538">    538</a>     private fun downloadMessageAttachments(
-<a href="#l539" class="line" id="l539">    539</a>         friendInfo: FriendInfo,
-<a href="#l540" class="line" id="l540">    540</a>         message: ConversationMessage,
-<a href="#l541" class="line" id="l541">    541</a>         authorName: String,
-<a href="#l542" class="line" id="l542">    542</a>         attachments: List&lt;DecodedAttachment&gt;,
-<a href="#l543" class="line" id="l543">    543</a>         forceAllowDuplicate: Boolean = false
-<a href="#l544" class="line" id="l544">    544</a>     ) {
-<a href="#l545" class="line" id="l545">    545</a>         attachments.forEach { attachment -&gt;
-<a href="#l546" class="line" id="l546">    546</a>             runCatching {
-<a href="#l547" class="line" id="l547">    547</a>                 provideDownloadManagerClient(
-<a href="#l548" class="line" id="l548">    548</a>                     mediaIdentifier = &quot;${message.clientConversationId}${message.senderId}${message.serverMessageId}${attachment.mediaUniqueId}&quot;,
-<a href="#l549" class="line" id="l549">    549</a>                     downloadSource = MediaDownloadSource.CHAT_MEDIA,
-<a href="#l550" class="line" id="l550">    550</a>                     mediaAuthor = authorName,
-<a href="#l551" class="line" id="l551">    551</a>                     friendInfo = friendInfo,
-<a href="#l552" class="line" id="l552">    552</a>                     forceAllowDuplicate = forceAllowDuplicate,
-<a href="#l553" class="line" id="l553">    553</a>                     creationTimestamp = message.creationTimestamp,
-<a href="#l554" class="line" id="l554">    554</a>                 ).apply {
-<a href="#l555" class="line" id="l555">    555</a>                     downloadInputMedias(
-<a href="#l556" class="line" id="l556">    556</a>                         arrayOf(attachment.createInputMedia()!!)
-<a href="#l557" class="line" id="l557">    557</a>                     )
-<a href="#l558" class="line" id="l558">    558</a>                 }
-<a href="#l559" class="line" id="l559">    559</a>             }.onFailure {
-<a href="#l560" class="line" id="l560">    560</a>                 context.longToast(translations[&quot;failed_generic_toast&quot;])
-<a href="#l561" class="line" id="l561">    561</a>                 context.log.error(&quot;Failed to download&quot;, it)
-<a href="#l562" class="line" id="l562">    562</a>             }
-<a href="#l563" class="line" id="l563">    563</a>         }
-<a href="#l564" class="line" id="l564">    564</a>     }
-<a href="#l565" class="line" id="l565">    565</a> 
-<a href="#l566" class="line" id="l566">    566</a>     private fun DecodedAttachment.getInfo(): String {
-<a href="#l567" class="line" id="l567">    567</a>         return &quot;${translations[&quot;attachment_type.${type.key}&quot;]} ${attachmentInfo?.resolution?.let { &quot;(${it.first}x${it.second})&quot; } ?: &quot;&quot;}&quot;
+<a href="#l509" class="line" id="l509">    509</a>                     mediaInfoMap[SplitMediaAssetType.ORIGINAL] = MediaInfo(
+<a href="#l510" class="line" id="l510">    510</a>                         (if (isVideo) mediaParamMap[&quot;video_media_info_list&quot;] else mediaParamMap[&quot;image_media_info&quot;])!!
+<a href="#l511" class="line" id="l511">    511</a>                     )
+<a href="#l512" class="line" id="l512">    512</a> 
+<a href="#l513" class="line" id="l513">    513</a>                     if (context.config.downloader.mergeOverlays.get() &amp;&amp; mediaParamMap.containsKey(&quot;overlay_image_media_info&quot;)) {
+<a href="#l514" class="line" id="l514">    514</a>                         mediaInfoMap[SplitMediaAssetType.OVERLAY] =
+<a href="#l515" class="line" id="l515">    515</a>                             MediaInfo(mediaParamMap[&quot;overlay_image_media_info&quot;]!!)
+<a href="#l516" class="line" id="l516">    516</a>                     }
+<a href="#l517" class="line" id="l517">    517</a>                     lastSeenMapParams = mediaParamMap
+<a href="#l518" class="line" id="l518">    518</a>                     lastSeenMediaInfoMap = mediaInfoMap
+<a href="#l519" class="line" id="l519">    519</a> 
+<a href="#l520" class="line" id="l520">    520</a>                     if (!canAutoDownload()) return@onOperaViewStateCallback
+<a href="#l521" class="line" id="l521">    521</a> 
+<a href="#l522" class="line" id="l522">    522</a>                     context.executeAsync {
+<a href="#l523" class="line" id="l523">    523</a>                         runCatching {
+<a href="#l524" class="line" id="l524">    524</a>                             handleOperaMedia(mediaParamMap, mediaInfoMap, false)
+<a href="#l525" class="line" id="l525">    525</a>                         }.onFailure {
+<a href="#l526" class="line" id="l526">    526</a>                             context.log.error(&quot;Failed to handle opera media&quot;, it)
+<a href="#l527" class="line" id="l527">    527</a>                             context.longToast(it.message)
+<a href="#l528" class="line" id="l528">    528</a>                         }
+<a href="#l529" class="line" id="l529">    529</a>                     }
+<a href="#l530" class="line" id="l530">    530</a>                 }
+<a href="#l531" class="line" id="l531">    531</a> 
+<a href="#l532" class="line" id="l532">    532</a>                 arrayOf(onDisplayStateChange, onDisplayStateChangeGesture).forEach { methodName -&gt;
+<a href="#l533" class="line" id="l533">    533</a>                     classReference.get()?.hook(
+<a href="#l534" class="line" id="l534">    534</a>                         methodName.get() ?: return@forEach,
+<a href="#l535" class="line" id="l535">    535</a>                         HookStage.AFTER, onOperaViewStateCallback
+<a href="#l536" class="line" id="l536">    536</a>                     )
+<a href="#l537" class="line" id="l537">    537</a>                 }
+<a href="#l538" class="line" id="l538">    538</a>             }
+<a href="#l539" class="line" id="l539">    539</a>         }
+<a href="#l540" class="line" id="l540">    540</a>     }
+<a href="#l541" class="line" id="l541">    541</a> 
+<a href="#l542" class="line" id="l542">    542</a>     private fun downloadMessageAttachments(
+<a href="#l543" class="line" id="l543">    543</a>         friendInfo: FriendInfo,
+<a href="#l544" class="line" id="l544">    544</a>         message: ConversationMessage,
+<a href="#l545" class="line" id="l545">    545</a>         authorName: String,
+<a href="#l546" class="line" id="l546">    546</a>         attachments: List&lt;DecodedAttachment&gt;,
+<a href="#l547" class="line" id="l547">    547</a>         forceAllowDuplicate: Boolean = false
+<a href="#l548" class="line" id="l548">    548</a>     ) {
+<a href="#l549" class="line" id="l549">    549</a>         attachments.forEach { attachment -&gt;
+<a href="#l550" class="line" id="l550">    550</a>             runCatching {
+<a href="#l551" class="line" id="l551">    551</a>                 provideDownloadManagerClient(
+<a href="#l552" class="line" id="l552">    552</a>                     mediaIdentifier = &quot;${message.clientConversationId}${message.senderId}${message.serverMessageId}${attachment.mediaUniqueId}&quot;,
+<a href="#l553" class="line" id="l553">    553</a>                     downloadSource = MediaDownloadSource.CHAT_MEDIA,
+<a href="#l554" class="line" id="l554">    554</a>                     mediaAuthor = authorName,
+<a href="#l555" class="line" id="l555">    555</a>                     friendInfo = friendInfo,
+<a href="#l556" class="line" id="l556">    556</a>                     forceAllowDuplicate = forceAllowDuplicate,
+<a href="#l557" class="line" id="l557">    557</a>                     creationTimestamp = message.creationTimestamp,
+<a href="#l558" class="line" id="l558">    558</a>                 ).apply {
+<a href="#l559" class="line" id="l559">    559</a>                     downloadInputMedias(
+<a href="#l560" class="line" id="l560">    560</a>                         arrayOf(attachment.createInputMedia()!!)
+<a href="#l561" class="line" id="l561">    561</a>                     )
+<a href="#l562" class="line" id="l562">    562</a>                 }
+<a href="#l563" class="line" id="l563">    563</a>             }.onFailure {
+<a href="#l564" class="line" id="l564">    564</a>                 context.longToast(translations[&quot;failed_generic_toast&quot;])
+<a href="#l565" class="line" id="l565">    565</a>                 context.log.error(&quot;Failed to download&quot;, it)
+<a href="#l566" class="line" id="l566">    566</a>             }
+<a href="#l567" class="line" id="l567">    567</a>         }
 <a href="#l568" class="line" id="l568">    568</a>     }
 <a href="#l569" class="line" id="l569">    569</a> 
-<a href="#l570" class="line" id="l570">    570</a>     @SuppressLint(&quot;SetTextI18n&quot;)
-<a href="#l571" class="line" id="l571">    571</a>     private fun previewAttachment(
-<a href="#l572" class="line" id="l572">    572</a>         attachment: DecodedAttachment
-<a href="#l573" class="line" id="l573">    573</a>     ) {
-<a href="#l574" class="line" id="l574">    574</a>         var previewBitmap: Bitmap? = null
-<a href="#l575" class="line" id="l575">    575</a>         val previewCoroutine = context.coroutineScope.launch {
-<a href="#l576" class="line" id="l576">    576</a>             runCatching {
-<a href="#l577" class="line" id="l577">    577</a>                 attachment.openStream { attachmentStream, _ -&gt;
-<a href="#l578" class="line" id="l578">    578</a>                     val downloadedMediaList = mutableMapOf&lt;SplitMediaAssetType, ByteArray&gt;()
-<a href="#l579" class="line" id="l579">    579</a> 
-<a href="#l580" class="line" id="l580">    580</a>                     MediaDownloaderHelper.getSplitElements(attachmentStream!!) {
-<a href="#l581" class="line" id="l581">    581</a>                             type, inputStream -&gt;
-<a href="#l582" class="line" id="l582">    582</a>                         downloadedMediaList[type] = inputStream.readBytes()
-<a href="#l583" class="line" id="l583">    583</a>                     }
-<a href="#l584" class="line" id="l584">    584</a> 
-<a href="#l585" class="line" id="l585">    585</a>                     val originalMedia = downloadedMediaList[SplitMediaAssetType.ORIGINAL] ?: return@openStream
-<a href="#l586" class="line" id="l586">    586</a>                     val overlay = downloadedMediaList[SplitMediaAssetType.OVERLAY]
-<a href="#l587" class="line" id="l587">    587</a> 
-<a href="#l588" class="line" id="l588">    588</a>                     var bitmap = PreviewUtils.createPreview(originalMedia, isVideo = FileType.fromByteArray(originalMedia).isVideo)
-<a href="#l589" class="line" id="l589">    589</a>                         ?: throw Exception(&quot;preview is null&quot;)
-<a href="#l590" class="line" id="l590">    590</a> 
-<a href="#l591" class="line" id="l591">    591</a>                     overlay?.also {
-<a href="#l592" class="line" id="l592">    592</a>                         bitmap = PreviewUtils.mergeBitmapOverlay(bitmap, BitmapFactory.decodeByteArray(it, 0, it.size))
-<a href="#l593" class="line" id="l593">    593</a>                     }
+<a href="#l570" class="line" id="l570">    570</a>     private fun DecodedAttachment.getInfo(): String {
+<a href="#l571" class="line" id="l571">    571</a>         return &quot;${translations[&quot;attachment_type.${type.key}&quot;]} ${attachmentInfo?.resolution?.let { &quot;(${it.first}x${it.second})&quot; } ?: &quot;&quot;}&quot;
+<a href="#l572" class="line" id="l572">    572</a>     }
+<a href="#l573" class="line" id="l573">    573</a> 
+<a href="#l574" class="line" id="l574">    574</a>     @SuppressLint(&quot;SetTextI18n&quot;)
+<a href="#l575" class="line" id="l575">    575</a>     private fun previewAttachment(
+<a href="#l576" class="line" id="l576">    576</a>         attachment: DecodedAttachment
+<a href="#l577" class="line" id="l577">    577</a>     ) {
+<a href="#l578" class="line" id="l578">    578</a>         var previewBitmap: Bitmap? = null
+<a href="#l579" class="line" id="l579">    579</a>         val previewCoroutine = context.coroutineScope.launch {
+<a href="#l580" class="line" id="l580">    580</a>             runCatching {
+<a href="#l581" class="line" id="l581">    581</a>                 attachment.openStream { attachmentStream, _ -&gt;
+<a href="#l582" class="line" id="l582">    582</a>                     val downloadedMediaList = mutableMapOf&lt;SplitMediaAssetType, ByteArray&gt;()
+<a href="#l583" class="line" id="l583">    583</a> 
+<a href="#l584" class="line" id="l584">    584</a>                     MediaDownloaderHelper.getSplitElements(attachmentStream!!) {
+<a href="#l585" class="line" id="l585">    585</a>                             type, inputStream -&gt;
+<a href="#l586" class="line" id="l586">    586</a>                         downloadedMediaList[type] = inputStream.readBytes()
+<a href="#l587" class="line" id="l587">    587</a>                     }
+<a href="#l588" class="line" id="l588">    588</a> 
+<a href="#l589" class="line" id="l589">    589</a>                     val originalMedia = downloadedMediaList[SplitMediaAssetType.ORIGINAL] ?: return@openStream
+<a href="#l590" class="line" id="l590">    590</a>                     val overlay = downloadedMediaList[SplitMediaAssetType.OVERLAY]
+<a href="#l591" class="line" id="l591">    591</a> 
+<a href="#l592" class="line" id="l592">    592</a>                     var bitmap = PreviewUtils.createPreview(originalMedia, isVideo = FileType.fromByteArray(originalMedia).isVideo)
+<a href="#l593" class="line" id="l593">    593</a>                         ?: throw Exception(&quot;preview is null&quot;)
 <a href="#l594" class="line" id="l594">    594</a> 
-<a href="#l595" class="line" id="l595">    595</a>                     previewBitmap = bitmap
-<a href="#l596" class="line" id="l596">    596</a>                 }
-<a href="#l597" class="line" id="l597">    597</a>             }.onFailure {
-<a href="#l598" class="line" id="l598">    598</a>                 context.shortToast(translations[&quot;failed_to_create_preview_toast&quot;])
-<a href="#l599" class="line" id="l599">    599</a>                 context.log.error(&quot;Failed to create preview&quot;, it)
-<a href="#l600" class="line" id="l600">    600</a>             }
-<a href="#l601" class="line" id="l601">    601</a>         }
-<a href="#l602" class="line" id="l602">    602</a> 
-<a href="#l603" class="line" id="l603">    603</a>         with(ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity)) {
-<a href="#l604" class="line" id="l604">    604</a>             val viewGroup = LinearLayout(context).apply {
-<a href="#l605" class="line" id="l605">    605</a>                 layoutParams = MarginLayoutParams(
-<a href="#l606" class="line" id="l606">    606</a>                     MarginLayoutParams.MATCH_PARENT,
-<a href="#l607" class="line" id="l607">    607</a>                     MarginLayoutParams.MATCH_PARENT
-<a href="#l608" class="line" id="l608">    608</a>                 )
-<a href="#l609" class="line" id="l609">    609</a>                 gravity = Gravity.CENTER_HORIZONTAL or Gravity.CENTER_VERTICAL
-<a href="#l610" class="line" id="l610">    610</a>                 addView(ProgressBar(context).apply {
-<a href="#l611" class="line" id="l611">    611</a>                     isIndeterminate = true
-<a href="#l612" class="line" id="l612">    612</a>                 })
-<a href="#l613" class="line" id="l613">    613</a>             }
-<a href="#l614" class="line" id="l614">    614</a> 
-<a href="#l615" class="line" id="l615">    615</a>             setOnDismissListener {
-<a href="#l616" class="line" id="l616">    616</a>                 previewCoroutine.cancel()
+<a href="#l595" class="line" id="l595">    595</a>                     overlay?.also {
+<a href="#l596" class="line" id="l596">    596</a>                         bitmap = PreviewUtils.mergeBitmapOverlay(bitmap, BitmapFactory.decodeByteArray(it, 0, it.size))
+<a href="#l597" class="line" id="l597">    597</a>                     }
+<a href="#l598" class="line" id="l598">    598</a> 
+<a href="#l599" class="line" id="l599">    599</a>                     previewBitmap = bitmap
+<a href="#l600" class="line" id="l600">    600</a>                 }
+<a href="#l601" class="line" id="l601">    601</a>             }.onFailure {
+<a href="#l602" class="line" id="l602">    602</a>                 context.shortToast(translations[&quot;failed_to_create_preview_toast&quot;])
+<a href="#l603" class="line" id="l603">    603</a>                 context.log.error(&quot;Failed to create preview&quot;, it)
+<a href="#l604" class="line" id="l604">    604</a>             }
+<a href="#l605" class="line" id="l605">    605</a>         }
+<a href="#l606" class="line" id="l606">    606</a> 
+<a href="#l607" class="line" id="l607">    607</a>         with(ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity)) {
+<a href="#l608" class="line" id="l608">    608</a>             val viewGroup = LinearLayout(context).apply {
+<a href="#l609" class="line" id="l609">    609</a>                 layoutParams = MarginLayoutParams(
+<a href="#l610" class="line" id="l610">    610</a>                     MarginLayoutParams.MATCH_PARENT,
+<a href="#l611" class="line" id="l611">    611</a>                     MarginLayoutParams.MATCH_PARENT
+<a href="#l612" class="line" id="l612">    612</a>                 )
+<a href="#l613" class="line" id="l613">    613</a>                 gravity = Gravity.CENTER_HORIZONTAL or Gravity.CENTER_VERTICAL
+<a href="#l614" class="line" id="l614">    614</a>                 addView(ProgressBar(context).apply {
+<a href="#l615" class="line" id="l615">    615</a>                     isIndeterminate = true
+<a href="#l616" class="line" id="l616">    616</a>                 })
 <a href="#l617" class="line" id="l617">    617</a>             }
 <a href="#l618" class="line" id="l618">    618</a> 
-<a href="#l619" class="line" id="l619">    619</a>             previewCoroutine.invokeOnCompletion { cause -&gt;
-<a href="#l620" class="line" id="l620">    620</a>                 if (previewCoroutine.isCancelled) return@invokeOnCompletion
-<a href="#l621" class="line" id="l621">    621</a>                 runOnUiThread {
-<a href="#l622" class="line" id="l622">    622</a>                     viewGroup.removeAllViews()
-<a href="#l623" class="line" id="l623">    623</a>                     if (cause != null) {
-<a href="#l624" class="line" id="l624">    624</a>                         viewGroup.addView(TextView(context).apply {
-<a href="#l625" class="line" id="l625">    625</a>                             text =
-<a href="#l626" class="line" id="l626">    626</a>                                 translations[&quot;failed_to_create_preview_toast&quot;] + &quot;\n&quot; + cause.message
-<a href="#l627" class="line" id="l627">    627</a>                             setPadding(30, 30, 30, 30)
-<a href="#l628" class="line" id="l628">    628</a>                         })
-<a href="#l629" class="line" id="l629">    629</a>                         return@runOnUiThread
-<a href="#l630" class="line" id="l630">    630</a>                     }
-<a href="#l631" class="line" id="l631">    631</a> 
-<a href="#l632" class="line" id="l632">    632</a>                     viewGroup.addView(ImageView(context).apply {
-<a href="#l633" class="line" id="l633">    633</a>                         setImageBitmap(previewBitmap)
-<a href="#l634" class="line" id="l634">    634</a>                         layoutParams = LinearLayout.LayoutParams(
-<a href="#l635" class="line" id="l635">    635</a>                             LinearLayout.LayoutParams.MATCH_PARENT,
-<a href="#l636" class="line" id="l636">    636</a>                             LinearLayout.LayoutParams.MATCH_PARENT
-<a href="#l637" class="line" id="l637">    637</a>                         )
-<a href="#l638" class="line" id="l638">    638</a>                         adjustViewBounds = true
-<a href="#l639" class="line" id="l639">    639</a>                     })
-<a href="#l640" class="line" id="l640">    640</a>                 }
-<a href="#l641" class="line" id="l641">    641</a>             }
-<a href="#l642" class="line" id="l642">    642</a> 
-<a href="#l643" class="line" id="l643">    643</a>             runOnUiThread {
-<a href="#l644" class="line" id="l644">    644</a>                 show().apply {
-<a href="#l645" class="line" id="l645">    645</a>                     setContentView(viewGroup)
-<a href="#l646" class="line" id="l646">    646</a>                     window?.setLayout(
-<a href="#l647" class="line" id="l647">    647</a>                         context.resources.displayMetrics.widthPixels,
-<a href="#l648" class="line" id="l648">    648</a>                         context.resources.displayMetrics.heightPixels
-<a href="#l649" class="line" id="l649">    649</a>                     )
-<a href="#l650" class="line" id="l650">    650</a>                 }
-<a href="#l651" class="line" id="l651">    651</a>             }
-<a href="#l652" class="line" id="l652">    652</a>         }
-<a href="#l653" class="line" id="l653">    653</a>     }
-<a href="#l654" class="line" id="l654">    654</a> 
-<a href="#l655" class="line" id="l655">    655</a>     @SuppressLint(&quot;SetTextI18n&quot;)
-<a href="#l656" class="line" id="l656">    656</a>     fun downloadMessageId(messageId: Long, forceAllowDuplicate: Boolean = false, isPreview: Boolean = false) {
-<a href="#l657" class="line" id="l657">    657</a>         val messageLogger = context.feature(MessageLogger::class)
-<a href="#l658" class="line" id="l658">    658</a>         val message = context.database.getConversationMessageFromId(messageId) ?: throw Exception(&quot;Message not found in database&quot;)
-<a href="#l659" class="line" id="l659">    659</a> 
-<a href="#l660" class="line" id="l660">    660</a>         val friendInfo = context.database.getFriendInfo(message.senderId!!) ?: throw Exception(&quot;Friend not found in database&quot;)
-<a href="#l661" class="line" id="l661">    661</a>         val authorName = friendInfo.usernameForSorting!!
-<a href="#l662" class="line" id="l662">    662</a> 
-<a href="#l663" class="line" id="l663">    663</a>         val decodedAttachments = (
-<a href="#l664" class="line" id="l664">    664</a>             messageLogger.takeIf { it.isEnabled }?.getMessageObject(message.clientConversationId!!, message.clientMessageId.toLong())?.let {
-<a href="#l665" class="line" id="l665">    665</a>                 MessageDecoder.decode(it.getAsJsonObject(&quot;mMessageContent&quot;))
-<a href="#l666" class="line" id="l666">    666</a>             } ?: MessageDecoder.decode(
-<a href="#l667" class="line" id="l667">    667</a>                 protoReader = ProtoReader(message.messageContent!!)
-<a href="#l668" class="line" id="l668">    668</a>             ).toMutableList().apply {
-<a href="#l669" class="line" id="l669">    669</a>                 val quotedMessage = message.quotedServerMessageId?.takeIf { it &gt; 0 }?.let { quotedMessageId -&gt;
-<a href="#l670" class="line" id="l670">    670</a>                     context.database.getConversationServerMessage(message.clientConversationId!!, quotedMessageId)
-<a href="#l671" class="line" id="l671">    671</a>                 } ?: return@apply
-<a href="#l672" class="line" id="l672">    672</a>                 addAll(0, MessageDecoder.decode(
-<a href="#l673" class="line" id="l673">    673</a>                     protoReader = ProtoReader(quotedMessage.messageContent ?: return@apply)
-<a href="#l674" class="line" id="l674">    674</a>                 ))
-<a href="#l675" class="line" id="l675">    675</a>             }
-<a href="#l676" class="line" id="l676">    676</a>         ).toMutableList()
-<a href="#l677" class="line" id="l677">    677</a> 
-<a href="#l678" class="line" id="l678">    678</a>         context.feature(Messaging::class).conversationManager?.takeIf {
-<a href="#l679" class="line" id="l679">    679</a>             decodedAttachments.isEmpty()
-<a href="#l680" class="line" id="l680">    680</a>         }?.also { conversationManager -&gt;
-<a href="#l681" class="line" id="l681">    681</a>             runBlocking {
-<a href="#l682" class="line" id="l682">    682</a>                 suspendCoroutine { continuation -&gt;
-<a href="#l683" class="line" id="l683">    683</a>                     conversationManager.fetchMessage(message.clientConversationId!!, message.clientMessageId.toLong(), onSuccess = { message -&gt;
-<a href="#l684" class="line" id="l684">    684</a>                         decodedAttachments.addAll(MessageDecoder.decode(message.messageContent!!))
-<a href="#l685" class="line" id="l685">    685</a>                         continuation.resumeWith(Result.success(Unit))
-<a href="#l686" class="line" id="l686">    686</a>                     }, onError = {
-<a href="#l687" class="line" id="l687">    687</a>                         continuation.resumeWith(Result.success(Unit))
-<a href="#l688" class="line" id="l688">    688</a>                     })
-<a href="#l689" class="line" id="l689">    689</a>                 }
-<a href="#l690" class="line" id="l690">    690</a>             }
-<a href="#l691" class="line" id="l691">    691</a>         }
-<a href="#l692" class="line" id="l692">    692</a> 
-<a href="#l693" class="line" id="l693">    693</a>         if (decodedAttachments.isEmpty()) {
-<a href="#l694" class="line" id="l694">    694</a>             context.shortToast(translations[&quot;no_attachments_toast&quot;])
-<a href="#l695" class="line" id="l695">    695</a>             return
-<a href="#l696" class="line" id="l696">    696</a>         }
-<a href="#l697" class="line" id="l697">    697</a> 
-<a href="#l698" class="line" id="l698">    698</a>         if (!isPreview) {
-<a href="#l699" class="line" id="l699">    699</a>             if (decodedAttachments.size == 1 ||
-<a href="#l700" class="line" id="l700">    700</a>                 context.isMainActivityPaused // we can&#39;t show alert dialogs when it downloads from a notification, so it downloads the first one
-<a href="#l701" class="line" id="l701">    701</a>             ) {
-<a href="#l702" class="line" id="l702">    702</a>                 downloadMessageAttachments(friendInfo, message, authorName,
-<a href="#l703" class="line" id="l703">    703</a>                     listOf(decodedAttachments.first()),
-<a href="#l704" class="line" id="l704">    704</a>                     forceAllowDuplicate = forceAllowDuplicate
-<a href="#l705" class="line" id="l705">    705</a>                 )
-<a href="#l706" class="line" id="l706">    706</a>                 return
-<a href="#l707" class="line" id="l707">    707</a>             }
-<a href="#l708" class="line" id="l708">    708</a> 
-<a href="#l709" class="line" id="l709">    709</a>             runOnUiThread {
-<a href="#l710" class="line" id="l710">    710</a>                 ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity).apply {
-<a href="#l711" class="line" id="l711">    711</a>                     val selectedAttachments = mutableListOf&lt;Int&gt;().apply {
-<a href="#l712" class="line" id="l712">    712</a>                         addAll(decodedAttachments.indices)
-<a href="#l713" class="line" id="l713">    713</a>                     }
-<a href="#l714" class="line" id="l714">    714</a>                     setMultiChoiceItems(
-<a href="#l715" class="line" id="l715">    715</a>                         decodedAttachments.mapIndexed { index, decodedAttachment -&gt;
-<a href="#l716" class="line" id="l716">    716</a>                             &quot;${index + 1}: ${decodedAttachment.getInfo()}&quot;
-<a href="#l717" class="line" id="l717">    717</a>                         }.toTypedArray(),
-<a href="#l718" class="line" id="l718">    718</a>                         decodedAttachments.map { true }.toBooleanArray()
-<a href="#l719" class="line" id="l719">    719</a>                     ) { _, which, isChecked -&gt;
-<a href="#l720" class="line" id="l720">    720</a>                         if (isChecked) {
-<a href="#l721" class="line" id="l721">    721</a>                             selectedAttachments.add(which)
-<a href="#l722" class="line" id="l722">    722</a>                         } else if (selectedAttachments.contains(which)) {
-<a href="#l723" class="line" id="l723">    723</a>                             selectedAttachments.remove(which)
-<a href="#l724" class="line" id="l724">    724</a>                         }
-<a href="#l725" class="line" id="l725">    725</a>                     }
-<a href="#l726" class="line" id="l726">    726</a>                     setTitle(translations[&quot;select_attachments_title&quot;])
-<a href="#l727" class="line" id="l727">    727</a>                     setNegativeButton(this@MediaDownloader.context.translation[&quot;button.cancel&quot;]) { dialog, _ -&gt; dialog.dismiss() }
-<a href="#l728" class="line" id="l728">    728</a>                     setPositiveButton(this@MediaDownloader.context.translation[&quot;button.download&quot;]) { _, _ -&gt;
-<a href="#l729" class="line" id="l729">    729</a>                         downloadMessageAttachments(friendInfo, message, authorName, selectedAttachments.map { decodedAttachments[it] },
-<a href="#l730" class="line" id="l730">    730</a>                             forceAllowDuplicate = forceAllowDuplicate
-<a href="#l731" class="line" id="l731">    731</a>                         )
-<a href="#l732" class="line" id="l732">    732</a>                     }
-<a href="#l733" class="line" id="l733">    733</a>                 }.show()
-<a href="#l734" class="line" id="l734">    734</a>             }
-<a href="#l735" class="line" id="l735">    735</a>             return
-<a href="#l736" class="line" id="l736">    736</a>         }
-<a href="#l737" class="line" id="l737">    737</a> 
-<a href="#l738" class="line" id="l738">    738</a>         if (decodedAttachments.size == 1) {
-<a href="#l739" class="line" id="l739">    739</a>             previewAttachment(decodedAttachments.first())
+<a href="#l619" class="line" id="l619">    619</a>             setOnDismissListener {
+<a href="#l620" class="line" id="l620">    620</a>                 previewCoroutine.cancel()
+<a href="#l621" class="line" id="l621">    621</a>             }
+<a href="#l622" class="line" id="l622">    622</a> 
+<a href="#l623" class="line" id="l623">    623</a>             previewCoroutine.invokeOnCompletion { cause -&gt;
+<a href="#l624" class="line" id="l624">    624</a>                 if (previewCoroutine.isCancelled) return@invokeOnCompletion
+<a href="#l625" class="line" id="l625">    625</a>                 runOnUiThread {
+<a href="#l626" class="line" id="l626">    626</a>                     viewGroup.removeAllViews()
+<a href="#l627" class="line" id="l627">    627</a>                     if (cause != null) {
+<a href="#l628" class="line" id="l628">    628</a>                         viewGroup.addView(TextView(context).apply {
+<a href="#l629" class="line" id="l629">    629</a>                             text =
+<a href="#l630" class="line" id="l630">    630</a>                                 translations[&quot;failed_to_create_preview_toast&quot;] + &quot;\n&quot; + cause.message
+<a href="#l631" class="line" id="l631">    631</a>                             setPadding(30, 30, 30, 30)
+<a href="#l632" class="line" id="l632">    632</a>                         })
+<a href="#l633" class="line" id="l633">    633</a>                         return@runOnUiThread
+<a href="#l634" class="line" id="l634">    634</a>                     }
+<a href="#l635" class="line" id="l635">    635</a> 
+<a href="#l636" class="line" id="l636">    636</a>                     viewGroup.addView(ImageView(context).apply {
+<a href="#l637" class="line" id="l637">    637</a>                         setImageBitmap(previewBitmap)
+<a href="#l638" class="line" id="l638">    638</a>                         layoutParams = LinearLayout.LayoutParams(
+<a href="#l639" class="line" id="l639">    639</a>                             LinearLayout.LayoutParams.MATCH_PARENT,
+<a href="#l640" class="line" id="l640">    640</a>                             LinearLayout.LayoutParams.MATCH_PARENT
+<a href="#l641" class="line" id="l641">    641</a>                         )
+<a href="#l642" class="line" id="l642">    642</a>                         adjustViewBounds = true
+<a href="#l643" class="line" id="l643">    643</a>                     })
+<a href="#l644" class="line" id="l644">    644</a>                 }
+<a href="#l645" class="line" id="l645">    645</a>             }
+<a href="#l646" class="line" id="l646">    646</a> 
+<a href="#l647" class="line" id="l647">    647</a>             runOnUiThread {
+<a href="#l648" class="line" id="l648">    648</a>                 show().apply {
+<a href="#l649" class="line" id="l649">    649</a>                     setContentView(viewGroup)
+<a href="#l650" class="line" id="l650">    650</a>                     window?.setLayout(
+<a href="#l651" class="line" id="l651">    651</a>                         context.resources.displayMetrics.widthPixels,
+<a href="#l652" class="line" id="l652">    652</a>                         context.resources.displayMetrics.heightPixels
+<a href="#l653" class="line" id="l653">    653</a>                     )
+<a href="#l654" class="line" id="l654">    654</a>                 }
+<a href="#l655" class="line" id="l655">    655</a>             }
+<a href="#l656" class="line" id="l656">    656</a>         }
+<a href="#l657" class="line" id="l657">    657</a>     }
+<a href="#l658" class="line" id="l658">    658</a> 
+<a href="#l659" class="line" id="l659">    659</a>     @SuppressLint(&quot;SetTextI18n&quot;)
+<a href="#l660" class="line" id="l660">    660</a>     fun downloadMessageId(messageId: Long, forceAllowDuplicate: Boolean = false, isPreview: Boolean = false, forceDownloadFirst: Boolean = false) {
+<a href="#l661" class="line" id="l661">    661</a>         val messageLogger = context.feature(MessageLogger::class)
+<a href="#l662" class="line" id="l662">    662</a>         val message = context.database.getConversationMessageFromId(messageId) ?: throw Exception(&quot;Message not found in database&quot;)
+<a href="#l663" class="line" id="l663">    663</a> 
+<a href="#l664" class="line" id="l664">    664</a>         val friendInfo = context.database.getFriendInfo(message.senderId!!) ?: throw Exception(&quot;Friend not found in database&quot;)
+<a href="#l665" class="line" id="l665">    665</a>         val authorName = friendInfo.usernameForSorting!!
+<a href="#l666" class="line" id="l666">    666</a> 
+<a href="#l667" class="line" id="l667">    667</a>         val decodedAttachments = (
+<a href="#l668" class="line" id="l668">    668</a>             messageLogger.takeIf { it.isEnabled }?.getMessageObject(message.clientConversationId!!, message.clientMessageId.toLong())?.let {
+<a href="#l669" class="line" id="l669">    669</a>                 MessageDecoder.decode(it.getAsJsonObject(&quot;mMessageContent&quot;))
+<a href="#l670" class="line" id="l670">    670</a>             } ?: MessageDecoder.decode(
+<a href="#l671" class="line" id="l671">    671</a>                 protoReader = ProtoReader(message.messageContent!!)
+<a href="#l672" class="line" id="l672">    672</a>             ).toMutableList().apply {
+<a href="#l673" class="line" id="l673">    673</a>                 val quotedMessage = message.quotedServerMessageId?.takeIf { it &gt; 0 }?.let { quotedMessageId -&gt;
+<a href="#l674" class="line" id="l674">    674</a>                     context.database.getConversationServerMessage(message.clientConversationId!!, quotedMessageId)
+<a href="#l675" class="line" id="l675">    675</a>                 } ?: return@apply
+<a href="#l676" class="line" id="l676">    676</a>                 addAll(0, MessageDecoder.decode(
+<a href="#l677" class="line" id="l677">    677</a>                     protoReader = ProtoReader(quotedMessage.messageContent ?: return@apply)
+<a href="#l678" class="line" id="l678">    678</a>                 ))
+<a href="#l679" class="line" id="l679">    679</a>             }
+<a href="#l680" class="line" id="l680">    680</a>         ).toMutableList()
+<a href="#l681" class="line" id="l681">    681</a> 
+<a href="#l682" class="line" id="l682">    682</a>         context.feature(Messaging::class).conversationManager?.takeIf {
+<a href="#l683" class="line" id="l683">    683</a>             decodedAttachments.isEmpty()
+<a href="#l684" class="line" id="l684">    684</a>         }?.also { conversationManager -&gt;
+<a href="#l685" class="line" id="l685">    685</a>             runBlocking {
+<a href="#l686" class="line" id="l686">    686</a>                 suspendCoroutine { continuation -&gt;
+<a href="#l687" class="line" id="l687">    687</a>                     conversationManager.fetchMessage(message.clientConversationId!!, message.clientMessageId.toLong(), onSuccess = { message -&gt;
+<a href="#l688" class="line" id="l688">    688</a>                         decodedAttachments.addAll(MessageDecoder.decode(message.messageContent!!))
+<a href="#l689" class="line" id="l689">    689</a>                         continuation.resumeWith(Result.success(Unit))
+<a href="#l690" class="line" id="l690">    690</a>                     }, onError = {
+<a href="#l691" class="line" id="l691">    691</a>                         continuation.resumeWith(Result.success(Unit))
+<a href="#l692" class="line" id="l692">    692</a>                     })
+<a href="#l693" class="line" id="l693">    693</a>                 }
+<a href="#l694" class="line" id="l694">    694</a>             }
+<a href="#l695" class="line" id="l695">    695</a>         }
+<a href="#l696" class="line" id="l696">    696</a> 
+<a href="#l697" class="line" id="l697">    697</a>         if (decodedAttachments.isEmpty()) {
+<a href="#l698" class="line" id="l698">    698</a>             context.shortToast(translations[&quot;no_attachments_toast&quot;])
+<a href="#l699" class="line" id="l699">    699</a>             return
+<a href="#l700" class="line" id="l700">    700</a>         }
+<a href="#l701" class="line" id="l701">    701</a> 
+<a href="#l702" class="line" id="l702">    702</a>         if (!isPreview) {
+<a href="#l703" class="line" id="l703">    703</a>             if (forceDownloadFirst ||
+<a href="#l704" class="line" id="l704">    704</a>                 decodedAttachments.size == 1 ||
+<a href="#l705" class="line" id="l705">    705</a>                 context.isMainActivityPaused // we can&#39;t show alert dialogs when it downloads from a notification, so it downloads the first one
+<a href="#l706" class="line" id="l706">    706</a>             ) {
+<a href="#l707" class="line" id="l707">    707</a>                 downloadMessageAttachments(friendInfo, message, authorName,
+<a href="#l708" class="line" id="l708">    708</a>                     listOf(decodedAttachments.first()),
+<a href="#l709" class="line" id="l709">    709</a>                     forceAllowDuplicate = forceAllowDuplicate
+<a href="#l710" class="line" id="l710">    710</a>                 )
+<a href="#l711" class="line" id="l711">    711</a>                 return
+<a href="#l712" class="line" id="l712">    712</a>             }
+<a href="#l713" class="line" id="l713">    713</a> 
+<a href="#l714" class="line" id="l714">    714</a>             runOnUiThread {
+<a href="#l715" class="line" id="l715">    715</a>                 ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity).apply {
+<a href="#l716" class="line" id="l716">    716</a>                     val selectedAttachments = mutableListOf&lt;Int&gt;().apply {
+<a href="#l717" class="line" id="l717">    717</a>                         addAll(decodedAttachments.indices)
+<a href="#l718" class="line" id="l718">    718</a>                     }
+<a href="#l719" class="line" id="l719">    719</a>                     setMultiChoiceItems(
+<a href="#l720" class="line" id="l720">    720</a>                         decodedAttachments.mapIndexed { index, decodedAttachment -&gt;
+<a href="#l721" class="line" id="l721">    721</a>                             &quot;${index + 1}: ${decodedAttachment.getInfo()}&quot;
+<a href="#l722" class="line" id="l722">    722</a>                         }.toTypedArray(),
+<a href="#l723" class="line" id="l723">    723</a>                         decodedAttachments.map { true }.toBooleanArray()
+<a href="#l724" class="line" id="l724">    724</a>                     ) { _, which, isChecked -&gt;
+<a href="#l725" class="line" id="l725">    725</a>                         if (isChecked) {
+<a href="#l726" class="line" id="l726">    726</a>                             selectedAttachments.add(which)
+<a href="#l727" class="line" id="l727">    727</a>                         } else if (selectedAttachments.contains(which)) {
+<a href="#l728" class="line" id="l728">    728</a>                             selectedAttachments.remove(which)
+<a href="#l729" class="line" id="l729">    729</a>                         }
+<a href="#l730" class="line" id="l730">    730</a>                     }
+<a href="#l731" class="line" id="l731">    731</a>                     setTitle(translations[&quot;select_attachments_title&quot;])
+<a href="#l732" class="line" id="l732">    732</a>                     setNegativeButton(this@MediaDownloader.context.translation[&quot;button.cancel&quot;]) { dialog, _ -&gt; dialog.dismiss() }
+<a href="#l733" class="line" id="l733">    733</a>                     setPositiveButton(this@MediaDownloader.context.translation[&quot;button.download&quot;]) { _, _ -&gt;
+<a href="#l734" class="line" id="l734">    734</a>                         downloadMessageAttachments(friendInfo, message, authorName, selectedAttachments.map { decodedAttachments[it] },
+<a href="#l735" class="line" id="l735">    735</a>                             forceAllowDuplicate = forceAllowDuplicate
+<a href="#l736" class="line" id="l736">    736</a>                         )
+<a href="#l737" class="line" id="l737">    737</a>                     }
+<a href="#l738" class="line" id="l738">    738</a>                 }.show()
+<a href="#l739" class="line" id="l739">    739</a>             }
 <a href="#l740" class="line" id="l740">    740</a>             return
 <a href="#l741" class="line" id="l741">    741</a>         }
 <a href="#l742" class="line" id="l742">    742</a> 
-<a href="#l743" class="line" id="l743">    743</a>         runOnUiThread {
-<a href="#l744" class="line" id="l744">    744</a>             ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity).apply {
-<a href="#l745" class="line" id="l745">    745</a>                 var selectedAttachment = 0
-<a href="#l746" class="line" id="l746">    746</a>                 setSingleChoiceItems(
-<a href="#l747" class="line" id="l747">    747</a>                     decodedAttachments.mapIndexed { index, decodedAttachment -&gt; &quot;${index + 1}: ${decodedAttachment.getInfo()}&quot; }.toTypedArray(),
-<a href="#l748" class="line" id="l748">    748</a>                     0
-<a href="#l749" class="line" id="l749">    749</a>                 ) { _, which -&gt;
-<a href="#l750" class="line" id="l750">    750</a>                     selectedAttachment = which
-<a href="#l751" class="line" id="l751">    751</a>                 }
-<a href="#l752" class="line" id="l752">    752</a>                 setTitle(translations[&quot;select_attachments_title&quot;])
-<a href="#l753" class="line" id="l753">    753</a>                 setNegativeButton(this@MediaDownloader.context.translation[&quot;button.cancel&quot;]) { dialog, _ -&gt; dialog.dismiss() }
-<a href="#l754" class="line" id="l754">    754</a>                 setPositiveButton(this@MediaDownloader.context.translation[&quot;chat_action_menu.preview_button&quot;]) { _, _ -&gt;
-<a href="#l755" class="line" id="l755">    755</a>                     previewAttachment(decodedAttachments[selectedAttachment])
+<a href="#l743" class="line" id="l743">    743</a>         if (decodedAttachments.size == 1) {
+<a href="#l744" class="line" id="l744">    744</a>             previewAttachment(decodedAttachments.first())
+<a href="#l745" class="line" id="l745">    745</a>             return
+<a href="#l746" class="line" id="l746">    746</a>         }
+<a href="#l747" class="line" id="l747">    747</a> 
+<a href="#l748" class="line" id="l748">    748</a>         runOnUiThread {
+<a href="#l749" class="line" id="l749">    749</a>             ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity).apply {
+<a href="#l750" class="line" id="l750">    750</a>                 var selectedAttachment = 0
+<a href="#l751" class="line" id="l751">    751</a>                 setSingleChoiceItems(
+<a href="#l752" class="line" id="l752">    752</a>                     decodedAttachments.mapIndexed { index, decodedAttachment -&gt; &quot;${index + 1}: ${decodedAttachment.getInfo()}&quot; }.toTypedArray(),
+<a href="#l753" class="line" id="l753">    753</a>                     0
+<a href="#l754" class="line" id="l754">    754</a>                 ) { _, which -&gt;
+<a href="#l755" class="line" id="l755">    755</a>                     selectedAttachment = which
 <a href="#l756" class="line" id="l756">    756</a>                 }
-<a href="#l757" class="line" id="l757">    757</a>             }.show()
-<a href="#l758" class="line" id="l758">    758</a>         }
-<a href="#l759" class="line" id="l759">    759</a>     }
-<a href="#l760" class="line" id="l760">    760</a> 
-<a href="#l761" class="line" id="l761">    761</a>     fun downloadProfilePicture(url: String, author: String) {
-<a href="#l762" class="line" id="l762">    762</a>         provideDownloadManagerClient(
-<a href="#l763" class="line" id="l763">    763</a>             mediaIdentifier = url.hashCode().toString(16).replaceFirst(&quot;-&quot;, &quot;&quot;),
-<a href="#l764" class="line" id="l764">    764</a>             mediaAuthor = author,
-<a href="#l765" class="line" id="l765">    765</a>             downloadSource = MediaDownloadSource.PROFILE_PICTURE
-<a href="#l766" class="line" id="l766">    766</a>         ).downloadSingleMedia(
-<a href="#l767" class="line" id="l767">    767</a>             url,
-<a href="#l768" class="line" id="l768">    768</a>             DownloadMediaType.REMOTE_MEDIA
-<a href="#l769" class="line" id="l769">    769</a>         )
-<a href="#l770" class="line" id="l770">    770</a>     }
-<a href="#l771" class="line" id="l771">    771</a> 
-<a href="#l772" class="line" id="l772">    772</a>     /**
-<a href="#l773" class="line" id="l773">    773</a>      * Called when a message is focused in chat
-<a href="#l774" class="line" id="l774">    774</a>      */
-<a href="#l775" class="line" id="l775">    775</a>     fun onMessageActionMenu(isPreviewMode: Boolean, forceAllowDuplicate: Boolean = false) {
-<a href="#l776" class="line" id="l776">    776</a>         val messaging = context.feature(Messaging::class)
-<a href="#l777" class="line" id="l777">    777</a>         if (messaging.openedConversationUUID == null) return
-<a href="#l778" class="line" id="l778">    778</a> 
-<a href="#l779" class="line" id="l779">    779</a>         context.executeAsync {
-<a href="#l780" class="line" id="l780">    780</a>             downloadMessageId(messaging.lastFocusedMessageId, forceAllowDuplicate, isPreviewMode)
-<a href="#l781" class="line" id="l781">    781</a>         }
-<a href="#l782" class="line" id="l782">    782</a>     }
-<a href="#l783" class="line" id="l783">    783</a> }
+<a href="#l757" class="line" id="l757">    757</a>                 setTitle(translations[&quot;select_attachments_title&quot;])
+<a href="#l758" class="line" id="l758">    758</a>                 setNegativeButton(this@MediaDownloader.context.translation[&quot;button.cancel&quot;]) { dialog, _ -&gt; dialog.dismiss() }
+<a href="#l759" class="line" id="l759">    759</a>                 setPositiveButton(this@MediaDownloader.context.translation[&quot;chat_action_menu.preview_button&quot;]) { _, _ -&gt;
+<a href="#l760" class="line" id="l760">    760</a>                     previewAttachment(decodedAttachments[selectedAttachment])
+<a href="#l761" class="line" id="l761">    761</a>                 }
+<a href="#l762" class="line" id="l762">    762</a>             }.show()
+<a href="#l763" class="line" id="l763">    763</a>         }
+<a href="#l764" class="line" id="l764">    764</a>     }
+<a href="#l765" class="line" id="l765">    765</a> 
+<a href="#l766" class="line" id="l766">    766</a>     fun downloadProfilePicture(url: String, author: String) {
+<a href="#l767" class="line" id="l767">    767</a>         provideDownloadManagerClient(
+<a href="#l768" class="line" id="l768">    768</a>             mediaIdentifier = url.hashCode().toString(16).replaceFirst(&quot;-&quot;, &quot;&quot;),
+<a href="#l769" class="line" id="l769">    769</a>             mediaAuthor = author,
+<a href="#l770" class="line" id="l770">    770</a>             downloadSource = MediaDownloadSource.PROFILE_PICTURE
+<a href="#l771" class="line" id="l771">    771</a>         ).downloadSingleMedia(
+<a href="#l772" class="line" id="l772">    772</a>             url,
+<a href="#l773" class="line" id="l773">    773</a>             DownloadMediaType.REMOTE_MEDIA
+<a href="#l774" class="line" id="l774">    774</a>         )
+<a href="#l775" class="line" id="l775">    775</a>     }
+<a href="#l776" class="line" id="l776">    776</a> 
+<a href="#l777" class="line" id="l777">    777</a>     /**
+<a href="#l778" class="line" id="l778">    778</a>      * Called when a message is focused in chat
+<a href="#l779" class="line" id="l779">    779</a>      */
+<a href="#l780" class="line" id="l780">    780</a>     fun onMessageActionMenu(isPreviewMode: Boolean, forceAllowDuplicate: Boolean = false) {
+<a href="#l781" class="line" id="l781">    781</a>         val messaging = context.feature(Messaging::class)
+<a href="#l782" class="line" id="l782">    782</a>         if (messaging.openedConversationUUID == null) return
+<a href="#l783" class="line" id="l783">    783</a> 
+<a href="#l784" class="line" id="l784">    784</a>         context.executeAsync {
+<a href="#l785" class="line" id="l785">    785</a>             downloadMessageId(messaging.lastFocusedMessageId, forceAllowDuplicate, isPreviewMode)
+<a href="#l786" class="line" id="l786">    786</a>         }
+<a href="#l787" class="line" id="l787">    787</a>     }
+<a href="#l788" class="line" id="l788">    788</a> }
 </pre>
 </div>
 </body>

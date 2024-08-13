@@ -108,18 +108,17 @@ fun View.findParent(maxIteration: Int = Int.MAX_VALUE, predicate: (View) -> Bool
 
 
 fun View.getComposerViewNode(): ComposerViewNode? {
-    if (!this::class.java.isAssignableFrom(SnapEnhance.classCache.composerView)) return null
+    if (!SnapEnhance.classCache.composerView.isInstance(this)) return null
+
     val composerViewNode = this::class.java.methods.firstOrNull {
         it.name == "getComposerViewNode"
     }?.invoke(this) ?: return null
 
-    return ComposerViewNode(composerViewNode::class.java.methods.firstOrNull {
-        it.name == "getNativeHandle"
-    }?.invoke(composerViewNode) as? Long ?: return null)
+    return ComposerViewNode.fromNode(composerViewNode)
 }
 
 fun View.getComposerContext(): ComposerContext? {
-    if (!this::class.java.isAssignableFrom(SnapEnhance.classCache.composerView)) return null
+    if (!SnapEnhance.classCache.composerView.isInstance(this)) return null
 
     return ComposerContext(this::class.java.methods.firstOrNull {
         it.name == "getComposerContext"
