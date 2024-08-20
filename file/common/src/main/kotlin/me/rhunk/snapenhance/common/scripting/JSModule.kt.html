@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> JSModule.kt (11326B) - <a href="../../../../../../../../../../raw/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt">raw</a></p><hr/><pre id="blob">
+<p> JSModule.kt (11792B) - <a href="../../../../../../../../../../raw/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.common.scripting
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import android.os.Handler
@@ -253,31 +253,46 @@
 <a href="#l230" class="line" id="l230">    230</a>             }
 <a href="#l231" class="line" id="l231">    231</a>         }
 <a href="#l232" class="line" id="l232">    232</a>     }
-<a href="#l233" class="line" id="l233">    233</a>     fun registerBindings(vararg bindings: AbstractBinding) {
-<a href="#l234" class="line" id="l234">    234</a>         bindings.forEach {
-<a href="#l235" class="line" id="l235">    235</a>             moduleBindings[it.name] = it.apply {
-<a href="#l236" class="line" id="l236">    236</a>                 context = moduleBindingContext
-<a href="#l237" class="line" id="l237">    237</a>             }
-<a href="#l238" class="line" id="l238">    238</a>         }
-<a href="#l239" class="line" id="l239">    239</a>     }
-<a href="#l240" class="line" id="l240">    240</a> 
-<a href="#l241" class="line" id="l241">    241</a>     @Suppress(&quot;UNCHECKED_CAST&quot;)
-<a href="#l242" class="line" id="l242">    242</a>     fun &lt;T : Any&gt; getBinding(clazz: KClass&lt;T&gt;): T? {
-<a href="#l243" class="line" id="l243">    243</a>         return moduleBindings.values.find { clazz.isInstance(it) } as? T
-<a href="#l244" class="line" id="l244">    244</a>     }
-<a href="#l245" class="line" id="l245">    245</a> 
-<a href="#l246" class="line" id="l246">    246</a>     private fun argsToString(args: Array&lt;out Any?&gt;?): String {
-<a href="#l247" class="line" id="l247">    247</a>         return args?.joinToString(&quot; &quot;) {
-<a href="#l248" class="line" id="l248">    248</a>             when (it) {
-<a href="#l249" class="line" id="l249">    249</a>                 is Wrapper -&gt; it.unwrap().let { value -&gt;
-<a href="#l250" class="line" id="l250">    250</a>                     if (value is Throwable) value.message + &quot;\n&quot; + value.stackTraceToString()
-<a href="#l251" class="line" id="l251">    251</a>                     else value.toString()
-<a href="#l252" class="line" id="l252">    252</a>                 }
-<a href="#l253" class="line" id="l253">    253</a>                 else -&gt; it.toString()
-<a href="#l254" class="line" id="l254">    254</a>             }
-<a href="#l255" class="line" id="l255">    255</a>         } ?: &quot;null&quot;
-<a href="#l256" class="line" id="l256">    256</a>     }
-<a href="#l257" class="line" id="l257">    257</a> }</pre>
+<a href="#l233" class="line" id="l233">    233</a> 
+<a href="#l234" class="line" id="l234">    234</a>     fun registerBindings(vararg bindings: AbstractBinding) {
+<a href="#l235" class="line" id="l235">    235</a>         bindings.forEach {
+<a href="#l236" class="line" id="l236">    236</a>             moduleBindings[it.name] = it.apply {
+<a href="#l237" class="line" id="l237">    237</a>                 context = moduleBindingContext
+<a href="#l238" class="line" id="l238">    238</a>             }
+<a href="#l239" class="line" id="l239">    239</a>         }
+<a href="#l240" class="line" id="l240">    240</a>     }
+<a href="#l241" class="line" id="l241">    241</a> 
+<a href="#l242" class="line" id="l242">    242</a>     fun onBridgeConnected(reloaded: Boolean = false) {
+<a href="#l243" class="line" id="l243">    243</a>         if (reloaded) {
+<a href="#l244" class="line" id="l244">    244</a>             moduleBindings.values.forEach { binding -&gt;
+<a href="#l245" class="line" id="l245">    245</a>                 runCatching {
+<a href="#l246" class="line" id="l246">    246</a>                     binding.onBridgeReloaded()
+<a href="#l247" class="line" id="l247">    247</a>                 }.onFailure {
+<a href="#l248" class="line" id="l248">    248</a>                     scriptRuntime.logger.error(&quot;Failed to call onBridgeConnected for binding ${binding.name}&quot;, it)
+<a href="#l249" class="line" id="l249">    249</a>                 }
+<a href="#l250" class="line" id="l250">    250</a>             }
+<a href="#l251" class="line" id="l251">    251</a>         }
+<a href="#l252" class="line" id="l252">    252</a> 
+<a href="#l253" class="line" id="l253">    253</a>         callFunction(&quot;module.onBridgeConnected&quot;, reloaded)
+<a href="#l254" class="line" id="l254">    254</a>     }
+<a href="#l255" class="line" id="l255">    255</a> 
+<a href="#l256" class="line" id="l256">    256</a>     @Suppress(&quot;UNCHECKED_CAST&quot;)
+<a href="#l257" class="line" id="l257">    257</a>     fun &lt;T : Any&gt; getBinding(clazz: KClass&lt;T&gt;): T? {
+<a href="#l258" class="line" id="l258">    258</a>         return moduleBindings.values.find { clazz.isInstance(it) } as? T
+<a href="#l259" class="line" id="l259">    259</a>     }
+<a href="#l260" class="line" id="l260">    260</a> 
+<a href="#l261" class="line" id="l261">    261</a>     private fun argsToString(args: Array&lt;out Any?&gt;?): String {
+<a href="#l262" class="line" id="l262">    262</a>         return args?.joinToString(&quot; &quot;) {
+<a href="#l263" class="line" id="l263">    263</a>             when (it) {
+<a href="#l264" class="line" id="l264">    264</a>                 is Wrapper -&gt; it.unwrap().let { value -&gt;
+<a href="#l265" class="line" id="l265">    265</a>                     if (value is Throwable) value.message + &quot;\n&quot; + value.stackTraceToString()
+<a href="#l266" class="line" id="l266">    266</a>                     else value.toString()
+<a href="#l267" class="line" id="l267">    267</a>                 }
+<a href="#l268" class="line" id="l268">    268</a>                 else -&gt; it.toString()
+<a href="#l269" class="line" id="l269">    269</a>             }
+<a href="#l270" class="line" id="l270">    270</a>         } ?: &quot;null&quot;
+<a href="#l271" class="line" id="l271">    271</a>     }
+<a href="#l272" class="line" id="l272">    272</a> }</pre>
 </div>
 </body>
 </html>

@@ -30,6 +30,7 @@ import me.rhunk.snapenhance.core.ui.InAppOverlay
 import me.rhunk.snapenhance.core.util.LSPatchUpdater
 import me.rhunk.snapenhance.core.util.hook.HookAdapter
 import me.rhunk.snapenhance.core.util.hook.HookStage
+import me.rhunk.snapenhance.core.util.hook.findRestrictedMethod
 import me.rhunk.snapenhance.core.util.hook.hook
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
@@ -164,7 +165,7 @@ class SnapEnhance {
             //if mappings aren't loaded, we can't initialize features
             if (!mappings.isMappingsLoaded) return
             features.init()
-            scriptRuntime.connect(bridgeClient.getScriptingInterface())
+            scriptRuntime.init()
             scriptRuntime.eachModule { callFunction("module.onSnapApplicationLoad", androidContext) }
         }
     }
@@ -240,12 +241,12 @@ class SnapEnhance {
             appContext.log.warn("sif is disabled")
         }
 
-        Runtime::class.java.declaredMethods.first {
+        Runtime::class.java.findRestrictedMethod {
             it.name == "loadLibrary0" && it.parameterTypes.contentEquals(
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) arrayOf(Class::class.java, String::class.java)
                 else arrayOf(ClassLoader::class.java, String::class.java)
             )
-        }.apply {
+        }!!.apply {
             if (safeMode) {
                 hook(HookStage.BEFORE) { param ->
                     if (param.arg<String>(1) != "scplugin") return@hook

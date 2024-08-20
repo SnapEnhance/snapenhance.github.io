@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> ManagerIPC.kt (2089B) - <a href="../../../../../../../../../../raw/app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ManagerIPC.kt">raw</a></p><hr/><pre id="blob">
+<p> ManagerIPC.kt (2202B) - <a href="../../../../../../../../../../raw/app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ManagerIPC.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.scripting.impl
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import android.os.DeadObjectException
@@ -42,8 +42,8 @@
 <a href="#l19" class="line" id="l19">     19</a>         onBroadcast(context.moduleInfo.name, eventName, listener)
 <a href="#l20" class="line" id="l20">     20</a>     }
 <a href="#l21" class="line" id="l21">     21</a> 
-<a href="#l22" class="line" id="l22">     22</a>     override fun emit(eventName: String, vararg args: String?) {
-<a href="#l23" class="line" id="l23">     23</a>         emit(context.moduleInfo.name, eventName, *args)
+<a href="#l22" class="line" id="l22">     22</a>     override fun emit(eventName: String, vararg args: String?): Int {
+<a href="#l23" class="line" id="l23">     23</a>         return broadcast(context.moduleInfo.name, eventName, *args)
 <a href="#l24" class="line" id="l24">     24</a>     }
 <a href="#l25" class="line" id="l25">     25</a> 
 <a href="#l26" class="line" id="l26">     26</a>     override fun onBroadcast(channel: String, eventName: String, listener: Listener) {
@@ -60,18 +60,21 @@
 <a href="#l37" class="line" id="l37">     37</a>         })
 <a href="#l38" class="line" id="l38">     38</a>     }
 <a href="#l39" class="line" id="l39">     39</a> 
-<a href="#l40" class="line" id="l40">     40</a>     override fun broadcast(channel: String, eventName: String, vararg args: String?) {
-<a href="#l41" class="line" id="l41">     41</a>         ipcListeners[channel]?.get(eventName)?.toList()?.forEach {
-<a href="#l42" class="line" id="l42">     42</a>             try {
-<a href="#l43" class="line" id="l43">     43</a>                 it.onMessage(args)
-<a href="#l44" class="line" id="l44">     44</a>             } catch (doe: DeadObjectException) {
-<a href="#l45" class="line" id="l45">     45</a>                 ipcListeners[channel]?.get(eventName)?.remove(it)
-<a href="#l46" class="line" id="l46">     46</a>             } catch (t: Throwable) {
-<a href="#l47" class="line" id="l47">     47</a>                 context.runtime.logger.error(&quot;Failed to send message for channel: $channel, event: $eventName&quot;, t, TAG)
-<a href="#l48" class="line" id="l48">     48</a>             }
-<a href="#l49" class="line" id="l49">     49</a>         }
-<a href="#l50" class="line" id="l50">     50</a>     }
-<a href="#l51" class="line" id="l51">     51</a> }</pre>
+<a href="#l40" class="line" id="l40">     40</a>     override fun broadcast(channel: String, eventName: String, vararg args: String?): Int {
+<a href="#l41" class="line" id="l41">     41</a>         var dispatchCount = 0
+<a href="#l42" class="line" id="l42">     42</a>         ipcListeners[channel]?.get(eventName)?.toList()?.forEach {
+<a href="#l43" class="line" id="l43">     43</a>             try {
+<a href="#l44" class="line" id="l44">     44</a>                 it.onMessage(args)
+<a href="#l45" class="line" id="l45">     45</a>                 dispatchCount++
+<a href="#l46" class="line" id="l46">     46</a>             } catch (doe: DeadObjectException) {
+<a href="#l47" class="line" id="l47">     47</a>                 ipcListeners[channel]?.get(eventName)?.remove(it)
+<a href="#l48" class="line" id="l48">     48</a>             } catch (t: Throwable) {
+<a href="#l49" class="line" id="l49">     49</a>                 context.runtime.logger.error(&quot;Failed to send message for channel: $channel, event: $eventName&quot;, t, TAG)
+<a href="#l50" class="line" id="l50">     50</a>             }
+<a href="#l51" class="line" id="l51">     51</a>         }
+<a href="#l52" class="line" id="l52">     52</a>         return dispatchCount
+<a href="#l53" class="line" id="l53">     53</a>     }
+<a href="#l54" class="line" id="l54">     54</a> }</pre>
 </div>
 </body>
 </html>

@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> RemoteScriptManager.kt (9628B) - <a href="../../../../../../../../../raw/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt">raw</a></p><hr/><pre id="blob">
+<p> RemoteScriptManager.kt (9732B) - <a href="../../../../../../../../../raw/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.scripting
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import android.annotation.SuppressLint
@@ -227,51 +227,54 @@
 <a href="#l204" class="line" id="l204">    204</a>         ipcListeners.getOrPut(channel) { mutableMapOf() }.getOrPut(eventName) { mutableSetOf() }.add(listener)
 <a href="#l205" class="line" id="l205">    205</a>     }
 <a href="#l206" class="line" id="l206">    206</a> 
-<a href="#l207" class="line" id="l207">    207</a>     override fun sendIPCMessage(channel: String, eventName: String, args: Array&lt;out String&gt;) {
-<a href="#l208" class="line" id="l208">    208</a>         runCatching {
-<a href="#l209" class="line" id="l209">    209</a>             ipcListeners[channel]?.get(eventName)?.toList()?.forEach {
-<a href="#l210" class="line" id="l210">    210</a>                 it.onMessage(args)
-<a href="#l211" class="line" id="l211">    211</a>             }
-<a href="#l212" class="line" id="l212">    212</a>         }.onFailure {
-<a href="#l213" class="line" id="l213">    213</a>             context.log.error(&quot;Failed to send message for $eventName&quot;, it)
-<a href="#l214" class="line" id="l214">    214</a>         }
-<a href="#l215" class="line" id="l215">    215</a>     }
-<a href="#l216" class="line" id="l216">    216</a> 
-<a href="#l217" class="line" id="l217">    217</a>     override fun configTransaction(
-<a href="#l218" class="line" id="l218">    218</a>         module: String?,
-<a href="#l219" class="line" id="l219">    219</a>         action: String,
-<a href="#l220" class="line" id="l220">    220</a>         key: String?,
-<a href="#l221" class="line" id="l221">    221</a>         value: String?,
-<a href="#l222" class="line" id="l222">    222</a>         save: Boolean
-<a href="#l223" class="line" id="l223">    223</a>     ): String? {
-<a href="#l224" class="line" id="l224">    224</a>         val scriptConfig = runtime.getModuleByName(module ?: return null)?.getBinding(ConfigInterface::class) ?: return null.also {
-<a href="#l225" class="line" id="l225">    225</a>             context.log.warn(&quot;Failed to get config interface for $module&quot;)
-<a href="#l226" class="line" id="l226">    226</a>         }
-<a href="#l227" class="line" id="l227">    227</a>         val transactionType = ConfigTransactionType.fromKey(action)
-<a href="#l228" class="line" id="l228">    228</a> 
-<a href="#l229" class="line" id="l229">    229</a>         return runCatching {
-<a href="#l230" class="line" id="l230">    230</a>             scriptConfig.run {
-<a href="#l231" class="line" id="l231">    231</a>                 if (transactionType == ConfigTransactionType.GET) {
-<a href="#l232" class="line" id="l232">    232</a>                     return get(key ?: return@runCatching null, value)
-<a href="#l233" class="line" id="l233">    233</a>                 }
-<a href="#l234" class="line" id="l234">    234</a>                 when (transactionType) {
-<a href="#l235" class="line" id="l235">    235</a>                     ConfigTransactionType.SET -&gt; set(key ?: return@runCatching null, value, save)
-<a href="#l236" class="line" id="l236">    236</a>                     ConfigTransactionType.SAVE -&gt; save()
-<a href="#l237" class="line" id="l237">    237</a>                     ConfigTransactionType.LOAD -&gt; load()
-<a href="#l238" class="line" id="l238">    238</a>                     ConfigTransactionType.DELETE -&gt; deleteConfig()
-<a href="#l239" class="line" id="l239">    239</a>                     else -&gt; {}
-<a href="#l240" class="line" id="l240">    240</a>                 }
-<a href="#l241" class="line" id="l241">    241</a>                 null
-<a href="#l242" class="line" id="l242">    242</a>             }
-<a href="#l243" class="line" id="l243">    243</a>         }.onFailure {
-<a href="#l244" class="line" id="l244">    244</a>             context.log.error(&quot;Failed to perform config transaction&quot;, it)
-<a href="#l245" class="line" id="l245">    245</a>         }.getOrDefault(&quot;&quot;)
-<a href="#l246" class="line" id="l246">    246</a>     }
-<a href="#l247" class="line" id="l247">    247</a> 
-<a href="#l248" class="line" id="l248">    248</a>     override fun registerAutoReloadListener(listener: AutoReloadListener?) {
-<a href="#l249" class="line" id="l249">    249</a>         autoReloadListener = listener
-<a href="#l250" class="line" id="l250">    250</a>     }
-<a href="#l251" class="line" id="l251">    251</a> }</pre>
+<a href="#l207" class="line" id="l207">    207</a>     override fun sendIPCMessage(channel: String, eventName: String, args: Array&lt;out String&gt;): Int {
+<a href="#l208" class="line" id="l208">    208</a>         var dispatchCount = 0
+<a href="#l209" class="line" id="l209">    209</a>         ipcListeners[channel]?.get(eventName)?.toList()?.forEach {
+<a href="#l210" class="line" id="l210">    210</a>             runCatching {
+<a href="#l211" class="line" id="l211">    211</a>                 it.onMessage(args)
+<a href="#l212" class="line" id="l212">    212</a>                 dispatchCount++
+<a href="#l213" class="line" id="l213">    213</a>             }.onFailure {
+<a href="#l214" class="line" id="l214">    214</a>                 context.log.error(&quot;Failed to send message for $eventName&quot;, it)
+<a href="#l215" class="line" id="l215">    215</a>             }
+<a href="#l216" class="line" id="l216">    216</a>         }
+<a href="#l217" class="line" id="l217">    217</a>         return dispatchCount
+<a href="#l218" class="line" id="l218">    218</a>     }
+<a href="#l219" class="line" id="l219">    219</a> 
+<a href="#l220" class="line" id="l220">    220</a>     override fun configTransaction(
+<a href="#l221" class="line" id="l221">    221</a>         module: String?,
+<a href="#l222" class="line" id="l222">    222</a>         action: String,
+<a href="#l223" class="line" id="l223">    223</a>         key: String?,
+<a href="#l224" class="line" id="l224">    224</a>         value: String?,
+<a href="#l225" class="line" id="l225">    225</a>         save: Boolean
+<a href="#l226" class="line" id="l226">    226</a>     ): String? {
+<a href="#l227" class="line" id="l227">    227</a>         val scriptConfig = runtime.getModuleByName(module ?: return null)?.getBinding(ConfigInterface::class) ?: return null.also {
+<a href="#l228" class="line" id="l228">    228</a>             context.log.warn(&quot;Failed to get config interface for $module&quot;)
+<a href="#l229" class="line" id="l229">    229</a>         }
+<a href="#l230" class="line" id="l230">    230</a>         val transactionType = ConfigTransactionType.fromKey(action)
+<a href="#l231" class="line" id="l231">    231</a> 
+<a href="#l232" class="line" id="l232">    232</a>         return runCatching {
+<a href="#l233" class="line" id="l233">    233</a>             scriptConfig.run {
+<a href="#l234" class="line" id="l234">    234</a>                 if (transactionType == ConfigTransactionType.GET) {
+<a href="#l235" class="line" id="l235">    235</a>                     return get(key ?: return@runCatching null, value)
+<a href="#l236" class="line" id="l236">    236</a>                 }
+<a href="#l237" class="line" id="l237">    237</a>                 when (transactionType) {
+<a href="#l238" class="line" id="l238">    238</a>                     ConfigTransactionType.SET -&gt; set(key ?: return@runCatching null, value, save)
+<a href="#l239" class="line" id="l239">    239</a>                     ConfigTransactionType.SAVE -&gt; save()
+<a href="#l240" class="line" id="l240">    240</a>                     ConfigTransactionType.LOAD -&gt; load()
+<a href="#l241" class="line" id="l241">    241</a>                     ConfigTransactionType.DELETE -&gt; deleteConfig()
+<a href="#l242" class="line" id="l242">    242</a>                     else -&gt; {}
+<a href="#l243" class="line" id="l243">    243</a>                 }
+<a href="#l244" class="line" id="l244">    244</a>                 null
+<a href="#l245" class="line" id="l245">    245</a>             }
+<a href="#l246" class="line" id="l246">    246</a>         }.onFailure {
+<a href="#l247" class="line" id="l247">    247</a>             context.log.error(&quot;Failed to perform config transaction&quot;, it)
+<a href="#l248" class="line" id="l248">    248</a>         }.getOrDefault(&quot;&quot;)
+<a href="#l249" class="line" id="l249">    249</a>     }
+<a href="#l250" class="line" id="l250">    250</a> 
+<a href="#l251" class="line" id="l251">    251</a>     override fun registerAutoReloadListener(listener: AutoReloadListener?) {
+<a href="#l252" class="line" id="l252">    252</a>         autoReloadListener = listener
+<a href="#l253" class="line" id="l253">    253</a>     }
+<a href="#l254" class="line" id="l254">    254</a> }</pre>
 </div>
 </body>
 </html>

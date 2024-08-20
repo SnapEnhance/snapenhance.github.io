@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> SnapEnhance.kt (15939B) - <a href="../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt">raw</a></p><hr/><pre id="blob">
+<p> SnapEnhance.kt (15965B) - <a href="../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import android.app.Activity
@@ -53,366 +53,367 @@
 <a href="#l30" class="line" id="l30">     30</a> import me.rhunk.snapenhance.core.util.LSPatchUpdater
 <a href="#l31" class="line" id="l31">     31</a> import me.rhunk.snapenhance.core.util.hook.HookAdapter
 <a href="#l32" class="line" id="l32">     32</a> import me.rhunk.snapenhance.core.util.hook.HookStage
-<a href="#l33" class="line" id="l33">     33</a> import me.rhunk.snapenhance.core.util.hook.hook
-<a href="#l34" class="line" id="l34">     34</a> import kotlin.reflect.KClass
-<a href="#l35" class="line" id="l35">     35</a> import kotlin.system.exitProcess
-<a href="#l36" class="line" id="l36">     36</a> import kotlin.system.measureTimeMillis
-<a href="#l37" class="line" id="l37">     37</a> 
+<a href="#l33" class="line" id="l33">     33</a> import me.rhunk.snapenhance.core.util.hook.findRestrictedMethod
+<a href="#l34" class="line" id="l34">     34</a> import me.rhunk.snapenhance.core.util.hook.hook
+<a href="#l35" class="line" id="l35">     35</a> import kotlin.reflect.KClass
+<a href="#l36" class="line" id="l36">     36</a> import kotlin.system.exitProcess
+<a href="#l37" class="line" id="l37">     37</a> import kotlin.system.measureTimeMillis
 <a href="#l38" class="line" id="l38">     38</a> 
-<a href="#l39" class="line" id="l39">     39</a> class SnapEnhance {
-<a href="#l40" class="line" id="l40">     40</a>     companion object {
-<a href="#l41" class="line" id="l41">     41</a>         lateinit var classLoader: ClassLoader
-<a href="#l42" class="line" id="l42">     42</a>             private set
-<a href="#l43" class="line" id="l43">     43</a>         val classCache by lazy {
-<a href="#l44" class="line" id="l44">     44</a>             SnapClassCache(classLoader)
-<a href="#l45" class="line" id="l45">     45</a>         }
-<a href="#l46" class="line" id="l46">     46</a>     }
-<a href="#l47" class="line" id="l47">     47</a>     private lateinit var appContext: ModContext
-<a href="#l48" class="line" id="l48">     48</a>     private var isBridgeInitialized = false
-<a href="#l49" class="line" id="l49">     49</a> 
-<a href="#l50" class="line" id="l50">     50</a>     private fun hookMainActivity(methodName: String, stage: HookStage = HookStage.AFTER, block: Activity.(param: HookAdapter) -&gt; Unit) {
-<a href="#l51" class="line" id="l51">     51</a>         Activity::class.java.hook(methodName, stage, { isBridgeInitialized }) { param -&gt;
-<a href="#l52" class="line" id="l52">     52</a>             val activity = param.thisObject() as Activity
-<a href="#l53" class="line" id="l53">     53</a>             if (!activity.packageName.equals(Constants.SNAPCHAT_PACKAGE_NAME)) return@hook
-<a href="#l54" class="line" id="l54">     54</a>             block(activity, param)
-<a href="#l55" class="line" id="l55">     55</a>         }
-<a href="#l56" class="line" id="l56">     56</a>     }
-<a href="#l57" class="line" id="l57">     57</a> 
-<a href="#l58" class="line" id="l58">     58</a>     fun init(context: Context) {
-<a href="#l59" class="line" id="l59">     59</a>         appContext = ModContext(
-<a href="#l60" class="line" id="l60">     60</a>             androidContext = context.also { classLoader = it.classLoader }
-<a href="#l61" class="line" id="l61">     61</a>         )
-<a href="#l62" class="line" id="l62">     62</a>         appContext.apply {
-<a href="#l63" class="line" id="l63">     63</a>             bridgeClient = BridgeClient(this)
-<a href="#l64" class="line" id="l64">     64</a>             initConfigListener()
-<a href="#l65" class="line" id="l65">     65</a>             bridgeClient.addOnConnectedCallback {
-<a href="#l66" class="line" id="l66">     66</a>                 bridgeClient.registerMessagingBridge(messagingBridge)
-<a href="#l67" class="line" id="l67">     67</a>                 coroutineScope.launch {
-<a href="#l68" class="line" id="l68">     68</a>                     runCatching {
-<a href="#l69" class="line" id="l69">     69</a>                         syncRemote()
-<a href="#l70" class="line" id="l70">     70</a>                     }.onFailure {
-<a href="#l71" class="line" id="l71">     71</a>                         log.error(&quot;Failed to sync remote&quot;, it)
-<a href="#l72" class="line" id="l72">     72</a>                     }
-<a href="#l73" class="line" id="l73">     73</a>                 }
-<a href="#l74" class="line" id="l74">     74</a>             }
-<a href="#l75" class="line" id="l75">     75</a>         }
-<a href="#l76" class="line" id="l76">     76</a> 
-<a href="#l77" class="line" id="l77">     77</a>         runBlocking {
-<a href="#l78" class="line" id="l78">     78</a>             var throwable: Throwable? = null
-<a href="#l79" class="line" id="l79">     79</a>             val canLoad = appContext.bridgeClient.connect { throwable = it }
-<a href="#l80" class="line" id="l80">     80</a>             if (canLoad == null) {
-<a href="#l81" class="line" id="l81">     81</a>                 InAppOverlay.showCrashOverlay(
-<a href="#l82" class="line" id="l82">     82</a>                     buildString {
-<a href="#l83" class="line" id="l83">     83</a>                         append(&quot;Snapchat timed out while trying to connect to SnapEnhance\n\n&quot;)
-<a href="#l84" class="line" id="l84">     84</a>                         append(&quot;Make sure you:\n&quot;)
-<a href="#l85" class="line" id="l85">     85</a>                         append(&quot; - Have installed the latest SnapEnhance version (https://github.com/rhunk/SnapEnhance)\n&quot;)
-<a href="#l86" class="line" id="l86">     86</a>                         append(&quot; - Disabled battery optimizations\n&quot;)
-<a href="#l87" class="line" id="l87">     87</a>                         append(&quot; - Excluded SnapEnhance and Snapchat in HideMyApplist&quot;)
-<a href="#l88" class="line" id="l88">     88</a>                     },
-<a href="#l89" class="line" id="l89">     89</a>                     throwable
-<a href="#l90" class="line" id="l90">     90</a>                 )
-<a href="#l91" class="line" id="l91">     91</a>                 appContext.logCritical(&quot;Cannot connect to the SnapEnhance app&quot;)
-<a href="#l92" class="line" id="l92">     92</a>                 return@runBlocking
-<a href="#l93" class="line" id="l93">     93</a>             }
-<a href="#l94" class="line" id="l94">     94</a>             if (!canLoad) exitProcess(1)
-<a href="#l95" class="line" id="l95">     95</a>             runCatching {
-<a href="#l96" class="line" id="l96">     96</a>                 LSPatchUpdater.onBridgeConnected(appContext)
-<a href="#l97" class="line" id="l97">     97</a>             }.onFailure {
-<a href="#l98" class="line" id="l98">     98</a>                 appContext.log.error(&quot;Failed to init LSPatchUpdater&quot;, it)
-<a href="#l99" class="line" id="l99">     99</a>             }
-<a href="#l100" class="line" id="l100">    100</a>             jetpackComposeResourceHook()
-<a href="#l101" class="line" id="l101">    101</a>             runCatching {
-<a href="#l102" class="line" id="l102">    102</a>                 measureTimeMillis {
-<a href="#l103" class="line" id="l103">    103</a>                     init(this)
-<a href="#l104" class="line" id="l104">    104</a>                 }.also {
-<a href="#l105" class="line" id="l105">    105</a>                     appContext.log.verbose(&quot;init took ${it}ms&quot;)
-<a href="#l106" class="line" id="l106">    106</a>                 }
-<a href="#l107" class="line" id="l107">    107</a> 
-<a href="#l108" class="line" id="l108">    108</a>                 hookMainActivity(&quot;onPostCreate&quot;) {
-<a href="#l109" class="line" id="l109">    109</a>                     appContext.mainActivity = this
-<a href="#l110" class="line" id="l110">    110</a>                     if (!appContext.mappings.isMappingsLoaded) return@hookMainActivity
-<a href="#l111" class="line" id="l111">    111</a>                     appContext.isMainActivityPaused = false
-<a href="#l112" class="line" id="l112">    112</a>                     onActivityCreate(this)
-<a href="#l113" class="line" id="l113">    113</a>                     appContext.actionManager.onNewIntent(intent)
-<a href="#l114" class="line" id="l114">    114</a>                 }
-<a href="#l115" class="line" id="l115">    115</a> 
-<a href="#l116" class="line" id="l116">    116</a>                 hookMainActivity(&quot;onPause&quot;) {
-<a href="#l117" class="line" id="l117">    117</a>                     appContext.bridgeClient.closeOverlay()
-<a href="#l118" class="line" id="l118">    118</a>                     appContext.isMainActivityPaused = true
-<a href="#l119" class="line" id="l119">    119</a>                 }
-<a href="#l120" class="line" id="l120">    120</a> 
-<a href="#l121" class="line" id="l121">    121</a>                 hookMainActivity(&quot;onNewIntent&quot;) { param -&gt;
-<a href="#l122" class="line" id="l122">    122</a>                     appContext.actionManager.onNewIntent(param.argNullable(0))
-<a href="#l123" class="line" id="l123">    123</a>                 }
-<a href="#l124" class="line" id="l124">    124</a> 
-<a href="#l125" class="line" id="l125">    125</a>                 hookMainActivity(&quot;onResume&quot;) {
-<a href="#l126" class="line" id="l126">    126</a>                     if (appContext.isMainActivityPaused.also {
-<a href="#l127" class="line" id="l127">    127</a>                         appContext.isMainActivityPaused = false
-<a href="#l128" class="line" id="l128">    128</a>                     }) {
-<a href="#l129" class="line" id="l129">    129</a>                         appContext.reloadConfig()
-<a href="#l130" class="line" id="l130">    130</a>                         appContext.executeAsync {
-<a href="#l131" class="line" id="l131">    131</a>                             syncRemote()
-<a href="#l132" class="line" id="l132">    132</a>                         }
-<a href="#l133" class="line" id="l133">    133</a>                     }
-<a href="#l134" class="line" id="l134">    134</a>                 }
-<a href="#l135" class="line" id="l135">    135</a>             }.onSuccess {
-<a href="#l136" class="line" id="l136">    136</a>                 isBridgeInitialized = true
-<a href="#l137" class="line" id="l137">    137</a>             }.onFailure {
-<a href="#l138" class="line" id="l138">    138</a>                 appContext.logCritical(&quot;Failed to initialize bridge&quot;, it)
-<a href="#l139" class="line" id="l139">    139</a>                 InAppOverlay.showCrashOverlay(&quot;SnapEnhance failed to initialize. Please check logs for more details.&quot;, it)
-<a href="#l140" class="line" id="l140">    140</a>             }
-<a href="#l141" class="line" id="l141">    141</a>         }
-<a href="#l142" class="line" id="l142">    142</a>     }
-<a href="#l143" class="line" id="l143">    143</a> 
-<a href="#l144" class="line" id="l144">    144</a>     private fun init(scope: CoroutineScope) {
-<a href="#l145" class="line" id="l145">    145</a>         with(appContext) {
-<a href="#l146" class="line" id="l146">    146</a>             Thread::class.java.hook(&quot;dispatchUncaughtException&quot;, HookStage.BEFORE) { param -&gt;
-<a href="#l147" class="line" id="l147">    147</a>                 runCatching {
-<a href="#l148" class="line" id="l148">    148</a>                     val throwable = param.argNullable(0) ?: Throwable()
-<a href="#l149" class="line" id="l149">    149</a>                     logCritical(null, throwable)
-<a href="#l150" class="line" id="l150">    150</a>                 }
-<a href="#l151" class="line" id="l151">    151</a>             }
-<a href="#l152" class="line" id="l152">    152</a> 
-<a href="#l153" class="line" id="l153">    153</a>             reloadConfig()
-<a href="#l154" class="line" id="l154">    154</a>             initWidgetListener()
-<a href="#l155" class="line" id="l155">    155</a>             initNative()
-<a href="#l156" class="line" id="l156">    156</a>             scope.launch(Dispatchers.IO) {
-<a href="#l157" class="line" id="l157">    157</a>                 translation.userLocale = getConfigLocale()
-<a href="#l158" class="line" id="l158">    158</a>                 translation.load()
-<a href="#l159" class="line" id="l159">    159</a>             }
-<a href="#l160" class="line" id="l160">    160</a> 
-<a href="#l161" class="line" id="l161">    161</a>             mappings.init(androidContext)
-<a href="#l162" class="line" id="l162">    162</a>             database.init()
-<a href="#l163" class="line" id="l163">    163</a>             eventDispatcher.init()
-<a href="#l164" class="line" id="l164">    164</a>             //if mappings aren&#39;t loaded, we can&#39;t initialize features
-<a href="#l165" class="line" id="l165">    165</a>             if (!mappings.isMappingsLoaded) return
-<a href="#l166" class="line" id="l166">    166</a>             features.init()
-<a href="#l167" class="line" id="l167">    167</a>             scriptRuntime.connect(bridgeClient.getScriptingInterface())
-<a href="#l168" class="line" id="l168">    168</a>             scriptRuntime.eachModule { callFunction(&quot;module.onSnapApplicationLoad&quot;, androidContext) }
-<a href="#l169" class="line" id="l169">    169</a>         }
-<a href="#l170" class="line" id="l170">    170</a>     }
-<a href="#l171" class="line" id="l171">    171</a> 
-<a href="#l172" class="line" id="l172">    172</a>     private var safeMode = false
-<a href="#l173" class="line" id="l173">    173</a> 
-<a href="#l174" class="line" id="l174">    174</a>     private fun onActivityCreate(activity: Activity) {
-<a href="#l175" class="line" id="l175">    175</a>         measureTimeMillis {
-<a href="#l176" class="line" id="l176">    176</a>             with(appContext) {
-<a href="#l177" class="line" id="l177">    177</a>                 features.onActivityCreate(activity)
-<a href="#l178" class="line" id="l178">    178</a>                 inAppOverlay.onActivityCreate(activity)
-<a href="#l179" class="line" id="l179">    179</a>                 scriptRuntime.eachModule { callFunction(&quot;module.onSnapMainActivityCreate&quot;, activity) }
-<a href="#l180" class="line" id="l180">    180</a>                 actionManager.onActivityCreate()
-<a href="#l181" class="line" id="l181">    181</a> 
-<a href="#l182" class="line" id="l182">    182</a>                 if (safeMode) {
-<a href="#l183" class="line" id="l183">    183</a>                     appContext.inAppOverlay.showStatusToast(
-<a href="#l184" class="line" id="l184">    184</a>                         Icons.Outlined.Cancel,
-<a href="#l185" class="line" id="l185">    185</a>                         &quot;Failed to load security features! Snapchat may not work properly.&quot;,
-<a href="#l186" class="line" id="l186">    186</a>                         durationMs = 3000
-<a href="#l187" class="line" id="l187">    187</a>                     )
-<a href="#l188" class="line" id="l188">    188</a>                 }
-<a href="#l189" class="line" id="l189">    189</a>             }
-<a href="#l190" class="line" id="l190">    190</a>         }.also { time -&gt;
-<a href="#l191" class="line" id="l191">    191</a>             appContext.log.verbose(&quot;onActivityCreate took $time&quot;)
-<a href="#l192" class="line" id="l192">    192</a>         }
-<a href="#l193" class="line" id="l193">    193</a>     }
-<a href="#l194" class="line" id="l194">    194</a> 
-<a href="#l195" class="line" id="l195">    195</a>     private fun initNative() {
-<a href="#l196" class="line" id="l196">    196</a>         val nativeSigCacheFileHandle = appContext.fileHandlerManager.getFileHandle(FileHandleScope.INTERNAL.key, InternalFileHandleType.NATIVE_SIG_CACHE.key).toWrapper()
-<a href="#l197" class="line" id="l197">    197</a> 
-<a href="#l198" class="line" id="l198">    198</a>         val oldSignatureCache = nativeSigCacheFileHandle.readBytes()
-<a href="#l199" class="line" id="l199">    199</a>             .takeIf {
-<a href="#l200" class="line" id="l200">    200</a>                 it.isNotEmpty()
-<a href="#l201" class="line" id="l201">    201</a>             }?.toString(Charsets.UTF_8)?.also {
-<a href="#l202" class="line" id="l202">    202</a>                 appContext.native.signatureCache = it
-<a href="#l203" class="line" id="l203">    203</a>                 appContext.log.verbose(&quot;old signature cache $it&quot;)
-<a href="#l204" class="line" id="l204">    204</a>             }
-<a href="#l205" class="line" id="l205">    205</a> 
-<a href="#l206" class="line" id="l206">    206</a>         val lateInit = appContext.native.initOnce {
-<a href="#l207" class="line" id="l207">    207</a>             nativeUnaryCallCallback = { request -&gt;
-<a href="#l208" class="line" id="l208">    208</a>                 appContext.event.post(NativeUnaryCallEvent(request.uri, request.buffer)) {
-<a href="#l209" class="line" id="l209">    209</a>                     request.buffer = buffer
-<a href="#l210" class="line" id="l210">    210</a>                     request.canceled = canceled
-<a href="#l211" class="line" id="l211">    211</a>                 }
-<a href="#l212" class="line" id="l212">    212</a>             }
-<a href="#l213" class="line" id="l213">    213</a>             appContext.reloadNativeConfig()
-<a href="#l214" class="line" id="l214">    214</a>         }.let { init -&gt;
-<a href="#l215" class="line" id="l215">    215</a>             {
-<a href="#l216" class="line" id="l216">    216</a>                 init()
-<a href="#l217" class="line" id="l217">    217</a>                 appContext.native.signatureCache.takeIf { it != oldSignatureCache }?.let {
-<a href="#l218" class="line" id="l218">    218</a>                     appContext.log.verbose(&quot;new signature cache $it&quot;)
-<a href="#l219" class="line" id="l219">    219</a>                     nativeSigCacheFileHandle.writeBytes(it.toByteArray(Charsets.UTF_8))
-<a href="#l220" class="line" id="l220">    220</a>                 }
-<a href="#l221" class="line" id="l221">    221</a>             }
-<a href="#l222" class="line" id="l222">    222</a>         }
-<a href="#l223" class="line" id="l223">    223</a> 
-<a href="#l224" class="line" id="l224">    224</a>         if (appContext.bridgeClient.getDebugProp(&quot;disable_sif&quot;, &quot;false&quot;) != &quot;true&quot;) {
-<a href="#l225" class="line" id="l225">    225</a>             runCatching {
-<a href="#l226" class="line" id="l226">    226</a>                 appContext.native.loadSharedLibrary(
-<a href="#l227" class="line" id="l227">    227</a>                     appContext.fileHandlerManager.getFileHandle(FileHandleScope.INTERNAL.key, InternalFileHandleType.SIF.key)
-<a href="#l228" class="line" id="l228">    228</a>                         .toWrapper()
-<a href="#l229" class="line" id="l229">    229</a>                         .readBytes()
-<a href="#l230" class="line" id="l230">    230</a>                         .takeIf {
-<a href="#l231" class="line" id="l231">    231</a>                             it.isNotEmpty()
-<a href="#l232" class="line" id="l232">    232</a>                         } ?: throw IllegalStateException(&quot;buffer is empty&quot;)
-<a href="#l233" class="line" id="l233">    233</a>                 )
-<a href="#l234" class="line" id="l234">    234</a>                 appContext.log.verbose(&quot;loaded sif&quot;)
-<a href="#l235" class="line" id="l235">    235</a>             }.onFailure {
-<a href="#l236" class="line" id="l236">    236</a>                 safeMode = true
-<a href="#l237" class="line" id="l237">    237</a>                 appContext.log.error(&quot;Failed to load sif&quot;, it)
-<a href="#l238" class="line" id="l238">    238</a>             }
-<a href="#l239" class="line" id="l239">    239</a>         } else {
-<a href="#l240" class="line" id="l240">    240</a>             appContext.log.warn(&quot;sif is disabled&quot;)
-<a href="#l241" class="line" id="l241">    241</a>         }
-<a href="#l242" class="line" id="l242">    242</a> 
-<a href="#l243" class="line" id="l243">    243</a>         Runtime::class.java.declaredMethods.first {
-<a href="#l244" class="line" id="l244">    244</a>             it.name == &quot;loadLibrary0&quot; &amp;&amp; it.parameterTypes.contentEquals(
-<a href="#l245" class="line" id="l245">    245</a>                 if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.Q) arrayOf(Class::class.java, String::class.java)
-<a href="#l246" class="line" id="l246">    246</a>                 else arrayOf(ClassLoader::class.java, String::class.java)
-<a href="#l247" class="line" id="l247">    247</a>             )
-<a href="#l248" class="line" id="l248">    248</a>         }.apply {
-<a href="#l249" class="line" id="l249">    249</a>             if (safeMode) {
-<a href="#l250" class="line" id="l250">    250</a>                 hook(HookStage.BEFORE) { param -&gt;
-<a href="#l251" class="line" id="l251">    251</a>                     if (param.arg&lt;String&gt;(1) != &quot;scplugin&quot;) return@hook
-<a href="#l252" class="line" id="l252">    252</a>                     param.setResult(null)
-<a href="#l253" class="line" id="l253">    253</a>                     appContext.log.warn(&quot;Can&#39;t load scplugin in safe mode&quot;)
-<a href="#l254" class="line" id="l254">    254</a>                     runCatching {
-<a href="#l255" class="line" id="l255">    255</a>                         Thread.sleep(Long.MAX_VALUE)
-<a href="#l256" class="line" id="l256">    256</a>                     }.onFailure {
-<a href="#l257" class="line" id="l257">    257</a>                         appContext.log.error(it)
-<a href="#l258" class="line" id="l258">    258</a>                     }
-<a href="#l259" class="line" id="l259">    259</a>                     exitProcess(1)
-<a href="#l260" class="line" id="l260">    260</a>                 }
-<a href="#l261" class="line" id="l261">    261</a>             }
-<a href="#l262" class="line" id="l262">    262</a> 
-<a href="#l263" class="line" id="l263">    263</a>             lateinit var unhook: () -&gt; Unit
-<a href="#l264" class="line" id="l264">    264</a>             hook(HookStage.AFTER) { param -&gt;
-<a href="#l265" class="line" id="l265">    265</a>                 if (param.arg&lt;String&gt;(1) != &quot;client&quot;) return@hook
-<a href="#l266" class="line" id="l266">    266</a>                 unhook()
-<a href="#l267" class="line" id="l267">    267</a>                 appContext.log.verbose(&quot;libclient lateInit&quot;)
-<a href="#l268" class="line" id="l268">    268</a>                 lateInit()
-<a href="#l269" class="line" id="l269">    269</a>             }.also { unhook = { it.unhook() } }
-<a href="#l270" class="line" id="l270">    270</a>         }
-<a href="#l271" class="line" id="l271">    271</a>     }
-<a href="#l272" class="line" id="l272">    272</a> 
-<a href="#l273" class="line" id="l273">    273</a>     private fun initConfigListener() {
-<a href="#l274" class="line" id="l274">    274</a>         val tasks = linkedSetOf&lt;() -&gt; Unit&gt;()
-<a href="#l275" class="line" id="l275">    275</a>         hookMainActivity(&quot;onResume&quot;) {
-<a href="#l276" class="line" id="l276">    276</a>             tasks.forEach { it() }
-<a href="#l277" class="line" id="l277">    277</a>         }
-<a href="#l278" class="line" id="l278">    278</a> 
-<a href="#l279" class="line" id="l279">    279</a>         fun runLater(task: () -&gt; Unit) {
-<a href="#l280" class="line" id="l280">    280</a>             if (appContext.isMainActivityPaused) {
-<a href="#l281" class="line" id="l281">    281</a>                 tasks.add(task)
-<a href="#l282" class="line" id="l282">    282</a>             } else {
-<a href="#l283" class="line" id="l283">    283</a>                 task()
-<a href="#l284" class="line" id="l284">    284</a>             }
-<a href="#l285" class="line" id="l285">    285</a>         }
-<a href="#l286" class="line" id="l286">    286</a> 
-<a href="#l287" class="line" id="l287">    287</a>         appContext.bridgeClient.addOnConnectedCallback {
-<a href="#l288" class="line" id="l288">    288</a>             appContext.bridgeClient.registerConfigStateListener(object: ConfigStateListener.Stub() {
-<a href="#l289" class="line" id="l289">    289</a>                 override fun onConfigChanged() {
-<a href="#l290" class="line" id="l290">    290</a>                     appContext.log.verbose(&quot;onConfigChanged&quot;)
-<a href="#l291" class="line" id="l291">    291</a>                     appContext.reloadConfig()
-<a href="#l292" class="line" id="l292">    292</a>                 }
-<a href="#l293" class="line" id="l293">    293</a> 
-<a href="#l294" class="line" id="l294">    294</a>                 override fun onRestartRequired() {
-<a href="#l295" class="line" id="l295">    295</a>                     appContext.log.verbose(&quot;onRestartRequired&quot;)
-<a href="#l296" class="line" id="l296">    296</a>                     runLater {
-<a href="#l297" class="line" id="l297">    297</a>                         appContext.log.verbose(&quot;softRestart&quot;)
-<a href="#l298" class="line" id="l298">    298</a>                         appContext.softRestartApp(saveSettings = false)
-<a href="#l299" class="line" id="l299">    299</a>                     }
-<a href="#l300" class="line" id="l300">    300</a>                 }
-<a href="#l301" class="line" id="l301">    301</a> 
-<a href="#l302" class="line" id="l302">    302</a>                 override fun onCleanCacheRequired() {
-<a href="#l303" class="line" id="l303">    303</a>                     appContext.log.verbose(&quot;onCleanCacheRequired&quot;)
-<a href="#l304" class="line" id="l304">    304</a>                     tasks.clear()
-<a href="#l305" class="line" id="l305">    305</a>                     runLater {
-<a href="#l306" class="line" id="l306">    306</a>                         appContext.log.verbose(&quot;cleanCache&quot;)
-<a href="#l307" class="line" id="l307">    307</a>                         appContext.actionManager.execute(EnumAction.CLEAN_CACHE)
-<a href="#l308" class="line" id="l308">    308</a>                     }
-<a href="#l309" class="line" id="l309">    309</a>                 }
-<a href="#l310" class="line" id="l310">    310</a>             })
-<a href="#l311" class="line" id="l311">    311</a>         }
-<a href="#l312" class="line" id="l312">    312</a>     }
-<a href="#l313" class="line" id="l313">    313</a> 
-<a href="#l314" class="line" id="l314">    314</a>     private fun initWidgetListener() {
-<a href="#l315" class="line" id="l315">    315</a>         appContext.event.subscribe(SnapWidgetBroadcastReceiveEvent::class) { event -&gt;
-<a href="#l316" class="line" id="l316">    316</a>             if (event.action != ReceiversConfig.BRIDGE_SYNC_ACTION) return@subscribe
-<a href="#l317" class="line" id="l317">    317</a>             event.canceled = true
-<a href="#l318" class="line" id="l318">    318</a>             val feedEntries = appContext.database.getFeedEntries(Int.MAX_VALUE)
-<a href="#l319" class="line" id="l319">    319</a> 
-<a href="#l320" class="line" id="l320">    320</a>             val groups = feedEntries.filter { it.friendUserId == null }.map {
-<a href="#l321" class="line" id="l321">    321</a>                 MessagingGroupInfo(
-<a href="#l322" class="line" id="l322">    322</a>                     it.key!!,
-<a href="#l323" class="line" id="l323">    323</a>                     it.feedDisplayName!!,
-<a href="#l324" class="line" id="l324">    324</a>                     it.participantsSize
-<a href="#l325" class="line" id="l325">    325</a>                 )
-<a href="#l326" class="line" id="l326">    326</a>             }
-<a href="#l327" class="line" id="l327">    327</a> 
-<a href="#l328" class="line" id="l328">    328</a>             val friends = feedEntries.filter { it.friendUserId != null }.map {
-<a href="#l329" class="line" id="l329">    329</a>                 MessagingFriendInfo(
-<a href="#l330" class="line" id="l330">    330</a>                     it.friendUserId!!,
-<a href="#l331" class="line" id="l331">    331</a>                     appContext.database.getConversationLinkFromUserId(it.friendUserId!!)?.clientConversationId,
-<a href="#l332" class="line" id="l332">    332</a>                     it.friendDisplayName,
-<a href="#l333" class="line" id="l333">    333</a>                     it.friendDisplayUsername!!.split(&quot;|&quot;)[1],
-<a href="#l334" class="line" id="l334">    334</a>                     it.bitmojiAvatarId,
-<a href="#l335" class="line" id="l335">    335</a>                     it.bitmojiSelfieId,
-<a href="#l336" class="line" id="l336">    336</a>                     streaks = null
-<a href="#l337" class="line" id="l337">    337</a>                 )
-<a href="#l338" class="line" id="l338">    338</a>             }
-<a href="#l339" class="line" id="l339">    339</a> 
-<a href="#l340" class="line" id="l340">    340</a>             appContext.bridgeClient.passGroupsAndFriends(groups, friends)
-<a href="#l341" class="line" id="l341">    341</a>         }
-<a href="#l342" class="line" id="l342">    342</a>     }
-<a href="#l343" class="line" id="l343">    343</a> 
-<a href="#l344" class="line" id="l344">    344</a>     private fun syncRemote() {
-<a href="#l345" class="line" id="l345">    345</a>         appContext.bridgeClient.sync(object : SyncCallback.Stub() {
-<a href="#l346" class="line" id="l346">    346</a>             override fun syncFriend(uuid: String): String? {
-<a href="#l347" class="line" id="l347">    347</a>                 return appContext.database.getFriendInfo(uuid)?.let {
-<a href="#l348" class="line" id="l348">    348</a>                     MessagingFriendInfo(
-<a href="#l349" class="line" id="l349">    349</a>                         userId = it.userId!!,
-<a href="#l350" class="line" id="l350">    350</a>                         dmConversationId = appContext.database.getConversationLinkFromUserId(it.userId!!)?.clientConversationId,
-<a href="#l351" class="line" id="l351">    351</a>                         displayName = it.displayName,
-<a href="#l352" class="line" id="l352">    352</a>                         mutableUsername = it.mutableUsername!!,
-<a href="#l353" class="line" id="l353">    353</a>                         bitmojiId = it.bitmojiAvatarId,
-<a href="#l354" class="line" id="l354">    354</a>                         selfieId = it.bitmojiSelfieId,
-<a href="#l355" class="line" id="l355">    355</a>                         streaks = if (it.streakLength &gt; 0) {
-<a href="#l356" class="line" id="l356">    356</a>                             FriendStreaks(
-<a href="#l357" class="line" id="l357">    357</a>                                 expirationTimestamp = it.streakExpirationTimestamp,
-<a href="#l358" class="line" id="l358">    358</a>                                 length = it.streakLength
-<a href="#l359" class="line" id="l359">    359</a>                             )
-<a href="#l360" class="line" id="l360">    360</a>                         } else null
-<a href="#l361" class="line" id="l361">    361</a>                     ).toSerialized()
-<a href="#l362" class="line" id="l362">    362</a>                 }
-<a href="#l363" class="line" id="l363">    363</a>             }
-<a href="#l364" class="line" id="l364">    364</a> 
-<a href="#l365" class="line" id="l365">    365</a>             override fun syncGroup(uuid: String): String? {
-<a href="#l366" class="line" id="l366">    366</a>                 return appContext.database.getFeedEntryByConversationId(uuid)?.let {
-<a href="#l367" class="line" id="l367">    367</a>                     MessagingGroupInfo(
-<a href="#l368" class="line" id="l368">    368</a>                         it.key!!,
-<a href="#l369" class="line" id="l369">    369</a>                         it.feedDisplayName!!,
-<a href="#l370" class="line" id="l370">    370</a>                         it.participantsSize
-<a href="#l371" class="line" id="l371">    371</a>                     ).toSerialized()
-<a href="#l372" class="line" id="l372">    372</a>                 }
-<a href="#l373" class="line" id="l373">    373</a>             }
-<a href="#l374" class="line" id="l374">    374</a>         })
-<a href="#l375" class="line" id="l375">    375</a>     }
-<a href="#l376" class="line" id="l376">    376</a> 
-<a href="#l377" class="line" id="l377">    377</a>     private fun jetpackComposeResourceHook() {
-<a href="#l378" class="line" id="l378">    378</a>         fun strings(vararg classes: KClass&lt;*&gt;): Map&lt;Int, String&gt; {
-<a href="#l379" class="line" id="l379">    379</a>             return classes.fold(mapOf()) { map, clazz -&gt;
-<a href="#l380" class="line" id="l380">    380</a>                 map + clazz.java.fields.filter {
-<a href="#l381" class="line" id="l381">    381</a>                     java.lang.reflect.Modifier.isStatic(it.modifiers) &amp;&amp; it.type == Int::class.javaPrimitiveType
-<a href="#l382" class="line" id="l382">    382</a>                 }.associate { it.getInt(null) to it.name }
-<a href="#l383" class="line" id="l383">    383</a>             }
-<a href="#l384" class="line" id="l384">    384</a>         }
-<a href="#l385" class="line" id="l385">    385</a>         val stringResources = strings(androidx.compose.material3.R.string::class, androidx.compose.ui.R.string::class)
-<a href="#l386" class="line" id="l386">    386</a>         Resources::class.java.getMethod(&quot;getString&quot;, Int::class.javaPrimitiveType).hook(HookStage.BEFORE) { param -&gt;
-<a href="#l387" class="line" id="l387">    387</a>             val key = param.arg&lt;Int&gt;(0)
-<a href="#l388" class="line" id="l388">    388</a>             val name = stringResources[key]?.replaceFirst(&quot;m3c_&quot;, &quot;&quot;) ?: return@hook
-<a href="#l389" class="line" id="l389">    389</a>             param.setResult(appContext.translation.getOrNull(&quot;material3_strings.${name}&quot;) ?: &quot;&quot;)
-<a href="#l390" class="line" id="l390">    390</a>         }
-<a href="#l391" class="line" id="l391">    391</a>     }
-<a href="#l392" class="line" id="l392">    392</a> }</pre>
+<a href="#l39" class="line" id="l39">     39</a> 
+<a href="#l40" class="line" id="l40">     40</a> class SnapEnhance {
+<a href="#l41" class="line" id="l41">     41</a>     companion object {
+<a href="#l42" class="line" id="l42">     42</a>         lateinit var classLoader: ClassLoader
+<a href="#l43" class="line" id="l43">     43</a>             private set
+<a href="#l44" class="line" id="l44">     44</a>         val classCache by lazy {
+<a href="#l45" class="line" id="l45">     45</a>             SnapClassCache(classLoader)
+<a href="#l46" class="line" id="l46">     46</a>         }
+<a href="#l47" class="line" id="l47">     47</a>     }
+<a href="#l48" class="line" id="l48">     48</a>     private lateinit var appContext: ModContext
+<a href="#l49" class="line" id="l49">     49</a>     private var isBridgeInitialized = false
+<a href="#l50" class="line" id="l50">     50</a> 
+<a href="#l51" class="line" id="l51">     51</a>     private fun hookMainActivity(methodName: String, stage: HookStage = HookStage.AFTER, block: Activity.(param: HookAdapter) -&gt; Unit) {
+<a href="#l52" class="line" id="l52">     52</a>         Activity::class.java.hook(methodName, stage, { isBridgeInitialized }) { param -&gt;
+<a href="#l53" class="line" id="l53">     53</a>             val activity = param.thisObject() as Activity
+<a href="#l54" class="line" id="l54">     54</a>             if (!activity.packageName.equals(Constants.SNAPCHAT_PACKAGE_NAME)) return@hook
+<a href="#l55" class="line" id="l55">     55</a>             block(activity, param)
+<a href="#l56" class="line" id="l56">     56</a>         }
+<a href="#l57" class="line" id="l57">     57</a>     }
+<a href="#l58" class="line" id="l58">     58</a> 
+<a href="#l59" class="line" id="l59">     59</a>     fun init(context: Context) {
+<a href="#l60" class="line" id="l60">     60</a>         appContext = ModContext(
+<a href="#l61" class="line" id="l61">     61</a>             androidContext = context.also { classLoader = it.classLoader }
+<a href="#l62" class="line" id="l62">     62</a>         )
+<a href="#l63" class="line" id="l63">     63</a>         appContext.apply {
+<a href="#l64" class="line" id="l64">     64</a>             bridgeClient = BridgeClient(this)
+<a href="#l65" class="line" id="l65">     65</a>             initConfigListener()
+<a href="#l66" class="line" id="l66">     66</a>             bridgeClient.addOnConnectedCallback {
+<a href="#l67" class="line" id="l67">     67</a>                 bridgeClient.registerMessagingBridge(messagingBridge)
+<a href="#l68" class="line" id="l68">     68</a>                 coroutineScope.launch {
+<a href="#l69" class="line" id="l69">     69</a>                     runCatching {
+<a href="#l70" class="line" id="l70">     70</a>                         syncRemote()
+<a href="#l71" class="line" id="l71">     71</a>                     }.onFailure {
+<a href="#l72" class="line" id="l72">     72</a>                         log.error(&quot;Failed to sync remote&quot;, it)
+<a href="#l73" class="line" id="l73">     73</a>                     }
+<a href="#l74" class="line" id="l74">     74</a>                 }
+<a href="#l75" class="line" id="l75">     75</a>             }
+<a href="#l76" class="line" id="l76">     76</a>         }
+<a href="#l77" class="line" id="l77">     77</a> 
+<a href="#l78" class="line" id="l78">     78</a>         runBlocking {
+<a href="#l79" class="line" id="l79">     79</a>             var throwable: Throwable? = null
+<a href="#l80" class="line" id="l80">     80</a>             val canLoad = appContext.bridgeClient.connect { throwable = it }
+<a href="#l81" class="line" id="l81">     81</a>             if (canLoad == null) {
+<a href="#l82" class="line" id="l82">     82</a>                 InAppOverlay.showCrashOverlay(
+<a href="#l83" class="line" id="l83">     83</a>                     buildString {
+<a href="#l84" class="line" id="l84">     84</a>                         append(&quot;Snapchat timed out while trying to connect to SnapEnhance\n\n&quot;)
+<a href="#l85" class="line" id="l85">     85</a>                         append(&quot;Make sure you:\n&quot;)
+<a href="#l86" class="line" id="l86">     86</a>                         append(&quot; - Have installed the latest SnapEnhance version (https://github.com/rhunk/SnapEnhance)\n&quot;)
+<a href="#l87" class="line" id="l87">     87</a>                         append(&quot; - Disabled battery optimizations\n&quot;)
+<a href="#l88" class="line" id="l88">     88</a>                         append(&quot; - Excluded SnapEnhance and Snapchat in HideMyApplist&quot;)
+<a href="#l89" class="line" id="l89">     89</a>                     },
+<a href="#l90" class="line" id="l90">     90</a>                     throwable
+<a href="#l91" class="line" id="l91">     91</a>                 )
+<a href="#l92" class="line" id="l92">     92</a>                 appContext.logCritical(&quot;Cannot connect to the SnapEnhance app&quot;)
+<a href="#l93" class="line" id="l93">     93</a>                 return@runBlocking
+<a href="#l94" class="line" id="l94">     94</a>             }
+<a href="#l95" class="line" id="l95">     95</a>             if (!canLoad) exitProcess(1)
+<a href="#l96" class="line" id="l96">     96</a>             runCatching {
+<a href="#l97" class="line" id="l97">     97</a>                 LSPatchUpdater.onBridgeConnected(appContext)
+<a href="#l98" class="line" id="l98">     98</a>             }.onFailure {
+<a href="#l99" class="line" id="l99">     99</a>                 appContext.log.error(&quot;Failed to init LSPatchUpdater&quot;, it)
+<a href="#l100" class="line" id="l100">    100</a>             }
+<a href="#l101" class="line" id="l101">    101</a>             jetpackComposeResourceHook()
+<a href="#l102" class="line" id="l102">    102</a>             runCatching {
+<a href="#l103" class="line" id="l103">    103</a>                 measureTimeMillis {
+<a href="#l104" class="line" id="l104">    104</a>                     init(this)
+<a href="#l105" class="line" id="l105">    105</a>                 }.also {
+<a href="#l106" class="line" id="l106">    106</a>                     appContext.log.verbose(&quot;init took ${it}ms&quot;)
+<a href="#l107" class="line" id="l107">    107</a>                 }
+<a href="#l108" class="line" id="l108">    108</a> 
+<a href="#l109" class="line" id="l109">    109</a>                 hookMainActivity(&quot;onPostCreate&quot;) {
+<a href="#l110" class="line" id="l110">    110</a>                     appContext.mainActivity = this
+<a href="#l111" class="line" id="l111">    111</a>                     if (!appContext.mappings.isMappingsLoaded) return@hookMainActivity
+<a href="#l112" class="line" id="l112">    112</a>                     appContext.isMainActivityPaused = false
+<a href="#l113" class="line" id="l113">    113</a>                     onActivityCreate(this)
+<a href="#l114" class="line" id="l114">    114</a>                     appContext.actionManager.onNewIntent(intent)
+<a href="#l115" class="line" id="l115">    115</a>                 }
+<a href="#l116" class="line" id="l116">    116</a> 
+<a href="#l117" class="line" id="l117">    117</a>                 hookMainActivity(&quot;onPause&quot;) {
+<a href="#l118" class="line" id="l118">    118</a>                     appContext.bridgeClient.closeOverlay()
+<a href="#l119" class="line" id="l119">    119</a>                     appContext.isMainActivityPaused = true
+<a href="#l120" class="line" id="l120">    120</a>                 }
+<a href="#l121" class="line" id="l121">    121</a> 
+<a href="#l122" class="line" id="l122">    122</a>                 hookMainActivity(&quot;onNewIntent&quot;) { param -&gt;
+<a href="#l123" class="line" id="l123">    123</a>                     appContext.actionManager.onNewIntent(param.argNullable(0))
+<a href="#l124" class="line" id="l124">    124</a>                 }
+<a href="#l125" class="line" id="l125">    125</a> 
+<a href="#l126" class="line" id="l126">    126</a>                 hookMainActivity(&quot;onResume&quot;) {
+<a href="#l127" class="line" id="l127">    127</a>                     if (appContext.isMainActivityPaused.also {
+<a href="#l128" class="line" id="l128">    128</a>                         appContext.isMainActivityPaused = false
+<a href="#l129" class="line" id="l129">    129</a>                     }) {
+<a href="#l130" class="line" id="l130">    130</a>                         appContext.reloadConfig()
+<a href="#l131" class="line" id="l131">    131</a>                         appContext.executeAsync {
+<a href="#l132" class="line" id="l132">    132</a>                             syncRemote()
+<a href="#l133" class="line" id="l133">    133</a>                         }
+<a href="#l134" class="line" id="l134">    134</a>                     }
+<a href="#l135" class="line" id="l135">    135</a>                 }
+<a href="#l136" class="line" id="l136">    136</a>             }.onSuccess {
+<a href="#l137" class="line" id="l137">    137</a>                 isBridgeInitialized = true
+<a href="#l138" class="line" id="l138">    138</a>             }.onFailure {
+<a href="#l139" class="line" id="l139">    139</a>                 appContext.logCritical(&quot;Failed to initialize bridge&quot;, it)
+<a href="#l140" class="line" id="l140">    140</a>                 InAppOverlay.showCrashOverlay(&quot;SnapEnhance failed to initialize. Please check logs for more details.&quot;, it)
+<a href="#l141" class="line" id="l141">    141</a>             }
+<a href="#l142" class="line" id="l142">    142</a>         }
+<a href="#l143" class="line" id="l143">    143</a>     }
+<a href="#l144" class="line" id="l144">    144</a> 
+<a href="#l145" class="line" id="l145">    145</a>     private fun init(scope: CoroutineScope) {
+<a href="#l146" class="line" id="l146">    146</a>         with(appContext) {
+<a href="#l147" class="line" id="l147">    147</a>             Thread::class.java.hook(&quot;dispatchUncaughtException&quot;, HookStage.BEFORE) { param -&gt;
+<a href="#l148" class="line" id="l148">    148</a>                 runCatching {
+<a href="#l149" class="line" id="l149">    149</a>                     val throwable = param.argNullable(0) ?: Throwable()
+<a href="#l150" class="line" id="l150">    150</a>                     logCritical(null, throwable)
+<a href="#l151" class="line" id="l151">    151</a>                 }
+<a href="#l152" class="line" id="l152">    152</a>             }
+<a href="#l153" class="line" id="l153">    153</a> 
+<a href="#l154" class="line" id="l154">    154</a>             reloadConfig()
+<a href="#l155" class="line" id="l155">    155</a>             initWidgetListener()
+<a href="#l156" class="line" id="l156">    156</a>             initNative()
+<a href="#l157" class="line" id="l157">    157</a>             scope.launch(Dispatchers.IO) {
+<a href="#l158" class="line" id="l158">    158</a>                 translation.userLocale = getConfigLocale()
+<a href="#l159" class="line" id="l159">    159</a>                 translation.load()
+<a href="#l160" class="line" id="l160">    160</a>             }
+<a href="#l161" class="line" id="l161">    161</a> 
+<a href="#l162" class="line" id="l162">    162</a>             mappings.init(androidContext)
+<a href="#l163" class="line" id="l163">    163</a>             database.init()
+<a href="#l164" class="line" id="l164">    164</a>             eventDispatcher.init()
+<a href="#l165" class="line" id="l165">    165</a>             //if mappings aren&#39;t loaded, we can&#39;t initialize features
+<a href="#l166" class="line" id="l166">    166</a>             if (!mappings.isMappingsLoaded) return
+<a href="#l167" class="line" id="l167">    167</a>             features.init()
+<a href="#l168" class="line" id="l168">    168</a>             scriptRuntime.init()
+<a href="#l169" class="line" id="l169">    169</a>             scriptRuntime.eachModule { callFunction(&quot;module.onSnapApplicationLoad&quot;, androidContext) }
+<a href="#l170" class="line" id="l170">    170</a>         }
+<a href="#l171" class="line" id="l171">    171</a>     }
+<a href="#l172" class="line" id="l172">    172</a> 
+<a href="#l173" class="line" id="l173">    173</a>     private var safeMode = false
+<a href="#l174" class="line" id="l174">    174</a> 
+<a href="#l175" class="line" id="l175">    175</a>     private fun onActivityCreate(activity: Activity) {
+<a href="#l176" class="line" id="l176">    176</a>         measureTimeMillis {
+<a href="#l177" class="line" id="l177">    177</a>             with(appContext) {
+<a href="#l178" class="line" id="l178">    178</a>                 features.onActivityCreate(activity)
+<a href="#l179" class="line" id="l179">    179</a>                 inAppOverlay.onActivityCreate(activity)
+<a href="#l180" class="line" id="l180">    180</a>                 scriptRuntime.eachModule { callFunction(&quot;module.onSnapMainActivityCreate&quot;, activity) }
+<a href="#l181" class="line" id="l181">    181</a>                 actionManager.onActivityCreate()
+<a href="#l182" class="line" id="l182">    182</a> 
+<a href="#l183" class="line" id="l183">    183</a>                 if (safeMode) {
+<a href="#l184" class="line" id="l184">    184</a>                     appContext.inAppOverlay.showStatusToast(
+<a href="#l185" class="line" id="l185">    185</a>                         Icons.Outlined.Cancel,
+<a href="#l186" class="line" id="l186">    186</a>                         &quot;Failed to load security features! Snapchat may not work properly.&quot;,
+<a href="#l187" class="line" id="l187">    187</a>                         durationMs = 3000
+<a href="#l188" class="line" id="l188">    188</a>                     )
+<a href="#l189" class="line" id="l189">    189</a>                 }
+<a href="#l190" class="line" id="l190">    190</a>             }
+<a href="#l191" class="line" id="l191">    191</a>         }.also { time -&gt;
+<a href="#l192" class="line" id="l192">    192</a>             appContext.log.verbose(&quot;onActivityCreate took $time&quot;)
+<a href="#l193" class="line" id="l193">    193</a>         }
+<a href="#l194" class="line" id="l194">    194</a>     }
+<a href="#l195" class="line" id="l195">    195</a> 
+<a href="#l196" class="line" id="l196">    196</a>     private fun initNative() {
+<a href="#l197" class="line" id="l197">    197</a>         val nativeSigCacheFileHandle = appContext.fileHandlerManager.getFileHandle(FileHandleScope.INTERNAL.key, InternalFileHandleType.NATIVE_SIG_CACHE.key).toWrapper()
+<a href="#l198" class="line" id="l198">    198</a> 
+<a href="#l199" class="line" id="l199">    199</a>         val oldSignatureCache = nativeSigCacheFileHandle.readBytes()
+<a href="#l200" class="line" id="l200">    200</a>             .takeIf {
+<a href="#l201" class="line" id="l201">    201</a>                 it.isNotEmpty()
+<a href="#l202" class="line" id="l202">    202</a>             }?.toString(Charsets.UTF_8)?.also {
+<a href="#l203" class="line" id="l203">    203</a>                 appContext.native.signatureCache = it
+<a href="#l204" class="line" id="l204">    204</a>                 appContext.log.verbose(&quot;old signature cache $it&quot;)
+<a href="#l205" class="line" id="l205">    205</a>             }
+<a href="#l206" class="line" id="l206">    206</a> 
+<a href="#l207" class="line" id="l207">    207</a>         val lateInit = appContext.native.initOnce {
+<a href="#l208" class="line" id="l208">    208</a>             nativeUnaryCallCallback = { request -&gt;
+<a href="#l209" class="line" id="l209">    209</a>                 appContext.event.post(NativeUnaryCallEvent(request.uri, request.buffer)) {
+<a href="#l210" class="line" id="l210">    210</a>                     request.buffer = buffer
+<a href="#l211" class="line" id="l211">    211</a>                     request.canceled = canceled
+<a href="#l212" class="line" id="l212">    212</a>                 }
+<a href="#l213" class="line" id="l213">    213</a>             }
+<a href="#l214" class="line" id="l214">    214</a>             appContext.reloadNativeConfig()
+<a href="#l215" class="line" id="l215">    215</a>         }.let { init -&gt;
+<a href="#l216" class="line" id="l216">    216</a>             {
+<a href="#l217" class="line" id="l217">    217</a>                 init()
+<a href="#l218" class="line" id="l218">    218</a>                 appContext.native.signatureCache.takeIf { it != oldSignatureCache }?.let {
+<a href="#l219" class="line" id="l219">    219</a>                     appContext.log.verbose(&quot;new signature cache $it&quot;)
+<a href="#l220" class="line" id="l220">    220</a>                     nativeSigCacheFileHandle.writeBytes(it.toByteArray(Charsets.UTF_8))
+<a href="#l221" class="line" id="l221">    221</a>                 }
+<a href="#l222" class="line" id="l222">    222</a>             }
+<a href="#l223" class="line" id="l223">    223</a>         }
+<a href="#l224" class="line" id="l224">    224</a> 
+<a href="#l225" class="line" id="l225">    225</a>         if (appContext.bridgeClient.getDebugProp(&quot;disable_sif&quot;, &quot;false&quot;) != &quot;true&quot;) {
+<a href="#l226" class="line" id="l226">    226</a>             runCatching {
+<a href="#l227" class="line" id="l227">    227</a>                 appContext.native.loadSharedLibrary(
+<a href="#l228" class="line" id="l228">    228</a>                     appContext.fileHandlerManager.getFileHandle(FileHandleScope.INTERNAL.key, InternalFileHandleType.SIF.key)
+<a href="#l229" class="line" id="l229">    229</a>                         .toWrapper()
+<a href="#l230" class="line" id="l230">    230</a>                         .readBytes()
+<a href="#l231" class="line" id="l231">    231</a>                         .takeIf {
+<a href="#l232" class="line" id="l232">    232</a>                             it.isNotEmpty()
+<a href="#l233" class="line" id="l233">    233</a>                         } ?: throw IllegalStateException(&quot;buffer is empty&quot;)
+<a href="#l234" class="line" id="l234">    234</a>                 )
+<a href="#l235" class="line" id="l235">    235</a>                 appContext.log.verbose(&quot;loaded sif&quot;)
+<a href="#l236" class="line" id="l236">    236</a>             }.onFailure {
+<a href="#l237" class="line" id="l237">    237</a>                 safeMode = true
+<a href="#l238" class="line" id="l238">    238</a>                 appContext.log.error(&quot;Failed to load sif&quot;, it)
+<a href="#l239" class="line" id="l239">    239</a>             }
+<a href="#l240" class="line" id="l240">    240</a>         } else {
+<a href="#l241" class="line" id="l241">    241</a>             appContext.log.warn(&quot;sif is disabled&quot;)
+<a href="#l242" class="line" id="l242">    242</a>         }
+<a href="#l243" class="line" id="l243">    243</a> 
+<a href="#l244" class="line" id="l244">    244</a>         Runtime::class.java.findRestrictedMethod {
+<a href="#l245" class="line" id="l245">    245</a>             it.name == &quot;loadLibrary0&quot; &amp;&amp; it.parameterTypes.contentEquals(
+<a href="#l246" class="line" id="l246">    246</a>                 if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.Q) arrayOf(Class::class.java, String::class.java)
+<a href="#l247" class="line" id="l247">    247</a>                 else arrayOf(ClassLoader::class.java, String::class.java)
+<a href="#l248" class="line" id="l248">    248</a>             )
+<a href="#l249" class="line" id="l249">    249</a>         }!!.apply {
+<a href="#l250" class="line" id="l250">    250</a>             if (safeMode) {
+<a href="#l251" class="line" id="l251">    251</a>                 hook(HookStage.BEFORE) { param -&gt;
+<a href="#l252" class="line" id="l252">    252</a>                     if (param.arg&lt;String&gt;(1) != &quot;scplugin&quot;) return@hook
+<a href="#l253" class="line" id="l253">    253</a>                     param.setResult(null)
+<a href="#l254" class="line" id="l254">    254</a>                     appContext.log.warn(&quot;Can&#39;t load scplugin in safe mode&quot;)
+<a href="#l255" class="line" id="l255">    255</a>                     runCatching {
+<a href="#l256" class="line" id="l256">    256</a>                         Thread.sleep(Long.MAX_VALUE)
+<a href="#l257" class="line" id="l257">    257</a>                     }.onFailure {
+<a href="#l258" class="line" id="l258">    258</a>                         appContext.log.error(it)
+<a href="#l259" class="line" id="l259">    259</a>                     }
+<a href="#l260" class="line" id="l260">    260</a>                     exitProcess(1)
+<a href="#l261" class="line" id="l261">    261</a>                 }
+<a href="#l262" class="line" id="l262">    262</a>             }
+<a href="#l263" class="line" id="l263">    263</a> 
+<a href="#l264" class="line" id="l264">    264</a>             lateinit var unhook: () -&gt; Unit
+<a href="#l265" class="line" id="l265">    265</a>             hook(HookStage.AFTER) { param -&gt;
+<a href="#l266" class="line" id="l266">    266</a>                 if (param.arg&lt;String&gt;(1) != &quot;client&quot;) return@hook
+<a href="#l267" class="line" id="l267">    267</a>                 unhook()
+<a href="#l268" class="line" id="l268">    268</a>                 appContext.log.verbose(&quot;libclient lateInit&quot;)
+<a href="#l269" class="line" id="l269">    269</a>                 lateInit()
+<a href="#l270" class="line" id="l270">    270</a>             }.also { unhook = { it.unhook() } }
+<a href="#l271" class="line" id="l271">    271</a>         }
+<a href="#l272" class="line" id="l272">    272</a>     }
+<a href="#l273" class="line" id="l273">    273</a> 
+<a href="#l274" class="line" id="l274">    274</a>     private fun initConfigListener() {
+<a href="#l275" class="line" id="l275">    275</a>         val tasks = linkedSetOf&lt;() -&gt; Unit&gt;()
+<a href="#l276" class="line" id="l276">    276</a>         hookMainActivity(&quot;onResume&quot;) {
+<a href="#l277" class="line" id="l277">    277</a>             tasks.forEach { it() }
+<a href="#l278" class="line" id="l278">    278</a>         }
+<a href="#l279" class="line" id="l279">    279</a> 
+<a href="#l280" class="line" id="l280">    280</a>         fun runLater(task: () -&gt; Unit) {
+<a href="#l281" class="line" id="l281">    281</a>             if (appContext.isMainActivityPaused) {
+<a href="#l282" class="line" id="l282">    282</a>                 tasks.add(task)
+<a href="#l283" class="line" id="l283">    283</a>             } else {
+<a href="#l284" class="line" id="l284">    284</a>                 task()
+<a href="#l285" class="line" id="l285">    285</a>             }
+<a href="#l286" class="line" id="l286">    286</a>         }
+<a href="#l287" class="line" id="l287">    287</a> 
+<a href="#l288" class="line" id="l288">    288</a>         appContext.bridgeClient.addOnConnectedCallback {
+<a href="#l289" class="line" id="l289">    289</a>             appContext.bridgeClient.registerConfigStateListener(object: ConfigStateListener.Stub() {
+<a href="#l290" class="line" id="l290">    290</a>                 override fun onConfigChanged() {
+<a href="#l291" class="line" id="l291">    291</a>                     appContext.log.verbose(&quot;onConfigChanged&quot;)
+<a href="#l292" class="line" id="l292">    292</a>                     appContext.reloadConfig()
+<a href="#l293" class="line" id="l293">    293</a>                 }
+<a href="#l294" class="line" id="l294">    294</a> 
+<a href="#l295" class="line" id="l295">    295</a>                 override fun onRestartRequired() {
+<a href="#l296" class="line" id="l296">    296</a>                     appContext.log.verbose(&quot;onRestartRequired&quot;)
+<a href="#l297" class="line" id="l297">    297</a>                     runLater {
+<a href="#l298" class="line" id="l298">    298</a>                         appContext.log.verbose(&quot;softRestart&quot;)
+<a href="#l299" class="line" id="l299">    299</a>                         appContext.softRestartApp(saveSettings = false)
+<a href="#l300" class="line" id="l300">    300</a>                     }
+<a href="#l301" class="line" id="l301">    301</a>                 }
+<a href="#l302" class="line" id="l302">    302</a> 
+<a href="#l303" class="line" id="l303">    303</a>                 override fun onCleanCacheRequired() {
+<a href="#l304" class="line" id="l304">    304</a>                     appContext.log.verbose(&quot;onCleanCacheRequired&quot;)
+<a href="#l305" class="line" id="l305">    305</a>                     tasks.clear()
+<a href="#l306" class="line" id="l306">    306</a>                     runLater {
+<a href="#l307" class="line" id="l307">    307</a>                         appContext.log.verbose(&quot;cleanCache&quot;)
+<a href="#l308" class="line" id="l308">    308</a>                         appContext.actionManager.execute(EnumAction.CLEAN_CACHE)
+<a href="#l309" class="line" id="l309">    309</a>                     }
+<a href="#l310" class="line" id="l310">    310</a>                 }
+<a href="#l311" class="line" id="l311">    311</a>             })
+<a href="#l312" class="line" id="l312">    312</a>         }
+<a href="#l313" class="line" id="l313">    313</a>     }
+<a href="#l314" class="line" id="l314">    314</a> 
+<a href="#l315" class="line" id="l315">    315</a>     private fun initWidgetListener() {
+<a href="#l316" class="line" id="l316">    316</a>         appContext.event.subscribe(SnapWidgetBroadcastReceiveEvent::class) { event -&gt;
+<a href="#l317" class="line" id="l317">    317</a>             if (event.action != ReceiversConfig.BRIDGE_SYNC_ACTION) return@subscribe
+<a href="#l318" class="line" id="l318">    318</a>             event.canceled = true
+<a href="#l319" class="line" id="l319">    319</a>             val feedEntries = appContext.database.getFeedEntries(Int.MAX_VALUE)
+<a href="#l320" class="line" id="l320">    320</a> 
+<a href="#l321" class="line" id="l321">    321</a>             val groups = feedEntries.filter { it.friendUserId == null }.map {
+<a href="#l322" class="line" id="l322">    322</a>                 MessagingGroupInfo(
+<a href="#l323" class="line" id="l323">    323</a>                     it.key!!,
+<a href="#l324" class="line" id="l324">    324</a>                     it.feedDisplayName!!,
+<a href="#l325" class="line" id="l325">    325</a>                     it.participantsSize
+<a href="#l326" class="line" id="l326">    326</a>                 )
+<a href="#l327" class="line" id="l327">    327</a>             }
+<a href="#l328" class="line" id="l328">    328</a> 
+<a href="#l329" class="line" id="l329">    329</a>             val friends = feedEntries.filter { it.friendUserId != null }.map {
+<a href="#l330" class="line" id="l330">    330</a>                 MessagingFriendInfo(
+<a href="#l331" class="line" id="l331">    331</a>                     it.friendUserId!!,
+<a href="#l332" class="line" id="l332">    332</a>                     appContext.database.getConversationLinkFromUserId(it.friendUserId!!)?.clientConversationId,
+<a href="#l333" class="line" id="l333">    333</a>                     it.friendDisplayName,
+<a href="#l334" class="line" id="l334">    334</a>                     it.friendDisplayUsername!!.split(&quot;|&quot;)[1],
+<a href="#l335" class="line" id="l335">    335</a>                     it.bitmojiAvatarId,
+<a href="#l336" class="line" id="l336">    336</a>                     it.bitmojiSelfieId,
+<a href="#l337" class="line" id="l337">    337</a>                     streaks = null
+<a href="#l338" class="line" id="l338">    338</a>                 )
+<a href="#l339" class="line" id="l339">    339</a>             }
+<a href="#l340" class="line" id="l340">    340</a> 
+<a href="#l341" class="line" id="l341">    341</a>             appContext.bridgeClient.passGroupsAndFriends(groups, friends)
+<a href="#l342" class="line" id="l342">    342</a>         }
+<a href="#l343" class="line" id="l343">    343</a>     }
+<a href="#l344" class="line" id="l344">    344</a> 
+<a href="#l345" class="line" id="l345">    345</a>     private fun syncRemote() {
+<a href="#l346" class="line" id="l346">    346</a>         appContext.bridgeClient.sync(object : SyncCallback.Stub() {
+<a href="#l347" class="line" id="l347">    347</a>             override fun syncFriend(uuid: String): String? {
+<a href="#l348" class="line" id="l348">    348</a>                 return appContext.database.getFriendInfo(uuid)?.let {
+<a href="#l349" class="line" id="l349">    349</a>                     MessagingFriendInfo(
+<a href="#l350" class="line" id="l350">    350</a>                         userId = it.userId!!,
+<a href="#l351" class="line" id="l351">    351</a>                         dmConversationId = appContext.database.getConversationLinkFromUserId(it.userId!!)?.clientConversationId,
+<a href="#l352" class="line" id="l352">    352</a>                         displayName = it.displayName,
+<a href="#l353" class="line" id="l353">    353</a>                         mutableUsername = it.mutableUsername!!,
+<a href="#l354" class="line" id="l354">    354</a>                         bitmojiId = it.bitmojiAvatarId,
+<a href="#l355" class="line" id="l355">    355</a>                         selfieId = it.bitmojiSelfieId,
+<a href="#l356" class="line" id="l356">    356</a>                         streaks = if (it.streakLength &gt; 0) {
+<a href="#l357" class="line" id="l357">    357</a>                             FriendStreaks(
+<a href="#l358" class="line" id="l358">    358</a>                                 expirationTimestamp = it.streakExpirationTimestamp,
+<a href="#l359" class="line" id="l359">    359</a>                                 length = it.streakLength
+<a href="#l360" class="line" id="l360">    360</a>                             )
+<a href="#l361" class="line" id="l361">    361</a>                         } else null
+<a href="#l362" class="line" id="l362">    362</a>                     ).toSerialized()
+<a href="#l363" class="line" id="l363">    363</a>                 }
+<a href="#l364" class="line" id="l364">    364</a>             }
+<a href="#l365" class="line" id="l365">    365</a> 
+<a href="#l366" class="line" id="l366">    366</a>             override fun syncGroup(uuid: String): String? {
+<a href="#l367" class="line" id="l367">    367</a>                 return appContext.database.getFeedEntryByConversationId(uuid)?.let {
+<a href="#l368" class="line" id="l368">    368</a>                     MessagingGroupInfo(
+<a href="#l369" class="line" id="l369">    369</a>                         it.key!!,
+<a href="#l370" class="line" id="l370">    370</a>                         it.feedDisplayName!!,
+<a href="#l371" class="line" id="l371">    371</a>                         it.participantsSize
+<a href="#l372" class="line" id="l372">    372</a>                     ).toSerialized()
+<a href="#l373" class="line" id="l373">    373</a>                 }
+<a href="#l374" class="line" id="l374">    374</a>             }
+<a href="#l375" class="line" id="l375">    375</a>         })
+<a href="#l376" class="line" id="l376">    376</a>     }
+<a href="#l377" class="line" id="l377">    377</a> 
+<a href="#l378" class="line" id="l378">    378</a>     private fun jetpackComposeResourceHook() {
+<a href="#l379" class="line" id="l379">    379</a>         fun strings(vararg classes: KClass&lt;*&gt;): Map&lt;Int, String&gt; {
+<a href="#l380" class="line" id="l380">    380</a>             return classes.fold(mapOf()) { map, clazz -&gt;
+<a href="#l381" class="line" id="l381">    381</a>                 map + clazz.java.fields.filter {
+<a href="#l382" class="line" id="l382">    382</a>                     java.lang.reflect.Modifier.isStatic(it.modifiers) &amp;&amp; it.type == Int::class.javaPrimitiveType
+<a href="#l383" class="line" id="l383">    383</a>                 }.associate { it.getInt(null) to it.name }
+<a href="#l384" class="line" id="l384">    384</a>             }
+<a href="#l385" class="line" id="l385">    385</a>         }
+<a href="#l386" class="line" id="l386">    386</a>         val stringResources = strings(androidx.compose.material3.R.string::class, androidx.compose.ui.R.string::class)
+<a href="#l387" class="line" id="l387">    387</a>         Resources::class.java.getMethod(&quot;getString&quot;, Int::class.javaPrimitiveType).hook(HookStage.BEFORE) { param -&gt;
+<a href="#l388" class="line" id="l388">    388</a>             val key = param.arg&lt;Int&gt;(0)
+<a href="#l389" class="line" id="l389">    389</a>             val name = stringResources[key]?.replaceFirst(&quot;m3c_&quot;, &quot;&quot;) ?: return@hook
+<a href="#l390" class="line" id="l390">    390</a>             param.setResult(appContext.translation.getOrNull(&quot;material3_strings.${name}&quot;) ?: &quot;&quot;)
+<a href="#l391" class="line" id="l391">    391</a>         }
+<a href="#l392" class="line" id="l392">    392</a>     }
+<a href="#l393" class="line" id="l393">    393</a> }</pre>
 </div>
 </body>
 </html>
