@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> ProtoReader.kt (9739B) - <a href="../../../../../../../../../../../raw/common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoReader.kt">raw</a></p><hr/><pre id="blob">
+<p> ProtoReader.kt (9855B) - <a href="../../../../../../../../../../../raw/common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoReader.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.common.util.protobuf
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import org.mozilla.javascript.annotations.JSFunction
@@ -224,77 +224,80 @@
 <a href="#l201" class="line" id="l201">    201</a>         return value
 <a href="#l202" class="line" id="l202">    202</a>     }
 <a href="#l203" class="line" id="l203">    203</a> 
-<a href="#l204" class="line" id="l204">    204</a>     private fun prettyPrint(tabSize: Int): String {
-<a href="#l205" class="line" id="l205">    205</a>         val tabLine = &quot;    &quot;.repeat(tabSize)
-<a href="#l206" class="line" id="l206">    206</a>         val stringBuilder = StringBuilder()
-<a href="#l207" class="line" id="l207">    207</a>         values.forEach v@{ (id, wires) -&gt;
-<a href="#l208" class="line" id="l208">    208</a>             wires.forEach { wire -&gt;
-<a href="#l209" class="line" id="l209">    209</a>                 stringBuilder.append(tabLine)
-<a href="#l210" class="line" id="l210">    210</a>                 stringBuilder.append(&quot;$id &lt;${wire.type.name.lowercase()}&gt; = &quot;)
-<a href="#l211" class="line" id="l211">    211</a>                 when (wire.type) {
-<a href="#l212" class="line" id="l212">    212</a>                     WireType.VARINT -&gt; stringBuilder.append(&quot;${wire.value}\n&quot;)
-<a href="#l213" class="line" id="l213">    213</a>                     WireType.FIXED64, WireType.FIXED32 -&gt; {
-<a href="#l214" class="line" id="l214">    214</a>                         val byteBuffer = ByteBuffer.wrap(wire.value as ByteArray).order(java.nio.ByteOrder.LITTLE_ENDIAN)
-<a href="#l215" class="line" id="l215">    215</a>                         val hexValue = wire.value.joinToString(&quot;&quot;) { byte -&gt; &quot;%02x&quot;.format(byte) }
-<a href="#l216" class="line" id="l216">    216</a>                         val intValue = if (wire.type == WireType.FIXED32) byteBuffer.int else byteBuffer.long
-<a href="#l217" class="line" id="l217">    217</a>                         byteBuffer.position(0)
-<a href="#l218" class="line" id="l218">    218</a>                         val decimalValue = if (wire.type == WireType.FIXED32) byteBuffer.float else byteBuffer.double
-<a href="#l219" class="line" id="l219">    219</a>                         stringBuilder.append(&quot;$intValue/0x$hexValue/$decimalValue\n&quot;)
-<a href="#l220" class="line" id="l220">    220</a>                     }
-<a href="#l221" class="line" id="l221">    221</a>                     WireType.CHUNK -&gt; {
-<a href="#l222" class="line" id="l222">    222</a>                         val array = (wire.value as? ByteArray) ?: return@forEach
-<a href="#l223" class="line" id="l223">    223</a> 
-<a href="#l224" class="line" id="l224">    224</a>                         fun printArray() {
-<a href="#l225" class="line" id="l225">    225</a>                             // auto detect uuids
-<a href="#l226" class="line" id="l226">    226</a>                             if (array.size == 16) {
-<a href="#l227" class="line" id="l227">    227</a>                                 val longs = LongArray(2)
-<a href="#l228" class="line" id="l228">    228</a>                                 for (i in 0 .. 7) {
-<a href="#l229" class="line" id="l229">    229</a>                                     longs[0] = longs[0] or ((array[i].toLong() and 0xFF) shl ((7 - i) * 8))
-<a href="#l230" class="line" id="l230">    230</a>                                 }
-<a href="#l231" class="line" id="l231">    231</a>                                 for (i in 8 .. 15) {
-<a href="#l232" class="line" id="l232">    232</a>                                     longs[1] = longs[1] or ((array[i].toLong() and 0xFF) shl ((15 - i) * 8))
+<a href="#l204" class="line" id="l204">    204</a>     @JSFunction
+<a href="#l205" class="line" id="l205">    205</a>     fun getFixed32(vararg ids: Int) = followPath(*ids, excludeLast = true)?.getFixed32(ids.last())
+<a href="#l206" class="line" id="l206">    206</a> 
+<a href="#l207" class="line" id="l207">    207</a>     private fun prettyPrint(tabSize: Int): String {
+<a href="#l208" class="line" id="l208">    208</a>         val tabLine = &quot;    &quot;.repeat(tabSize)
+<a href="#l209" class="line" id="l209">    209</a>         val stringBuilder = StringBuilder()
+<a href="#l210" class="line" id="l210">    210</a>         values.forEach v@{ (id, wires) -&gt;
+<a href="#l211" class="line" id="l211">    211</a>             wires.forEach { wire -&gt;
+<a href="#l212" class="line" id="l212">    212</a>                 stringBuilder.append(tabLine)
+<a href="#l213" class="line" id="l213">    213</a>                 stringBuilder.append(&quot;$id &lt;${wire.type.name.lowercase()}&gt; = &quot;)
+<a href="#l214" class="line" id="l214">    214</a>                 when (wire.type) {
+<a href="#l215" class="line" id="l215">    215</a>                     WireType.VARINT -&gt; stringBuilder.append(&quot;${wire.value}\n&quot;)
+<a href="#l216" class="line" id="l216">    216</a>                     WireType.FIXED64, WireType.FIXED32 -&gt; {
+<a href="#l217" class="line" id="l217">    217</a>                         val byteBuffer = ByteBuffer.wrap(wire.value as ByteArray).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+<a href="#l218" class="line" id="l218">    218</a>                         val hexValue = wire.value.joinToString(&quot;&quot;) { byte -&gt; &quot;%02x&quot;.format(byte) }
+<a href="#l219" class="line" id="l219">    219</a>                         val intValue = if (wire.type == WireType.FIXED32) byteBuffer.int else byteBuffer.long
+<a href="#l220" class="line" id="l220">    220</a>                         byteBuffer.position(0)
+<a href="#l221" class="line" id="l221">    221</a>                         val decimalValue = if (wire.type == WireType.FIXED32) byteBuffer.float else byteBuffer.double
+<a href="#l222" class="line" id="l222">    222</a>                         stringBuilder.append(&quot;$intValue/0x$hexValue/$decimalValue\n&quot;)
+<a href="#l223" class="line" id="l223">    223</a>                     }
+<a href="#l224" class="line" id="l224">    224</a>                     WireType.CHUNK -&gt; {
+<a href="#l225" class="line" id="l225">    225</a>                         val array = (wire.value as? ByteArray) ?: return@forEach
+<a href="#l226" class="line" id="l226">    226</a> 
+<a href="#l227" class="line" id="l227">    227</a>                         fun printArray() {
+<a href="#l228" class="line" id="l228">    228</a>                             // auto detect uuids
+<a href="#l229" class="line" id="l229">    229</a>                             if (array.size == 16) {
+<a href="#l230" class="line" id="l230">    230</a>                                 val longs = LongArray(2)
+<a href="#l231" class="line" id="l231">    231</a>                                 for (i in 0 .. 7) {
+<a href="#l232" class="line" id="l232">    232</a>                                     longs[0] = longs[0] or ((array[i].toLong() and 0xFF) shl ((7 - i) * 8))
 <a href="#l233" class="line" id="l233">    233</a>                                 }
-<a href="#l234" class="line" id="l234">    234</a>                                 stringBuilder.append(&quot;uuid: ${UUID(longs[0], longs[1])}\n&quot;)
-<a href="#l235" class="line" id="l235">    235</a>                                 return
-<a href="#l236" class="line" id="l236">    236</a>                             }
-<a href="#l237" class="line" id="l237">    237</a> 
-<a href="#l238" class="line" id="l238">    238</a>                             //auto detect ascii strings
-<a href="#l239" class="line" id="l239">    239</a>                             if (array.all { it in (0x20..0x7E) || it == 0x0A.toByte() || it == 0x0D.toByte() }) {
-<a href="#l240" class="line" id="l240">    240</a>                                 stringBuilder.append(&quot;string: ${array.toString(Charsets.UTF_8)}\n&quot;)
-<a href="#l241" class="line" id="l241">    241</a>                                 return
-<a href="#l242" class="line" id="l242">    242</a>                             }
-<a href="#l243" class="line" id="l243">    243</a> 
-<a href="#l244" class="line" id="l244">    244</a>                             stringBuilder.append(&quot;\n&quot;)
-<a href="#l245" class="line" id="l245">    245</a>                             stringBuilder.append(&quot;$tabLine    &quot;)
-<a href="#l246" class="line" id="l246">    246</a>                             stringBuilder.append(array.joinToString(&quot; &quot;) { byte -&gt; &quot;%02x&quot;.format(byte) })
+<a href="#l234" class="line" id="l234">    234</a>                                 for (i in 8 .. 15) {
+<a href="#l235" class="line" id="l235">    235</a>                                     longs[1] = longs[1] or ((array[i].toLong() and 0xFF) shl ((15 - i) * 8))
+<a href="#l236" class="line" id="l236">    236</a>                                 }
+<a href="#l237" class="line" id="l237">    237</a>                                 stringBuilder.append(&quot;uuid: ${UUID(longs[0], longs[1])}\n&quot;)
+<a href="#l238" class="line" id="l238">    238</a>                                 return
+<a href="#l239" class="line" id="l239">    239</a>                             }
+<a href="#l240" class="line" id="l240">    240</a> 
+<a href="#l241" class="line" id="l241">    241</a>                             //auto detect ascii strings
+<a href="#l242" class="line" id="l242">    242</a>                             if (array.all { it in (0x20..0x7E) || it == 0x0A.toByte() || it == 0x0D.toByte() }) {
+<a href="#l243" class="line" id="l243">    243</a>                                 stringBuilder.append(&quot;string: ${array.toString(Charsets.UTF_8)}\n&quot;)
+<a href="#l244" class="line" id="l244">    244</a>                                 return
+<a href="#l245" class="line" id="l245">    245</a>                             }
+<a href="#l246" class="line" id="l246">    246</a> 
 <a href="#l247" class="line" id="l247">    247</a>                             stringBuilder.append(&quot;\n&quot;)
-<a href="#l248" class="line" id="l248">    248</a>                         }
-<a href="#l249" class="line" id="l249">    249</a> 
-<a href="#l250" class="line" id="l250">    250</a>                         runCatching {
-<a href="#l251" class="line" id="l251">    251</a>                             if (array.isEmpty()) {
-<a href="#l252" class="line" id="l252">    252</a>                                 stringBuilder.append(&quot;empty\n&quot;)
-<a href="#l253" class="line" id="l253">    253</a>                                 return@runCatching
-<a href="#l254" class="line" id="l254">    254</a>                             }
-<a href="#l255" class="line" id="l255">    255</a> 
-<a href="#l256" class="line" id="l256">    256</a>                             ProtoReader(array).prettyPrint(tabSize + 1).takeIf { it.isNotEmpty() }?.let {
-<a href="#l257" class="line" id="l257">    257</a>                                 stringBuilder.append(&quot;message:\n&quot;)
-<a href="#l258" class="line" id="l258">    258</a>                                 stringBuilder.append(it)
-<a href="#l259" class="line" id="l259">    259</a>                             } ?: printArray()
-<a href="#l260" class="line" id="l260">    260</a>                         }.onFailure {
-<a href="#l261" class="line" id="l261">    261</a>                             printArray()
-<a href="#l262" class="line" id="l262">    262</a>                         }
-<a href="#l263" class="line" id="l263">    263</a>                     }
-<a href="#l264" class="line" id="l264">    264</a>                     else -&gt; stringBuilder.append(&quot;unknown\n&quot;)
-<a href="#l265" class="line" id="l265">    265</a>                 }
-<a href="#l266" class="line" id="l266">    266</a>             }
-<a href="#l267" class="line" id="l267">    267</a>         }
-<a href="#l268" class="line" id="l268">    268</a> 
-<a href="#l269" class="line" id="l269">    269</a>         return stringBuilder.toString()
-<a href="#l270" class="line" id="l270">    270</a>     }
+<a href="#l248" class="line" id="l248">    248</a>                             stringBuilder.append(&quot;$tabLine    &quot;)
+<a href="#l249" class="line" id="l249">    249</a>                             stringBuilder.append(array.joinToString(&quot; &quot;) { byte -&gt; &quot;%02x&quot;.format(byte) })
+<a href="#l250" class="line" id="l250">    250</a>                             stringBuilder.append(&quot;\n&quot;)
+<a href="#l251" class="line" id="l251">    251</a>                         }
+<a href="#l252" class="line" id="l252">    252</a> 
+<a href="#l253" class="line" id="l253">    253</a>                         runCatching {
+<a href="#l254" class="line" id="l254">    254</a>                             if (array.isEmpty()) {
+<a href="#l255" class="line" id="l255">    255</a>                                 stringBuilder.append(&quot;empty\n&quot;)
+<a href="#l256" class="line" id="l256">    256</a>                                 return@runCatching
+<a href="#l257" class="line" id="l257">    257</a>                             }
+<a href="#l258" class="line" id="l258">    258</a> 
+<a href="#l259" class="line" id="l259">    259</a>                             ProtoReader(array).prettyPrint(tabSize + 1).takeIf { it.isNotEmpty() }?.let {
+<a href="#l260" class="line" id="l260">    260</a>                                 stringBuilder.append(&quot;message:\n&quot;)
+<a href="#l261" class="line" id="l261">    261</a>                                 stringBuilder.append(it)
+<a href="#l262" class="line" id="l262">    262</a>                             } ?: printArray()
+<a href="#l263" class="line" id="l263">    263</a>                         }.onFailure {
+<a href="#l264" class="line" id="l264">    264</a>                             printArray()
+<a href="#l265" class="line" id="l265">    265</a>                         }
+<a href="#l266" class="line" id="l266">    266</a>                     }
+<a href="#l267" class="line" id="l267">    267</a>                     else -&gt; stringBuilder.append(&quot;unknown\n&quot;)
+<a href="#l268" class="line" id="l268">    268</a>                 }
+<a href="#l269" class="line" id="l269">    269</a>             }
+<a href="#l270" class="line" id="l270">    270</a>         }
 <a href="#l271" class="line" id="l271">    271</a> 
-<a href="#l272" class="line" id="l272">    272</a>     @JSFunction
-<a href="#l273" class="line" id="l273">    273</a>     override fun toString() = prettyPrint(0)
-<a href="#l274" class="line" id="l274">    274</a> }</pre>
+<a href="#l272" class="line" id="l272">    272</a>         return stringBuilder.toString()
+<a href="#l273" class="line" id="l273">    273</a>     }
+<a href="#l274" class="line" id="l274">    274</a> 
+<a href="#l275" class="line" id="l275">    275</a>     @JSFunction
+<a href="#l276" class="line" id="l276">    276</a>     override fun toString() = prettyPrint(0)
+<a href="#l277" class="line" id="l277">    277</a> }</pre>
 </div>
 </body>
 </html>
