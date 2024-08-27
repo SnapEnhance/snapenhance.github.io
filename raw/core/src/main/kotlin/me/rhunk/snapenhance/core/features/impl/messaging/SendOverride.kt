@@ -333,6 +333,7 @@ class SendOverride : Feature("Send Override") {
                                     )
                                     Slider(
                                         modifier = Modifier.fillMaxWidth(),
+                                        enabled = selectedType != "SAVEABLE_SNAP",
                                         value = customDuration,
                                         onValueChange = {
                                             customDuration = it
@@ -355,7 +356,7 @@ class SendOverride : Feature("Send Override") {
                             }
                             Button(onClick = {
                                 alertDialog.dismiss()
-                                if (sendMedia(selectedType, convertDuration(customDuration))) {
+                                if (sendMedia(selectedType, if (selectedType != "SAVEABLE_SNAP" ) convertDuration(customDuration) else null)) {
                                     event.invokeOriginal()
                                 }
                             }) {
