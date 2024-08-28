@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> BetterLocation.kt (12072B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt">raw</a></p><hr/><pre id="blob">
+<p> BetterLocation.kt (12516B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core.features.impl.experiments
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import android.location.Location
@@ -152,155 +152,165 @@
 <a href="#l129" class="line" id="l129">    129</a> 
 <a href="#l130" class="line" id="l130">    130</a>     private fun onLocationEvent(protoReader: ProtoReader) {
 <a href="#l131" class="line" id="l131">    131</a>         protoReader.eachBuffer(3, 1) {
-<a href="#l132" class="line" id="l132">    132</a>             val userId = UUID(getFixed64(1, 1) ?: return@eachBuffer, getFixed64(1, 2) ?: return@eachBuffer).toString()
-<a href="#l133" class="line" id="l133">    133</a>             val friendCluster = FriendLocation(
-<a href="#l134" class="line" id="l134">    134</a>                 userId = userId,
-<a href="#l135" class="line" id="l135">    135</a>                 latitude = Float.fromBits(getFixed32(4)).toDouble(),
-<a href="#l136" class="line" id="l136">    136</a>                 longitude = Float.fromBits(getFixed32(5)).toDouble(),
-<a href="#l137" class="line" id="l137">    137</a>                 lastUpdated = getVarInt(7, 2) ?: -1L,
-<a href="#l138" class="line" id="l138">    138</a>                 locality = getString(10),
-<a href="#l139" class="line" id="l139">    139</a>                 localityPieces = mutableListOf&lt;String&gt;().also {
-<a href="#l140" class="line" id="l140">    140</a>                     forEach { index, wire -&gt;
-<a href="#l141" class="line" id="l141">    141</a>                         if (index != 11) return@forEach
-<a href="#l142" class="line" id="l142">    142</a>                         it.add((wire.value as ByteArray).toString(Charsets.UTF_8) )
-<a href="#l143" class="line" id="l143">    143</a>                     }
-<a href="#l144" class="line" id="l144">    144</a>                 },
-<a href="#l145" class="line" id="l145">    145</a>                 batteryLevel = getFixed32(7, 13)?.let { Float.fromBits(it) } ?: -1F,
-<a href="#l146" class="line" id="l146">    146</a>             )
-<a href="#l147" class="line" id="l147">    147</a> 
-<a href="#l148" class="line" id="l148">    148</a>             locationHistory[userId] = friendCluster
-<a href="#l149" class="line" id="l149">    149</a>         }
-<a href="#l150" class="line" id="l150">    150</a>     }
-<a href="#l151" class="line" id="l151">    151</a> 
-<a href="#l152" class="line" id="l152">    152</a>     private fun openManagementOverlay() {
-<a href="#l153" class="line" id="l153">    153</a>         context.bridgeClient.getLocationManager().provideFriendsLocation(
-<a href="#l154" class="line" id="l154">    154</a>             locationHistory.values.toList().mapNotNull { locationHistory -&gt;
-<a href="#l155" class="line" id="l155">    155</a>                 val friendInfo = context.database.getFriendInfo(locationHistory.userId) ?: return@mapNotNull null
+<a href="#l132" class="line" id="l132">    132</a>             val clusterId = UUID(getFixed64(1, 1) ?: return@eachBuffer, getFixed64(1, 2) ?: return@eachBuffer).toString()
+<a href="#l133" class="line" id="l133">    133</a> 
+<a href="#l134" class="line" id="l134">    134</a>             val latitude = getFixed32(4)?.let { Float.fromBits(it) }?.toDouble() ?: return@eachBuffer
+<a href="#l135" class="line" id="l135">    135</a>             val longitude = getFixed32(5)?.let { Float.fromBits(it) }?.toDouble() ?: return@eachBuffer
+<a href="#l136" class="line" id="l136">    136</a> 
+<a href="#l137" class="line" id="l137">    137</a>             val locality = getString(10)
+<a href="#l138" class="line" id="l138">    138</a>             val localityPieces = mutableListOf&lt;String&gt;().also {
+<a href="#l139" class="line" id="l139">    139</a>                 forEach { index, wire -&gt;
+<a href="#l140" class="line" id="l140">    140</a>                     if (index != 11) return@forEach
+<a href="#l141" class="line" id="l141">    141</a>                     it.add((wire.value as ByteArray).toString(Charsets.UTF_8) )
+<a href="#l142" class="line" id="l142">    142</a>                 }
+<a href="#l143" class="line" id="l143">    143</a>             }
+<a href="#l144" class="line" id="l144">    144</a> 
+<a href="#l145" class="line" id="l145">    145</a>             eachBuffer(7) friend@{
+<a href="#l146" class="line" id="l146">    146</a>                 val userId = if (contains(1)) UUID(getFixed64(1, 1) ?: return@friend, getFixed64(1, 2) ?: return@friend).toString() else clusterId
+<a href="#l147" class="line" id="l147">    147</a>                 val friendLocation = FriendLocation(
+<a href="#l148" class="line" id="l148">    148</a>                     userId = userId,
+<a href="#l149" class="line" id="l149">    149</a>                     latitude = latitude,
+<a href="#l150" class="line" id="l150">    150</a>                     longitude = longitude,
+<a href="#l151" class="line" id="l151">    151</a>                     lastUpdated = getVarInt(2) ?: -1L,
+<a href="#l152" class="line" id="l152">    152</a>                     locality = locality,
+<a href="#l153" class="line" id="l153">    153</a>                     localityPieces = localityPieces,
+<a href="#l154" class="line" id="l154">    154</a>                     batteryLevel = getFixed32(13)?.let { Float.fromBits(it) } ?: -1F,
+<a href="#l155" class="line" id="l155">    155</a>                 )
 <a href="#l156" class="line" id="l156">    156</a> 
-<a href="#l157" class="line" id="l157">    157</a>                 me.rhunk.snapenhance.bridge.location.FriendLocation().also {
-<a href="#l158" class="line" id="l158">    158</a>                     it.username = friendInfo.mutableUsername ?: return@mapNotNull null
-<a href="#l159" class="line" id="l159">    159</a>                     it.displayName = friendInfo.displayName
-<a href="#l160" class="line" id="l160">    160</a>                     it.bitmojiId = friendInfo.bitmojiAvatarId
-<a href="#l161" class="line" id="l161">    161</a>                     it.bitmojiSelfieId = friendInfo.bitmojiSelfieId
-<a href="#l162" class="line" id="l162">    162</a>                     it.latitude = locationHistory.latitude
-<a href="#l163" class="line" id="l163">    163</a>                     it.longitude = locationHistory.longitude
-<a href="#l164" class="line" id="l164">    164</a>                     it.lastUpdated = locationHistory.lastUpdated
-<a href="#l165" class="line" id="l165">    165</a>                     it.locality = locationHistory.locality
-<a href="#l166" class="line" id="l166">    166</a>                     it.localityPieces = locationHistory.localityPieces
-<a href="#l167" class="line" id="l167">    167</a>                 }
-<a href="#l168" class="line" id="l168">    168</a>             }
-<a href="#l169" class="line" id="l169">    169</a>         )
-<a href="#l170" class="line" id="l170">    170</a>         context.bridgeClient.openOverlay(OverlayType.BETTER_LOCATION)
-<a href="#l171" class="line" id="l171">    171</a>     }
-<a href="#l172" class="line" id="l172">    172</a> 
-<a href="#l173" class="line" id="l173">    173</a>     override fun init() {
-<a href="#l174" class="line" id="l174">    174</a>         if (context.config.global.betterLocation.globalState != true) return
-<a href="#l175" class="line" id="l175">    175</a> 
-<a href="#l176" class="line" id="l176">    176</a>         val canSpoofLocation = { context.config.global.betterLocation.spoofLocation.get() }
-<a href="#l177" class="line" id="l177">    177</a> 
-<a href="#l178" class="line" id="l178">    178</a>         LocationManager::class.java.apply {
-<a href="#l179" class="line" id="l179">    179</a>             hook(&quot;isProviderEnabled&quot;, HookStage.BEFORE, { canSpoofLocation() }) { it.setResult(true) }
-<a href="#l180" class="line" id="l180">    180</a>             hook(&quot;isProviderEnabledForUser&quot;, HookStage.BEFORE, { canSpoofLocation() }) { it.setResult(true) }
-<a href="#l181" class="line" id="l181">    181</a>         }
-<a href="#l182" class="line" id="l182">    182</a>         Location::class.java.apply {
-<a href="#l183" class="line" id="l183">    183</a>             hook(&quot;getLatitude&quot;, HookStage.BEFORE, { canSpoofLocation() }) { it.setResult(getLat()) }
-<a href="#l184" class="line" id="l184">    184</a>             hook(&quot;getLongitude&quot;, HookStage.BEFORE, { canSpoofLocation() }) { it.setResult(getLong()) }
-<a href="#l185" class="line" id="l185">    185</a>         }
-<a href="#l186" class="line" id="l186">    186</a> 
-<a href="#l187" class="line" id="l187">    187</a>         val mapFeaturesRootId = context.resources.getId(&quot;map_features_root&quot;)
-<a href="#l188" class="line" id="l188">    188</a> 
-<a href="#l189" class="line" id="l189">    189</a>         if (context.config.global.betterLocation.showBatteryLevel.get()) {
-<a href="#l190" class="line" id="l190">    190</a>             findClass(&quot;snap.snap_maps_sdk.nano.SnapMapsSdk\$PublicUserInfo&quot;).hook(&quot;setDisplayName&quot;, HookStage.BEFORE) { param -&gt;
-<a href="#l191" class="line" id="l191">    191</a>                 val instance = param.thisObject&lt;Any&gt;()
-<a href="#l192" class="line" id="l192">    192</a>                 val userId = instance.getObjectField(&quot;userId_&quot;) as? String ?: return@hook
-<a href="#l193" class="line" id="l193">    193</a>                 val batteryLevel = locationHistory[userId]?.batteryLevel?.takeIf { it &gt; -1F } ?: return@hook
-<a href="#l194" class="line" id="l194">    194</a>                 param.setArg(0, param.arg&lt;String&gt;(0) + &quot; (${(batteryLevel * 100).toInt()}%)&quot;)
-<a href="#l195" class="line" id="l195">    195</a>             }
+<a href="#l157" class="line" id="l157">    157</a>                 locationHistory[userId] = friendLocation
+<a href="#l158" class="line" id="l158">    158</a>             }
+<a href="#l159" class="line" id="l159">    159</a>         }
+<a href="#l160" class="line" id="l160">    160</a>     }
+<a href="#l161" class="line" id="l161">    161</a> 
+<a href="#l162" class="line" id="l162">    162</a>     private fun openManagementOverlay() {
+<a href="#l163" class="line" id="l163">    163</a>         context.bridgeClient.getLocationManager().provideFriendsLocation(
+<a href="#l164" class="line" id="l164">    164</a>             locationHistory.values.toList().mapNotNull { locationHistory -&gt;
+<a href="#l165" class="line" id="l165">    165</a>                 val friendInfo = context.database.getFriendInfo(locationHistory.userId) ?: return@mapNotNull null
+<a href="#l166" class="line" id="l166">    166</a> 
+<a href="#l167" class="line" id="l167">    167</a>                 me.rhunk.snapenhance.bridge.location.FriendLocation().also {
+<a href="#l168" class="line" id="l168">    168</a>                     it.username = friendInfo.mutableUsername ?: return@mapNotNull null
+<a href="#l169" class="line" id="l169">    169</a>                     it.displayName = friendInfo.displayName
+<a href="#l170" class="line" id="l170">    170</a>                     it.bitmojiId = friendInfo.bitmojiAvatarId
+<a href="#l171" class="line" id="l171">    171</a>                     it.bitmojiSelfieId = friendInfo.bitmojiSelfieId
+<a href="#l172" class="line" id="l172">    172</a>                     it.latitude = locationHistory.latitude
+<a href="#l173" class="line" id="l173">    173</a>                     it.longitude = locationHistory.longitude
+<a href="#l174" class="line" id="l174">    174</a>                     it.lastUpdated = locationHistory.lastUpdated
+<a href="#l175" class="line" id="l175">    175</a>                     it.locality = locationHistory.locality
+<a href="#l176" class="line" id="l176">    176</a>                     it.localityPieces = locationHistory.localityPieces
+<a href="#l177" class="line" id="l177">    177</a>                 }
+<a href="#l178" class="line" id="l178">    178</a>             }
+<a href="#l179" class="line" id="l179">    179</a>         )
+<a href="#l180" class="line" id="l180">    180</a>         context.bridgeClient.openOverlay(OverlayType.BETTER_LOCATION)
+<a href="#l181" class="line" id="l181">    181</a>     }
+<a href="#l182" class="line" id="l182">    182</a> 
+<a href="#l183" class="line" id="l183">    183</a>     override fun init() {
+<a href="#l184" class="line" id="l184">    184</a>         if (context.config.global.betterLocation.globalState != true) return
+<a href="#l185" class="line" id="l185">    185</a> 
+<a href="#l186" class="line" id="l186">    186</a>         val canSpoofLocation = { context.config.global.betterLocation.spoofLocation.get() }
+<a href="#l187" class="line" id="l187">    187</a> 
+<a href="#l188" class="line" id="l188">    188</a>         LocationManager::class.java.apply {
+<a href="#l189" class="line" id="l189">    189</a>             hook(&quot;isProviderEnabled&quot;, HookStage.BEFORE, { canSpoofLocation() }) { it.setResult(true) }
+<a href="#l190" class="line" id="l190">    190</a>             hook(&quot;isProviderEnabledForUser&quot;, HookStage.BEFORE, { canSpoofLocation() }) { it.setResult(true) }
+<a href="#l191" class="line" id="l191">    191</a>         }
+<a href="#l192" class="line" id="l192">    192</a>         Location::class.java.apply {
+<a href="#l193" class="line" id="l193">    193</a>             hook(&quot;getLatitude&quot;, HookStage.BEFORE, { canSpoofLocation() }) { it.setResult(getLat()) }
+<a href="#l194" class="line" id="l194">    194</a>             hook(&quot;getLongitude&quot;, HookStage.BEFORE, { canSpoofLocation() }) { it.setResult(getLong()) }
+<a href="#l195" class="line" id="l195">    195</a>         }
 <a href="#l196" class="line" id="l196">    196</a> 
-<a href="#l197" class="line" id="l197">    197</a>             findClass(&quot;com.snap.map_friend_focus_view.MapFocusViewFriendSectionDataModel&quot;).hookConstructor(HookStage.AFTER) { param -&gt;
-<a href="#l198" class="line" id="l198">    198</a>                 val instance = param.thisObject&lt;Any&gt;()
-<a href="#l199" class="line" id="l199">    199</a>                 val userId = instance.getObjectField(&quot;_userId&quot;) as? String ?: return@hookConstructor
-<a href="#l200" class="line" id="l200">    200</a>                 val batteryLevel = locationHistory[userId]?.batteryLevel?.takeIf { it &gt; -1F } ?: return@hookConstructor
-<a href="#l201" class="line" id="l201">    201</a> 
-<a href="#l202" class="line" id="l202">    202</a>                 param.thisObject&lt;Any&gt;().dataBuilder {
-<a href="#l203" class="line" id="l203">    203</a>                     val prevText = get&lt;String?&gt;(&quot;_lastSeen&quot;)?.let { &quot; - $it&quot; } ?: &quot;&quot;
-<a href="#l204" class="line" id="l204">    204</a>                     set(&quot;_lastSeen&quot;, &quot;(${(batteryLevel * 100).toInt()}%)$prevText&quot;)
-<a href="#l205" class="line" id="l205">    205</a>                 }
-<a href="#l206" class="line" id="l206">    206</a>             }
-<a href="#l207" class="line" id="l207">    207</a>         }
-<a href="#l208" class="line" id="l208">    208</a> 
-<a href="#l209" class="line" id="l209">    209</a>         context.event.subscribe(AddViewEvent::class) { event -&gt;
-<a href="#l210" class="line" id="l210">    210</a>             if (event.view.id != mapFeaturesRootId) return@subscribe
-<a href="#l211" class="line" id="l211">    211</a>             val view = event.view as RelativeLayout
-<a href="#l212" class="line" id="l212">    212</a> 
-<a href="#l213" class="line" id="l213">    213</a>             view.addOnAttachStateChangeListener(object: View.OnAttachStateChangeListener {
-<a href="#l214" class="line" id="l214">    214</a>                 override fun onViewAttachedToWindow(v: View) {
-<a href="#l215" class="line" id="l215">    215</a>                     view.addView(createComposeView(view.context) {
-<a href="#l216" class="line" id="l216">    216</a>                         val darkTheme = remember { context.androidContext.isDarkTheme() }
-<a href="#l217" class="line" id="l217">    217</a>                         Box(
-<a href="#l218" class="line" id="l218">    218</a>                             modifier = Modifier.padding(start = 8.dp)
-<a href="#l219" class="line" id="l219">    219</a>                         ) {
-<a href="#l220" class="line" id="l220">    220</a>                             FilledIconButton(
-<a href="#l221" class="line" id="l221">    221</a>                                 modifier = Modifier.size(40.dp),
-<a href="#l222" class="line" id="l222">    222</a>                                 colors = IconButtonDefaults.filledIconButtonColors(
-<a href="#l223" class="line" id="l223">    223</a>                                     containerColor = if (darkTheme) Color(0xFF1D1D1D) else Color.White,
-<a href="#l224" class="line" id="l224">    224</a>                                     contentColor = if (darkTheme) Color.White else Color(0xFF151A1A),
-<a href="#l225" class="line" id="l225">    225</a>                                 ),
-<a href="#l226" class="line" id="l226">    226</a>                                 onClick = { openManagementOverlay() }
-<a href="#l227" class="line" id="l227">    227</a>                             ) {
-<a href="#l228" class="line" id="l228">    228</a>                                 Icon(Icons.Default.EditLocation, contentDescription = null)
-<a href="#l229" class="line" id="l229">    229</a>                             }
-<a href="#l230" class="line" id="l230">    230</a>                         }
-<a href="#l231" class="line" id="l231">    231</a>                     }.apply {
-<a href="#l232" class="line" id="l232">    232</a>                         layoutParams = RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-<a href="#l233" class="line" id="l233">    233</a>                             addRule(RelativeLayout.ALIGN_PARENT_LEFT)
-<a href="#l234" class="line" id="l234">    234</a>                             setMargins(0, (60 * context.resources.displayMetrics.density).toInt(), 0, 0)
-<a href="#l235" class="line" id="l235">    235</a>                         }
-<a href="#l236" class="line" id="l236">    236</a>                     })
-<a href="#l237" class="line" id="l237">    237</a>                 }
-<a href="#l238" class="line" id="l238">    238</a> 
-<a href="#l239" class="line" id="l239">    239</a>                 override fun onViewDetachedFromWindow(v: View) {}
-<a href="#l240" class="line" id="l240">    240</a>             })
-<a href="#l241" class="line" id="l241">    241</a>         }
-<a href="#l242" class="line" id="l242">    242</a> 
-<a href="#l243" class="line" id="l243">    243</a>         context.event.subscribe(UnaryCallEvent::class) { event -&gt;
-<a href="#l244" class="line" id="l244">    244</a>             if (event.uri == &quot;/snapchat.valis.Valis/SendClientUpdate&quot;) {
-<a href="#l245" class="line" id="l245">    245</a>                 event.buffer = ProtoEditor(event.buffer).apply {
-<a href="#l246" class="line" id="l246">    246</a>                     edit {
-<a href="#l247" class="line" id="l247">    247</a>                         editEach(1) {
-<a href="#l248" class="line" id="l248">    248</a>                             editClientUpdate(this)
-<a href="#l249" class="line" id="l249">    249</a>                         }
-<a href="#l250" class="line" id="l250">    250</a>                     }
-<a href="#l251" class="line" id="l251">    251</a>                 }.toByteArray()
-<a href="#l252" class="line" id="l252">    252</a>             }
-<a href="#l253" class="line" id="l253">    253</a>         }
-<a href="#l254" class="line" id="l254">    254</a> 
-<a href="#l255" class="line" id="l255">    255</a>         context.mappings.useMapper(CallbackMapper::class) {
-<a href="#l256" class="line" id="l256">    256</a>             callbacks.getClass(&quot;ServerStreamingEventHandler&quot;)?.hook(&quot;onEvent&quot;, HookStage.BEFORE) { param -&gt;
-<a href="#l257" class="line" id="l257">    257</a>                 val buffer = param.argNullable&lt;ByteBuffer&gt;(1)?.let {
-<a href="#l258" class="line" id="l258">    258</a>                     it.position(0)
-<a href="#l259" class="line" id="l259">    259</a>                     ByteArray(it.capacity()).also { buffer -&gt; it.get(buffer); it.position(0) }
-<a href="#l260" class="line" id="l260">    260</a>                 } ?: return@hook
-<a href="#l261" class="line" id="l261">    261</a>                 onLocationEvent(ProtoReader(buffer))
+<a href="#l197" class="line" id="l197">    197</a>         val mapFeaturesRootId = context.resources.getId(&quot;map_features_root&quot;)
+<a href="#l198" class="line" id="l198">    198</a> 
+<a href="#l199" class="line" id="l199">    199</a>         if (context.config.global.betterLocation.showBatteryLevel.get()) {
+<a href="#l200" class="line" id="l200">    200</a>             findClass(&quot;snap.snap_maps_sdk.nano.SnapMapsSdk\$PublicUserInfo&quot;).hook(&quot;setDisplayName&quot;, HookStage.BEFORE) { param -&gt;
+<a href="#l201" class="line" id="l201">    201</a>                 val instance = param.thisObject&lt;Any&gt;()
+<a href="#l202" class="line" id="l202">    202</a>                 val userId = instance.getObjectField(&quot;userId_&quot;) as? String ?: return@hook
+<a href="#l203" class="line" id="l203">    203</a>                 val batteryLevel = locationHistory[userId]?.batteryLevel?.takeIf { it &gt; -1F } ?: return@hook
+<a href="#l204" class="line" id="l204">    204</a>                 param.setArg(0, param.arg&lt;String&gt;(0) + &quot; (${(batteryLevel * 100).toInt()}%)&quot;)
+<a href="#l205" class="line" id="l205">    205</a>             }
+<a href="#l206" class="line" id="l206">    206</a> 
+<a href="#l207" class="line" id="l207">    207</a>             findClass(&quot;com.snap.map_friend_focus_view.MapFocusViewFriendSectionDataModel&quot;).hookConstructor(HookStage.AFTER) { param -&gt;
+<a href="#l208" class="line" id="l208">    208</a>                 val instance = param.thisObject&lt;Any&gt;()
+<a href="#l209" class="line" id="l209">    209</a>                 val userId = instance.getObjectField(&quot;_userId&quot;) as? String ?: return@hookConstructor
+<a href="#l210" class="line" id="l210">    210</a>                 val batteryLevel = locationHistory[userId]?.batteryLevel?.takeIf { it &gt; -1F } ?: return@hookConstructor
+<a href="#l211" class="line" id="l211">    211</a> 
+<a href="#l212" class="line" id="l212">    212</a>                 param.thisObject&lt;Any&gt;().dataBuilder {
+<a href="#l213" class="line" id="l213">    213</a>                     val prevText = get&lt;String?&gt;(&quot;_lastSeen&quot;)?.let { &quot; - $it&quot; } ?: &quot;&quot;
+<a href="#l214" class="line" id="l214">    214</a>                     set(&quot;_lastSeen&quot;, &quot;(${(batteryLevel * 100).toInt()}%)$prevText&quot;)
+<a href="#l215" class="line" id="l215">    215</a>                 }
+<a href="#l216" class="line" id="l216">    216</a>             }
+<a href="#l217" class="line" id="l217">    217</a>         }
+<a href="#l218" class="line" id="l218">    218</a> 
+<a href="#l219" class="line" id="l219">    219</a>         context.event.subscribe(AddViewEvent::class) { event -&gt;
+<a href="#l220" class="line" id="l220">    220</a>             if (event.view.id != mapFeaturesRootId) return@subscribe
+<a href="#l221" class="line" id="l221">    221</a>             val view = event.view as RelativeLayout
+<a href="#l222" class="line" id="l222">    222</a> 
+<a href="#l223" class="line" id="l223">    223</a>             view.addOnAttachStateChangeListener(object: View.OnAttachStateChangeListener {
+<a href="#l224" class="line" id="l224">    224</a>                 override fun onViewAttachedToWindow(v: View) {
+<a href="#l225" class="line" id="l225">    225</a>                     view.addView(createComposeView(view.context) {
+<a href="#l226" class="line" id="l226">    226</a>                         val darkTheme = remember { context.androidContext.isDarkTheme() }
+<a href="#l227" class="line" id="l227">    227</a>                         Box(
+<a href="#l228" class="line" id="l228">    228</a>                             modifier = Modifier.padding(start = 8.dp)
+<a href="#l229" class="line" id="l229">    229</a>                         ) {
+<a href="#l230" class="line" id="l230">    230</a>                             FilledIconButton(
+<a href="#l231" class="line" id="l231">    231</a>                                 modifier = Modifier.size(40.dp),
+<a href="#l232" class="line" id="l232">    232</a>                                 colors = IconButtonDefaults.filledIconButtonColors(
+<a href="#l233" class="line" id="l233">    233</a>                                     containerColor = if (darkTheme) Color(0xFF1D1D1D) else Color.White,
+<a href="#l234" class="line" id="l234">    234</a>                                     contentColor = if (darkTheme) Color.White else Color(0xFF151A1A),
+<a href="#l235" class="line" id="l235">    235</a>                                 ),
+<a href="#l236" class="line" id="l236">    236</a>                                 onClick = { openManagementOverlay() }
+<a href="#l237" class="line" id="l237">    237</a>                             ) {
+<a href="#l238" class="line" id="l238">    238</a>                                 Icon(Icons.Default.EditLocation, contentDescription = null)
+<a href="#l239" class="line" id="l239">    239</a>                             }
+<a href="#l240" class="line" id="l240">    240</a>                         }
+<a href="#l241" class="line" id="l241">    241</a>                     }.apply {
+<a href="#l242" class="line" id="l242">    242</a>                         layoutParams = RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+<a href="#l243" class="line" id="l243">    243</a>                             addRule(RelativeLayout.ALIGN_PARENT_LEFT)
+<a href="#l244" class="line" id="l244">    244</a>                             setMargins(0, (60 * context.resources.displayMetrics.density).toInt(), 0, 0)
+<a href="#l245" class="line" id="l245">    245</a>                         }
+<a href="#l246" class="line" id="l246">    246</a>                     })
+<a href="#l247" class="line" id="l247">    247</a>                 }
+<a href="#l248" class="line" id="l248">    248</a> 
+<a href="#l249" class="line" id="l249">    249</a>                 override fun onViewDetachedFromWindow(v: View) {}
+<a href="#l250" class="line" id="l250">    250</a>             })
+<a href="#l251" class="line" id="l251">    251</a>         }
+<a href="#l252" class="line" id="l252">    252</a> 
+<a href="#l253" class="line" id="l253">    253</a>         context.event.subscribe(UnaryCallEvent::class) { event -&gt;
+<a href="#l254" class="line" id="l254">    254</a>             if (event.uri == &quot;/snapchat.valis.Valis/SendClientUpdate&quot;) {
+<a href="#l255" class="line" id="l255">    255</a>                 event.buffer = ProtoEditor(event.buffer).apply {
+<a href="#l256" class="line" id="l256">    256</a>                     edit {
+<a href="#l257" class="line" id="l257">    257</a>                         editEach(1) {
+<a href="#l258" class="line" id="l258">    258</a>                             editClientUpdate(this)
+<a href="#l259" class="line" id="l259">    259</a>                         }
+<a href="#l260" class="line" id="l260">    260</a>                     }
+<a href="#l261" class="line" id="l261">    261</a>                 }.toByteArray()
 <a href="#l262" class="line" id="l262">    262</a>             }
 <a href="#l263" class="line" id="l263">    263</a>         }
 <a href="#l264" class="line" id="l264">    264</a> 
-<a href="#l265" class="line" id="l265">    265</a>         findClass(&quot;com.snapchat.client.grpc.ClientStreamSendHandler\$CppProxy&quot;).hook(&quot;send&quot;, HookStage.BEFORE) { param -&gt;
-<a href="#l266" class="line" id="l266">    266</a>             val array = param.arg&lt;ByteBuffer&gt;(0).let {
-<a href="#l267" class="line" id="l267">    267</a>                 it.position(0)
-<a href="#l268" class="line" id="l268">    268</a>                 ByteArray(it.capacity()).also { buffer -&gt; it.get(buffer); it.position(0) }
-<a href="#l269" class="line" id="l269">    269</a>             }
-<a href="#l270" class="line" id="l270">    270</a> 
-<a href="#l271" class="line" id="l271">    271</a>             param.setArg(0, ProtoEditor(array).apply {
-<a href="#l272" class="line" id="l272">    272</a>                 edit {
-<a href="#l273" class="line" id="l273">    273</a>                     editClientUpdate(this)
-<a href="#l274" class="line" id="l274">    274</a>                 }
-<a href="#l275" class="line" id="l275">    275</a>             }.toByteArray().let {
-<a href="#l276" class="line" id="l276">    276</a>                 ByteBuffer.allocateDirect(it.size).put(it).rewind()
-<a href="#l277" class="line" id="l277">    277</a>             })
-<a href="#l278" class="line" id="l278">    278</a>         }
-<a href="#l279" class="line" id="l279">    279</a>     }
-<a href="#l280" class="line" id="l280">    280</a> }</pre>
+<a href="#l265" class="line" id="l265">    265</a>         context.mappings.useMapper(CallbackMapper::class) {
+<a href="#l266" class="line" id="l266">    266</a>             callbacks.getClass(&quot;ServerStreamingEventHandler&quot;)?.hook(&quot;onEvent&quot;, HookStage.BEFORE) { param -&gt;
+<a href="#l267" class="line" id="l267">    267</a>                 val buffer = param.argNullable&lt;ByteBuffer&gt;(1)?.let {
+<a href="#l268" class="line" id="l268">    268</a>                     it.position(0)
+<a href="#l269" class="line" id="l269">    269</a>                     ByteArray(it.capacity()).also { buffer -&gt; it.get(buffer); it.position(0) }
+<a href="#l270" class="line" id="l270">    270</a>                 } ?: return@hook
+<a href="#l271" class="line" id="l271">    271</a>                 onLocationEvent(ProtoReader(buffer))
+<a href="#l272" class="line" id="l272">    272</a>             }
+<a href="#l273" class="line" id="l273">    273</a>         }
+<a href="#l274" class="line" id="l274">    274</a> 
+<a href="#l275" class="line" id="l275">    275</a>         findClass(&quot;com.snapchat.client.grpc.ClientStreamSendHandler\$CppProxy&quot;).hook(&quot;send&quot;, HookStage.BEFORE) { param -&gt;
+<a href="#l276" class="line" id="l276">    276</a>             val array = param.arg&lt;ByteBuffer&gt;(0).let {
+<a href="#l277" class="line" id="l277">    277</a>                 it.position(0)
+<a href="#l278" class="line" id="l278">    278</a>                 ByteArray(it.capacity()).also { buffer -&gt; it.get(buffer); it.position(0) }
+<a href="#l279" class="line" id="l279">    279</a>             }
+<a href="#l280" class="line" id="l280">    280</a> 
+<a href="#l281" class="line" id="l281">    281</a>             param.setArg(0, ProtoEditor(array).apply {
+<a href="#l282" class="line" id="l282">    282</a>                 edit {
+<a href="#l283" class="line" id="l283">    283</a>                     editClientUpdate(this)
+<a href="#l284" class="line" id="l284">    284</a>                 }
+<a href="#l285" class="line" id="l285">    285</a>             }.toByteArray().let {
+<a href="#l286" class="line" id="l286">    286</a>                 ByteBuffer.allocateDirect(it.size).put(it).rewind()
+<a href="#l287" class="line" id="l287">    287</a>             })
+<a href="#l288" class="line" id="l288">    288</a>         }
+<a href="#l289" class="line" id="l289">    289</a>     }
+<a href="#l290" class="line" id="l290">    290</a> }</pre>
 </div>
 </body>
 </html>
