@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> Updater.kt (1374B) - <a href="../../../../../../../../../../../raw/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/data/Updater.kt">raw</a></p><hr/><pre id="blob">
+<p> Updater.kt (2875B) - <a href="../../../../../../../../../../../raw/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/data/Updater.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.ui.manager.data
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import com.google.gson.JsonParser
@@ -50,15 +50,40 @@
 <a href="#l27" class="line" id="l27">     27</a>         val latestVersion = latestRelease.getAsJsonPrimitive(&quot;tag_name&quot;).asString
 <a href="#l28" class="line" id="l28">     28</a>         if (latestVersion.removePrefix(&quot;v&quot;) == BuildConfig.VERSION_NAME) return@runCatching null
 <a href="#l29" class="line" id="l29">     29</a> 
-<a href="#l30" class="line" id="l30">     30</a>         LatestRelease(latestVersion, endpoint.url.toString().replace(&quot;api.&quot;, &quot;&quot;).replace(&quot;repos/&quot;, &quot;&quot;))
-<a href="#l31" class="line" id="l31">     31</a>     }.onFailure {
-<a href="#l32" class="line" id="l32">     32</a>         AbstractLogger.directError(&quot;Failed to fetch latest release&quot;, it)
-<a href="#l33" class="line" id="l33">     33</a>     }.getOrNull()
-<a href="#l34" class="line" id="l34">     34</a> 
-<a href="#l35" class="line" id="l35">     35</a>     val latestRelease by lazy {
-<a href="#l36" class="line" id="l36">     36</a>         fetchLatestRelease()
-<a href="#l37" class="line" id="l37">     37</a>     }
-<a href="#l38" class="line" id="l38">     38</a> }</pre>
+<a href="#l30" class="line" id="l30">     30</a>         LatestRelease(
+<a href="#l31" class="line" id="l31">     31</a>             versionName = latestVersion,
+<a href="#l32" class="line" id="l32">     32</a>             releaseUrl = endpoint.url.toString().replace(&quot;api.&quot;, &quot;&quot;).replace(&quot;repos/&quot;, &quot;&quot;)
+<a href="#l33" class="line" id="l33">     33</a>         )
+<a href="#l34" class="line" id="l34">     34</a>     }.onFailure {
+<a href="#l35" class="line" id="l35">     35</a>         AbstractLogger.directError(&quot;Failed to fetch latest release&quot;, it)
+<a href="#l36" class="line" id="l36">     36</a>     }.getOrNull()
+<a href="#l37" class="line" id="l37">     37</a> 
+<a href="#l38" class="line" id="l38">     38</a>     private fun fetchLatestDebugCI() = runCatching {
+<a href="#l39" class="line" id="l39">     39</a>         val actionRuns = OkHttpClient().newCall(Request.Builder().url(&quot;https://api.github.com/repos/rhunk/SnapEnhance/actions/runs?event=workflow_dispatch&quot;).build()).execute().use {
+<a href="#l40" class="line" id="l40">     40</a>             if (!it.isSuccessful) throw Throwable(&quot;Failed to fetch CI runs: ${it.code}&quot;)
+<a href="#l41" class="line" id="l41">     41</a>             JsonParser.parseString(it.body.string()).asJsonObject
+<a href="#l42" class="line" id="l42">     42</a>         }
+<a href="#l43" class="line" id="l43">     43</a>         val debugRuns = actionRuns.getAsJsonArray(&quot;workflow_runs&quot;)?.mapNotNull { it.asJsonObject }?.filter { run -&gt;
+<a href="#l44" class="line" id="l44">     44</a>             run.get(&quot;conclusion&quot;)?.takeIf { it.isJsonPrimitive }?.asString == &quot;success&quot; &amp;&amp; run.getAsJsonPrimitive(&quot;path&quot;)?.asString == &quot;.github/workflows/debug.yml&quot;
+<a href="#l45" class="line" id="l45">     45</a>         } ?: throw Throwable(&quot;No debug CI runs found&quot;)
+<a href="#l46" class="line" id="l46">     46</a> 
+<a href="#l47" class="line" id="l47">     47</a>         val latestRun = debugRuns.firstOrNull() ?: throw Throwable(&quot;No debug CI runs found&quot;)
+<a href="#l48" class="line" id="l48">     48</a>         val headSha = latestRun.getAsJsonPrimitive(&quot;head_sha&quot;)?.asString ?: throw Throwable(&quot;No head sha found&quot;)
+<a href="#l49" class="line" id="l49">     49</a> 
+<a href="#l50" class="line" id="l50">     50</a>         if (headSha == BuildConfig.GIT_HASH) return@runCatching null
+<a href="#l51" class="line" id="l51">     51</a> 
+<a href="#l52" class="line" id="l52">     52</a>         LatestRelease(
+<a href="#l53" class="line" id="l53">     53</a>             versionName = headSha.substring(0, headSha.length.coerceAtMost(7)) + &quot;-debug&quot;,
+<a href="#l54" class="line" id="l54">     54</a>             releaseUrl = latestRun.getAsJsonPrimitive(&quot;html_url&quot;)?.asString?.replace(&quot;github.com&quot;, &quot;nightly.link&quot;) ?: return@runCatching null
+<a href="#l55" class="line" id="l55">     55</a>         )
+<a href="#l56" class="line" id="l56">     56</a>     }.onFailure {
+<a href="#l57" class="line" id="l57">     57</a>         AbstractLogger.directError(&quot;Failed to fetch latest debug CI&quot;, it)
+<a href="#l58" class="line" id="l58">     58</a>     }.getOrNull()
+<a href="#l59" class="line" id="l59">     59</a> 
+<a href="#l60" class="line" id="l60">     60</a>     val latestRelease by lazy {
+<a href="#l61" class="line" id="l61">     61</a>         if (BuildConfig.DEBUG) fetchLatestDebugCI() else fetchLatestRelease()
+<a href="#l62" class="line" id="l62">     62</a>     }
+<a href="#l63" class="line" id="l63">     63</a> }</pre>
 </div>
 </body>
 </html>

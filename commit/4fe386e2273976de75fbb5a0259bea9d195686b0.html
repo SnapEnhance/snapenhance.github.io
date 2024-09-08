@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(app/updater): debug CI builds - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/4fe386e2273976de75fbb5a0259bea9d195686b0.html">4fe386e2273976de75fbb5a0259bea9d195686b0</a>
+<b>parent</b> <a href="../commit/6a22224d58c1e91cfaf688e3d3f6596303d54afb.html">6a22224d58c1e91cfaf688e3d3f6596303d54afb</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun,  8 Sep 2024 21:25:42 +0200
+
+feat(app/updater): debug CI builds
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/data/Updater.kt</a></td><td> | </td><td class="num">29</td><td><span class="i">+++++++++++++++++++++++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeRootSection.kt</a></td><td> | </td><td class="num">20</td><td><span class="i">++++++++++++</span><span class="d">--------</span></td></tr>
+</table></pre><pre>2 files changed, 39 insertions(+), 10 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/data/Updater.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/data/Updater.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/data/Updater.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/data/Updater.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -27,12 +27,37 @@ object Updater {
+</a>         val latestVersion = latestRelease.getAsJsonPrimitive(&quot;tag_name&quot;).asString
+         if (latestVersion.removePrefix(&quot;v&quot;) == BuildConfig.VERSION_NAME) return@runCatching null
+ 
+<a href="#h0-0-3" id="h0-0-3" class="d">-        LatestRelease(latestVersion, endpoint.url.toString().replace(&quot;api.&quot;, &quot;&quot;).replace(&quot;repos/&quot;, &quot;&quot;))
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        LatestRelease(
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+            versionName = latestVersion,
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+            releaseUrl = endpoint.url.toString().replace(&quot;api.&quot;, &quot;&quot;).replace(&quot;repos/&quot;, &quot;&quot;)
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+        )
+</a>     }.onFailure {
+         AbstractLogger.directError(&quot;Failed to fetch latest release&quot;, it)
+     }.getOrNull()
+ 
+<a href="#h0-0-12" id="h0-0-12" class="i">+    private fun fetchLatestDebugCI() = runCatching {
+</a><a href="#h0-0-13" id="h0-0-13" class="i">+        val actionRuns = OkHttpClient().newCall(Request.Builder().url(&quot;https://api.github.com/repos/rhunk/SnapEnhance/actions/runs?event=workflow_dispatch&quot;).build()).execute().use {
+</a><a href="#h0-0-14" id="h0-0-14" class="i">+            if (!it.isSuccessful) throw Throwable(&quot;Failed to fetch CI runs: ${it.code}&quot;)
+</a><a href="#h0-0-15" id="h0-0-15" class="i">+            JsonParser.parseString(it.body.string()).asJsonObject
+</a><a href="#h0-0-16" id="h0-0-16" class="i">+        }
+</a><a href="#h0-0-17" id="h0-0-17" class="i">+        val debugRuns = actionRuns.getAsJsonArray(&quot;workflow_runs&quot;)?.mapNotNull { it.asJsonObject }?.filter { run -&gt;
+</a><a href="#h0-0-18" id="h0-0-18" class="i">+            run.getAsJsonPrimitive(&quot;conclusion&quot;)?.asString == &quot;success&quot; &amp;&amp; run.getAsJsonPrimitive(&quot;path&quot;)?.asString == &quot;.github/workflows/debug.yml&quot;
+</a><a href="#h0-0-19" id="h0-0-19" class="i">+        } ?: throw Throwable(&quot;No debug CI runs found&quot;)
+</a><a href="#h0-0-20" id="h0-0-20" class="i">+
+</a><a href="#h0-0-21" id="h0-0-21" class="i">+        val latestRun = debugRuns.firstOrNull() ?: throw Throwable(&quot;No debug CI runs found&quot;)
+</a><a href="#h0-0-22" id="h0-0-22" class="i">+        val headSha = latestRun.getAsJsonPrimitive(&quot;head_sha&quot;)?.asString ?: throw Throwable(&quot;No head sha found&quot;)
+</a><a href="#h0-0-23" id="h0-0-23" class="i">+
+</a><a href="#h0-0-24" id="h0-0-24" class="i">+        if (headSha == BuildConfig.GIT_HASH) return@runCatching null
+</a><a href="#h0-0-25" id="h0-0-25" class="i">+
+</a><a href="#h0-0-26" id="h0-0-26" class="i">+        LatestRelease(
+</a><a href="#h0-0-27" id="h0-0-27" class="i">+            versionName = headSha.substring(0, headSha.length.coerceAtMost(7)) + &quot;-debug&quot;,
+</a><a href="#h0-0-28" id="h0-0-28" class="i">+            releaseUrl = latestRun.getAsJsonPrimitive(&quot;html_url&quot;)?.asString?.replace(&quot;github.com&quot;, &quot;nightly.link&quot;) ?: return@runCatching null
+</a><a href="#h0-0-29" id="h0-0-29" class="i">+        )
+</a><a href="#h0-0-30" id="h0-0-30" class="i">+    }.onFailure {
+</a><a href="#h0-0-31" id="h0-0-31" class="i">+        AbstractLogger.directError(&quot;Failed to fetch latest debug CI&quot;, it)
+</a><a href="#h0-0-32" id="h0-0-32" class="i">+    }.getOrNull()
+</a><a href="#h0-0-33" id="h0-0-33" class="i">+
+</a>     val latestRelease by lazy {
+<a href="#h0-0-35" id="h0-0-35" class="d">-        fetchLatestRelease()
+</a><a href="#h0-0-36" id="h0-0-36" class="i">+        if (BuildConfig.DEBUG) fetchLatestDebugCI() else fetchLatestRelease()
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeRootSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeRootSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeRootSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeRootSection.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -209,9 +209,7 @@ class HomeRootSection : Routes.Route() {
+</a>                 context.database.getQuickTiles()
+             }
+ 
+<a href="#h1-0-3" id="h1-0-3" class="d">-            val latestUpdate by rememberAsyncMutableState(defaultValue = null) {
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-                if (!BuildConfig.DEBUG) Updater.latestRelease else null
+</a><a href="#h1-0-5" id="h1-0-5" class="d">-            }
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+            val latestUpdate by rememberAsyncMutableState(defaultValue = null) { Updater.latestRelease }
+</a> 
+             if (latestUpdate != null) {
+                 Spacer(modifier = Modifier.height(10.dp))
+<a href="#h1-1" id="h1-1" class="h">@@ -228,15 +226,21 @@ class HomeRootSection : Routes.Route() {
+</a>                                 fontWeight = FontWeight.Bold,
+                             )
+                             Text(
+<a href="#h1-1-3" id="h1-1-3" class="d">-                                fontSize = 12.sp, text = translation.format(
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+                                fontSize = 12.sp,
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+                                text = translation.format(
+</a>                                     &quot;update_content&quot;,
+                                     &quot;version&quot; to (latestUpdate?.versionName ?: &quot;unknown&quot;)
+<a href="#h1-1-8" id="h1-1-8" class="d">-                                ), lineHeight = 20.sp
+</a><a href="#h1-1-9" id="h1-1-9" class="i">+                                ),
+</a><a href="#h1-1-10" id="h1-1-10" class="i">+                                lineHeight = 20.sp,
+</a><a href="#h1-1-11" id="h1-1-11" class="i">+                                overflow = TextOverflow.Ellipsis,
+</a>                             )
+                         }
+<a href="#h1-1-14" id="h1-1-14" class="d">-                        Button(onClick = {
+</a><a href="#h1-1-15" id="h1-1-15" class="d">-                            latestUpdate?.releaseUrl?.let { openExternalLink(it) }
+</a><a href="#h1-1-16" id="h1-1-16" class="d">-                        }, modifier = Modifier.height(40.dp)) {
+</a><a href="#h1-1-17" id="h1-1-17" class="i">+                        Button(
+</a><a href="#h1-1-18" id="h1-1-18" class="i">+                            modifier = Modifier.height(40.dp),
+</a><a href="#h1-1-19" id="h1-1-19" class="i">+                            onClick = {
+</a><a href="#h1-1-20" id="h1-1-20" class="i">+                                latestUpdate?.releaseUrl?.let { openExternalLink(it) }
+</a><a href="#h1-1-21" id="h1-1-21" class="i">+                            }
+</a><a href="#h1-1-22" id="h1-1-22" class="i">+                        ) {
+</a>                             Text(text = translation[&quot;update_button&quot;])
+                         }
+                     }
+</pre>
+</div>
+</body>
+</html>
