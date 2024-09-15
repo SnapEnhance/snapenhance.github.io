@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> sqlite_hook.rs (2554B) - <a href="../../../../../raw/native/rust/src/modules/sqlite_hook.rs">raw</a></p><hr/><pre id="blob">
+<p> sqlite_hook.rs (2641B) - <a href="../../../../../raw/native/rust/src/modules/sqlite_hook.rs">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> use std::{collections::HashMap, ffi::{c_void, CStr}, mem::size_of, ptr::addr_of_mut, sync::Mutex};
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> use jni::{objects::{JObject, JString}, JNIEnv};
@@ -73,35 +73,40 @@
 <a href="#l50" class="line" id="l50">     50</a>     let database_filename = get_jni_string(&amp;mut env, filename).expect(&quot;Failed to get database filename&quot;);
 <a href="#l51" class="line" id="l51">     51</a>     let mutex = SQLITE3_MUTEX_MAP.lock().unwrap().get(&amp;database_filename).map(|mutex| *mutex);
 <a href="#l52" class="line" id="l52">     52</a> 
-<a href="#l53" class="line" id="l53">     53</a>     if let Some(mut mutex) = mutex {
-<a href="#l54" class="line" id="l54">     54</a>         if unsafe { libc::pthread_mutex_lock(addr_of_mut!(mutex)) } != 0 {
-<a href="#l55" class="line" id="l55">     55</a>             error!(&quot;pthread_mutex_lock failed&quot;);
-<a href="#l56" class="line" id="l56">     56</a>             return;
-<a href="#l57" class="line" id="l57">     57</a>         }
-<a href="#l58" class="line" id="l58">     58</a> 
-<a href="#l59" class="line" id="l59">     59</a>         env.call_method(runnable, &quot;run&quot;, &quot;()V&quot;, &amp;[]).expect(&quot;Failed to call run method&quot;);
-<a href="#l60" class="line" id="l60">     60</a> 
-<a href="#l61" class="line" id="l61">     61</a>         if unsafe { libc::pthread_mutex_unlock(addr_of_mut!(mutex)) } != 0 {
-<a href="#l62" class="line" id="l62">     62</a>             error!(&quot;pthread_mutex_unlock failed&quot;);
-<a href="#l63" class="line" id="l63">     63</a>         }
-<a href="#l64" class="line" id="l64">     64</a>     } else {
-<a href="#l65" class="line" id="l65">     65</a>         warn!(&quot;No mutex found for database: {}&quot;, database_filename);
-<a href="#l66" class="line" id="l66">     66</a>     }
-<a href="#l67" class="line" id="l67">     67</a> }
-<a href="#l68" class="line" id="l68">     68</a> 
-<a href="#l69" class="line" id="l69">     69</a> 
-<a href="#l70" class="line" id="l70">     70</a> pub fn init() {
-<a href="#l71" class="line" id="l71">     71</a>     if let Some(signature) = sig::find_signature(
-<a href="#l72" class="line" id="l72">     72</a>         &amp;common::CLIENT_MODULE, 
-<a href="#l73" class="line" id="l73">     73</a>         &quot;FF FF 00 A9 3F 00 00 F9&quot;, -0x3C,
-<a href="#l74" class="line" id="l74">     74</a>         &quot;9A 46 90 46 78 44 89 46 05 68&quot;,-0xd
-<a href="#l75" class="line" id="l75">     75</a>     ) {
-<a href="#l76" class="line" id="l76">     76</a>         debug!(&quot;Found sqlite3_open signature: {:#x}&quot;, signature);
-<a href="#l77" class="line" id="l77">     77</a>         dobby_hook!(signature as *mut c_void, sqlite3_open);
-<a href="#l78" class="line" id="l78">     78</a>     } else {
-<a href="#l79" class="line" id="l79">     79</a>         warn!(&quot;Failed to find sqlite3_open signature&quot;);
-<a href="#l80" class="line" id="l80">     80</a>     }
-<a href="#l81" class="line" id="l81">     81</a> }</pre>
+<a href="#l53" class="line" id="l53">     53</a>     let call_runnable = || {
+<a href="#l54" class="line" id="l54">     54</a>         env.call_method(runnable, &quot;run&quot;, &quot;()V&quot;, &amp;[]).expect(&quot;Failed to call run method&quot;);
+<a href="#l55" class="line" id="l55">     55</a>     };
+<a href="#l56" class="line" id="l56">     56</a> 
+<a href="#l57" class="line" id="l57">     57</a>     if let Some(mut mutex) = mutex {
+<a href="#l58" class="line" id="l58">     58</a>         if unsafe { libc::pthread_mutex_lock(addr_of_mut!(mutex)) } != 0 {
+<a href="#l59" class="line" id="l59">     59</a>             error!(&quot;pthread_mutex_lock failed&quot;);
+<a href="#l60" class="line" id="l60">     60</a>             return;
+<a href="#l61" class="line" id="l61">     61</a>         }
+<a href="#l62" class="line" id="l62">     62</a> 
+<a href="#l63" class="line" id="l63">     63</a>         call_runnable();
+<a href="#l64" class="line" id="l64">     64</a> 
+<a href="#l65" class="line" id="l65">     65</a>         if unsafe { libc::pthread_mutex_unlock(addr_of_mut!(mutex)) } != 0 {
+<a href="#l66" class="line" id="l66">     66</a>             error!(&quot;pthread_mutex_unlock failed&quot;);
+<a href="#l67" class="line" id="l67">     67</a>         }
+<a href="#l68" class="line" id="l68">     68</a>     } else {
+<a href="#l69" class="line" id="l69">     69</a>         warn!(&quot;No mutex found for database: {}&quot;, database_filename);
+<a href="#l70" class="line" id="l70">     70</a>         call_runnable();
+<a href="#l71" class="line" id="l71">     71</a>     }
+<a href="#l72" class="line" id="l72">     72</a> }
+<a href="#l73" class="line" id="l73">     73</a> 
+<a href="#l74" class="line" id="l74">     74</a> 
+<a href="#l75" class="line" id="l75">     75</a> pub fn init() {
+<a href="#l76" class="line" id="l76">     76</a>     if let Some(signature) = sig::find_signature(
+<a href="#l77" class="line" id="l77">     77</a>         &amp;common::CLIENT_MODULE, 
+<a href="#l78" class="line" id="l78">     78</a>         &quot;FF FF 00 A9 3F 00 00 F9&quot;, -0x3C,
+<a href="#l79" class="line" id="l79">     79</a>         &quot;9A 46 90 46 78 44 89 46 05 68&quot;,-0xd
+<a href="#l80" class="line" id="l80">     80</a>     ) {
+<a href="#l81" class="line" id="l81">     81</a>         debug!(&quot;Found sqlite3_open signature: {:#x}&quot;, signature);
+<a href="#l82" class="line" id="l82">     82</a>         dobby_hook!(signature as *mut c_void, sqlite3_open);
+<a href="#l83" class="line" id="l83">     83</a>     } else {
+<a href="#l84" class="line" id="l84">     84</a>         warn!(&quot;Failed to find sqlite3_open signature&quot;);
+<a href="#l85" class="line" id="l85">     85</a>     }
+<a href="#l86" class="line" id="l86">     86</a> }</pre>
 </div>
 </body>
 </html>
