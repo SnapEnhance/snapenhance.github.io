@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> pull_request.yml (5150B) - <a href="../../../raw/.github/workflows/pull_request.yml">raw</a></p><hr/><pre id="blob">
+<p> pull_request.yml (3922B) - <a href="../../../raw/.github/workflows/pull_request.yml">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> name: Pull Request CI
 <a href="#l2" class="line" id="l2">      2</a> on:
 <a href="#l3" class="line" id="l3">      3</a>   pull_request:
@@ -113,8 +113,8 @@
 <a href="#l90" class="line" id="l90">     90</a>           name: snapenhance-armv7-debug
 <a href="#l91" class="line" id="l91">     91</a>           path: app/build/outputs/apk/armv7/debug/*.apk
 <a href="#l92" class="line" id="l92">     92</a> 
-<a href="#l93" class="line" id="l93">     93</a>   job_universal:
-<a href="#l94" class="line" id="l94">     94</a>     runs-on: macos-latest
+<a href="#l93" class="line" id="l93">     93</a>   job_manager:
+<a href="#l94" class="line" id="l94">     94</a>     runs-on: ubuntu-latest
 <a href="#l95" class="line" id="l95">     95</a>     steps:
 <a href="#l96" class="line" id="l96">     96</a>       - name: Checkout repo
 <a href="#l97" class="line" id="l97">     97</a>         uses: actions/checkout@v4
@@ -131,87 +131,44 @@
 <a href="#l108" class="line" id="l108">    108</a>       - name: Grant execute permission for gradlew
 <a href="#l109" class="line" id="l109">    109</a>         run: chmod +x gradlew
 <a href="#l110" class="line" id="l110">    110</a> 
-<a href="#l111" class="line" id="l111">    111</a>       - name: Setup NPM Dependencies
-<a href="#l112" class="line" id="l112">    112</a>         run: npm install typescript -g
+<a href="#l111" class="line" id="l111">    111</a>       - name: Build
+<a href="#l112" class="line" id="l112">    112</a>         run: ./gradlew manager:assembleDebug
 <a href="#l113" class="line" id="l113">    113</a> 
-<a href="#l114" class="line" id="l114">    114</a>       - name: Add Android targets for Rust
-<a href="#l115" class="line" id="l115">    115</a>         run: rustup target add armv7-linux-androideabi aarch64-linux-android
-<a href="#l116" class="line" id="l116">    116</a> 
-<a href="#l117" class="line" id="l117">    117</a>       - name: Build
-<a href="#l118" class="line" id="l118">    118</a>         run: ./gradlew assembleAllDebug
+<a href="#l114" class="line" id="l114">    114</a>       - name: Upload artifact
+<a href="#l115" class="line" id="l115">    115</a>         uses: actions/upload-artifact@v4
+<a href="#l116" class="line" id="l116">    116</a>         with:
+<a href="#l117" class="line" id="l117">    117</a>           name: manager
+<a href="#l118" class="line" id="l118">    118</a>           path: manager/build/outputs/apk/debug/*.apk
 <a href="#l119" class="line" id="l119">    119</a> 
-<a href="#l120" class="line" id="l120">    120</a>       - name: Get current build version
-<a href="#l121" class="line" id="l121">    121</a>         id: version-env
-<a href="#l122" class="line" id="l122">    122</a>         run: |
-<a href="#l123" class="line" id="l123">    123</a>           ./gradlew getVersion
-<a href="#l124" class="line" id="l124">    124</a>           echo &quot;version=$(cat app/build/version.txt)&quot; &gt;&gt; $GITHUB_ENV
-<a href="#l125" class="line" id="l125">    125</a> 
-<a href="#l126" class="line" id="l126">    126</a>       - name: Rename APK file
-<a href="#l127" class="line" id="l127">    127</a>         run: |
-<a href="#l128" class="line" id="l128">    128</a>           mv app/build/outputs/apk/all/debug/*.apk app/build/outputs/apk/all/debug/snapenhance-${{ env.version }}-universal-${GITHUB_SHA::7}.apk
-<a href="#l129" class="line" id="l129">    129</a> 
-<a href="#l130" class="line" id="l130">    130</a>       - name: Upload universal
-<a href="#l131" class="line" id="l131">    131</a>         uses: actions/upload-artifact@v4
-<a href="#l132" class="line" id="l132">    132</a>         with:
-<a href="#l133" class="line" id="l133">    133</a>           name: snapenhance-universal-debug
-<a href="#l134" class="line" id="l134">    134</a>           path: app/build/outputs/apk/all/debug/*.apk
-<a href="#l135" class="line" id="l135">    135</a> 
-<a href="#l136" class="line" id="l136">    136</a>   job_manager:
-<a href="#l137" class="line" id="l137">    137</a>     runs-on: ubuntu-latest
-<a href="#l138" class="line" id="l138">    138</a>     steps:
-<a href="#l139" class="line" id="l139">    139</a>       - name: Checkout repo
-<a href="#l140" class="line" id="l140">    140</a>         uses: actions/checkout@v4
-<a href="#l141" class="line" id="l141">    141</a>         with:
-<a href="#l142" class="line" id="l142">    142</a>           submodules: &#39;recursive&#39;
+<a href="#l120" class="line" id="l120">    120</a>   job_core:
+<a href="#l121" class="line" id="l121">    121</a>     runs-on: ubuntu-latest
+<a href="#l122" class="line" id="l122">    122</a>     steps:
+<a href="#l123" class="line" id="l123">    123</a>       - name: Checkout repo
+<a href="#l124" class="line" id="l124">    124</a>         uses: actions/checkout@v4
+<a href="#l125" class="line" id="l125">    125</a>         with:
+<a href="#l126" class="line" id="l126">    126</a>           submodules: &#39;recursive&#39;
+<a href="#l127" class="line" id="l127">    127</a> 
+<a href="#l128" class="line" id="l128">    128</a>       - name: Set up JDK 21
+<a href="#l129" class="line" id="l129">    129</a>         uses: actions/setup-java@v4
+<a href="#l130" class="line" id="l130">    130</a>         with:
+<a href="#l131" class="line" id="l131">    131</a>           java-version: &#39;21&#39;
+<a href="#l132" class="line" id="l132">    132</a>           distribution: &#39;temurin&#39;
+<a href="#l133" class="line" id="l133">    133</a>           cache: gradle
+<a href="#l134" class="line" id="l134">    134</a> 
+<a href="#l135" class="line" id="l135">    135</a>       - name: Grant execute permission for gradlew
+<a href="#l136" class="line" id="l136">    136</a>         run: chmod +x gradlew
+<a href="#l137" class="line" id="l137">    137</a> 
+<a href="#l138" class="line" id="l138">    138</a>       - name: Add Android targets for Rust
+<a href="#l139" class="line" id="l139">    139</a>         run: rustup target add armv7-linux-androideabi aarch64-linux-android
+<a href="#l140" class="line" id="l140">    140</a> 
+<a href="#l141" class="line" id="l141">    141</a>       - name: Build
+<a href="#l142" class="line" id="l142">    142</a>         run: ./gradlew assembleCoreDebug
 <a href="#l143" class="line" id="l143">    143</a> 
-<a href="#l144" class="line" id="l144">    144</a>       - name: Set up JDK 21
-<a href="#l145" class="line" id="l145">    145</a>         uses: actions/setup-java@v4
+<a href="#l144" class="line" id="l144">    144</a>       - name: Upload artifact
+<a href="#l145" class="line" id="l145">    145</a>         uses: actions/upload-artifact@v4
 <a href="#l146" class="line" id="l146">    146</a>         with:
-<a href="#l147" class="line" id="l147">    147</a>           java-version: &#39;21&#39;
-<a href="#l148" class="line" id="l148">    148</a>           distribution: &#39;temurin&#39;
-<a href="#l149" class="line" id="l149">    149</a>           cache: gradle
-<a href="#l150" class="line" id="l150">    150</a> 
-<a href="#l151" class="line" id="l151">    151</a>       - name: Grant execute permission for gradlew
-<a href="#l152" class="line" id="l152">    152</a>         run: chmod +x gradlew
-<a href="#l153" class="line" id="l153">    153</a> 
-<a href="#l154" class="line" id="l154">    154</a>       - name: Build
-<a href="#l155" class="line" id="l155">    155</a>         run: ./gradlew manager:assembleDebug
-<a href="#l156" class="line" id="l156">    156</a> 
-<a href="#l157" class="line" id="l157">    157</a>       - name: Upload artifact
-<a href="#l158" class="line" id="l158">    158</a>         uses: actions/upload-artifact@v4
-<a href="#l159" class="line" id="l159">    159</a>         with:
-<a href="#l160" class="line" id="l160">    160</a>           name: manager
-<a href="#l161" class="line" id="l161">    161</a>           path: manager/build/outputs/apk/debug/*.apk
-<a href="#l162" class="line" id="l162">    162</a> 
-<a href="#l163" class="line" id="l163">    163</a>   job_core:
-<a href="#l164" class="line" id="l164">    164</a>     runs-on: ubuntu-latest
-<a href="#l165" class="line" id="l165">    165</a>     steps:
-<a href="#l166" class="line" id="l166">    166</a>       - name: Checkout repo
-<a href="#l167" class="line" id="l167">    167</a>         uses: actions/checkout@v4
-<a href="#l168" class="line" id="l168">    168</a>         with:
-<a href="#l169" class="line" id="l169">    169</a>           submodules: &#39;recursive&#39;
-<a href="#l170" class="line" id="l170">    170</a> 
-<a href="#l171" class="line" id="l171">    171</a>       - name: Set up JDK 21
-<a href="#l172" class="line" id="l172">    172</a>         uses: actions/setup-java@v4
-<a href="#l173" class="line" id="l173">    173</a>         with:
-<a href="#l174" class="line" id="l174">    174</a>           java-version: &#39;21&#39;
-<a href="#l175" class="line" id="l175">    175</a>           distribution: &#39;temurin&#39;
-<a href="#l176" class="line" id="l176">    176</a>           cache: gradle
-<a href="#l177" class="line" id="l177">    177</a> 
-<a href="#l178" class="line" id="l178">    178</a>       - name: Grant execute permission for gradlew
-<a href="#l179" class="line" id="l179">    179</a>         run: chmod +x gradlew
-<a href="#l180" class="line" id="l180">    180</a> 
-<a href="#l181" class="line" id="l181">    181</a>       - name: Add Android targets for Rust
-<a href="#l182" class="line" id="l182">    182</a>         run: rustup target add armv7-linux-androideabi aarch64-linux-android
-<a href="#l183" class="line" id="l183">    183</a> 
-<a href="#l184" class="line" id="l184">    184</a>       - name: Build
-<a href="#l185" class="line" id="l185">    185</a>         run: ./gradlew assembleCoreDebug
-<a href="#l186" class="line" id="l186">    186</a> 
-<a href="#l187" class="line" id="l187">    187</a>       - name: Upload artifact
-<a href="#l188" class="line" id="l188">    188</a>         uses: actions/upload-artifact@v4
-<a href="#l189" class="line" id="l189">    189</a>         with:
-<a href="#l190" class="line" id="l190">    190</a>           name: core
-<a href="#l191" class="line" id="l191">    191</a>           path: app/build/outputs/apk/core/debug/*.apk
+<a href="#l147" class="line" id="l147">    147</a>           name: core
+<a href="#l148" class="line" id="l148">    148</a>           path: app/build/outputs/apk/core/debug/*.apk
 </pre>
 </div>
 </body>
