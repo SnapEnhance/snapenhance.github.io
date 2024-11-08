@@ -11,7 +11,7 @@ android {
     compileSdk = 34
 
     buildToolsVersion = "34.0.0"
-    ndkVersion = "27.1.12297006"
+    ndkVersion = System.getenv("ANDROID_NDK_HOME")?.trimEnd('/')?.substringAfterLast("/") ?: "27.1.12297006"
 
     buildFeatures {
         buildConfig = true
