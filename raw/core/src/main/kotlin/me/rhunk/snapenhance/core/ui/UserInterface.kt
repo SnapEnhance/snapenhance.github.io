@@ -1,13 +1,14 @@
 package me.rhunk.snapenhance.core.ui
 
+import android.content.res.Resources
 import android.graphics.Typeface
+import android.util.TypedValue
 import android.view.Gravity
 import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
 import me.rhunk.snapenhance.core.ModContext
 import me.rhunk.snapenhance.core.util.hook.HookStage
 import me.rhunk.snapenhance.core.util.hook.hook
-import me.rhunk.snapenhance.core.util.hook.hookConstructor
 import me.rhunk.snapenhance.core.util.ktx.isDarkTheme
 
 class UserInterface(
@@ -47,14 +48,36 @@ class UserInterface(
     fun init() {
         ResourcesCompat::class.java.hook("getFont", HookStage.BEFORE) { param ->
             val id = param.arg<Int>(1)
-            if (fontMap.containsKey(id)) {
+            if (id == avenirNextFontId) {
+                param.setResult(avenirNextTypeface)
+            } else if (fontMap.containsKey(id)) {
                 param.setResult(fontMap[id])
             }
         }
 
-        Typeface::class.java.hookConstructor(HookStage.AFTER) { param ->
-            val typeface = param.thisObject<Typeface>()
-            fontMap[typeface.weight] = typeface
+        lateinit var unhook: () -> Unit
+
+        unhook = Resources::class.java.hook("getValue", HookStage.AFTER) { param ->
+            val typedValue = param.argNullable<TypedValue>(1)?.takeIf {
+                it.resourceId != 0 &&
+                it.type == TypedValue.TYPE_STRING && it.string?.endsWith(".ttf") == true
+            } ?: return@hook
+
+            var offset = typedValue.resourceId.shr(8).shl(8)
+
+            while (true) {
+                var font = try {
+                    context.resources.getFont(++offset)
+                } catch (_: Throwable) {
+                    break
+                }
+
+                fontMap[font.weight] = font
+            }
+
+            unhook()
+        }.let {
+            { it.forEach { it.unhook() } }
         }
     }
 }
