@@ -12,7 +12,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.UserHandle
 import de.robv.android.xposed.XposedBridge
-import de.robv.android.xposed.XposedHelpers
 import kotlinx.coroutines.*
 import me.rhunk.snapenhance.common.data.ContentType
 import me.rhunk.snapenhance.common.data.FileType
@@ -30,6 +29,7 @@ import me.rhunk.snapenhance.core.features.impl.downloader.decoder.MessageDecoder
 import me.rhunk.snapenhance.core.features.impl.experiments.BetterTranscript
 import me.rhunk.snapenhance.core.features.impl.spying.StealthMode
 import me.rhunk.snapenhance.core.util.hook.HookStage
+import me.rhunk.snapenhance.core.util.hook.findRestrictedConstructor
 import me.rhunk.snapenhance.core.util.hook.findRestrictedMethod
 import me.rhunk.snapenhance.core.util.hook.hook
 import me.rhunk.snapenhance.core.util.ktx.setObjectField
@@ -69,13 +69,7 @@ class Notifications : Feature("Notifications") {
     private val sentNotifications = mutableMapOf<Int, String>() // notificationId => conversationId
 
     private val notifyAsUserMethod by lazy {
-        XposedHelpers.findMethodExact(
-            NotificationManager::class.java, "notifyAsUser",
-            String::class.java,
-            Int::class.javaPrimitiveType,
-            Notification::class.java,
-            UserHandle::class.java
-        )
+        NotificationManager::class.java.findRestrictedMethod { it.name == "notifyAsUser" } ?: throw NoSuchMethodException("notifyAsUser")
     }
 
     private val notificationManager by lazy {
@@ -85,11 +79,9 @@ class Notifications : Feature("Notifications") {
     private val translations by lazy { context.translation.getCategory("better_notifications") }
     private val config by lazy { context.config.messaging.betterNotifications }
 
-    private fun newNotificationBuilder(notification: Notification) = XposedHelpers.newInstance(
-        Notification.Builder::class.java,
-        context.androidContext,
-        notification
-    ) as Notification.Builder
+    private fun newNotificationBuilder(notification: Notification) = Notification.Builder::class.java.findRestrictedConstructor {
+        it.parameterTypes.size == 2 && it.parameterTypes[1] == Notification::class.java
+    }?.newInstance(context.androidContext, notification) as? Notification.Builder ?: throw NoSuchMethodException("Notification.Builder")
 
     private fun setNotificationText(notification: Notification, text: String) {
         notification.extras.putString("android.text", text)
