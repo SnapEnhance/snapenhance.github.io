@@ -284,10 +284,9 @@ class HomeSettings : Routes.Route() {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
+                    PreferenceToggle(context.sharedPreferences, key = "disable_sif_prod", text = "Disable Snap Integrity Fix")
                     PreferenceToggle(context.sharedPreferences, key = "disable_feature_loading", text = "Disable Feature Loading")
                     PreferenceToggle(context.sharedPreferences, key = "disable_mapper", text = "Disable Auto Mapper")
-                    PreferenceToggle(context.sharedPreferences, key = "disable_sif", text = "Disable Security Features")
-                    PreferenceToggle(context.sharedPreferences, key = "disable_mod_detection_version_check", text = "Disable Mod Detection Version Check")
                 }
             }
             Spacer(modifier = Modifier.height(50.dp))

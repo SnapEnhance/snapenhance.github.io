@@ -91,15 +91,15 @@ class HalfSwipeNotifier : Feature("Half Swipe Notifier") {
 
             if (minDuration > peekingDuration || maxDuration < peekingDuration) return
 
-            val groupName = context.database.getFeedEntryByConversationId(conversationId)?.feedDisplayName
+            val feedEntry = context.database.getFeedEntryByConversationId(conversationId)
             val friendInfo = context.database.getFriendInfo(userId) ?: return
 
             Notification.Builder(context.androidContext, channelId)
-                .setContentTitle(groupName ?: friendInfo.displayName ?: friendInfo.mutableUsername)
-                .setContentText(if (groupName != null) {
+                .setContentTitle(feedEntry?.feedDisplayName ?: friendInfo.displayName ?: friendInfo.mutableUsername)
+                .setContentText(if (feedEntry?.conversationType == 1) {
                     translation.format("notification_content_group",
                         "friend" to (friendInfo.displayName ?: friendInfo.mutableUsername).toString(),
-                        "group" to groupName,
+                        "group" to (feedEntry.feedDisplayName ?: "Group"),
                         "duration" to peekingDuration.toString()
                     )
                 } else {

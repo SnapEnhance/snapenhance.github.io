@@ -1,7 +1,5 @@
 package me.rhunk.snapenhance.ui.manager.pages.home
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -38,8 +36,10 @@ import me.rhunk.snapenhance.R
 import me.rhunk.snapenhance.action.EnumQuickActions
 import me.rhunk.snapenhance.common.BuildConfig
 import me.rhunk.snapenhance.common.action.EnumAction
+import me.rhunk.snapenhance.common.ui.TopBarActionButton
 import me.rhunk.snapenhance.common.ui.rememberAsyncMutableState
 import me.rhunk.snapenhance.common.ui.rememberAsyncMutableStateList
+import me.rhunk.snapenhance.common.util.ktx.openLink
 import me.rhunk.snapenhance.core.ui.Snapenhance
 import me.rhunk.snapenhance.storage.getQuickTiles
 import me.rhunk.snapenhance.storage.setQuickTiles
@@ -54,7 +54,6 @@ class HomeRootSection : Routes.Route() {
     }
 
     private lateinit var activityLauncherHelper: ActivityLauncherHelper
-
 
     private val cards by lazy {
         EnumQuickActions.entries.map {
@@ -93,24 +92,11 @@ class HomeRootSection : Routes.Route() {
         }
     }
 
-    private fun openExternalLink(link: String) {
-        kotlin.runCatching {
-            context.activity?.startActivity(Intent(Intent.ACTION_VIEW).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                data = Uri.parse(link)
-            })
-        }.onFailure {
-            context.log.error("Failed to open external link", it)
-            context.shortToast("Failed to open external link. Check logs for more details.")
-        }
-    }
-
     @Composable
     fun ExternalLinkIcon(
         modifier: Modifier = Modifier,
         size: Dp = 32.dp,
         imageVector: ImageVector,
-        link: String
     ) {
         Icon(
             imageVector = imageVector,
@@ -120,31 +106,41 @@ class HomeRootSection : Routes.Route() {
                 .size(size)
                 .clip(RoundedCornerShape(50))
                 .then(modifier)
-                .clickable { openExternalLink(link) }
         )
     }
 
+    override val title: @Composable (() -> Unit)? = {}
 
     override val init: () -> Unit = {
         activityLauncherHelper = ActivityLauncherHelper(context.activity!!)
     }
 
     override val topBarActions: @Composable (RowScope.() -> Unit) = {
-        IconButton(onClick = {
-            routes.homeLogs.navigate()
-        }) {
-            Icon(Icons.Filled.BugReport, contentDescription = null)
-        }
-        IconButton(onClick = {
-            routes.settings.navigate()
-        }) {
-            Icon(Icons.Filled.Settings, contentDescription = null)
-        }
+        TopBarActionButton(
+            onClick = {
+                routes.homeLogs.navigate()
+            },
+            icon = Icons.Filled.BugReport,
+            text = context.translation["manager.routes.home_logs"]
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        TopBarActionButton(
+            onClick = {
+                routes.settings.navigate()
+            },
+            icon = Icons.Filled.Settings,
+            text = context.translation["manager.routes.home_settings"]
+        )
     }
-
 
     @OptIn(ExperimentalLayoutApi::class)
     override val content: @Composable (NavBackStackEntry) -> Unit = {
+        val avenirNext = remember {
+            FontFamily(
+                Font(R.font.avenir_next_medium, FontWeight.Medium)
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -164,12 +160,8 @@ class HomeRootSection : Routes.Route() {
                     "version_title",
                     "versionName" to BuildConfig.VERSION_NAME
                 ),
-                fontSize = 12.sp,
-                fontFamily = remember {
-                    FontFamily(
-                        Font(R.font.avenir_next_medium, FontWeight.Medium)
-                    )
-                },
+                fontSize = 14.sp,
+                fontFamily = avenirNext,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
 
@@ -183,25 +175,32 @@ class HomeRootSection : Routes.Route() {
                     .padding(all = 5.dp)
             ) {
                 ExternalLinkIcon(
+                    modifier = Modifier.clickable {
+                        context.androidContext.openLink("https://codeberg.org/SnapEnhance/SnapEnhance")
+                    },
                     imageVector = ImageVector.vectorResource(id = R.drawable.ic_codeberg),
-                    link = "https://codeberg.org/SnapEnhance/SnapEnhance"
                 )
 
                 ExternalLinkIcon(
+                    modifier = Modifier.clickable {
+                        context.androidContext.openLink("https://t.me/snapenhance")
+                    },
                     imageVector = ImageVector.vectorResource(id = R.drawable.ic_telegram),
-                    link = "https://t.me/snapenhance"
                 )
 
                 ExternalLinkIcon(
+                    modifier = Modifier.clickable {
+                        context.androidContext.openLink("https://github.com/rhunk/SnapEnhance")
+                    },
                     imageVector = ImageVector.vectorResource(id = R.drawable.ic_github),
-                    link = "https://github.com/rhunk/SnapEnhance"
                 )
 
                 ExternalLinkIcon(
-                    modifier = Modifier.offset(x = (-3).dp),
+                    modifier = Modifier.offset(x = (-3).dp).clickable {
+                        context.androidContext.openLink("https://github.com/rhunk/SnapEnhance/wiki")
+                    },
                     size = 40.dp,
                     imageVector = Icons.AutoMirrored.Default.Help,
-                    link = "https://github.com/rhunk/SnapEnhance/wiki",
                 )
             }
 
@@ -238,7 +237,7 @@ class HomeRootSection : Routes.Route() {
                         Button(
                             modifier = Modifier.height(40.dp),
                             onClick = {
-                                latestUpdate?.releaseUrl?.let { openExternalLink(it) }
+                                latestUpdate?.releaseUrl?.let { context.androidContext.openLink(it) }
                             }
                         ) {
                             Text(text = translation["update_button"])
@@ -294,7 +293,7 @@ class HomeRootSection : Routes.Route() {
                             buildSummary.getStringAnnotations(
                                 tag = "git_hash", start = offset, end = offset
                             ).firstOrNull()?.let {
-                                openExternalLink("https://codeberg.org/SnapEnhance/SnapEnhance/commit/${it.item}")
+                                context.androidContext.openLink("https://codeberg.org/SnapEnhance/SnapEnhance/commit/${it.item}")
                             }
                         }
                     )

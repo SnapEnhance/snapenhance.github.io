@@ -37,6 +37,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.rhunk.snapenhance.common.config.*
+import me.rhunk.snapenhance.common.ui.TopBarActionButton
 import me.rhunk.snapenhance.common.ui.rememberAsyncMutableStateList
 import me.rhunk.snapenhance.common.ui.transparentTextFieldColors
 import me.rhunk.snapenhance.ui.manager.MainActivity
@@ -531,16 +532,26 @@ class FeaturesRootSection : Routes.Route() {
             }
         }
 
-        IconButton(onClick = {
-            showSearchBar = showSearchBar.not()
-            if (!showSearchBar && routes.currentDestination == SEARCH_FEATURE_ROUTE) {
-                navigateToMainRoot()
+
+        if (showSearchBar) {
+            IconButton(onClick = {
+                showSearchBar = false
+                if (routes.currentDestination == SEARCH_FEATURE_ROUTE) {
+                    navigateToMainRoot()
+                }
+            }) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = null
+                )
             }
-        }) {
-            Icon(
-                imageVector = if (showSearchBar) Icons.Filled.Close
-                else Icons.Filled.Search,
-                contentDescription = null
+        } else {
+            TopBarActionButton(
+                onClick = {
+                    showSearchBar = true
+                },
+                icon = Icons.Filled.Search,
+                text = translation["search_button"]
             )
         }
 
