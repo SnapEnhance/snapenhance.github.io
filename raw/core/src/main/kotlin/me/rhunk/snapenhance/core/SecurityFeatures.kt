@@ -30,8 +30,8 @@ class SecurityFeatures(
 
     fun init(): Boolean {
         val snapchatVersionCode = context.androidContext.packageManager?.getPackageInfo(context.androidContext.packageName, 0)?.longVersionCode ?: throw IllegalStateException("Failed to get version code")
-        val mustUseSafeMode = MOD_DETECTION_VERSION_CHECK.checkVersion(snapchatVersionCode)?.second == VersionRequirement.OLDER_REQUIRED
-        val debugDisable = context.bridgeClient.getDebugProp("disable_sif_prod", "false") != "true"
+        val shouldUseSafeMode = MOD_DETECTION_VERSION_CHECK.checkVersion(snapchatVersionCode)?.second == VersionRequirement.OLDER_REQUIRED // true if version is >12.81.0.44
+        val debugDisable = context.bridgeClient.getDebugProp("disable_sif_prod", "false") == "true"
 
         context.config.experimental.nativeHooks.customSharedLibrary.get().takeIf { it.isNotEmpty() }?.let {
             runCatching {
@@ -45,7 +45,7 @@ class SecurityFeatures(
             }
         }
 
-        if (debugDisable && !mustUseSafeMode) {
+        if (!debugDisable) {
             runCatching {
                 context.native.loadSharedLibrary(
                     context.fileHandlerManager.getFileHandle(FileHandleScope.INTERNAL.key, InternalFileHandleType.SIF.key)
@@ -108,7 +108,7 @@ class SecurityFeatures(
         }
 
         val status = getStatus()
-        val safeMode = mustUseSafeMode || (status == null || status < 2)
+        val safeMode = shouldUseSafeMode && (status == null || status < 2)
 
         if (safeMode && !debugDisable) {
             context.features.addActivityCreateListener {

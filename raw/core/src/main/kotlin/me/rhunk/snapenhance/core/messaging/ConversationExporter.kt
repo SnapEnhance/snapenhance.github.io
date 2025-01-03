@@ -3,6 +3,7 @@ package me.rhunk.snapenhance.core.messaging
 import android.util.Base64InputStream
 import android.util.Base64OutputStream
 import com.google.gson.stream.JsonWriter
+import kotlinx.coroutines.runBlocking
 import me.rhunk.snapenhance.common.BuildConfig
 import me.rhunk.snapenhance.common.data.ContentType
 import me.rhunk.snapenhance.common.database.impl.FriendFeedEntry
@@ -132,33 +133,35 @@ class ConversationExporter(
                 for (i in 0..5) {
                     printLog("downloading ${attachment.boltKey ?: attachment.directUrl}... (attempt ${i + 1}/5)")
                     runCatching {
-                        attachment.openStream { downloadedInputStream, _ ->
-                            MediaDownloaderHelper.getSplitElements(downloadedInputStream!!) { type, splitInputStream ->
-                                val mediaKey = "${type}_${attachment.mediaUniqueId}"
-                                val bufferedInputStream = BufferedInputStream(splitInputStream)
-                                val fileType = MediaDownloaderHelper.getFileType(bufferedInputStream)
-                                val mediaFile = cacheFolder.resolve("$mediaKey.${fileType.fileExtension}")
+                        runBlocking {
+                            attachment.openStream { downloadedInputStream, _ ->
+                                MediaDownloaderHelper.getSplitElements(downloadedInputStream!!) { type, splitInputStream ->
+                                    val mediaKey = "${type}_${attachment.mediaUniqueId}"
+                                    val bufferedInputStream = BufferedInputStream(splitInputStream)
+                                    val fileType = MediaDownloaderHelper.getFileType(bufferedInputStream)
+                                    val mediaFile = cacheFolder.resolve("$mediaKey.${fileType.fileExtension}")
 
-                                mediaFile.outputStream().use { fos ->
-                                    bufferedInputStream.copyTo(fos)
-                                }
+                                    mediaFile.outputStream().use { fos ->
+                                        bufferedInputStream.copyTo(fos)
+                                    }
 
-                                writeThreadExecutor.execute {
-                                    outputFileStream.write("<div class=\"media-$mediaKey\"><!-- ".toByteArray())
-                                    mediaFile.inputStream().use {
-                                        val deflateInputStream = DeflaterInputStream(it, Deflater(Deflater.BEST_SPEED, true))
-                                        (newBase64InputStream.newInstance(
-                                            deflateInputStream,
-                                            android.util.Base64.DEFAULT or android.util.Base64.NO_WRAP,
-                                            true
-                                        ) as InputStream).copyTo(outputFileStream)
-                                        outputFileStream.write(" --></div>\n".toByteArray())
-                                        outputFileStream.flush()
+                                    writeThreadExecutor.execute {
+                                        outputFileStream.write("<div class=\"media-$mediaKey\"><!-- ".toByteArray())
+                                        mediaFile.inputStream().use {
+                                            val deflateInputStream = DeflaterInputStream(it, Deflater(Deflater.BEST_SPEED, true))
+                                            (newBase64InputStream.newInstance(
+                                                deflateInputStream,
+                                                android.util.Base64.DEFAULT or android.util.Base64.NO_WRAP,
+                                                true
+                                            ) as InputStream).copyTo(outputFileStream)
+                                            outputFileStream.write(" --></div>\n".toByteArray())
+                                            outputFileStream.flush()
+                                        }
                                     }
                                 }
-                            }
-                            writeThreadExecutor.execute {
-                                downloadedMediaIdCache.add(attachment.mediaUniqueId!!)
+                                writeThreadExecutor.execute {
+                                    downloadedMediaIdCache.add(attachment.mediaUniqueId!!)
+                                }
                             }
                         }
                         return@decode

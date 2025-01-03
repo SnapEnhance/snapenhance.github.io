@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> LoggerWrapper.kt (19500B) - <a href="../../../../../../../../../../../raw/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt">raw</a></p><hr/><pre id="blob">
+<p> LoggerWrapper.kt (19326B) - <a href="../../../../../../../../../../../raw/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.common.bridge.wrapper
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import android.content.ContentValues
@@ -422,71 +422,70 @@
 <a href="#l399" class="line" id="l399">    399</a>     }
 <a href="#l400" class="line" id="l400">    400</a> 
 <a href="#l401" class="line" id="l401">    401</a>     fun getConversationInfo(conversationId: String): ConversationInfo? {
-<a href="#l402" class="line" id="l402">    402</a>         val participantSize = database.rawQuery(&quot;SELECT COUNT(DISTINCT user_id) FROM messages WHERE conversation_id = ?&quot;, arrayOf(conversationId)).use {
-<a href="#l403" class="line" id="l403">    403</a>             if (!it.moveToFirst()) return null
-<a href="#l404" class="line" id="l404">    404</a>             it.getInt(0)
-<a href="#l405" class="line" id="l405">    405</a>         }
-<a href="#l406" class="line" id="l406">    406</a>         val groupTitle = if (participantSize &gt; 2) database.rawQuery(&quot;SELECT group_title FROM messages WHERE conversation_id = ? AND group_title IS NOT NULL LIMIT 1&quot;, arrayOf(conversationId)).use {
-<a href="#l407" class="line" id="l407">    407</a>             if (!it.moveToFirst()) return@use null
-<a href="#l408" class="line" id="l408">    408</a>             it.getStringOrNull(&quot;group_title&quot;)
-<a href="#l409" class="line" id="l409">    409</a>         } else null
-<a href="#l410" class="line" id="l410">    410</a>         val usernames = database.rawQuery(&quot;SELECT DISTINCT username FROM messages WHERE conversation_id = ?&quot;, arrayOf(conversationId)).use {
-<a href="#l411" class="line" id="l411">    411</a>             val usernames = mutableListOf&lt;String&gt;()
-<a href="#l412" class="line" id="l412">    412</a>             while (it.moveToNext()) {
-<a href="#l413" class="line" id="l413">    413</a>                 usernames.add(it.getString(0))
-<a href="#l414" class="line" id="l414">    414</a>             }
-<a href="#l415" class="line" id="l415">    415</a>             usernames
-<a href="#l416" class="line" id="l416">    416</a>         }
-<a href="#l417" class="line" id="l417">    417</a> 
-<a href="#l418" class="line" id="l418">    418</a>         return ConversationInfo(conversationId, participantSize, groupTitle, usernames)
-<a href="#l419" class="line" id="l419">    419</a>     }
-<a href="#l420" class="line" id="l420">    420</a> 
-<a href="#l421" class="line" id="l421">    421</a>     override fun getChatEdits(conversationId: String, messageId: Long): List&lt;LoggedChatEdit&gt; {
-<a href="#l422" class="line" id="l422">    422</a>         val edits = mutableListOf&lt;LoggedChatEdit&gt;()
-<a href="#l423" class="line" id="l423">    423</a>         database.rawQuery(
-<a href="#l424" class="line" id="l424">    424</a>             &quot;SELECT added_timestamp, message_text FROM chat_edits WHERE conversation_id = ? AND message_id = ? ORDER BY added_timestamp ASC&quot;,
-<a href="#l425" class="line" id="l425">    425</a>             arrayOf(conversationId, messageId.toString())
-<a href="#l426" class="line" id="l426">    426</a>         ).use { cursor -&gt;
-<a href="#l427" class="line" id="l427">    427</a>             while (cursor.moveToNext()) {
-<a href="#l428" class="line" id="l428">    428</a>                 edits.add(LoggedChatEdit().apply {
-<a href="#l429" class="line" id="l429">    429</a>                     timestamp = cursor.getLongOrNull(&quot;added_timestamp&quot;) ?: return@apply
-<a href="#l430" class="line" id="l430">    430</a>                     message = cursor.getStringOrNull(&quot;message_text&quot;)
-<a href="#l431" class="line" id="l431">    431</a>                 }.takeIf { it.timestamp &gt; 0L } ?: continue)
-<a href="#l432" class="line" id="l432">    432</a>             }
-<a href="#l433" class="line" id="l433">    433</a>         }
-<a href="#l434" class="line" id="l434">    434</a>         return edits
-<a href="#l435" class="line" id="l435">    435</a>     }
-<a href="#l436" class="line" id="l436">    436</a> 
-<a href="#l437" class="line" id="l437">    437</a>     fun fetchMessages(
-<a href="#l438" class="line" id="l438">    438</a>         conversationId: String,
-<a href="#l439" class="line" id="l439">    439</a>         fromTimestamp: Long,
-<a href="#l440" class="line" id="l440">    440</a>         limit: Int,
-<a href="#l441" class="line" id="l441">    441</a>         reverseOrder: Boolean = true,
-<a href="#l442" class="line" id="l442">    442</a>         filter: ((LoggedMessage) -&gt; Boolean)? = null
-<a href="#l443" class="line" id="l443">    443</a>     ): List&lt;LoggedMessage&gt; {
-<a href="#l444" class="line" id="l444">    444</a>         val messages = mutableListOf&lt;LoggedMessage&gt;()
-<a href="#l445" class="line" id="l445">    445</a>         database.rawQuery(
-<a href="#l446" class="line" id="l446">    446</a>             &quot;SELECT * FROM messages WHERE conversation_id = ? AND send_timestamp ${if (reverseOrder) &quot;&lt;&quot; else &quot;&gt;&quot;} ? ORDER BY send_timestamp ${if (reverseOrder) &quot;DESC&quot; else &quot;ASC&quot;}&quot;,
-<a href="#l447" class="line" id="l447">    447</a>             arrayOf(conversationId, fromTimestamp.toString())
-<a href="#l448" class="line" id="l448">    448</a>         ).use {
-<a href="#l449" class="line" id="l449">    449</a>             while (it.moveToNext() &amp;&amp; messages.size &lt; limit) {
-<a href="#l450" class="line" id="l450">    450</a>                 val message = LoggedMessage(
-<a href="#l451" class="line" id="l451">    451</a>                     messageId = it.getLongOrNull(&quot;message_id&quot;) ?: continue,
-<a href="#l452" class="line" id="l452">    452</a>                     conversationId = it.getStringOrNull(&quot;conversation_id&quot;) ?: continue,
-<a href="#l453" class="line" id="l453">    453</a>                     userId = it.getStringOrNull(&quot;user_id&quot;) ?: continue,
-<a href="#l454" class="line" id="l454">    454</a>                     username = it.getStringOrNull(&quot;username&quot;) ?: continue,
-<a href="#l455" class="line" id="l455">    455</a>                     sendTimestamp = it.getLongOrNull(&quot;send_timestamp&quot;) ?: continue,
-<a href="#l456" class="line" id="l456">    456</a>                     addedTimestamp = it.getLongOrNull(&quot;added_timestamp&quot;) ?: continue,
-<a href="#l457" class="line" id="l457">    457</a>                     groupTitle = it.getStringOrNull(&quot;group_title&quot;),
-<a href="#l458" class="line" id="l458">    458</a>                     messageData = it.getBlobOrNull(&quot;message_data&quot;) ?: continue
-<a href="#l459" class="line" id="l459">    459</a>                 )
-<a href="#l460" class="line" id="l460">    460</a>                 if (filter != null &amp;&amp; !filter(message)) continue
-<a href="#l461" class="line" id="l461">    461</a>                 messages.add(message)
-<a href="#l462" class="line" id="l462">    462</a>             }
-<a href="#l463" class="line" id="l463">    463</a>         }
-<a href="#l464" class="line" id="l464">    464</a>         return messages
-<a href="#l465" class="line" id="l465">    465</a>     }
-<a href="#l466" class="line" id="l466">    466</a> }</pre>
+<a href="#l402" class="line" id="l402">    402</a>         val usernames = database.rawQuery(&quot;SELECT DISTINCT username FROM messages WHERE conversation_id = ?&quot;, arrayOf(conversationId)).use {
+<a href="#l403" class="line" id="l403">    403</a>             val usernames = mutableListOf&lt;String&gt;()
+<a href="#l404" class="line" id="l404">    404</a>             while (it.moveToNext()) {
+<a href="#l405" class="line" id="l405">    405</a>                 usernames.add(it.getString(0))
+<a href="#l406" class="line" id="l406">    406</a>             }
+<a href="#l407" class="line" id="l407">    407</a>             usernames
+<a href="#l408" class="line" id="l408">    408</a>         }
+<a href="#l409" class="line" id="l409">    409</a> 
+<a href="#l410" class="line" id="l410">    410</a>         if (usernames.size &gt; 2) { usernames.remove(&quot;myai&quot;) }
+<a href="#l411" class="line" id="l411">    411</a> 
+<a href="#l412" class="line" id="l412">    412</a>         val groupTitle = if (usernames.size &gt; 2) database.rawQuery(&quot;SELECT group_title FROM messages WHERE conversation_id = ? AND group_title IS NOT NULL LIMIT 1&quot;, arrayOf(conversationId)).use {
+<a href="#l413" class="line" id="l413">    413</a>             if (!it.moveToFirst()) return@use null
+<a href="#l414" class="line" id="l414">    414</a>             it.getStringOrNull(&quot;group_title&quot;)
+<a href="#l415" class="line" id="l415">    415</a>         } else null
+<a href="#l416" class="line" id="l416">    416</a> 
+<a href="#l417" class="line" id="l417">    417</a>         return ConversationInfo(conversationId, usernames.size, groupTitle, usernames)
+<a href="#l418" class="line" id="l418">    418</a>     }
+<a href="#l419" class="line" id="l419">    419</a> 
+<a href="#l420" class="line" id="l420">    420</a>     override fun getChatEdits(conversationId: String, messageId: Long): List&lt;LoggedChatEdit&gt; {
+<a href="#l421" class="line" id="l421">    421</a>         val edits = mutableListOf&lt;LoggedChatEdit&gt;()
+<a href="#l422" class="line" id="l422">    422</a>         database.rawQuery(
+<a href="#l423" class="line" id="l423">    423</a>             &quot;SELECT added_timestamp, message_text FROM chat_edits WHERE conversation_id = ? AND message_id = ? ORDER BY added_timestamp ASC&quot;,
+<a href="#l424" class="line" id="l424">    424</a>             arrayOf(conversationId, messageId.toString())
+<a href="#l425" class="line" id="l425">    425</a>         ).use { cursor -&gt;
+<a href="#l426" class="line" id="l426">    426</a>             while (cursor.moveToNext()) {
+<a href="#l427" class="line" id="l427">    427</a>                 edits.add(LoggedChatEdit().apply {
+<a href="#l428" class="line" id="l428">    428</a>                     timestamp = cursor.getLongOrNull(&quot;added_timestamp&quot;) ?: return@apply
+<a href="#l429" class="line" id="l429">    429</a>                     message = cursor.getStringOrNull(&quot;message_text&quot;)
+<a href="#l430" class="line" id="l430">    430</a>                 }.takeIf { it.timestamp &gt; 0L } ?: continue)
+<a href="#l431" class="line" id="l431">    431</a>             }
+<a href="#l432" class="line" id="l432">    432</a>         }
+<a href="#l433" class="line" id="l433">    433</a>         return edits
+<a href="#l434" class="line" id="l434">    434</a>     }
+<a href="#l435" class="line" id="l435">    435</a> 
+<a href="#l436" class="line" id="l436">    436</a>     fun fetchMessages(
+<a href="#l437" class="line" id="l437">    437</a>         conversationId: String,
+<a href="#l438" class="line" id="l438">    438</a>         fromTimestamp: Long,
+<a href="#l439" class="line" id="l439">    439</a>         limit: Int,
+<a href="#l440" class="line" id="l440">    440</a>         reverseOrder: Boolean = true,
+<a href="#l441" class="line" id="l441">    441</a>         filter: ((LoggedMessage) -&gt; Boolean)? = null
+<a href="#l442" class="line" id="l442">    442</a>     ): List&lt;LoggedMessage&gt; {
+<a href="#l443" class="line" id="l443">    443</a>         val messages = mutableListOf&lt;LoggedMessage&gt;()
+<a href="#l444" class="line" id="l444">    444</a>         database.rawQuery(
+<a href="#l445" class="line" id="l445">    445</a>             &quot;SELECT * FROM messages WHERE conversation_id = ? AND send_timestamp ${if (reverseOrder) &quot;&lt;&quot; else &quot;&gt;&quot;} ? ORDER BY send_timestamp ${if (reverseOrder) &quot;DESC&quot; else &quot;ASC&quot;}&quot;,
+<a href="#l446" class="line" id="l446">    446</a>             arrayOf(conversationId, fromTimestamp.toString())
+<a href="#l447" class="line" id="l447">    447</a>         ).use {
+<a href="#l448" class="line" id="l448">    448</a>             while (it.moveToNext() &amp;&amp; messages.size &lt; limit) {
+<a href="#l449" class="line" id="l449">    449</a>                 val message = LoggedMessage(
+<a href="#l450" class="line" id="l450">    450</a>                     messageId = it.getLongOrNull(&quot;message_id&quot;) ?: continue,
+<a href="#l451" class="line" id="l451">    451</a>                     conversationId = it.getStringOrNull(&quot;conversation_id&quot;) ?: continue,
+<a href="#l452" class="line" id="l452">    452</a>                     userId = it.getStringOrNull(&quot;user_id&quot;) ?: continue,
+<a href="#l453" class="line" id="l453">    453</a>                     username = it.getStringOrNull(&quot;username&quot;) ?: continue,
+<a href="#l454" class="line" id="l454">    454</a>                     sendTimestamp = it.getLongOrNull(&quot;send_timestamp&quot;) ?: continue,
+<a href="#l455" class="line" id="l455">    455</a>                     addedTimestamp = it.getLongOrNull(&quot;added_timestamp&quot;) ?: continue,
+<a href="#l456" class="line" id="l456">    456</a>                     groupTitle = it.getStringOrNull(&quot;group_title&quot;),
+<a href="#l457" class="line" id="l457">    457</a>                     messageData = it.getBlobOrNull(&quot;message_data&quot;) ?: continue
+<a href="#l458" class="line" id="l458">    458</a>                 )
+<a href="#l459" class="line" id="l459">    459</a>                 if (filter != null &amp;&amp; !filter(message)) continue
+<a href="#l460" class="line" id="l460">    460</a>                 messages.add(message)
+<a href="#l461" class="line" id="l461">    461</a>             }
+<a href="#l462" class="line" id="l462">    462</a>         }
+<a href="#l463" class="line" id="l463">    463</a>         return messages
+<a href="#l464" class="line" id="l464">    464</a>     }
+<a href="#l465" class="line" id="l465">    465</a> }</pre>
 </div>
 </body>
 </html>
