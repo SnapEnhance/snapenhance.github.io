@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>perf(app): log reader - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/fbeb3d87ec4a60e9543c9ea4e923217ec7c457d6.html">fbeb3d87ec4a60e9543c9ea4e923217ec7c457d6</a>
+<b>parent</b> <a href="../commit/8bb2cb37d64fe6b9aaf62c88b69947228755beaa.html">8bb2cb37d64fe6b9aaf62c88b69947228755beaa</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 10 Jan 2025 17:24:18 +0100
+
+perf(app): log reader
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/LogManager.kt</a></td><td> | </td><td class="num">32</td><td><span class="i">++++++++++++++++++++++</span><span class="d">----------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeLogs.kt</a></td><td> | </td><td class="num">24</td><td><span class="i">++++++++++</span><span class="d">--------------</span></td></tr>
+</table></pre><pre>2 files changed, 32 insertions(+), 24 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/LogManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/LogManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/LogManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/LogManager.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -78,18 +78,30 @@ class LogReader(
+</a>     }
+ 
+     private fun queryLineCount(): Int {
+<a href="#h0-0-3" id="h0-0-3" class="i">+        val buffer = ByteArray(1024 * 1024)
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+
+</a>         synchronized(randomAccessFile) {
+             randomAccessFile.seek(0)
+             var lineCount = 0
+<a href="#h0-0-8" id="h0-0-8" class="d">-            var lastPointer: Long
+</a><a href="#h0-0-9" id="h0-0-9" class="d">-            var line: String?
+</a><a href="#h0-0-10" id="h0-0-10" class="d">-
+</a><a href="#h0-0-11" id="h0-0-11" class="d">-            while (randomAccessFile.also {
+</a><a href="#h0-0-12" id="h0-0-12" class="d">-                    lastPointer = it.filePointer
+</a><a href="#h0-0-13" id="h0-0-13" class="d">-                }.readLine().also { line = it } != null) {
+</a><a href="#h0-0-14" id="h0-0-14" class="d">-                if (line?.startsWith(&#39;|&#39;) == true) {
+</a><a href="#h0-0-15" id="h0-0-15" class="d">-                    lineCount++
+</a><a href="#h0-0-16" id="h0-0-16" class="d">-                    startLineIndexes.add(lastPointer + 1)
+</a><a href="#h0-0-17" id="h0-0-17" class="i">+            var read: Int
+</a><a href="#h0-0-18" id="h0-0-18" class="i">+            var lastPointer: Long = 0
+</a><a href="#h0-0-19" id="h0-0-19" class="i">+            var line: StringBuilder? = null
+</a><a href="#h0-0-20" id="h0-0-20" class="i">+
+</a><a href="#h0-0-21" id="h0-0-21" class="i">+            while (randomAccessFile.read(buffer).also { read = it } != -1) {
+</a><a href="#h0-0-22" id="h0-0-22" class="i">+                for (i in 0 until read) {
+</a><a href="#h0-0-23" id="h0-0-23" class="i">+                    val char = buffer[i].toInt().toChar()
+</a><a href="#h0-0-24" id="h0-0-24" class="i">+                    if (line == null) {
+</a><a href="#h0-0-25" id="h0-0-25" class="i">+                        line = StringBuilder()
+</a><a href="#h0-0-26" id="h0-0-26" class="i">+                        lastPointer = randomAccessFile.filePointer - read + i
+</a><a href="#h0-0-27" id="h0-0-27" class="i">+                    }
+</a><a href="#h0-0-28" id="h0-0-28" class="i">+                    line.append(char)
+</a><a href="#h0-0-29" id="h0-0-29" class="i">+                    if (char == &#39;\n&#39;) {
+</a><a href="#h0-0-30" id="h0-0-30" class="i">+                        if (line.startsWith(&#39;|&#39;)) {
+</a><a href="#h0-0-31" id="h0-0-31" class="i">+                            lineCount++
+</a><a href="#h0-0-32" id="h0-0-32" class="i">+                            startLineIndexes.add(lastPointer + 1)
+</a><a href="#h0-0-33" id="h0-0-33" class="i">+                        }
+</a><a href="#h0-0-34" id="h0-0-34" class="i">+                        line = null
+</a><a href="#h0-0-35" id="h0-0-35" class="i">+                    }
+</a>                 }
+             }
+ 
+<a href="#h0-1" id="h0-1" class="h">@@ -100,7 +112,7 @@ class LogReader(
+</a>     private fun getLine(index: Int): String? {
+         if (index &lt;= 0 || index &gt; lineCount) return null
+         synchronized(randomAccessFile) {
+<a href="#h0-1-3" id="h0-1-3" class="d">-            randomAccessFile.seek(startLineIndexes[index])
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+            randomAccessFile.seek(startLineIndexes.getOrNull(index) ?: return null)
+</a>             return readLogLine()?.toString()
+         }
+     }
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeLogs.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeLogs.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeLogs.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeLogs.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -156,8 +156,6 @@ class HomeLogs : Routes.Route() {
+</a>                             logReader?.getLogLine(index)
+                         })
+                     }
+<a href="#h1-0-3" id="h1-0-3" class="d">-                    var expand by remember { mutableStateOf(false) }
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-
+</a>                     logLine?.let { line -&gt;
+                         Box(modifier = Modifier
+                             .fillMaxWidth()
+<a href="#h1-1" id="h1-1" class="h">@@ -171,20 +169,18 @@ class HomeLogs : Routes.Route() {
+</a>                                                 )
+                                             )
+                                         }
+<a href="#h1-1-3" id="h1-1-3" class="d">-                                    },
+</a><a href="#h1-1-4" id="h1-1-4" class="d">-                                    onTap = {
+</a><a href="#h1-1-5" id="h1-1-5" class="d">-                                        expand = !expand
+</a>                                     }
+                                 )
+                             }) {
+<a href="#h1-1-9" id="h1-1-9" class="d">-                            Row(
+</a><a href="#h1-1-10" id="h1-1-10" class="i">+                            Column(
+</a>                                 modifier = Modifier
+                                     .padding(4.dp)
+                                     .fillMaxWidth()
+                                     .defaultMinSize(minHeight = 30.dp),
+<a href="#h1-1-15" id="h1-1-15" class="d">-                                verticalAlignment = Alignment.CenterVertically
+</a>                             ) {
+<a href="#h1-1-17" id="h1-1-17" class="d">-                                if (!expand) {
+</a><a href="#h1-1-18" id="h1-1-18" class="i">+                                Row(
+</a><a href="#h1-1-19" id="h1-1-19" class="i">+                                    verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h1-1-20" id="h1-1-20" class="i">+                                ) {
+</a>                                     Icon(
+                                         imageVector = when (line.logLevel) {
+                                             LogLevel.DEBUG -&gt; Icons.Outlined.BugReport
+<a href="#h1-2" id="h1-2" class="h">@@ -193,14 +189,15 @@ class HomeLogs : Routes.Route() {
+</a>                                             LogLevel.WARN -&gt; Icons.Outlined.Warning
+                                             else -&gt; Icons.Outlined.Info
+                                         },
+<a href="#h1-2-3" id="h1-2-3" class="i">+                                        modifier = Modifier.size(16.dp),
+</a>                                         contentDescription = null,
+                                     )
+ 
+                                     Text(
+                                         text = LogChannel.fromChannel(line.tag)?.shortName ?: line.tag,
+                                         modifier = Modifier.padding(start = 4.dp),
+<a href="#h1-2-10" id="h1-2-10" class="d">-                                        fontWeight = FontWeight.Light,
+</a><a href="#h1-2-11" id="h1-2-11" class="d">-                                        fontSize = 10.sp,
+</a><a href="#h1-2-12" id="h1-2-12" class="i">+                                        fontWeight = FontWeight.Bold,
+</a><a href="#h1-2-13" id="h1-2-13" class="i">+                                        fontSize = 12.sp,
+</a>                                     )
+ 
+                                     Text(
+<a href="#h1-3" id="h1-3" class="h">@@ -212,10 +209,9 @@ class HomeLogs : Routes.Route() {
+</a> 
+                                 Text(
+                                     text = line.message.trimIndent(),
+<a href="#h1-3-3" id="h1-3-3" class="d">-                                    fontSize = 10.sp,
+</a><a href="#h1-3-4" id="h1-3-4" class="d">-                                    maxLines = if (expand) Int.MAX_VALUE else 6,
+</a><a href="#h1-3-5" id="h1-3-5" class="d">-                                    overflow = if (expand) TextOverflow.Visible else TextOverflow.Ellipsis,
+</a><a href="#h1-3-6" id="h1-3-6" class="d">-                                    softWrap = !expand,
+</a><a href="#h1-3-7" id="h1-3-7" class="i">+                                    lineHeight = 10.sp,
+</a><a href="#h1-3-8" id="h1-3-8" class="i">+                                    fontSize = 9.sp,
+</a><a href="#h1-3-9" id="h1-3-9" class="i">+                                    maxLines = Int.MAX_VALUE,
+</a>                                 )
+                             }
+                         }
+</pre>
+</div>
+</body>
+</html>
