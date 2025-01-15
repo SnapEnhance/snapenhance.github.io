@@ -259,7 +259,7 @@ class BulkMessagingAction : AbstractAction() {
                     onExpandedChange = { filterMenuExpanded = it },
                 ) {
                     ElevatedCard(
-                        modifier = Modifier.menuAnchor()
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     ) {
                         Text(text = filter.name, modifier = Modifier.padding(5.dp))
                     }
@@ -286,7 +286,7 @@ class BulkMessagingAction : AbstractAction() {
                     onExpandedChange = { sortMenuExpanded = it },
                 ) {
                     ElevatedCard(
-                        modifier = Modifier.menuAnchor()
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     ) {
                         Text(text = "Sort by", modifier = Modifier.padding(5.dp))
                     }

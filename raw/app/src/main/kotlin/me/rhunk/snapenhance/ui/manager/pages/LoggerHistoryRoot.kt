@@ -255,7 +255,7 @@ class LoggerHistoryRoot : Routes.Route() {
                     onValueChange = {},
                     readOnly = true,
                     modifier = Modifier
-                        .menuAnchor()
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                         .fillMaxWidth()
                 )
 

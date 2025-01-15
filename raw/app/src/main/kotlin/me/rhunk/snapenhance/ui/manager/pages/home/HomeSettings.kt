@@ -250,7 +250,7 @@ class HomeSettings : Routes.Route() {
                             value = selectedFileType.fileName,
                             onValueChange = {},
                             readOnly = true,
-                            modifier = Modifier.menuAnchor()
+                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable)
                         )
 
                         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {

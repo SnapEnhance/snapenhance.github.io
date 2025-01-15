@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.Font
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -273,29 +275,26 @@ class HomeRootSection : Routes.Route() {
                             )
                             append(" - ")
                         }
-                        pushStringAnnotation(
-                            tag = "git_hash",
-                            annotation = BuildConfig.GIT_HASH
-                        )
-                        withStyle(
-                            style = SpanStyle(
-                                fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                        withLink(
+                            LinkAnnotation.Clickable(
+                                "git_hash",
+                                linkInteractionListener = {
+                                    context.androidContext.openLink("https://codeberg.org/SnapEnhance/SnapEnhance/commit/${BuildConfig.GIT_HASH}")
+                                }
                             )
                         ) {
-                            append(BuildConfig.GIT_HASH.substring(0, 7))
-                        }
-                        pop()
-                    }
-                    ClickableText(
-                        text = buildSummary,
-                        onClick = { offset ->
-                            buildSummary.getStringAnnotations(
-                                tag = "git_hash", start = offset, end = offset
-                            ).firstOrNull()?.let {
-                                context.androidContext.openLink("https://codeberg.org/SnapEnhance/SnapEnhance/commit/${it.item}")
+                            withStyle(
+                                style = SpanStyle(
+                                    fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            ) {
+                                append(BuildConfig.GIT_HASH.substring(0, 7))
                             }
                         }
+                    }
+                    Text(
+                        text = buildSummary
                     )
                     Text(
                         fontSize = 12.sp,

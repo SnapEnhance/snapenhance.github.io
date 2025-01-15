@@ -99,7 +99,7 @@ class ExportChatMessages : AbstractAction() {
                         onValueChange = {},
                         readOnly = true,
                         singleLine = true,
-                        modifier = Modifier.menuAnchor()
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     )
 
                     ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -159,7 +159,7 @@ class ExportChatMessages : AbstractAction() {
                         value = exportType.extension,
                         onValueChange = {},
                         readOnly = true,
-                        modifier = Modifier.menuAnchor()
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     )
 
                     ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -188,7 +188,7 @@ class ExportChatMessages : AbstractAction() {
                         } ?: exporterTranslation["text_field_selection_all"],
                         onValueChange = {},
                         readOnly = true,
-                        modifier = Modifier.menuAnchor()
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     )
 
                     ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
