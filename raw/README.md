@@ -245,7 +245,7 @@ Thanks to everyone involved including the [third-party libraries](https://github
 - [RevealedSoulEven](https://github.com/revealedsouleven)
 - [iBasim](https://github.com/ibasim)
 - [xerta555](https://github.com/xerta555)
-- [VendorAttestation](https://github.com/VendorAttestation)
+- [ptraced](https://github.com/ptraced)
 - [CanerKaraca23](https://github.com/CanerKaraca23)
 - [bocajthomas](https://github.com/bocajthomas)
 - [w451](https://github.com/w451)

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(core): hide friends - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/053b56bb3dc60a3df2feae3cb5e6c336934b16b4.html">053b56bb3dc60a3df2feae3cb5e6c336934b16b4</a>
+<b>parent</b> <a href="../commit/d217e2e86d78a23c9b67857ad86733ef7074a5e6.html">d217e2e86d78a23c9b67857ad86733ef7074a5e6</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat,  1 Feb 2025 11:44:16 +0100
+
+feat(core): hide friends
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/RequerySqlite.kt</a></td><td> | </td><td class="num">36</td><td><span class="i">++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="D">D</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideQuickAddSuggestions.kt</a></td><td> | </td><td class="num">28</td><td><span class="i"></span><span class="d">----------------------------</span></td></tr>
+</table></pre><pre>3 files changed, 37 insertions(+), 29 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -105,7 +105,7 @@ class FeatureManager(
+</a>             FriendFeedMessagePreview(),
+             HideStreakRestore(),
+             HideFriendFeedEntry(),
+<a href="#h0-0-3" id="h0-0-3" class="d">-            HideQuickAddSuggestions(),
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+            RequerySqlite(),
+</a>             CallButtonsOverride(),
+             SnapPreview(),
+             BypassScreenshotDetection(),
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/RequerySqlite.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/RequerySqlite.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/RequerySqlite.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/RequerySqlite.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -0,0 +1,35 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="i">+package me.rhunk.snapenhance.core.features.impl.tweaks
+</a><a href="#h1-0-1" id="h1-0-1" class="i">+
+</a><a href="#h1-0-2" id="h1-0-2" class="i">+import me.rhunk.snapenhance.common.data.MessagingRuleType
+</a><a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.core.features.Feature
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import me.rhunk.snapenhance.core.util.hook.HookStage
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+import me.rhunk.snapenhance.core.util.hook.hook
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+class RequerySqlite : Feature(&quot;Requery Sqlite&quot;) {
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+    override fun init() {
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+        val hideQuickAddSuggestions = context.config.userInterface.hideQuickAddSuggestions.get()
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+        val hideFriendFeedEntry = context.config.userInterface.hideFriendFeedEntry.get()
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+        if (!hideQuickAddSuggestions &amp;&amp; !hideFriendFeedEntry) return
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+
+</a><a href="#h1-0-14" id="h1-0-14" class="i">+        findClass(&quot;io.requery.android.database.sqlite.SQLiteDatabase&quot;).hook(&quot;rawQueryWithFactory&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h1-0-15" id="h1-0-15" class="i">+            var sqlRequest = param.argNullable&lt;String&gt;(1) ?: return@hook
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+            fun patchRequest(condition: String) {
+</a><a href="#h1-0-18" id="h1-0-18" class="i">+                sqlRequest.lastIndexOf(&quot;WHERE&quot;).takeIf { it != -1 }?.let {
+</a><a href="#h1-0-19" id="h1-0-19" class="i">+                    sqlRequest = sqlRequest.substring(0, it + 5) + &quot; $condition AND &quot; + sqlRequest.substring(it + 5)
+</a><a href="#h1-0-20" id="h1-0-20" class="i">+                    param.setArg(1, sqlRequest)
+</a><a href="#h1-0-21" id="h1-0-21" class="i">+                }
+</a><a href="#h1-0-22" id="h1-0-22" class="i">+            }
+</a><a href="#h1-0-23" id="h1-0-23" class="i">+
+</a><a href="#h1-0-24" id="h1-0-24" class="i">+            if (hideQuickAddSuggestions &amp;&amp; sqlRequest.contains(&quot;SuggestedFriendPlacement&quot;)) {
+</a><a href="#h1-0-25" id="h1-0-25" class="i">+                patchRequest(&quot;0 = 1&quot;)
+</a><a href="#h1-0-26" id="h1-0-26" class="i">+            }
+</a><a href="#h1-0-27" id="h1-0-27" class="i">+
+</a><a href="#h1-0-28" id="h1-0-28" class="i">+            if (hideFriendFeedEntry &amp;&amp; sqlRequest.startsWith(&quot;SELECT&quot;) &amp;&amp; (sqlRequest.contains(&quot;FriendWithUsername&quot;)) &amp;&amp; sqlRequest.contains(&quot;userId&quot;)) {
+</a><a href="#h1-0-29" id="h1-0-29" class="i">+                val ids = context.bridgeClient.getRuleIds(MessagingRuleType.HIDE_FRIEND_FEED).takeIf { it.isNotEmpty() } ?: return@hook
+</a><a href="#h1-0-30" id="h1-0-30" class="i">+                patchRequest(ids.joinToString(&quot; AND &quot;) { &quot;${if (sqlRequest.contains(&quot;Friend.userId&quot;)) &quot;Friend.userId&quot; else &quot;userId &quot;} != &#39;$it&#39;&quot; })
+</a><a href="#h1-0-31" id="h1-0-31" class="i">+            }
+</a><a href="#h1-0-32" id="h1-0-32" class="i">+        }
+</a><a href="#h1-0-33" id="h1-0-33" class="i">+    }
+</a><a href="#h1-0-34" id="h1-0-34" class="i">+}</a><a href="#h1-0-35" id="h1-0-35" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideQuickAddSuggestions.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideQuickAddSuggestions.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideQuickAddSuggestions.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideQuickAddSuggestions.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,27 +0,0 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="d">-package me.rhunk.snapenhance.core.features.impl.ui
+</a><a href="#h2-0-1" id="h2-0-1" class="d">-
+</a><a href="#h2-0-2" id="h2-0-2" class="d">-import me.rhunk.snapenhance.core.features.Feature
+</a><a href="#h2-0-3" id="h2-0-3" class="d">-import me.rhunk.snapenhance.core.util.hook.HookStage
+</a><a href="#h2-0-4" id="h2-0-4" class="d">-import me.rhunk.snapenhance.core.util.hook.hook
+</a><a href="#h2-0-5" id="h2-0-5" class="d">-
+</a><a href="#h2-0-6" id="h2-0-6" class="d">-class HideQuickAddSuggestions : Feature(&quot;Hide Quick Add Suggestions&quot;) {
+</a><a href="#h2-0-7" id="h2-0-7" class="d">-    override fun init() {
+</a><a href="#h2-0-8" id="h2-0-8" class="d">-        if (!context.config.userInterface.hideQuickAddSuggestions.get()) return
+</a><a href="#h2-0-9" id="h2-0-9" class="d">-
+</a><a href="#h2-0-10" id="h2-0-10" class="d">-        context.androidContext.classLoader.loadClass(&quot;io.requery.android.database.sqlite.SQLiteDatabase&quot;)
+</a><a href="#h2-0-11" id="h2-0-11" class="d">-            .hook(&quot;rawQueryWithFactory&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h2-0-12" id="h2-0-12" class="d">-                var sqlRequest = param.arg&lt;String&gt;(1)
+</a><a href="#h2-0-13" id="h2-0-13" class="d">-
+</a><a href="#h2-0-14" id="h2-0-14" class="d">-                fun patchRequest() {
+</a><a href="#h2-0-15" id="h2-0-15" class="d">-                    sqlRequest.lastIndexOf(&quot;WHERE&quot;).takeIf { it != -1 }?.let {
+</a><a href="#h2-0-16" id="h2-0-16" class="d">-                        sqlRequest = sqlRequest.substring(0, it + 5) + &quot; 0 = 1 AND &quot; + sqlRequest.substring(it + 5)
+</a><a href="#h2-0-17" id="h2-0-17" class="d">-                        param.setArg(1, sqlRequest)
+</a><a href="#h2-0-18" id="h2-0-18" class="d">-                    }
+</a><a href="#h2-0-19" id="h2-0-19" class="d">-                }
+</a><a href="#h2-0-20" id="h2-0-20" class="d">-
+</a><a href="#h2-0-21" id="h2-0-21" class="d">-                if (sqlRequest.contains(&quot;SuggestedFriendPlacement&quot;)) {
+</a><a href="#h2-0-22" id="h2-0-22" class="d">-                    patchRequest()
+</a><a href="#h2-0-23" id="h2-0-23" class="d">-                }
+</a><a href="#h2-0-24" id="h2-0-24" class="d">-            }
+</a><a href="#h2-0-25" id="h2-0-25" class="d">-    }
+</a><a href="#h2-0-26" id="h2-0-26" class="d">-}</a><a href="#h2-0-27" id="h2-0-27" class="d">-
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>
