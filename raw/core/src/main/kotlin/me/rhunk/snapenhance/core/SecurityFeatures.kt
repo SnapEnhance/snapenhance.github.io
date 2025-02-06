@@ -1,8 +1,18 @@
 package me.rhunk.snapenhance.core
 
 import android.system.Os
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.NotInterested
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import me.rhunk.snapenhance.common.bridge.FileHandleScope
 import me.rhunk.snapenhance.common.bridge.InternalFileHandleType
 import me.rhunk.snapenhance.common.bridge.toWrapper
@@ -11,6 +21,7 @@ import me.rhunk.snapenhance.common.config.VersionRequirement
 import me.rhunk.snapenhance.common.util.protobuf.ProtoEditor
 import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
 import me.rhunk.snapenhance.core.event.events.impl.UnaryCallEvent
+import me.rhunk.snapenhance.core.ui.CustomComposable
 import me.rhunk.snapenhance.core.util.ktx.setObjectField
 import java.io.FileDescriptor
 import kotlin.text.isNotEmpty
@@ -109,6 +120,25 @@ class SecurityFeatures(
 
         val status = getStatus()
         val safeMode = shouldUseSafeMode && (status == null || status < 2)
+
+        if (status != null && status >= 2) {
+            lateinit var composable: CustomComposable
+            composable = {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .align(Alignment.TopCenter),
+                ) {
+                    Icon(Icons.Filled.Check, contentDescription = null, tint = Color(0xFF85A947))
+                }
+
+                LaunchedEffect(Unit) {
+                    delay(2500)
+                    context.inAppOverlay.removeCustomComposable(composable)
+                }
+            }
+            context.inAppOverlay.addCustomComposable(composable)
+        }
 
         if (safeMode && !debugDisable) {
             context.features.addActivityCreateListener {

@@ -10,6 +10,7 @@ import me.rhunk.snapenhance.common.database.impl.ConversationMessage
 import me.rhunk.snapenhance.common.database.impl.FriendFeedEntry
 import me.rhunk.snapenhance.common.database.impl.FriendInfo
 import me.rhunk.snapenhance.common.database.impl.StoryEntry
+import me.rhunk.snapenhance.common.database.impl.StorySnapEntry
 import me.rhunk.snapenhance.common.database.impl.UserConversationLink
 import me.rhunk.snapenhance.common.util.ktx.getBlobOrNull
 import me.rhunk.snapenhance.common.util.ktx.getIntOrNull
@@ -24,7 +25,8 @@ enum class DatabaseType(
     val fileName: String
 ) {
     MAIN("main.db"),
-    ARROYO("arroyo.db")
+    ARROYO("arroyo.db"),
+    SIMPLE_DB_HELPER("simple_db_helper.db")
 }
 
 class DatabaseAccess(
@@ -494,5 +496,16 @@ class DatabaseAccess(
                 )
             }
         }?.close()
+    }
+
+    fun getStorySnapEntry(rawSnapId: String): StorySnapEntry? {
+        return useDatabase(DatabaseType.SIMPLE_DB_HELPER)?.performOperation {
+            readDatabaseObject(
+                StorySnapEntry(),
+                "DiscoverStorySnap",
+                "rawSnapId = ?",
+                arrayOf(rawSnapId)
+            )
+        }
     }
 }
