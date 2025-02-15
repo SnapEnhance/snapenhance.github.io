@@ -23,9 +23,11 @@ class OperaViewerParamsMapper : AbstractClassMapper("OperaViewerParams") {
 
                 classDef.methods.firstOrNull { method ->
                     method.returnType == "Ljava/lang/Object;" &&
-                            method.parameters.size == 2 &&
-                            method.parameterTypes[1] == "Ljava/lang/Object;" &&
-                            method.hasHashMapReference("get")
+                    method.hasHashMapReference("get")
+                } ?: continue
+                classDef.methods.firstOrNull { method ->
+                    method.returnType == "V" &&
+                    method.hasHashMapReference("remove")
                 } ?: continue
 
                 classReference.set(classDef.getClassName())

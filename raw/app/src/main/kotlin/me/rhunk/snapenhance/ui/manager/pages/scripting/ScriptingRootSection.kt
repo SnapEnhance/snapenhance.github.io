@@ -576,7 +576,7 @@ class ScriptingRootSection : Routes.Route() {
     override val topBarActions: @Composable() (RowScope.() -> Unit) = {
         TopBarActionButton(
             onClick = {
-                context.androidContext.openLink("https://codeberg.org/SnapEnhance/scripting-docs")
+                context.androidContext.openLink("https://github.com/SnapEnhance/scripting-docs")
             },
             icon = Icons.Default.CollectionsBookmark,
             text = "Documentation",

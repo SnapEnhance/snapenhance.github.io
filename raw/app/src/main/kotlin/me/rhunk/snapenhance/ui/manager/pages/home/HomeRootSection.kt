@@ -4,7 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
@@ -178,13 +177,6 @@ class HomeRootSection : Routes.Route() {
             ) {
                 ExternalLinkIcon(
                     modifier = Modifier.clickable {
-                        context.androidContext.openLink("https://codeberg.org/SnapEnhance/SnapEnhance")
-                    },
-                    imageVector = ImageVector.vectorResource(id = R.drawable.ic_codeberg),
-                )
-
-                ExternalLinkIcon(
-                    modifier = Modifier.clickable {
                         context.androidContext.openLink("https://t.me/snapenhance")
                     },
                     imageVector = ImageVector.vectorResource(id = R.drawable.ic_telegram),
@@ -279,7 +271,7 @@ class HomeRootSection : Routes.Route() {
                             LinkAnnotation.Clickable(
                                 "git_hash",
                                 linkInteractionListener = {
-                                    context.androidContext.openLink("https://codeberg.org/SnapEnhance/SnapEnhance/commit/${BuildConfig.GIT_HASH}")
+                                    context.androidContext.openLink("https://github.com/rhunk/SnapEnhance/commit/${BuildConfig.GIT_HASH}")
                                 }
                             )
                         ) {
