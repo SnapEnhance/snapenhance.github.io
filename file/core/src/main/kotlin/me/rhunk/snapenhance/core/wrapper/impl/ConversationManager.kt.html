@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> ConversationManager.kt (9668B) - <a href="../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt">raw</a></p><hr/><pre id="blob">
+<p> ConversationManager.kt (10691B) - <a href="../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core.wrapper.impl
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import me.rhunk.snapenhance.common.data.MessageUpdate
@@ -50,163 +50,184 @@
 <a href="#l27" class="line" id="l27">     27</a>     private val clearConversation by lazy { findMethodByName(&quot;clearConversation&quot;) }
 <a href="#l28" class="line" id="l28">     28</a>     private val getOneOnOneConversationIds by lazy { findMethodByName(&quot;getOneOnOneConversationIds&quot;) }
 <a href="#l29" class="line" id="l29">     29</a>     private val dismissStreakRestore by lazy { findMethodByName(&quot;dismissStreakRestore&quot;) }
-<a href="#l30" class="line" id="l30">     30</a> 
+<a href="#l30" class="line" id="l30">     30</a>     private val reactToMessageMethod by lazy { findMethodByName(&quot;reactToMessage&quot;) }
 <a href="#l31" class="line" id="l31">     31</a> 
-<a href="#l32" class="line" id="l32">     32</a>     private fun getCallbackClass(name: String): Class&lt;*&gt; {
-<a href="#l33" class="line" id="l33">     33</a>         lateinit var result: Class&lt;*&gt;
-<a href="#l34" class="line" id="l34">     34</a>         context.mappings.useMapper(CallbackMapper::class) {
-<a href="#l35" class="line" id="l35">     35</a>             result = context.androidContext.classLoader.loadClass(callbacks.get()!![name])
-<a href="#l36" class="line" id="l36">     36</a>         }
-<a href="#l37" class="line" id="l37">     37</a>         return result
-<a href="#l38" class="line" id="l38">     38</a>     }
-<a href="#l39" class="line" id="l39">     39</a> 
+<a href="#l32" class="line" id="l32">     32</a> 
+<a href="#l33" class="line" id="l33">     33</a>     private fun getCallbackClass(name: String): Class&lt;*&gt; {
+<a href="#l34" class="line" id="l34">     34</a>         lateinit var result: Class&lt;*&gt;
+<a href="#l35" class="line" id="l35">     35</a>         context.mappings.useMapper(CallbackMapper::class) {
+<a href="#l36" class="line" id="l36">     36</a>             result = context.androidContext.classLoader.loadClass(callbacks.get()!![name])
+<a href="#l37" class="line" id="l37">     37</a>         }
+<a href="#l38" class="line" id="l38">     38</a>         return result
+<a href="#l39" class="line" id="l39">     39</a>     }
 <a href="#l40" class="line" id="l40">     40</a> 
-<a href="#l41" class="line" id="l41">     41</a>     fun updateMessage(conversationId: String, messageId: Long, action: MessageUpdate, onResult: CallbackResult = {}) {
-<a href="#l42" class="line" id="l42">     42</a>         updateMessageMethod.invoke(
-<a href="#l43" class="line" id="l43">     43</a>             instanceNonNull(),
-<a href="#l44" class="line" id="l44">     44</a>             SnapUUID(conversationId).instanceNonNull(),
-<a href="#l45" class="line" id="l45">     45</a>             messageId,
-<a href="#l46" class="line" id="l46">     46</a>             context.classCache.messageUpdateEnum.enumConstants!!.first { it.toString() == action.toString() },
-<a href="#l47" class="line" id="l47">     47</a>             CallbackBuilder(getCallbackClass(&quot;Callback&quot;))
-<a href="#l48" class="line" id="l48">     48</a>                 .override(&quot;onSuccess&quot;) { onResult(null) }
-<a href="#l49" class="line" id="l49">     49</a>                 .override(&quot;onError&quot;) { onResult(it.arg&lt;Any&gt;(0).toString()) }.build()
-<a href="#l50" class="line" id="l50">     50</a>         )
-<a href="#l51" class="line" id="l51">     51</a>     }
-<a href="#l52" class="line" id="l52">     52</a> 
-<a href="#l53" class="line" id="l53">     53</a>     fun fetchConversationWithMessagesPaginated(conversationId: String, lastMessageId: Long, amount: Int, onSuccess: (message: List&lt;Message&gt;) -&gt; Unit, onError: (error: String) -&gt; Unit) {
-<a href="#l54" class="line" id="l54">     54</a>         val callback = CallbackBuilder(getCallbackClass(&quot;FetchConversationWithMessagesCallback&quot;))
-<a href="#l55" class="line" id="l55">     55</a>             .override(&quot;onFetchConversationWithMessagesComplete&quot;) { param -&gt;
-<a href="#l56" class="line" id="l56">     56</a>                 onSuccess(param.arg&lt;List&lt;*&gt;&gt;(1).map { Message(it) })
-<a href="#l57" class="line" id="l57">     57</a>             }
-<a href="#l58" class="line" id="l58">     58</a>             .override(&quot;onServerRequest&quot;, shouldUnhook = false) {}
-<a href="#l59" class="line" id="l59">     59</a>             .override(&quot;onError&quot;) {
-<a href="#l60" class="line" id="l60">     60</a>                 onError(it.arg&lt;Any&gt;(0).toString())
-<a href="#l61" class="line" id="l61">     61</a>             }.build()
-<a href="#l62" class="line" id="l62">     62</a>         fetchConversationWithMessagesPaginatedMethod.invoke(instanceNonNull(), conversationId.toSnapUUID().instanceNonNull(), lastMessageId, amount, callback)
-<a href="#l63" class="line" id="l63">     63</a>     }
-<a href="#l64" class="line" id="l64">     64</a> 
-<a href="#l65" class="line" id="l65">     65</a>     fun fetchConversationWithMessages(conversationId: String, onSuccess: (List&lt;Message&gt;) -&gt; Unit, onError: (error: String) -&gt; Unit) {
-<a href="#l66" class="line" id="l66">     66</a>         fetchConversationWithMessagesMethod.invoke(
-<a href="#l67" class="line" id="l67">     67</a>             instanceNonNull(),
-<a href="#l68" class="line" id="l68">     68</a>             conversationId.toSnapUUID().instanceNonNull(),
-<a href="#l69" class="line" id="l69">     69</a>             CallbackBuilder(getCallbackClass(&quot;FetchConversationWithMessagesCallback&quot;))
-<a href="#l70" class="line" id="l70">     70</a>                 .override(&quot;onFetchConversationWithMessagesComplete&quot;) { param -&gt;
-<a href="#l71" class="line" id="l71">     71</a>                     onSuccess(param.arg&lt;List&lt;*&gt;&gt;(1).map { Message(it) })
-<a href="#l72" class="line" id="l72">     72</a>                 }
-<a href="#l73" class="line" id="l73">     73</a>                 .override(&quot;onServerRequest&quot;, shouldUnhook = false) {}
-<a href="#l74" class="line" id="l74">     74</a>                 .override(&quot;onError&quot;) {
-<a href="#l75" class="line" id="l75">     75</a>                     onError(it.arg&lt;Any&gt;(0).toString())
-<a href="#l76" class="line" id="l76">     76</a>                 }.build()
-<a href="#l77" class="line" id="l77">     77</a>         )
-<a href="#l78" class="line" id="l78">     78</a>     }
-<a href="#l79" class="line" id="l79">     79</a> 
-<a href="#l80" class="line" id="l80">     80</a>     fun displayedMessages(conversationId: String, messageId: Long, onResult: CallbackResult = {}) {
-<a href="#l81" class="line" id="l81">     81</a>         displayedMessagesMethod.invoke(
-<a href="#l82" class="line" id="l82">     82</a>             instanceNonNull(),
-<a href="#l83" class="line" id="l83">     83</a>             conversationId.toSnapUUID().instanceNonNull(),
-<a href="#l84" class="line" id="l84">     84</a>             messageId,
-<a href="#l85" class="line" id="l85">     85</a>             CallbackBuilder(getCallbackClass(&quot;Callback&quot;))
-<a href="#l86" class="line" id="l86">     86</a>                 .override(&quot;onSuccess&quot;) { onResult(null) }
-<a href="#l87" class="line" id="l87">     87</a>                 .override(&quot;onError&quot;) { onResult(it.arg&lt;Any&gt;(0).toString()) }.build()
-<a href="#l88" class="line" id="l88">     88</a>         )
-<a href="#l89" class="line" id="l89">     89</a>     }
-<a href="#l90" class="line" id="l90">     90</a> 
-<a href="#l91" class="line" id="l91">     91</a>     fun fetchMessage(conversationId: String, messageId: Long, onSuccess: (Message) -&gt; Unit, onError: (error: String) -&gt; Unit = {}) {
-<a href="#l92" class="line" id="l92">     92</a>         fetchMessage.invoke(
-<a href="#l93" class="line" id="l93">     93</a>             instanceNonNull(),
-<a href="#l94" class="line" id="l94">     94</a>             conversationId.toSnapUUID().instanceNonNull(),
-<a href="#l95" class="line" id="l95">     95</a>             messageId,
-<a href="#l96" class="line" id="l96">     96</a>             CallbackBuilder(getCallbackClass(&quot;FetchMessageCallback&quot;))
-<a href="#l97" class="line" id="l97">     97</a>                 .override(&quot;onFetchMessageComplete&quot;) { param -&gt;
-<a href="#l98" class="line" id="l98">     98</a>                     onSuccess(Message(param.arg(0)))
-<a href="#l99" class="line" id="l99">     99</a>                 }
-<a href="#l100" class="line" id="l100">    100</a>                 .override(&quot;onError&quot;) {
-<a href="#l101" class="line" id="l101">    101</a>                     onError(it.arg&lt;Any&gt;(0).toString())
-<a href="#l102" class="line" id="l102">    102</a>                 }.build()
-<a href="#l103" class="line" id="l103">    103</a>         )
-<a href="#l104" class="line" id="l104">    104</a>     }
-<a href="#l105" class="line" id="l105">    105</a> 
-<a href="#l106" class="line" id="l106">    106</a>     fun fetchMessageByServerId(conversationId: String, serverMessageId: Long, onSuccess: (Message) -&gt; Unit, onError: (error: String) -&gt; Unit) {
-<a href="#l107" class="line" id="l107">    107</a>         val serverMessageIdentifier = context.classCache.serverMessageIdentifier.dataBuilder {
-<a href="#l108" class="line" id="l108">    108</a>             set(&quot;mServerConversationId&quot;,  conversationId.toSnapUUID().instanceNonNull())
-<a href="#l109" class="line" id="l109">    109</a>             set(&quot;mServerMessageId&quot;, serverMessageId)
-<a href="#l110" class="line" id="l110">    110</a>         }
-<a href="#l111" class="line" id="l111">    111</a> 
-<a href="#l112" class="line" id="l112">    112</a>         fetchMessageByServerId.invoke(
-<a href="#l113" class="line" id="l113">    113</a>             instanceNonNull(),
-<a href="#l114" class="line" id="l114">    114</a>             serverMessageIdentifier,
-<a href="#l115" class="line" id="l115">    115</a>             CallbackBuilder(getCallbackClass(&quot;FetchMessageCallback&quot;))
-<a href="#l116" class="line" id="l116">    116</a>                 .override(&quot;onFetchMessageComplete&quot;) { param -&gt;
-<a href="#l117" class="line" id="l117">    117</a>                     onSuccess(Message(param.arg(0)))
-<a href="#l118" class="line" id="l118">    118</a>                 }
-<a href="#l119" class="line" id="l119">    119</a>                 .override(&quot;onError&quot;) {
-<a href="#l120" class="line" id="l120">    120</a>                     onError(it.arg&lt;Any&gt;(0).toString())
-<a href="#l121" class="line" id="l121">    121</a>                 }.build()
-<a href="#l122" class="line" id="l122">    122</a>         )
-<a href="#l123" class="line" id="l123">    123</a>     }
-<a href="#l124" class="line" id="l124">    124</a> 
-<a href="#l125" class="line" id="l125">    125</a>     fun fetchMessagesByServerIds(conversationId: String, serverMessageIds: List&lt;Long&gt;, onSuccess: (List&lt;Message&gt;) -&gt; Unit, onError: (error: String) -&gt; Unit) {
-<a href="#l126" class="line" id="l126">    126</a>         fetchMessagesByServerIds.invoke(
-<a href="#l127" class="line" id="l127">    127</a>             instanceNonNull(),
-<a href="#l128" class="line" id="l128">    128</a>             serverMessageIds.map {
-<a href="#l129" class="line" id="l129">    129</a>                 CallbackBuilder.createEmptyObject(context.classCache.serverMessageIdentifier.constructors.first())?.apply {
-<a href="#l130" class="line" id="l130">    130</a>                     setObjectField(&quot;mServerConversationId&quot;, conversationId.toSnapUUID().instanceNonNull())
-<a href="#l131" class="line" id="l131">    131</a>                     setObjectField(&quot;mServerMessageId&quot;, it)
-<a href="#l132" class="line" id="l132">    132</a>                 }
-<a href="#l133" class="line" id="l133">    133</a>             },
-<a href="#l134" class="line" id="l134">    134</a>             CallbackBuilder(getCallbackClass(&quot;FetchMessagesByServerIdsCallback&quot;))
-<a href="#l135" class="line" id="l135">    135</a>                 .override(&quot;onSuccess&quot;) { param -&gt;
-<a href="#l136" class="line" id="l136">    136</a>                     onSuccess(param.arg&lt;List&lt;*&gt;&gt;(0).mapNotNull {
-<a href="#l137" class="line" id="l137">    137</a>                         Message(it?.getObjectField(&quot;mMessage&quot;) ?: return@mapNotNull null)
-<a href="#l138" class="line" id="l138">    138</a>                     })
-<a href="#l139" class="line" id="l139">    139</a>                 }
-<a href="#l140" class="line" id="l140">    140</a>                 .override(&quot;onError&quot;) {
-<a href="#l141" class="line" id="l141">    141</a>                     onError(it.arg&lt;Any&gt;(0).toString())
-<a href="#l142" class="line" id="l142">    142</a>                 }.build()
-<a href="#l143" class="line" id="l143">    143</a>         )
-<a href="#l144" class="line" id="l144">    144</a>     }
-<a href="#l145" class="line" id="l145">    145</a> 
-<a href="#l146" class="line" id="l146">    146</a>     fun clearConversation(conversationId: String, onSuccess: () -&gt; Unit, onError: (error: String) -&gt; Unit) {
-<a href="#l147" class="line" id="l147">    147</a>         val callback = CallbackBuilder(getCallbackClass(&quot;Callback&quot;))
-<a href="#l148" class="line" id="l148">    148</a>             .override(&quot;onSuccess&quot;) { onSuccess() }
-<a href="#l149" class="line" id="l149">    149</a>             .override(&quot;onError&quot;) { onError(it.arg&lt;Any&gt;(0).toString()) }.build()
-<a href="#l150" class="line" id="l150">    150</a>         clearConversation.invoke(instanceNonNull(), conversationId.toSnapUUID().instanceNonNull(), callback)
-<a href="#l151" class="line" id="l151">    151</a>     }
-<a href="#l152" class="line" id="l152">    152</a> 
-<a href="#l153" class="line" id="l153">    153</a>     fun getOneOnOneConversationIds(userIds: List&lt;String&gt;, onSuccess: (List&lt;Pair&lt;String, String&gt;&gt;) -&gt; Unit, onError: (error: String) -&gt; Unit) {
-<a href="#l154" class="line" id="l154">    154</a>         val callback = CallbackBuilder(getCallbackClass(&quot;GetOneOnOneConversationIdsCallback&quot;))
-<a href="#l155" class="line" id="l155">    155</a>             .override(&quot;onSuccess&quot;) { param -&gt;
-<a href="#l156" class="line" id="l156">    156</a>                 onSuccess(param.arg&lt;ArrayList&lt;*&gt;&gt;(0).map {
-<a href="#l157" class="line" id="l157">    157</a>                     SnapUUID(it.getObjectField(&quot;mUserId&quot;)).toString() to SnapUUID(it.getObjectField(&quot;mConversationId&quot;)).toString()
-<a href="#l158" class="line" id="l158">    158</a>                 })
-<a href="#l159" class="line" id="l159">    159</a>             }
-<a href="#l160" class="line" id="l160">    160</a>             .override(&quot;onError&quot;) { onError(it.arg&lt;Any&gt;(0).toString()) }.build()
-<a href="#l161" class="line" id="l161">    161</a>         getOneOnOneConversationIds.invoke(instanceNonNull(), userIds.map { it.toSnapUUID().instanceNonNull() }.toMutableList(), callback)
-<a href="#l162" class="line" id="l162">    162</a>     }
-<a href="#l163" class="line" id="l163">    163</a> 
-<a href="#l164" class="line" id="l164">    164</a>     fun editMessage(conversationId: String, messageId: Long, content: ByteArray, onSuccess: () -&gt; Unit, onError: (error: String) -&gt; Unit) {
-<a href="#l165" class="line" id="l165">    165</a>         val editMessageMethod = instanceNonNull()::class.java.methods.first { it.name == &quot;editMessage&quot; }
-<a href="#l166" class="line" id="l166">    166</a>         editMessageMethod.invoke(instanceNonNull(), editMessageMethod.parameterTypes[0].dataBuilder {
-<a href="#l167" class="line" id="l167">    167</a>             set(&quot;mConversationId&quot;, conversationId.toSnapUUID().instanceNonNull())
-<a href="#l168" class="line" id="l168">    168</a>             set(&quot;mMessageId&quot;, messageId)
-<a href="#l169" class="line" id="l169">    169</a>         }, editMessageMethod.parameterTypes[1].dataBuilder {
-<a href="#l170" class="line" id="l170">    170</a>             set(&quot;mContent&quot;, content)
-<a href="#l171" class="line" id="l171">    171</a>             set(&quot;mMentionInfo&quot;, null)
-<a href="#l172" class="line" id="l172">    172</a>         }, CallbackBuilder(getCallbackClass(&quot;Callback&quot;))
-<a href="#l173" class="line" id="l173">    173</a>             .override(&quot;onSuccess&quot;) { onSuccess() }
-<a href="#l174" class="line" id="l174">    174</a>             .override(&quot;onError&quot;) { onError(it.arg&lt;Any&gt;(0).toString()) }.build()
-<a href="#l175" class="line" id="l175">    175</a>         )
-<a href="#l176" class="line" id="l176">    176</a>     }
-<a href="#l177" class="line" id="l177">    177</a> 
-<a href="#l178" class="line" id="l178">    178</a>     fun isEditMessageSupported() = instanceNonNull()::class.java.methods.any { it.name == &quot;editMessage&quot; }
-<a href="#l179" class="line" id="l179">    179</a> 
-<a href="#l180" class="line" id="l180">    180</a>     fun dismissStreakRestore(conversationId: String, onSuccess: () -&gt; Unit, onError: (error: String) -&gt; Unit) {
-<a href="#l181" class="line" id="l181">    181</a>         val callback = CallbackBuilder(getCallbackClass(&quot;Callback&quot;))
-<a href="#l182" class="line" id="l182">    182</a>             .override(&quot;onSuccess&quot;) { onSuccess() }
-<a href="#l183" class="line" id="l183">    183</a>             .override(&quot;onError&quot;) { onError(it.arg&lt;Any&gt;(0).toString()) }.build()
-<a href="#l184" class="line" id="l184">    184</a>         dismissStreakRestore.invoke(instanceNonNull(), conversationId.toSnapUUID().instanceNonNull(), callback)
-<a href="#l185" class="line" id="l185">    185</a>     }
-<a href="#l186" class="line" id="l186">    186</a> }</pre>
+<a href="#l41" class="line" id="l41">     41</a> 
+<a href="#l42" class="line" id="l42">     42</a>     fun updateMessage(conversationId: String, messageId: Long, action: MessageUpdate, onResult: CallbackResult = {}) {
+<a href="#l43" class="line" id="l43">     43</a>         updateMessageMethod.invoke(
+<a href="#l44" class="line" id="l44">     44</a>             instanceNonNull(),
+<a href="#l45" class="line" id="l45">     45</a>             SnapUUID(conversationId).instanceNonNull(),
+<a href="#l46" class="line" id="l46">     46</a>             messageId,
+<a href="#l47" class="line" id="l47">     47</a>             context.classCache.messageUpdateEnum.enumConstants!!.first { it.toString() == action.toString() },
+<a href="#l48" class="line" id="l48">     48</a>             CallbackBuilder(getCallbackClass(&quot;Callback&quot;))
+<a href="#l49" class="line" id="l49">     49</a>                 .override(&quot;onSuccess&quot;) { onResult(null) }
+<a href="#l50" class="line" id="l50">     50</a>                 .override(&quot;onError&quot;) { onResult(it.arg&lt;Any&gt;(0).toString()) }.build()
+<a href="#l51" class="line" id="l51">     51</a>         )
+<a href="#l52" class="line" id="l52">     52</a>     }
+<a href="#l53" class="line" id="l53">     53</a> 
+<a href="#l54" class="line" id="l54">     54</a>     fun fetchConversationWithMessagesPaginated(conversationId: String, lastMessageId: Long, amount: Int, onSuccess: (message: List&lt;Message&gt;) -&gt; Unit, onError: (error: String) -&gt; Unit) {
+<a href="#l55" class="line" id="l55">     55</a>         val callback = CallbackBuilder(getCallbackClass(&quot;FetchConversationWithMessagesCallback&quot;))
+<a href="#l56" class="line" id="l56">     56</a>             .override(&quot;onFetchConversationWithMessagesComplete&quot;) { param -&gt;
+<a href="#l57" class="line" id="l57">     57</a>                 onSuccess(param.arg&lt;List&lt;*&gt;&gt;(1).map { Message(it) })
+<a href="#l58" class="line" id="l58">     58</a>             }
+<a href="#l59" class="line" id="l59">     59</a>             .override(&quot;onServerRequest&quot;, shouldUnhook = false) {}
+<a href="#l60" class="line" id="l60">     60</a>             .override(&quot;onError&quot;) {
+<a href="#l61" class="line" id="l61">     61</a>                 onError(it.arg&lt;Any&gt;(0).toString())
+<a href="#l62" class="line" id="l62">     62</a>             }.build()
+<a href="#l63" class="line" id="l63">     63</a>         fetchConversationWithMessagesPaginatedMethod.invoke(instanceNonNull(), conversationId.toSnapUUID().instanceNonNull(), lastMessageId, amount, callback)
+<a href="#l64" class="line" id="l64">     64</a>     }
+<a href="#l65" class="line" id="l65">     65</a> 
+<a href="#l66" class="line" id="l66">     66</a>     fun fetchConversationWithMessages(conversationId: String, onSuccess: (List&lt;Message&gt;) -&gt; Unit, onError: (error: String) -&gt; Unit) {
+<a href="#l67" class="line" id="l67">     67</a>         fetchConversationWithMessagesMethod.invoke(
+<a href="#l68" class="line" id="l68">     68</a>             instanceNonNull(),
+<a href="#l69" class="line" id="l69">     69</a>             conversationId.toSnapUUID().instanceNonNull(),
+<a href="#l70" class="line" id="l70">     70</a>             CallbackBuilder(getCallbackClass(&quot;FetchConversationWithMessagesCallback&quot;))
+<a href="#l71" class="line" id="l71">     71</a>                 .override(&quot;onFetchConversationWithMessagesComplete&quot;) { param -&gt;
+<a href="#l72" class="line" id="l72">     72</a>                     onSuccess(param.arg&lt;List&lt;*&gt;&gt;(1).map { Message(it) })
+<a href="#l73" class="line" id="l73">     73</a>                 }
+<a href="#l74" class="line" id="l74">     74</a>                 .override(&quot;onServerRequest&quot;, shouldUnhook = false) {}
+<a href="#l75" class="line" id="l75">     75</a>                 .override(&quot;onError&quot;) {
+<a href="#l76" class="line" id="l76">     76</a>                     onError(it.arg&lt;Any&gt;(0).toString())
+<a href="#l77" class="line" id="l77">     77</a>                 }.build()
+<a href="#l78" class="line" id="l78">     78</a>         )
+<a href="#l79" class="line" id="l79">     79</a>     }
+<a href="#l80" class="line" id="l80">     80</a> 
+<a href="#l81" class="line" id="l81">     81</a>     fun displayedMessages(conversationId: String, messageId: Long, onResult: CallbackResult = {}) {
+<a href="#l82" class="line" id="l82">     82</a>         displayedMessagesMethod.invoke(
+<a href="#l83" class="line" id="l83">     83</a>             instanceNonNull(),
+<a href="#l84" class="line" id="l84">     84</a>             conversationId.toSnapUUID().instanceNonNull(),
+<a href="#l85" class="line" id="l85">     85</a>             messageId,
+<a href="#l86" class="line" id="l86">     86</a>             CallbackBuilder(getCallbackClass(&quot;Callback&quot;))
+<a href="#l87" class="line" id="l87">     87</a>                 .override(&quot;onSuccess&quot;) { onResult(null) }
+<a href="#l88" class="line" id="l88">     88</a>                 .override(&quot;onError&quot;) { onResult(it.arg&lt;Any&gt;(0).toString()) }.build()
+<a href="#l89" class="line" id="l89">     89</a>         )
+<a href="#l90" class="line" id="l90">     90</a>     }
+<a href="#l91" class="line" id="l91">     91</a> 
+<a href="#l92" class="line" id="l92">     92</a>     fun fetchMessage(conversationId: String, messageId: Long, onSuccess: (Message) -&gt; Unit, onError: (error: String) -&gt; Unit = {}) {
+<a href="#l93" class="line" id="l93">     93</a>         fetchMessage.invoke(
+<a href="#l94" class="line" id="l94">     94</a>             instanceNonNull(),
+<a href="#l95" class="line" id="l95">     95</a>             conversationId.toSnapUUID().instanceNonNull(),
+<a href="#l96" class="line" id="l96">     96</a>             messageId,
+<a href="#l97" class="line" id="l97">     97</a>             CallbackBuilder(getCallbackClass(&quot;FetchMessageCallback&quot;))
+<a href="#l98" class="line" id="l98">     98</a>                 .override(&quot;onFetchMessageComplete&quot;) { param -&gt;
+<a href="#l99" class="line" id="l99">     99</a>                     onSuccess(Message(param.arg(0)))
+<a href="#l100" class="line" id="l100">    100</a>                 }
+<a href="#l101" class="line" id="l101">    101</a>                 .override(&quot;onError&quot;) {
+<a href="#l102" class="line" id="l102">    102</a>                     onError(it.arg&lt;Any&gt;(0).toString())
+<a href="#l103" class="line" id="l103">    103</a>                 }.build()
+<a href="#l104" class="line" id="l104">    104</a>         )
+<a href="#l105" class="line" id="l105">    105</a>     }
+<a href="#l106" class="line" id="l106">    106</a> 
+<a href="#l107" class="line" id="l107">    107</a>     fun fetchMessageByServerId(conversationId: String, serverMessageId: Long, onSuccess: (Message) -&gt; Unit, onError: (error: String) -&gt; Unit) {
+<a href="#l108" class="line" id="l108">    108</a>         val serverMessageIdentifier = context.classCache.serverMessageIdentifier.dataBuilder {
+<a href="#l109" class="line" id="l109">    109</a>             set(&quot;mServerConversationId&quot;,  conversationId.toSnapUUID().instanceNonNull())
+<a href="#l110" class="line" id="l110">    110</a>             set(&quot;mServerMessageId&quot;, serverMessageId)
+<a href="#l111" class="line" id="l111">    111</a>         }
+<a href="#l112" class="line" id="l112">    112</a> 
+<a href="#l113" class="line" id="l113">    113</a>         fetchMessageByServerId.invoke(
+<a href="#l114" class="line" id="l114">    114</a>             instanceNonNull(),
+<a href="#l115" class="line" id="l115">    115</a>             serverMessageIdentifier,
+<a href="#l116" class="line" id="l116">    116</a>             CallbackBuilder(getCallbackClass(&quot;FetchMessageCallback&quot;))
+<a href="#l117" class="line" id="l117">    117</a>                 .override(&quot;onFetchMessageComplete&quot;) { param -&gt;
+<a href="#l118" class="line" id="l118">    118</a>                     onSuccess(Message(param.arg(0)))
+<a href="#l119" class="line" id="l119">    119</a>                 }
+<a href="#l120" class="line" id="l120">    120</a>                 .override(&quot;onError&quot;) {
+<a href="#l121" class="line" id="l121">    121</a>                     onError(it.arg&lt;Any&gt;(0).toString())
+<a href="#l122" class="line" id="l122">    122</a>                 }.build()
+<a href="#l123" class="line" id="l123">    123</a>         )
+<a href="#l124" class="line" id="l124">    124</a>     }
+<a href="#l125" class="line" id="l125">    125</a> 
+<a href="#l126" class="line" id="l126">    126</a>     fun fetchMessagesByServerIds(conversationId: String, serverMessageIds: List&lt;Long&gt;, onSuccess: (List&lt;Message&gt;) -&gt; Unit, onError: (error: String) -&gt; Unit) {
+<a href="#l127" class="line" id="l127">    127</a>         fetchMessagesByServerIds.invoke(
+<a href="#l128" class="line" id="l128">    128</a>             instanceNonNull(),
+<a href="#l129" class="line" id="l129">    129</a>             serverMessageIds.map {
+<a href="#l130" class="line" id="l130">    130</a>                 CallbackBuilder.createEmptyObject(context.classCache.serverMessageIdentifier.constructors.first())?.apply {
+<a href="#l131" class="line" id="l131">    131</a>                     setObjectField(&quot;mServerConversationId&quot;, conversationId.toSnapUUID().instanceNonNull())
+<a href="#l132" class="line" id="l132">    132</a>                     setObjectField(&quot;mServerMessageId&quot;, it)
+<a href="#l133" class="line" id="l133">    133</a>                 }
+<a href="#l134" class="line" id="l134">    134</a>             },
+<a href="#l135" class="line" id="l135">    135</a>             CallbackBuilder(getCallbackClass(&quot;FetchMessagesByServerIdsCallback&quot;))
+<a href="#l136" class="line" id="l136">    136</a>                 .override(&quot;onSuccess&quot;) { param -&gt;
+<a href="#l137" class="line" id="l137">    137</a>                     onSuccess(param.arg&lt;List&lt;*&gt;&gt;(0).mapNotNull {
+<a href="#l138" class="line" id="l138">    138</a>                         Message(it?.getObjectField(&quot;mMessage&quot;) ?: return@mapNotNull null)
+<a href="#l139" class="line" id="l139">    139</a>                     })
+<a href="#l140" class="line" id="l140">    140</a>                 }
+<a href="#l141" class="line" id="l141">    141</a>                 .override(&quot;onError&quot;) {
+<a href="#l142" class="line" id="l142">    142</a>                     onError(it.arg&lt;Any&gt;(0).toString())
+<a href="#l143" class="line" id="l143">    143</a>                 }.build()
+<a href="#l144" class="line" id="l144">    144</a>         )
+<a href="#l145" class="line" id="l145">    145</a>     }
+<a href="#l146" class="line" id="l146">    146</a> 
+<a href="#l147" class="line" id="l147">    147</a>     fun clearConversation(conversationId: String, onSuccess: () -&gt; Unit, onError: (error: String) -&gt; Unit) {
+<a href="#l148" class="line" id="l148">    148</a>         val callback = CallbackBuilder(getCallbackClass(&quot;Callback&quot;))
+<a href="#l149" class="line" id="l149">    149</a>             .override(&quot;onSuccess&quot;) { onSuccess() }
+<a href="#l150" class="line" id="l150">    150</a>             .override(&quot;onError&quot;) { onError(it.arg&lt;Any&gt;(0).toString()) }.build()
+<a href="#l151" class="line" id="l151">    151</a>         clearConversation.invoke(instanceNonNull(), conversationId.toSnapUUID().instanceNonNull(), callback)
+<a href="#l152" class="line" id="l152">    152</a>     }
+<a href="#l153" class="line" id="l153">    153</a> 
+<a href="#l154" class="line" id="l154">    154</a>     fun getOneOnOneConversationIds(userIds: List&lt;String&gt;, onSuccess: (List&lt;Pair&lt;String, String&gt;&gt;) -&gt; Unit, onError: (error: String) -&gt; Unit) {
+<a href="#l155" class="line" id="l155">    155</a>         val callback = CallbackBuilder(getCallbackClass(&quot;GetOneOnOneConversationIdsCallback&quot;))
+<a href="#l156" class="line" id="l156">    156</a>             .override(&quot;onSuccess&quot;) { param -&gt;
+<a href="#l157" class="line" id="l157">    157</a>                 onSuccess(param.arg&lt;ArrayList&lt;*&gt;&gt;(0).map {
+<a href="#l158" class="line" id="l158">    158</a>                     SnapUUID(it.getObjectField(&quot;mUserId&quot;)).toString() to SnapUUID(it.getObjectField(&quot;mConversationId&quot;)).toString()
+<a href="#l159" class="line" id="l159">    159</a>                 })
+<a href="#l160" class="line" id="l160">    160</a>             }
+<a href="#l161" class="line" id="l161">    161</a>             .override(&quot;onError&quot;) { onError(it.arg&lt;Any&gt;(0).toString()) }.build()
+<a href="#l162" class="line" id="l162">    162</a>         getOneOnOneConversationIds.invoke(instanceNonNull(), userIds.map { it.toSnapUUID().instanceNonNull() }.toMutableList(), callback)
+<a href="#l163" class="line" id="l163">    163</a>     }
+<a href="#l164" class="line" id="l164">    164</a> 
+<a href="#l165" class="line" id="l165">    165</a>     fun editMessage(conversationId: String, messageId: Long, content: ByteArray, onSuccess: () -&gt; Unit, onError: (error: String) -&gt; Unit) {
+<a href="#l166" class="line" id="l166">    166</a>         val editMessageMethod = instanceNonNull()::class.java.methods.first { it.name == &quot;editMessage&quot; }
+<a href="#l167" class="line" id="l167">    167</a>         editMessageMethod.invoke(instanceNonNull(), editMessageMethod.parameterTypes[0].dataBuilder {
+<a href="#l168" class="line" id="l168">    168</a>             set(&quot;mConversationId&quot;, conversationId.toSnapUUID().instanceNonNull())
+<a href="#l169" class="line" id="l169">    169</a>             set(&quot;mMessageId&quot;, messageId)
+<a href="#l170" class="line" id="l170">    170</a>         }, editMessageMethod.parameterTypes[1].dataBuilder {
+<a href="#l171" class="line" id="l171">    171</a>             set(&quot;mContent&quot;, content)
+<a href="#l172" class="line" id="l172">    172</a>             set(&quot;mMentionInfo&quot;, null)
+<a href="#l173" class="line" id="l173">    173</a>         }, CallbackBuilder(getCallbackClass(&quot;Callback&quot;))
+<a href="#l174" class="line" id="l174">    174</a>             .override(&quot;onSuccess&quot;) { onSuccess() }
+<a href="#l175" class="line" id="l175">    175</a>             .override(&quot;onError&quot;) { onError(it.arg&lt;Any&gt;(0).toString()) }.build()
+<a href="#l176" class="line" id="l176">    176</a>         )
+<a href="#l177" class="line" id="l177">    177</a>     }
+<a href="#l178" class="line" id="l178">    178</a> 
+<a href="#l179" class="line" id="l179">    179</a>     fun isEditMessageSupported() = instanceNonNull()::class.java.methods.any { it.name == &quot;editMessage&quot; }
+<a href="#l180" class="line" id="l180">    180</a> 
+<a href="#l181" class="line" id="l181">    181</a>     fun dismissStreakRestore(conversationId: String, onSuccess: () -&gt; Unit, onError: (error: String) -&gt; Unit) {
+<a href="#l182" class="line" id="l182">    182</a>         val callback = CallbackBuilder(getCallbackClass(&quot;Callback&quot;))
+<a href="#l183" class="line" id="l183">    183</a>             .override(&quot;onSuccess&quot;) { onSuccess() }
+<a href="#l184" class="line" id="l184">    184</a>             .override(&quot;onError&quot;) { onError(it.arg&lt;Any&gt;(0).toString()) }.build()
+<a href="#l185" class="line" id="l185">    185</a>         dismissStreakRestore.invoke(instanceNonNull(), conversationId.toSnapUUID().instanceNonNull(), callback)
+<a href="#l186" class="line" id="l186">    186</a>     }
+<a href="#l187" class="line" id="l187">    187</a> 
+<a href="#l188" class="line" id="l188">    188</a>     fun reactToMessage(conversationId: String, messageId: Long, emoji: String? = null, intentionType: Long? = null, onSuccess: () -&gt; Unit, onError: (error: String) -&gt; Unit) {
+<a href="#l189" class="line" id="l189">    189</a>         reactToMessageMethod.invoke(
+<a href="#l190" class="line" id="l190">    190</a>             instanceNonNull(),
+<a href="#l191" class="line" id="l191">    191</a>             conversationId.toSnapUUID().instanceNonNull(),
+<a href="#l192" class="line" id="l192">    192</a>             messageId,
+<a href="#l193" class="line" id="l193">    193</a>             reactToMessageMethod.parameterTypes[2].dataBuilder {
+<a href="#l194" class="line" id="l194">    194</a>                 set(&quot;mEmoji&quot;, emoji)
+<a href="#l195" class="line" id="l195">    195</a>                 set(&quot;mIntentionType&quot;, intentionType)
+<a href="#l196" class="line" id="l196">    196</a>             },
+<a href="#l197" class="line" id="l197">    197</a>             reactToMessageMethod.parameterTypes[3].dataBuilder {
+<a href="#l198" class="line" id="l198">    198</a>                 set(&quot;mMetricsMessageMediaType&quot;, &quot;NO_MEDIA&quot;)
+<a href="#l199" class="line" id="l199">    199</a>                 set(&quot;mMetricsMessageType&quot;, &quot;TEXT&quot;)
+<a href="#l200" class="line" id="l200">    200</a>                 set(&quot;mReactionSource&quot;, &quot;NONE&quot;)
+<a href="#l201" class="line" id="l201">    201</a>             },
+<a href="#l202" class="line" id="l202">    202</a>             CallbackBuilder(getCallbackClass(&quot;Callback&quot;))
+<a href="#l203" class="line" id="l203">    203</a>             .override(&quot;onSuccess&quot;) { onSuccess() }
+<a href="#l204" class="line" id="l204">    204</a>             .override(&quot;onError&quot;) { onError(it.arg&lt;Any&gt;(0).toString()) }.build()
+<a href="#l205" class="line" id="l205">    205</a>         )
+<a href="#l206" class="line" id="l206">    206</a>     }
+<a href="#l207" class="line" id="l207">    207</a> }</pre>
 </div>
 </body>
 </html>
