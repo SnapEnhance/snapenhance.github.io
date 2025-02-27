@@ -79,7 +79,6 @@ class MessagingTweaks : ConfigContainer() {
     ) { requireRestart(); customOptionTranslationPath = "content_type" }
     val preventMessageSending = multiple("prevent_message_sending", *NotificationType.getOutgoingValues().map { it.key }.toTypedArray()) {
         customOptionTranslationPath = "features.options.notifications"
-        nativeHooks()
     }
     val friendMutationNotifier = multiple("friend_mutation_notifier",
         "remove_friend",
@@ -94,10 +93,12 @@ class MessagingTweaks : ConfigContainer() {
         customOptionTranslationPath = "features.options.notifications"
     }
     val messageLogger = container("message_logger", MessageLoggerConfig()) { requireRestart() }
-    val galleryMediaSendOverride = unique("gallery_media_send_override", "always_ask", "SNAP", "NOTE", "SAVEABLE_SNAP") { requireRestart(); nativeHooks() }
+    val galleryMediaSendOverride = unique("gallery_media_send_override", "always_ask", "SNAP", "NOTE", "SAVEABLE_SNAP") { requireRestart() }
     val stripMediaMetadata = multiple("strip_media_metadata", "hide_caption_text", "hide_snap_filters", "hide_extras", "remove_audio_note_duration", "remove_audio_note_transcript_capability") { requireRestart() }
     val bypassMessageRetentionPolicy = boolean("bypass_message_retention_policy") { addNotices(FeatureNotice.UNSTABLE); requireRestart() }
     val bypassMessageActionRestrictions = boolean("bypass_message_action_restrictions") { requireRestart() }
     val removeGroupsLockedStatus = boolean("remove_groups_locked_status") { requireRestart() }
-    val doubleTapChatAction = unique("double_tap_chat_action", "like_message", "copy_text", "delete_message", "mark_as_read") { requireRestart() }
+    val doubleTapChatAction = unique("double_tap_chat_action", "like_message", "copy_text", "delete_message", "mark_as_read", "custom_emoji_reaction") { requireRestart() }
+    val doubleTapChatActionCustomEmoji = string("double_tap_chat_action_custom_emoji") {
+        inputCheck = { it.length == 2 && it.toByteArray(Charsets.UTF_8).size >= 4 } }
 }
