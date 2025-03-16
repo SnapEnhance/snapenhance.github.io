@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> CallRecorder.kt (6539B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/CallRecorder.kt">raw</a></p><hr/><pre id="blob">
+<p> CallRecorder.kt (6992B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/CallRecorder.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core.features.impl.experiments
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import android.media.AudioAttributes
@@ -56,103 +56,112 @@
 <a href="#l33" class="line" id="l33">     33</a>         val streamHandlers = ConcurrentHashMap&lt;Int, MutableList&lt;(data: ByteArray) -&gt; Unit&gt;&gt;() // audioTrack -&gt; handlers
 <a href="#l34" class="line" id="l34">     34</a>         val participants = CopyOnWriteArrayList&lt;String&gt;()
 <a href="#l35" class="line" id="l35">     35</a> 
-<a href="#l36" class="line" id="l36">     36</a>         findClass(&quot;com.snapchat.talkcorev3.CallingSessionState&quot;).hookConstructor(HookStage.AFTER) { param -&gt;
-<a href="#l37" class="line" id="l37">     37</a>             val instance = param.thisObject&lt;Any&gt;()
-<a href="#l38" class="line" id="l38">     38</a>             val callingState = instance.getObjectFieldOrNull(&quot;mLocalUser&quot;)?.getObjectField(&quot;mCallingState&quot;)
-<a href="#l39" class="line" id="l39">     39</a> 
-<a href="#l40" class="line" id="l40">     40</a>             if (callingState.toString() == &quot;IN_CALL&quot;) {
-<a href="#l41" class="line" id="l41">     41</a>                 participants.clear()
-<a href="#l42" class="line" id="l42">     42</a>                 participants.addAll((instance.getObjectField(&quot;mParticipants&quot;) as Map&lt;*, *&gt;).keys.map { it.toString() })
-<a href="#l43" class="line" id="l43">     43</a>             }
-<a href="#l44" class="line" id="l44">     44</a>         }
-<a href="#l45" class="line" id="l45">     45</a> 
-<a href="#l46" class="line" id="l46">     46</a>         AudioTrack::class.java.apply {
-<a href="#l47" class="line" id="l47">     47</a>             getConstructor(
-<a href="#l48" class="line" id="l48">     48</a>                 AudioAttributes::class.java,
-<a href="#l49" class="line" id="l49">     49</a>                 AudioFormat::class.java,
-<a href="#l50" class="line" id="l50">     50</a>                 Int::class.javaPrimitiveType,
-<a href="#l51" class="line" id="l51">     51</a>                 Int::class.javaPrimitiveType,
-<a href="#l52" class="line" id="l52">     52</a>                 Int::class.javaPrimitiveType,
-<a href="#l53" class="line" id="l53">     53</a>             ).hook(HookStage.BEFORE) { param -&gt;
-<a href="#l54" class="line" id="l54">     54</a>                 val audioAttributes = param.arg&lt;AudioAttributes&gt;(0)
-<a href="#l55" class="line" id="l55">     55</a>                 if (audioAttributes.usage != AudioAttributes.USAGE_VOICE_COMMUNICATION) return@hook
-<a href="#l56" class="line" id="l56">     56</a>                 val audioFormat = param.arg&lt;AudioFormat&gt;(1)
-<a href="#l57" class="line" id="l57">     57</a>                 val hashCode = param.thisObject&lt;Any&gt;().hashCode()
-<a href="#l58" class="line" id="l58">     58</a> 
-<a href="#l59" class="line" id="l59">     59</a>                 lateinit var streamUrl: String
-<a href="#l60" class="line" id="l60">     60</a>                 streamUrl = httpServer.ensureServerStarted()?.putContent(
-<a href="#l61" class="line" id="l61">     61</a>                     object: HttpServer.HttpContent() {
-<a href="#l62" class="line" id="l62">     62</a>                         override val contentType: String = &quot;audio/wav&quot;
-<a href="#l63" class="line" id="l63">     63</a>                         override val chunked: Boolean = true
-<a href="#l64" class="line" id="l64">     64</a>                         override val contentLength: Long? = null
-<a href="#l65" class="line" id="l65">     65</a>                         override val newBody: () -&gt; HttpServer.HttpBody = {
-<a href="#l66" class="line" id="l66">     66</a>                             object: HttpServer.HttpBody() {
-<a href="#l67" class="line" id="l67">     67</a>                                 val outputStream = PipedOutputStream()
-<a href="#l68" class="line" id="l68">     68</a>                                 val inputStream = PipedInputStream(outputStream)
-<a href="#l69" class="line" id="l69">     69</a> 
-<a href="#l70" class="line" id="l70">     70</a>                                 val handler: (byteArray: ByteArray) -&gt; Unit = handler@{ byteArray -&gt;
-<a href="#l71" class="line" id="l71">     71</a>                                     if (byteArray.isEmpty()) {
-<a href="#l72" class="line" id="l72">     72</a>                                         httpServer.removeUrl(streamUrl)
-<a href="#l73" class="line" id="l73">     73</a>                                         return@handler
-<a href="#l74" class="line" id="l74">     74</a>                                     }
-<a href="#l75" class="line" id="l75">     75</a>                                     runCatching {
-<a href="#l76" class="line" id="l76">     76</a>                                         outputStream.write(byteArray)
-<a href="#l77" class="line" id="l77">     77</a>                                         outputStream.flush()
-<a href="#l78" class="line" id="l78">     78</a>                                     }.onFailure {
-<a href="#l79" class="line" id="l79">     79</a>                                         context.log.warn(&quot;Failed to write to streaming url ${it.localizedMessage}&quot;)
-<a href="#l80" class="line" id="l80">     80</a>                                     }
-<a href="#l81" class="line" id="l81">     81</a>                                 }
-<a href="#l82" class="line" id="l82">     82</a> 
-<a href="#l83" class="line" id="l83">     83</a>                                 override val onOpen: () -&gt; Unit = {
-<a href="#l84" class="line" id="l84">     84</a>                                     streamHandlers.getOrPut(hashCode) { CopyOnWriteArrayList() }.add(handler)
-<a href="#l85" class="line" id="l85">     85</a>                                 }
-<a href="#l86" class="line" id="l86">     86</a> 
-<a href="#l87" class="line" id="l87">     87</a>                                 override val readBytes: (byteArray: ByteArray) -&gt; Int = { byteArray -&gt;
-<a href="#l88" class="line" id="l88">     88</a>                                     runBlocking {
-<a href="#l89" class="line" id="l89">     89</a>                                         withTimeoutOrNull(3000L) {
-<a href="#l90" class="line" id="l90">     90</a>                                             inputStream.read(byteArray)
-<a href="#l91" class="line" id="l91">     91</a>                                         } ?: -1
-<a href="#l92" class="line" id="l92">     92</a>                                     }
-<a href="#l93" class="line" id="l93">     93</a>                                 }
-<a href="#l94" class="line" id="l94">     94</a> 
-<a href="#l95" class="line" id="l95">     95</a>                                 override val onClose: () -&gt; Unit = {
-<a href="#l96" class="line" id="l96">     96</a>                                     context.log.verbose(&quot;Streaming url closed&quot;)
-<a href="#l97" class="line" id="l97">     97</a>                                     streamHandlers[hashCode]?.remove(handler)
-<a href="#l98" class="line" id="l98">     98</a>                                     outputStream.close()
-<a href="#l99" class="line" id="l99">     99</a>                                     inputStream.close()
-<a href="#l100" class="line" id="l100">    100</a>                                 }
-<a href="#l101" class="line" id="l101">    101</a>                             }
-<a href="#l102" class="line" id="l102">    102</a>                         }
-<a href="#l103" class="line" id="l103">    103</a>                     }
-<a href="#l104" class="line" id="l104">    104</a>                 ) ?: return@hook
-<a href="#l105" class="line" id="l105">    105</a> 
-<a href="#l106" class="line" id="l106">    106</a>                 context.log.verbose(&quot;streaming url = $streamUrl, sampleRate = ${audioFormat.sampleRate}, audioFormat = ${audioFormat.encoding}&quot;)
-<a href="#l107" class="line" id="l107">    107</a> 
-<a href="#l108" class="line" id="l108">    108</a>                 context.feature(MediaDownloader::class).provideDownloadManagerClient(
-<a href="#l109" class="line" id="l109">    109</a>                     UUID.randomUUID().toString(),
-<a href="#l110" class="line" id="l110">    110</a>                     participants.mapNotNull { context.database.getFriendInfo(it)?.mutableUsername }.joinToString(&quot;-&quot;),
-<a href="#l111" class="line" id="l111">    111</a>                     System.currentTimeMillis(),
-<a href="#l112" class="line" id="l112">    112</a>                     MediaDownloadSource.VOICE_CALL
-<a href="#l113" class="line" id="l113">    113</a>                 ).downloadStream(streamUrl, AudioStreamFormat(audioFormat.channelCount, audioFormat.sampleRate, audioFormat.encoding))
-<a href="#l114" class="line" id="l114">    114</a>             }
-<a href="#l115" class="line" id="l115">    115</a> 
-<a href="#l116" class="line" id="l116">    116</a>             getMethod(&quot;write&quot;, ByteBuffer::class.java, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType).hook(HookStage.BEFORE) { param -&gt;
-<a href="#l117" class="line" id="l117">    117</a>                 streamHandlers[param.thisObject&lt;Any&gt;().hashCode()]?.let { handlers -&gt;
-<a href="#l118" class="line" id="l118">    118</a>                     val byteBuffer = param.arg&lt;ByteBuffer&gt;(0)
-<a href="#l119" class="line" id="l119">    119</a>                     val position = byteBuffer.position()
-<a href="#l120" class="line" id="l120">    120</a>                     val buffer = ByteArray(param.arg(1))
-<a href="#l121" class="line" id="l121">    121</a>                     byteBuffer.get(buffer)
-<a href="#l122" class="line" id="l122">    122</a>                     byteBuffer.position(position)
-<a href="#l123" class="line" id="l123">    123</a>                     handlers.forEach { it(buffer) }
-<a href="#l124" class="line" id="l124">    124</a>                 }
-<a href="#l125" class="line" id="l125">    125</a>             }
-<a href="#l126" class="line" id="l126">    126</a> 
-<a href="#l127" class="line" id="l127">    127</a>             hook(&quot;release&quot;, HookStage.BEFORE) {
-<a href="#l128" class="line" id="l128">    128</a>                 streamHandlers.remove(it.thisObject&lt;Any&gt;().hashCode())?.forEach { it(ByteArray(0)) }
-<a href="#l129" class="line" id="l129">    129</a>             }
-<a href="#l130" class="line" id="l130">    130</a>         }
-<a href="#l131" class="line" id="l131">    131</a>     }
-<a href="#l132" class="line" id="l132">    132</a> }</pre>
+<a href="#l36" class="line" id="l36">     36</a>         runCatching {
+<a href="#l37" class="line" id="l37">     37</a>             findClass(&quot;com.snapchat.talkcorev3.CallingSessionState&quot;)
+<a href="#l38" class="line" id="l38">     38</a>         }.getOrNull()?.hookConstructor(HookStage.AFTER) { param -&gt;
+<a href="#l39" class="line" id="l39">     39</a>             val instance = param.thisObject&lt;Any&gt;()
+<a href="#l40" class="line" id="l40">     40</a>             val callingState = instance.getObjectFieldOrNull(&quot;mLocalUser&quot;)?.getObjectField(&quot;mCallingState&quot;)
+<a href="#l41" class="line" id="l41">     41</a> 
+<a href="#l42" class="line" id="l42">     42</a>             if (callingState.toString() == &quot;IN_CALL&quot;) {
+<a href="#l43" class="line" id="l43">     43</a>                 participants.clear()
+<a href="#l44" class="line" id="l44">     44</a>                 participants.addAll((instance.getObjectField(&quot;mParticipants&quot;) as Map&lt;*, *&gt;).keys.map { it.toString() })
+<a href="#l45" class="line" id="l45">     45</a>             }
+<a href="#l46" class="line" id="l46">     46</a>         } ?: findClass(&quot;com.snapchat.talkcorev3.TSCallingStateUpdateParams&quot;).hookConstructor(HookStage.AFTER) { param -&gt;
+<a href="#l47" class="line" id="l47">     47</a>             val instance = param.thisObject&lt;Any&gt;()
+<a href="#l48" class="line" id="l48">     48</a> 
+<a href="#l49" class="line" id="l49">     49</a>             if (instance.getObjectFieldOrNull(&quot;mInCall&quot;) == true) {
+<a href="#l50" class="line" id="l50">     50</a>                 participants.clear()
+<a href="#l51" class="line" id="l51">     51</a>                 participants.addAll((instance.getObjectField(&quot;mParticipants&quot;) as Set&lt;*&gt;).map { it.toString() })
+<a href="#l52" class="line" id="l52">     52</a>             }
+<a href="#l53" class="line" id="l53">     53</a>         }
+<a href="#l54" class="line" id="l54">     54</a> 
+<a href="#l55" class="line" id="l55">     55</a>         AudioTrack::class.java.apply {
+<a href="#l56" class="line" id="l56">     56</a>             getConstructor(
+<a href="#l57" class="line" id="l57">     57</a>                 AudioAttributes::class.java,
+<a href="#l58" class="line" id="l58">     58</a>                 AudioFormat::class.java,
+<a href="#l59" class="line" id="l59">     59</a>                 Int::class.javaPrimitiveType,
+<a href="#l60" class="line" id="l60">     60</a>                 Int::class.javaPrimitiveType,
+<a href="#l61" class="line" id="l61">     61</a>                 Int::class.javaPrimitiveType,
+<a href="#l62" class="line" id="l62">     62</a>             ).hook(HookStage.BEFORE) { param -&gt;
+<a href="#l63" class="line" id="l63">     63</a>                 val audioAttributes = param.arg&lt;AudioAttributes&gt;(0)
+<a href="#l64" class="line" id="l64">     64</a>                 if (audioAttributes.usage != AudioAttributes.USAGE_VOICE_COMMUNICATION) return@hook
+<a href="#l65" class="line" id="l65">     65</a>                 val audioFormat = param.arg&lt;AudioFormat&gt;(1)
+<a href="#l66" class="line" id="l66">     66</a>                 val hashCode = param.thisObject&lt;Any&gt;().hashCode()
+<a href="#l67" class="line" id="l67">     67</a> 
+<a href="#l68" class="line" id="l68">     68</a>                 lateinit var streamUrl: String
+<a href="#l69" class="line" id="l69">     69</a>                 streamUrl = httpServer.ensureServerStarted()?.putContent(
+<a href="#l70" class="line" id="l70">     70</a>                     object: HttpServer.HttpContent() {
+<a href="#l71" class="line" id="l71">     71</a>                         override val contentType: String = &quot;audio/wav&quot;
+<a href="#l72" class="line" id="l72">     72</a>                         override val chunked: Boolean = true
+<a href="#l73" class="line" id="l73">     73</a>                         override val contentLength: Long? = null
+<a href="#l74" class="line" id="l74">     74</a>                         override val newBody: () -&gt; HttpServer.HttpBody = {
+<a href="#l75" class="line" id="l75">     75</a>                             object: HttpServer.HttpBody() {
+<a href="#l76" class="line" id="l76">     76</a>                                 val outputStream = PipedOutputStream()
+<a href="#l77" class="line" id="l77">     77</a>                                 val inputStream = PipedInputStream(outputStream)
+<a href="#l78" class="line" id="l78">     78</a> 
+<a href="#l79" class="line" id="l79">     79</a>                                 val handler: (byteArray: ByteArray) -&gt; Unit = handler@{ byteArray -&gt;
+<a href="#l80" class="line" id="l80">     80</a>                                     if (byteArray.isEmpty()) {
+<a href="#l81" class="line" id="l81">     81</a>                                         httpServer.removeUrl(streamUrl)
+<a href="#l82" class="line" id="l82">     82</a>                                         return@handler
+<a href="#l83" class="line" id="l83">     83</a>                                     }
+<a href="#l84" class="line" id="l84">     84</a>                                     runCatching {
+<a href="#l85" class="line" id="l85">     85</a>                                         outputStream.write(byteArray)
+<a href="#l86" class="line" id="l86">     86</a>                                         outputStream.flush()
+<a href="#l87" class="line" id="l87">     87</a>                                     }.onFailure {
+<a href="#l88" class="line" id="l88">     88</a>                                         context.log.warn(&quot;Failed to write to streaming url ${it.localizedMessage}&quot;)
+<a href="#l89" class="line" id="l89">     89</a>                                     }
+<a href="#l90" class="line" id="l90">     90</a>                                 }
+<a href="#l91" class="line" id="l91">     91</a> 
+<a href="#l92" class="line" id="l92">     92</a>                                 override val onOpen: () -&gt; Unit = {
+<a href="#l93" class="line" id="l93">     93</a>                                     streamHandlers.getOrPut(hashCode) { CopyOnWriteArrayList() }.add(handler)
+<a href="#l94" class="line" id="l94">     94</a>                                 }
+<a href="#l95" class="line" id="l95">     95</a> 
+<a href="#l96" class="line" id="l96">     96</a>                                 override val readBytes: (byteArray: ByteArray) -&gt; Int = { byteArray -&gt;
+<a href="#l97" class="line" id="l97">     97</a>                                     runBlocking {
+<a href="#l98" class="line" id="l98">     98</a>                                         withTimeoutOrNull(3000L) {
+<a href="#l99" class="line" id="l99">     99</a>                                             inputStream.read(byteArray)
+<a href="#l100" class="line" id="l100">    100</a>                                         } ?: -1
+<a href="#l101" class="line" id="l101">    101</a>                                     }
+<a href="#l102" class="line" id="l102">    102</a>                                 }
+<a href="#l103" class="line" id="l103">    103</a> 
+<a href="#l104" class="line" id="l104">    104</a>                                 override val onClose: () -&gt; Unit = {
+<a href="#l105" class="line" id="l105">    105</a>                                     context.log.verbose(&quot;Streaming url closed&quot;)
+<a href="#l106" class="line" id="l106">    106</a>                                     streamHandlers[hashCode]?.remove(handler)
+<a href="#l107" class="line" id="l107">    107</a>                                     outputStream.close()
+<a href="#l108" class="line" id="l108">    108</a>                                     inputStream.close()
+<a href="#l109" class="line" id="l109">    109</a>                                 }
+<a href="#l110" class="line" id="l110">    110</a>                             }
+<a href="#l111" class="line" id="l111">    111</a>                         }
+<a href="#l112" class="line" id="l112">    112</a>                     }
+<a href="#l113" class="line" id="l113">    113</a>                 ) ?: return@hook
+<a href="#l114" class="line" id="l114">    114</a> 
+<a href="#l115" class="line" id="l115">    115</a>                 context.log.verbose(&quot;streaming url = $streamUrl, sampleRate = ${audioFormat.sampleRate}, audioFormat = ${audioFormat.encoding}&quot;)
+<a href="#l116" class="line" id="l116">    116</a> 
+<a href="#l117" class="line" id="l117">    117</a>                 context.feature(MediaDownloader::class).provideDownloadManagerClient(
+<a href="#l118" class="line" id="l118">    118</a>                     UUID.randomUUID().toString(),
+<a href="#l119" class="line" id="l119">    119</a>                     participants.mapNotNull { context.database.getFriendInfo(it)?.mutableUsername }.joinToString(&quot;-&quot;),
+<a href="#l120" class="line" id="l120">    120</a>                     System.currentTimeMillis(),
+<a href="#l121" class="line" id="l121">    121</a>                     MediaDownloadSource.VOICE_CALL
+<a href="#l122" class="line" id="l122">    122</a>                 ).downloadStream(streamUrl, AudioStreamFormat(audioFormat.channelCount, audioFormat.sampleRate, audioFormat.encoding))
+<a href="#l123" class="line" id="l123">    123</a>             }
+<a href="#l124" class="line" id="l124">    124</a> 
+<a href="#l125" class="line" id="l125">    125</a>             getMethod(&quot;write&quot;, ByteBuffer::class.java, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType).hook(HookStage.BEFORE) { param -&gt;
+<a href="#l126" class="line" id="l126">    126</a>                 streamHandlers[param.thisObject&lt;Any&gt;().hashCode()]?.let { handlers -&gt;
+<a href="#l127" class="line" id="l127">    127</a>                     val byteBuffer = param.arg&lt;ByteBuffer&gt;(0)
+<a href="#l128" class="line" id="l128">    128</a>                     val position = byteBuffer.position()
+<a href="#l129" class="line" id="l129">    129</a>                     val buffer = ByteArray(param.arg(1))
+<a href="#l130" class="line" id="l130">    130</a>                     byteBuffer.get(buffer)
+<a href="#l131" class="line" id="l131">    131</a>                     byteBuffer.position(position)
+<a href="#l132" class="line" id="l132">    132</a>                     handlers.forEach { it(buffer) }
+<a href="#l133" class="line" id="l133">    133</a>                 }
+<a href="#l134" class="line" id="l134">    134</a>             }
+<a href="#l135" class="line" id="l135">    135</a> 
+<a href="#l136" class="line" id="l136">    136</a>             hook(&quot;release&quot;, HookStage.BEFORE) {
+<a href="#l137" class="line" id="l137">    137</a>                 streamHandlers.remove(it.thisObject&lt;Any&gt;().hashCode())?.forEach { it(ByteArray(0)) }
+<a href="#l138" class="line" id="l138">    138</a>             }
+<a href="#l139" class="line" id="l139">    139</a>         }
+<a href="#l140" class="line" id="l140">    140</a>     }
+<a href="#l141" class="line" id="l141">    141</a> }</pre>
 </div>
 </body>
 </html>
