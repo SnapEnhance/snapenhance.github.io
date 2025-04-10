@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>refactor(core): security features - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/9761d73ece7a5c35abde08c7a2fb39e321a6528c.html">9761d73ece7a5c35abde08c7a2fb39e321a6528c</a>
+<b>parent</b> <a href="../commit/62350a048c39042226ee9a4edae7f5549dd2237a.html">62350a048c39042226ee9a4edae7f5549dd2237a</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu, 10 Apr 2025 18:40:07 +0200
+
+refactor(core): security features
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">+++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt</a></td><td> | </td><td class="num">148</td><td><span class="i">+++++++++++++++++++++++++++++++++++</span><span class="d">--------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></td><td> | </td><td class="num">19</td><td><span class="i">+++++++++++++</span><span class="d">------</span></td></tr>
+</table></pre><pre>4 files changed, 85 insertions(+), 92 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
+</a> import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+ import androidx.compose.ui.window.Dialog
+<a href="#h0-0-3" id="h0-0-3" class="i">+import androidx.core.content.edit
+</a> import androidx.core.net.toUri
+ import androidx.navigation.NavBackStackEntry
+ import kotlinx.coroutines.launch
+<a href="#h0-1" id="h0-1" class="h">@@ -52,9 +53,9 @@ class HomeSettings : Routes.Route() {
+</a>                 .clickable {
+                     value = !value
+                     sharedPreferences
+<a href="#h0-1-3" id="h0-1-3" class="d">-                        .edit()
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-                        .putBoolean(realKey, value)
+</a><a href="#h0-1-5" id="h0-1-5" class="d">-                        .apply()
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+                        .edit() {
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+                            putBoolean(realKey, value)
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+                        }
+</a>                 },
+             horizontalArrangement = Arrangement.SpaceBetween,
+             verticalAlignment = Alignment.CenterVertically
+<a href="#h0-2" id="h0-2" class="h">@@ -284,7 +285,7 @@ class HomeSettings : Routes.Route() {
+</a>                 Column(
+                     verticalArrangement = Arrangement.spacedBy(4.dp),
+                 ) {
+<a href="#h0-2-3" id="h0-2-3" class="d">-                    PreferenceToggle(context.sharedPreferences, key = &quot;disable_sif_prod&quot;, text = &quot;Disable Snap Integrity Fix&quot;)
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+                    PreferenceToggle(context.sharedPreferences, key = &quot;enable_security_features&quot;, text = &quot;Enable Security Features&quot;)
+</a>                     PreferenceToggle(context.sharedPreferences, key = &quot;disable_feature_loading&quot;, text = &quot;Disable Feature Loading&quot;)
+                     PreferenceToggle(context.sharedPreferences, key = &quot;disable_mapper&quot;, text = &quot;Disable Auto Mapper&quot;)
+                 }
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -75,6 +75,7 @@ class ModContext(
+</a>     val isDeveloper by lazy { config.scripting.developerMode.get() }
+ 
+     var isMainActivityPaused = true
+<a href="#h1-0-3" id="h1-0-3" class="i">+    var isSafeMode = false
+</a> 
+     fun &lt;T : Feature&gt; feature(featureClass: KClass&lt;T&gt;): T {
+         return features.get(featureClass)!!
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,16 +1,20 @@
+</a> package me.rhunk.snapenhance.core
+ 
+ import android.system.Os
+<a href="#h2-0-3" id="h2-0-3" class="d">-import androidx.compose.foundation.layout.Row
+</a><a href="#h2-0-4" id="h2-0-4" class="d">-import androidx.compose.foundation.layout.padding
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+import android.view.ViewGroup
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+import androidx.compose.foundation.layout.*
+</a> import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.filled.Check
+<a href="#h2-0-9" id="h2-0-9" class="d">-import androidx.compose.material.icons.filled.NotInterested
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+import androidx.compose.material.icons.rounded.NotInterested
+</a> import androidx.compose.material3.Icon
+<a href="#h2-0-12" id="h2-0-12" class="i">+import androidx.compose.material3.MaterialTheme
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+import androidx.compose.material3.Surface
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+import androidx.compose.material3.Text
+</a> import androidx.compose.runtime.LaunchedEffect
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.graphics.Color
+<a href="#h2-0-19" id="h2-0-19" class="i">+import androidx.compose.ui.text.style.TextAlign
+</a> import androidx.compose.ui.unit.dp
+ import kotlinx.coroutines.delay
+ import me.rhunk.snapenhance.common.bridge.FileHandleScope
+<a href="#h2-1" id="h2-1" class="h">@@ -18,13 +22,8 @@ import me.rhunk.snapenhance.common.bridge.InternalFileHandleType
+</a> import me.rhunk.snapenhance.common.bridge.toWrapper
+ import me.rhunk.snapenhance.common.config.MOD_DETECTION_VERSION_CHECK
+ import me.rhunk.snapenhance.common.config.VersionRequirement
+<a href="#h2-1-3" id="h2-1-3" class="d">-import me.rhunk.snapenhance.common.util.protobuf.ProtoEditor
+</a><a href="#h2-1-4" id="h2-1-4" class="d">-import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+</a><a href="#h2-1-5" id="h2-1-5" class="d">-import me.rhunk.snapenhance.core.event.events.impl.UnaryCallEvent
+</a><a href="#h2-1-6" id="h2-1-6" class="i">+import me.rhunk.snapenhance.common.ui.createComposeView
+</a> import me.rhunk.snapenhance.core.ui.CustomComposable
+<a href="#h2-1-8" id="h2-1-8" class="d">-import me.rhunk.snapenhance.core.util.ktx.setObjectField
+</a><a href="#h2-1-9" id="h2-1-9" class="d">-import java.io.FileDescriptor
+</a><a href="#h2-1-10" id="h2-1-10" class="d">-import kotlin.text.isNotEmpty
+</a> 
+ class SecurityFeatures(
+     private val context: ModContext
+<a href="#h2-2" id="h2-2" class="h">@@ -39,10 +38,9 @@ class SecurityFeatures(
+</a>         transact(this, 0)?.toString(2)?.padStart(32, &#39;0&#39;)?.count { it == &#39;1&#39; }
+     }
+ 
+<a href="#h2-2-3" id="h2-2-3" class="d">-    fun init(): Boolean {
+</a><a href="#h2-2-4" id="h2-2-4" class="i">+    private fun isSafeMode(): Boolean {
+</a>         val snapchatVersionCode = context.androidContext.packageManager?.getPackageInfo(context.androidContext.packageName, 0)?.longVersionCode ?: throw IllegalStateException(&quot;Failed to get version code&quot;)
+         val shouldUseSafeMode = MOD_DETECTION_VERSION_CHECK.checkVersion(snapchatVersionCode)?.second == VersionRequirement.OLDER_REQUIRED // true if version is &gt;12.81.0.44
+<a href="#h2-2-7" id="h2-2-7" class="d">-        val debugDisable = context.bridgeClient.getDebugProp(&quot;disable_sif_prod&quot;, &quot;false&quot;) == &quot;true&quot;
+</a> 
+         context.config.experimental.nativeHooks.customSharedLibrary.get().takeIf { it.isNotEmpty() }?.let {
+             runCatching {
+<a href="#h2-3" id="h2-3" class="h">@@ -54,74 +52,28 @@ class SecurityFeatures(
+</a>                 context.log.error(&quot;Failed to load custom shared library&quot;, it)
+                 return true
+             }
+<a href="#h2-3-3" id="h2-3-3" class="d">-        }
+</a><a href="#h2-3-4" id="h2-3-4" class="d">-
+</a><a href="#h2-3-5" id="h2-3-5" class="d">-        if (!debugDisable) {
+</a><a href="#h2-3-6" id="h2-3-6" class="d">-            runCatching {
+</a><a href="#h2-3-7" id="h2-3-7" class="d">-                context.native.loadSharedLibrary(
+</a><a href="#h2-3-8" id="h2-3-8" class="d">-                    context.fileHandlerManager.getFileHandle(FileHandleScope.INTERNAL.key, InternalFileHandleType.SIF.key)
+</a><a href="#h2-3-9" id="h2-3-9" class="d">-                        .toWrapper()
+</a><a href="#h2-3-10" id="h2-3-10" class="d">-                        .readBytes()
+</a><a href="#h2-3-11" id="h2-3-11" class="d">-                        .takeIf {
+</a><a href="#h2-3-12" id="h2-3-12" class="d">-                            it.isNotEmpty()
+</a><a href="#h2-3-13" id="h2-3-13" class="d">-                        } ?: throw IllegalStateException(&quot;buffer is empty&quot;)
+</a><a href="#h2-3-14" id="h2-3-14" class="d">-                )
+</a><a href="#h2-3-15" id="h2-3-15" class="d">-                context.log.verbose(&quot;loaded sif&quot;)
+</a><a href="#h2-3-16" id="h2-3-16" class="d">-            }.onFailure {
+</a><a href="#h2-3-17" id="h2-3-17" class="d">-                context.log.error(&quot;Failed to load sif&quot;, it)
+</a><a href="#h2-3-18" id="h2-3-18" class="d">-                return true
+</a><a href="#h2-3-19" id="h2-3-19" class="d">-            }
+</a><a href="#h2-3-20" id="h2-3-20" class="d">-        } else {
+</a><a href="#h2-3-21" id="h2-3-21" class="d">-            context.log.warn(&quot;sif is disabled&quot;)
+</a><a href="#h2-3-22" id="h2-3-22" class="d">-        }
+</a><a href="#h2-3-23" id="h2-3-23" class="i">+        } ?: context.bridgeClient.getDebugProp(&quot;enable_security_features&quot;, &quot;false&quot;).takeIf { it == &quot;true&quot; }?.runCatching {
+</a><a href="#h2-3-24" id="h2-3-24" class="i">+            context.native.loadSharedLibrary(
+</a><a href="#h2-3-25" id="h2-3-25" class="i">+                context.fileHandlerManager.getFileHandle(FileHandleScope.INTERNAL.key, InternalFileHandleType.SIF.key)
+</a><a href="#h2-3-26" id="h2-3-26" class="i">+                    .toWrapper()
+</a><a href="#h2-3-27" id="h2-3-27" class="i">+                    .readBytes()
+</a><a href="#h2-3-28" id="h2-3-28" class="i">+                    .takeIf {
+</a><a href="#h2-3-29" id="h2-3-29" class="i">+                        it.isNotEmpty()
+</a><a href="#h2-3-30" id="h2-3-30" class="i">+                    } ?: throw IllegalStateException(&quot;Binary is empty&quot;)
+</a><a href="#h2-3-31" id="h2-3-31" class="i">+            )
+</a><a href="#h2-3-32" id="h2-3-32" class="i">+            context.log.verbose(&quot;loaded sif&quot;)
+</a><a href="#h2-3-33" id="h2-3-33" class="i">+        }?.onFailure {
+</a><a href="#h2-3-34" id="h2-3-34" class="i">+            context.log.error(&quot;Failed to load sif: &quot; + it.message)
+</a><a href="#h2-3-35" id="h2-3-35" class="i">+            return shouldUseSafeMode
+</a><a href="#h2-3-36" id="h2-3-36" class="i">+        } ?: context.log.warn(&quot;Security features are disabled&quot;)
+</a> 
+         token // pre init token
+ 
+<a href="#h2-3-40" id="h2-3-40" class="d">-        context.event.subscribe(UnaryCallEvent::class) { event -&gt;
+</a><a href="#h2-3-41" id="h2-3-41" class="d">-            if (!event.uri.contains(&quot;/Login&quot;)) return@subscribe
+</a><a href="#h2-3-42" id="h2-3-42" class="d">-
+</a><a href="#h2-3-43" id="h2-3-43" class="d">-            // intercept login response
+</a><a href="#h2-3-44" id="h2-3-44" class="d">-            event.addResponseCallback {
+</a><a href="#h2-3-45" id="h2-3-45" class="d">-                val response = ProtoReader(buffer)
+</a><a href="#h2-3-46" id="h2-3-46" class="d">-                val isBlocked = when {
+</a><a href="#h2-3-47" id="h2-3-47" class="d">-                    event.uri.contains(&quot;TLv&quot;) -&gt; response.getVarInt(1) == 14L
+</a><a href="#h2-3-48" id="h2-3-48" class="d">-                    else -&gt; response.getVarInt(1) == 16L
+</a><a href="#h2-3-49" id="h2-3-49" class="d">-                }
+</a><a href="#h2-3-50" id="h2-3-50" class="d">-
+</a><a href="#h2-3-51" id="h2-3-51" class="d">-                val errorDataIndex = when {
+</a><a href="#h2-3-52" id="h2-3-52" class="d">-                    response.contains(11) -&gt; 11
+</a><a href="#h2-3-53" id="h2-3-53" class="d">-                    response.contains(10) -&gt; 10
+</a><a href="#h2-3-54" id="h2-3-54" class="d">-                    response.contains(8) -&gt; 8
+</a><a href="#h2-3-55" id="h2-3-55" class="d">-                    else -&gt; return@addResponseCallback
+</a><a href="#h2-3-56" id="h2-3-56" class="d">-                }
+</a><a href="#h2-3-57" id="h2-3-57" class="d">-
+</a><a href="#h2-3-58" id="h2-3-58" class="d">-                if (isBlocked) {
+</a><a href="#h2-3-59" id="h2-3-59" class="d">-                    val status = transact(token ?: return@addResponseCallback, 1)
+</a><a href="#h2-3-60" id="h2-3-60" class="d">-                        ?.takeIf { it != 0 }
+</a><a href="#h2-3-61" id="h2-3-61" class="d">-                        ?.let {
+</a><a href="#h2-3-62" id="h2-3-62" class="d">-                            val buffer = ByteArray(8192)
+</a><a href="#h2-3-63" id="h2-3-63" class="d">-                            val fd = FileDescriptor().apply {
+</a><a href="#h2-3-64" id="h2-3-64" class="d">-                                setObjectField(&quot;descriptor&quot;, it)
+</a><a href="#h2-3-65" id="h2-3-65" class="d">-                            }
+</a><a href="#h2-3-66" id="h2-3-66" class="d">-                            val read = Os.read(fd, buffer, 0, buffer.size)
+</a><a href="#h2-3-67" id="h2-3-67" class="d">-                            Os.close(fd)
+</a><a href="#h2-3-68" id="h2-3-68" class="d">-                            buffer.copyOfRange(0, read).decodeToString()
+</a><a href="#h2-3-69" id="h2-3-69" class="d">-                        } ?: return@addResponseCallback
+</a><a href="#h2-3-70" id="h2-3-70" class="d">-
+</a><a href="#h2-3-71" id="h2-3-71" class="d">-                    buffer = ProtoEditor(buffer).apply {
+</a><a href="#h2-3-72" id="h2-3-72" class="d">-                        edit(errorDataIndex) {
+</a><a href="#h2-3-73" id="h2-3-73" class="d">-                            remove(1)
+</a><a href="#h2-3-74" id="h2-3-74" class="d">-                            addString(1, status)
+</a><a href="#h2-3-75" id="h2-3-75" class="d">-                        }
+</a><a href="#h2-3-76" id="h2-3-76" class="d">-                    }.toByteArray()
+</a><a href="#h2-3-77" id="h2-3-77" class="d">-                }
+</a><a href="#h2-3-78" id="h2-3-78" class="d">-            }
+</a><a href="#h2-3-79" id="h2-3-79" class="d">-        }
+</a><a href="#h2-3-80" id="h2-3-80" class="d">-
+</a>         val status = getStatus()
+         val safeMode = shouldUseSafeMode &amp;&amp; (status == null || status &lt; 2)
+ 
+         if (status != null &amp;&amp; status &gt;= 2) {
+<a href="#h2-3-85" id="h2-3-85" class="i">+            context.log.verbose(&quot;status=$status&quot;)
+</a>             lateinit var composable: CustomComposable
+             composable = {
+                 Row(
+<a href="#h2-4" id="h2-4" class="h">@@ -140,17 +92,49 @@ class SecurityFeatures(
+</a>             context.inAppOverlay.addCustomComposable(composable)
+         }
+ 
+<a href="#h2-4-3" id="h2-4-3" class="d">-        if (safeMode &amp;&amp; !debugDisable) {
+</a><a href="#h2-4-4" id="h2-4-4" class="d">-            context.features.addActivityCreateListener {
+</a><a href="#h2-4-5" id="h2-4-5" class="d">-                context.inAppOverlay.showStatusToast(
+</a><a href="#h2-4-6" id="h2-4-6" class="d">-                    icon = Icons.Filled.NotInterested,
+</a><a href="#h2-4-7" id="h2-4-7" class="d">-                    text = &quot;SnapEnhance is not compatible with this version of Snapchat without SIF and will result in a ban.\nUse Snapchat ${MOD_DETECTION_VERSION_CHECK.maxVersion?.first ?: &quot;0.0.0&quot;} or older to avoid detections or use test accounts.&quot;,
+</a><a href="#h2-4-8" id="h2-4-8" class="d">-                    durationMs = 10000,
+</a><a href="#h2-4-9" id="h2-4-9" class="d">-                    maxLines = 6
+</a><a href="#h2-4-10" id="h2-4-10" class="d">-                )
+</a><a href="#h2-4-11" id="h2-4-11" class="i">+        return safeMode
+</a><a href="#h2-4-12" id="h2-4-12" class="i">+    }
+</a><a href="#h2-4-13" id="h2-4-13" class="i">+
+</a><a href="#h2-4-14" id="h2-4-14" class="i">+    fun init() {
+</a><a href="#h2-4-15" id="h2-4-15" class="i">+        context.isSafeMode = isSafeMode()
+</a><a href="#h2-4-16" id="h2-4-16" class="i">+        context.log.verbose(&quot;isSafeMode=${context.isSafeMode}&quot;)
+</a><a href="#h2-4-17" id="h2-4-17" class="i">+        if (!context.isSafeMode) return
+</a><a href="#h2-4-18" id="h2-4-18" class="i">+
+</a><a href="#h2-4-19" id="h2-4-19" class="i">+        context.features.addActivityCreateListener { activity -&gt;
+</a><a href="#h2-4-20" id="h2-4-20" class="i">+            if (!activity.javaClass.name.endsWith(&quot;LoginSignupActivity&quot;)) return@addActivityCreateListener
+</a><a href="#h2-4-21" id="h2-4-21" class="i">+
+</a><a href="#h2-4-22" id="h2-4-22" class="i">+            activity.findViewById&lt;ViewGroup&gt;(android.R.id.content).apply {
+</a><a href="#h2-4-23" id="h2-4-23" class="i">+                visibility = ViewGroup.INVISIBLE
+</a><a href="#h2-4-24" id="h2-4-24" class="i">+
+</a><a href="#h2-4-25" id="h2-4-25" class="i">+                post {
+</a><a href="#h2-4-26" id="h2-4-26" class="i">+                    addView(createComposeView(activity) {
+</a><a href="#h2-4-27" id="h2-4-27" class="i">+                        Surface(
+</a><a href="#h2-4-28" id="h2-4-28" class="i">+                            modifier = Modifier.fillMaxSize()
+</a><a href="#h2-4-29" id="h2-4-29" class="i">+                        ) {
+</a><a href="#h2-4-30" id="h2-4-30" class="i">+                            Box(
+</a><a href="#h2-4-31" id="h2-4-31" class="i">+                                modifier = Modifier.fillMaxSize()
+</a><a href="#h2-4-32" id="h2-4-32" class="i">+                            ) {
+</a><a href="#h2-4-33" id="h2-4-33" class="i">+                                Column(
+</a><a href="#h2-4-34" id="h2-4-34" class="i">+                                    modifier = Modifier.align(Alignment.Center).padding(16.dp),
+</a><a href="#h2-4-35" id="h2-4-35" class="i">+                                    horizontalAlignment = Alignment.CenterHorizontally,
+</a><a href="#h2-4-36" id="h2-4-36" class="i">+                                ) {
+</a><a href="#h2-4-37" id="h2-4-37" class="i">+                                    Icon(Icons.Rounded.NotInterested, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(110.dp))
+</a><a href="#h2-4-38" id="h2-4-38" class="i">+                                    Spacer(Modifier.height(50.dp))
+</a><a href="#h2-4-39" id="h2-4-39" class="i">+                                    Text(
+</a><a href="#h2-4-40" id="h2-4-40" class="i">+                                        &quot;SnapEnhance can&#39;t be used to login or signup because your Snapchat version isn&#39;t the recommended one (v${MOD_DETECTION_VERSION_CHECK.maxVersion?.first ?: &quot;0.0.0&quot;}). Please downgrade to continue using it.\n\nFor more details, join t.me/snapenhance_chat&quot;,
+</a><a href="#h2-4-41" id="h2-4-41" class="i">+                                        color = MaterialTheme.colorScheme.onSurface,
+</a><a href="#h2-4-42" id="h2-4-42" class="i">+                                        textAlign = TextAlign.Center,
+</a><a href="#h2-4-43" id="h2-4-43" class="i">+                                    )
+</a><a href="#h2-4-44" id="h2-4-44" class="i">+                                }
+</a><a href="#h2-4-45" id="h2-4-45" class="i">+                            }
+</a><a href="#h2-4-46" id="h2-4-46" class="i">+                        }
+</a><a href="#h2-4-47" id="h2-4-47" class="i">+
+</a><a href="#h2-4-48" id="h2-4-48" class="i">+                        LaunchedEffect(Unit) {
+</a><a href="#h2-4-49" id="h2-4-49" class="i">+                            visibility = ViewGroup.VISIBLE
+</a><a href="#h2-4-50" id="h2-4-50" class="i">+                        }
+</a><a href="#h2-4-51" id="h2-4-51" class="i">+                    })
+</a><a href="#h2-4-52" id="h2-4-52" class="i">+                }
+</a>             }
+         }
+<a href="#h2-4-55" id="h2-4-55" class="d">-
+</a><a href="#h2-4-56" id="h2-4-56" class="d">-        return safeMode
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -18,6 +18,7 @@ import me.rhunk.snapenhance.common.action.EnumAction
+</a> import me.rhunk.snapenhance.common.bridge.FileHandleScope
+ import me.rhunk.snapenhance.common.bridge.InternalFileHandleType
+ import me.rhunk.snapenhance.common.bridge.toWrapper
+<a href="#h3-0-3" id="h3-0-3" class="i">+import me.rhunk.snapenhance.common.config.MOD_DETECTION_VERSION_CHECK
+</a> import me.rhunk.snapenhance.common.data.FriendStreaks
+ import me.rhunk.snapenhance.common.data.MessagingFriendInfo
+ import me.rhunk.snapenhance.common.data.MessagingGroupInfo
+<a href="#h3-1" id="h3-1" class="h">@@ -202,7 +203,6 @@ class SnapEnhance {
+</a>                 it.isNotEmpty()
+             }?.toString(Charsets.UTF_8)?.also {
+                 appContext.native.signatureCache = it
+<a href="#h3-1-3" id="h3-1-3" class="d">-                appContext.log.verbose(&quot;old signature cache $it&quot;)
+</a>             }
+ 
+         val lateInit = appContext.native.initOnce {
+<a href="#h3-2" id="h3-2" class="h">@@ -223,7 +223,7 @@ class SnapEnhance {
+</a>             }
+         }
+ 
+<a href="#h3-2-3" id="h3-2-3" class="d">-        val safeMode = SecurityFeatures(appContext).init()
+</a><a href="#h3-2-4" id="h3-2-4" class="i">+        SecurityFeatures(appContext).init()
+</a> 
+         Runtime::class.java.findRestrictedMethod {
+             it.name == &quot;loadLibrary0&quot; &amp;&amp; it.parameterTypes.contentEquals(
+<a href="#h3-3" id="h3-3" class="h">@@ -231,11 +231,18 @@ class SnapEnhance {
+</a>                 else arrayOf(ClassLoader::class.java, String::class.java)
+             )
+         }!!.apply {
+<a href="#h3-3-3" id="h3-3-3" class="d">-            if (safeMode) {
+</a><a href="#h3-3-4" id="h3-3-4" class="i">+            if (appContext.isSafeMode) {
+</a>                 hook(HookStage.BEFORE) { param -&gt;
+                     if (param.arg&lt;String&gt;(1) != &quot;scplugin&quot;) return@hook
+                     param.setResult(null)
+<a href="#h3-3-8" id="h3-3-8" class="d">-                    appContext.log.warn(&quot;Can&#39;t load scplugin in safe mode&quot;)
+</a><a href="#h3-3-9" id="h3-3-9" class="i">+                    appContext.runOnUiThread {
+</a><a href="#h3-3-10" id="h3-3-10" class="i">+                        appContext.inAppOverlay.showStatusToast(
+</a><a href="#h3-3-11" id="h3-3-11" class="i">+                            Icons.Outlined.Cancel,
+</a><a href="#h3-3-12" id="h3-3-12" class="i">+                            &quot;SnapEnhance is not compatible with this version of Snapchat and will result in a ban.\nUse Snapchat ${MOD_DETECTION_VERSION_CHECK.maxVersion?.first ?: &quot;0.0.0&quot;} or older to avoid detections.&quot;,
+</a><a href="#h3-3-13" id="h3-3-13" class="i">+                            durationMs = 7000,
+</a><a href="#h3-3-14" id="h3-3-14" class="i">+                            maxLines = 6
+</a><a href="#h3-3-15" id="h3-3-15" class="i">+                        )
+</a><a href="#h3-3-16" id="h3-3-16" class="i">+                    }
+</a>                     runCatching {
+                         Thread.sleep(Long.MAX_VALUE)
+                     }.onFailure {
+<a href="#h3-4" id="h3-4" class="h">@@ -249,7 +256,6 @@ class SnapEnhance {
+</a>             hook(HookStage.AFTER) { param -&gt;
+                 if (param.arg&lt;String&gt;(1) != &quot;client&quot;) return@hook
+                 unhook()
+<a href="#h3-4-3" id="h3-4-3" class="d">-                appContext.log.verbose(&quot;libclient lateInit&quot;)
+</a>                 lateInit()
+             }.also { unhook = { it.unhook() } }
+         }
+<a href="#h3-5" id="h3-5" class="h">@@ -311,7 +317,8 @@ class SnapEnhance {
+</a>             }
+ 
+             val friends = feedEntries.filter { it.conversationType == 0 }.mapNotNull {
+<a href="#h3-5-3" id="h3-5-3" class="d">-                val friendUserId = it.friendUserId ?: it.participants?.filter { it != appContext.database.myUserId }?.firstOrNull() ?: return@mapNotNull null
+</a><a href="#h3-5-4" id="h3-5-4" class="i">+                val friendUserId = it.friendUserId ?: it.participants?.firstOrNull { it != appContext.database.myUserId }
+</a><a href="#h3-5-5" id="h3-5-5" class="i">+                ?: return@mapNotNull null
+</a>                 val friend = appContext.database.getFriendInfo(friendUserId) ?: return@mapNotNull null
+ 
+                 MessagingFriendInfo(
+</pre>
+</div>
+</body>
+</html>
