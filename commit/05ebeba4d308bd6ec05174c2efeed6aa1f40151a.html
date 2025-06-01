@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix: media downloader - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/05ebeba4d308bd6ec05174c2efeed6aa1f40151a.html">05ebeba4d308bd6ec05174c2efeed6aa1f40151a</a>
+<b>parent</b> <a href="../commit/f8898118ee978948c038cb44eef0e734d7c36409.html">f8898118ee978948c038cb44eef0e734d7c36409</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 19 May 2023 12:37:19 +0200
+
+fix: media downloader
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">107</td><td><span class="i">+++++++++</span><span class="d">----------------------------------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/Notifications.kt</a></td><td> | </td><td class="num">17</td><td><span class="i">++++++++</span><span class="d">---------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/util/MediaDownloaderHelper.kt</a></td><td> | </td><td class="num">92</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>3 files changed, 111 insertions(+), 105 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -24,8 +24,9 @@ import me.rhunk.snapenhance.hook.HookAdapter
+</a> import me.rhunk.snapenhance.hook.HookStage
+ import me.rhunk.snapenhance.hook.Hooker
+ import me.rhunk.snapenhance.util.EncryptionUtils
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.util.MediaDownloaderHelper
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+import me.rhunk.snapenhance.util.MediaType
+</a> import me.rhunk.snapenhance.util.PreviewUtils
+<a href="#h0-0-6" id="h0-0-6" class="d">-import me.rhunk.snapenhance.util.download.CdnDownloader
+</a> import me.rhunk.snapenhance.util.getObjectField
+ import me.rhunk.snapenhance.util.protobuf.ProtoReader
+ import java.io.*
+<a href="#h0-1" id="h0-1" class="h">@@ -34,14 +35,10 @@ import java.net.URL
+</a> import java.nio.file.Paths
+ import java.util.*
+ import java.util.concurrent.atomic.AtomicReference
+<a href="#h0-1-3" id="h0-1-3" class="d">-import java.util.zip.ZipInputStream
+</a> import javax.crypto.Cipher
+ import javax.crypto.CipherInputStream
+ import kotlin.io.path.inputStream
+ 
+<a href="#h0-1-8" id="h0-1-8" class="d">-enum class MediaType {
+</a><a href="#h0-1-9" id="h0-1-9" class="d">-    ORIGINAL, OVERLAY
+</a><a href="#h0-1-10" id="h0-1-10" class="d">-}
+</a> 
+ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_ASYNC) {
+     private var lastSeenMediaInfoMap: MutableMap&lt;MediaType, MediaInfo&gt;? = null
+<a href="#h0-2" id="h0-2" class="h">@@ -98,50 +95,6 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a>         }
+         return true
+     }
+<a href="#h0-2-3" id="h0-2-3" class="d">-
+</a><a href="#h0-2-4" id="h0-2-4" class="d">-
+</a><a href="#h0-2-5" id="h0-2-5" class="d">-    private fun mergeOverlay(original: ByteArray, overlay: ByteArray, isPreviewMode: Boolean): ByteArray? {
+</a><a href="#h0-2-6" id="h0-2-6" class="d">-        context.longToast(&quot;Merging current media with overlay. This may take a while.&quot;)
+</a><a href="#h0-2-7" id="h0-2-7" class="d">-        val originalFileType = FileType.fromByteArray(original)
+</a><a href="#h0-2-8" id="h0-2-8" class="d">-        val overlayFileType = FileType.fromByteArray(overlay)
+</a><a href="#h0-2-9" id="h0-2-9" class="d">-        //merge files
+</a><a href="#h0-2-10" id="h0-2-10" class="d">-        val mergedFile = File.createTempFile(&quot;merged&quot;, &quot;.&quot; + originalFileType.fileExtension)
+</a><a href="#h0-2-11" id="h0-2-11" class="d">-        val tempVideoFile = File.createTempFile(&quot;original&quot;, &quot;.&quot; + originalFileType.fileExtension).also {
+</a><a href="#h0-2-12" id="h0-2-12" class="d">-            with(FileOutputStream(it)) {
+</a><a href="#h0-2-13" id="h0-2-13" class="d">-                write(original)
+</a><a href="#h0-2-14" id="h0-2-14" class="d">-                close()
+</a><a href="#h0-2-15" id="h0-2-15" class="d">-            }
+</a><a href="#h0-2-16" id="h0-2-16" class="d">-        }
+</a><a href="#h0-2-17" id="h0-2-17" class="d">-        val tempOverlayFile = File.createTempFile(&quot;overlay&quot;, &quot;.&quot; + overlayFileType.fileExtension).also {
+</a><a href="#h0-2-18" id="h0-2-18" class="d">-            with(FileOutputStream(it)) {
+</a><a href="#h0-2-19" id="h0-2-19" class="d">-                write(overlay)
+</a><a href="#h0-2-20" id="h0-2-20" class="d">-                close()
+</a><a href="#h0-2-21" id="h0-2-21" class="d">-            }
+</a><a href="#h0-2-22" id="h0-2-22" class="d">-        }
+</a><a href="#h0-2-23" id="h0-2-23" class="d">-
+</a><a href="#h0-2-24" id="h0-2-24" class="d">-        //TODO: improve ffmpeg speed
+</a><a href="#h0-2-25" id="h0-2-25" class="d">-        val fFmpegSession = FFmpegKit.execute(
+</a><a href="#h0-2-26" id="h0-2-26" class="d">-            &quot;-y -i &quot; +
+</a><a href="#h0-2-27" id="h0-2-27" class="d">-                    tempVideoFile.absolutePath +
+</a><a href="#h0-2-28" id="h0-2-28" class="d">-                    &quot; -i &quot; +
+</a><a href="#h0-2-29" id="h0-2-29" class="d">-                    tempOverlayFile.absolutePath +
+</a><a href="#h0-2-30" id="h0-2-30" class="d">-                    &quot; -filter_complex \&quot;[0]scale2ref[img][vid];[img]setsar=1[img];[vid]nullsink; [img][1]overlay=(W-w)/2:(H-h)/2,scale=2*trunc(iw*sar/2):2*trunc(ih/2)\&quot; -c:v libx264 -q:v 13 -c:a copy &quot; +
+</a><a href="#h0-2-31" id="h0-2-31" class="d">-                    &quot;  -threads 6 ${(if (isPreviewMode) &quot;-frames:v 1&quot; else &quot;&quot;)} &quot; +
+</a><a href="#h0-2-32" id="h0-2-32" class="d">-                    mergedFile.absolutePath
+</a><a href="#h0-2-33" id="h0-2-33" class="d">-        )
+</a><a href="#h0-2-34" id="h0-2-34" class="d">-        tempVideoFile.delete()
+</a><a href="#h0-2-35" id="h0-2-35" class="d">-        tempOverlayFile.delete()
+</a><a href="#h0-2-36" id="h0-2-36" class="d">-        if (fFmpegSession.returnCode.value != 0) {
+</a><a href="#h0-2-37" id="h0-2-37" class="d">-            mergedFile.delete()
+</a><a href="#h0-2-38" id="h0-2-38" class="d">-            context.longToast(&quot;Failed to merge video and overlay. See logs for more details.&quot;)
+</a><a href="#h0-2-39" id="h0-2-39" class="d">-            xposedLog(fFmpegSession.output)
+</a><a href="#h0-2-40" id="h0-2-40" class="d">-            return null
+</a><a href="#h0-2-41" id="h0-2-41" class="d">-        }
+</a><a href="#h0-2-42" id="h0-2-42" class="d">-        val mergedFileData: ByteArray = FileInputStream(mergedFile).readBytes()
+</a><a href="#h0-2-43" id="h0-2-43" class="d">-        mergedFile.delete()
+</a><a href="#h0-2-44" id="h0-2-44" class="d">-        return mergedFileData
+</a><a href="#h0-2-45" id="h0-2-45" class="d">-    }
+</a><a href="#h0-2-46" id="h0-2-46" class="d">-
+</a>     private fun queryMediaData(mediaInfo: MediaInfo): ByteArray {
+         val mediaUri = Uri.parse(mediaInfo.uri)
+         val mediaInputStream = AtomicReference&lt;InputStream&gt;()
+<a href="#h0-3" id="h0-3" class="h">@@ -206,7 +159,7 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a>             }
+             val overlayMediaInfo = mediaInfoMap[MediaType.OVERLAY]!!
+             val overlayContent: ByteArray = queryMediaData(overlayMediaInfo)
+<a href="#h0-3-3" id="h0-3-3" class="d">-            mediaContent = mergeOverlay(mediaContent, overlayContent, false)
+</a><a href="#h0-3-4" id="h0-3-4" class="i">+            mediaContent = MediaDownloaderHelper.mergeOverlay(mediaContent, overlayContent, false)
+</a>         }
+         val fileType = FileType.fromByteArray(mediaContent!!)
+         downloadMediaContent(mediaContent, hash, author, fileType)
+<a href="#h0-4" id="h0-4" class="h">@@ -369,53 +322,15 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a> 
+         //download the message content
+         try {
+<a href="#h0-4-3" id="h0-4-3" class="d">-            var inputStream: InputStream = CdnDownloader.downloadWithDefaultEndpoints(urlKey) ?: throw FileNotFoundException(&quot;Unable to get $urlKey from cdn list. Check the logs for more info&quot;)
+</a><a href="#h0-4-4" id="h0-4-4" class="d">-            inputStream = EncryptionUtils.decryptInputStreamFromArroyo(
+</a><a href="#h0-4-5" id="h0-4-5" class="d">-                inputStream,
+</a><a href="#h0-4-6" id="h0-4-6" class="d">-                contentType,
+</a><a href="#h0-4-7" id="h0-4-7" class="d">-                messageReader
+</a><a href="#h0-4-8" id="h0-4-8" class="d">-            )
+</a><a href="#h0-4-9" id="h0-4-9" class="i">+            context.longToast(&quot;Querying $urlKey. It might take a while...&quot;)
+</a><a href="#h0-4-10" id="h0-4-10" class="i">+            val downloadedMedia = MediaDownloaderHelper.downloadMediaFromKey(urlKey, canMergeOverlay(), isPreviewMode) {
+</a><a href="#h0-4-11" id="h0-4-11" class="i">+                EncryptionUtils.decryptInputStreamFromArroyo(it, contentType, messageReader)
+</a><a href="#h0-4-12" id="h0-4-12" class="i">+            }[MediaType.ORIGINAL] ?: throw Exception(&quot;Failed to download media for key $urlKey&quot;)
+</a><a href="#h0-4-13" id="h0-4-13" class="i">+            val fileType = FileType.fromByteArray(downloadedMedia)
+</a> 
+<a href="#h0-4-15" id="h0-4-15" class="d">-            var mediaData: ByteArray = inputStream.readBytes()
+</a><a href="#h0-4-16" id="h0-4-16" class="d">-            var fileType = FileType.fromByteArray(mediaData)
+</a><a href="#h0-4-17" id="h0-4-17" class="d">-            val isZipFile = fileType == FileType.ZIP
+</a><a href="#h0-4-18" id="h0-4-18" class="d">-
+</a><a href="#h0-4-19" id="h0-4-19" class="d">-            //videos with overlay are packed in a zip file
+</a><a href="#h0-4-20" id="h0-4-20" class="d">-            //there are 2 files in the zip file, the video (webm) and the overlay (png)
+</a><a href="#h0-4-21" id="h0-4-21" class="d">-            if (isZipFile) {
+</a><a href="#h0-4-22" id="h0-4-22" class="d">-                var videoData: ByteArray? = null
+</a><a href="#h0-4-23" id="h0-4-23" class="d">-                var overlayData: ByteArray? = null
+</a><a href="#h0-4-24" id="h0-4-24" class="d">-                val zipInputStream = ZipInputStream(ByteArrayInputStream(mediaData))
+</a><a href="#h0-4-25" id="h0-4-25" class="d">-                while (zipInputStream.nextEntry != null) {
+</a><a href="#h0-4-26" id="h0-4-26" class="d">-                    val zipEntryData: ByteArray = zipInputStream.readBytes()
+</a><a href="#h0-4-27" id="h0-4-27" class="d">-                    val entryFileType = FileType.fromByteArray(zipEntryData)
+</a><a href="#h0-4-28" id="h0-4-28" class="d">-                    if (entryFileType.isVideo) {
+</a><a href="#h0-4-29" id="h0-4-29" class="d">-                        videoData = zipEntryData
+</a><a href="#h0-4-30" id="h0-4-30" class="d">-                    } else if (entryFileType.isImage) {
+</a><a href="#h0-4-31" id="h0-4-31" class="d">-                        overlayData = zipEntryData
+</a><a href="#h0-4-32" id="h0-4-32" class="d">-                    }
+</a><a href="#h0-4-33" id="h0-4-33" class="d">-                }
+</a><a href="#h0-4-34" id="h0-4-34" class="d">-                if (videoData == null || overlayData == null) {
+</a><a href="#h0-4-35" id="h0-4-35" class="d">-                    xposedLog(&quot;Invalid data in zip file&quot;)
+</a><a href="#h0-4-36" id="h0-4-36" class="d">-                    return
+</a><a href="#h0-4-37" id="h0-4-37" class="d">-                }
+</a><a href="#h0-4-38" id="h0-4-38" class="d">-                val mergedVideo = mergeOverlay(videoData, overlayData, isPreviewMode)
+</a><a href="#h0-4-39" id="h0-4-39" class="d">-                val videoFileType = FileType.fromByteArray(videoData)
+</a><a href="#h0-4-40" id="h0-4-40" class="d">-                if (!isPreviewMode) {
+</a><a href="#h0-4-41" id="h0-4-41" class="d">-                    downloadMediaContent(
+</a><a href="#h0-4-42" id="h0-4-42" class="d">-                        mergedVideo!!,
+</a><a href="#h0-4-43" id="h0-4-43" class="d">-                        Arrays.hashCode(videoData),
+</a><a href="#h0-4-44" id="h0-4-44" class="d">-                        messageAuthor,
+</a><a href="#h0-4-45" id="h0-4-45" class="d">-                        videoFileType
+</a><a href="#h0-4-46" id="h0-4-46" class="d">-                    )
+</a><a href="#h0-4-47" id="h0-4-47" class="d">-                    return
+</a><a href="#h0-4-48" id="h0-4-48" class="d">-                }
+</a><a href="#h0-4-49" id="h0-4-49" class="d">-                mediaData = mergedVideo!!
+</a><a href="#h0-4-50" id="h0-4-50" class="d">-                fileType = videoFileType
+</a><a href="#h0-4-51" id="h0-4-51" class="d">-            }
+</a>             if (isPreviewMode) {
+                 runCatching {
+<a href="#h0-4-54" id="h0-4-54" class="d">-                    val bitmap: Bitmap? = PreviewUtils.createPreview(mediaData, fileType.isVideo)
+</a><a href="#h0-4-55" id="h0-4-55" class="i">+                    val bitmap: Bitmap? = PreviewUtils.createPreview(downloadedMedia, fileType.isVideo)
+</a>                     if (bitmap == null) {
+                         context.shortToast(&quot;Failed to create preview&quot;)
+                         return
+<a href="#h0-5" id="h0-5" class="h">@@ -435,9 +350,9 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a>                 }
+                 return
+             }
+<a href="#h0-5-3" id="h0-5-3" class="d">-            downloadMediaContent(mediaData, mediaData.contentHashCode(), messageAuthor, fileType)
+</a><a href="#h0-5-4" id="h0-5-4" class="i">+            downloadMediaContent(downloadedMedia, downloadedMedia.contentHashCode(), messageAuthor, fileType)
+</a>         } catch (e: Throwable) {
+<a href="#h0-5-6" id="h0-5-6" class="d">-            context.shortToast(&quot;Failed to download &quot; + e.message)
+</a><a href="#h0-5-7" id="h0-5-7" class="i">+            context.longToast(&quot;Failed to download &quot; + e.message)
+</a>             xposedLog(e)
+         }
+     }
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/Notifications.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/Notifications.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/Notifications.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/Notifications.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -22,8 +22,9 @@ import me.rhunk.snapenhance.hook.HookStage
+</a> import me.rhunk.snapenhance.hook.Hooker
+ import me.rhunk.snapenhance.util.CallbackBuilder
+ import me.rhunk.snapenhance.util.EncryptionUtils
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.util.MediaDownloaderHelper
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import me.rhunk.snapenhance.util.MediaType
+</a> import me.rhunk.snapenhance.util.PreviewUtils
+<a href="#h1-0-6" id="h1-0-6" class="d">-import me.rhunk.snapenhance.util.download.CdnDownloader
+</a> import me.rhunk.snapenhance.util.protobuf.ProtoReader
+ 
+ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+<a href="#h1-1" id="h1-1" class="h">@@ -114,7 +115,6 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>                         val urlKey = ProtoReader(mediaContent).getString(2, 2) ?: return@forEach
+                         runCatching {
+                             //download the media
+<a href="#h1-1-3" id="h1-1-3" class="d">-                            var mediaInputStream = CdnDownloader.downloadWithDefaultEndpoints(urlKey)!!
+</a>                             val mediaInfo = ProtoReader(contentData).let {
+                                 if (contentType == ContentType.EXTERNAL_MEDIA)
+                                     return@let it.readPath(*Constants.MESSAGE_EXTERNAL_MEDIA_ENCRYPTION_PROTO_PATH)
+<a href="#h1-2" id="h1-2" class="h">@@ -122,14 +122,13 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>                                     return@let it.readPath(*Constants.MESSAGE_SNAP_ENCRYPTION_PROTO_PATH)
+                             }?: return@runCatching
+ 
+<a href="#h1-2-3" id="h1-2-3" class="d">-                            //decrypt if necessary
+</a><a href="#h1-2-4" id="h1-2-4" class="d">-                            if (mediaInfo.exists(Constants.ARROYO_ENCRYPTION_PROTO_INDEX)) {
+</a><a href="#h1-2-5" id="h1-2-5" class="d">-                                mediaInputStream = EncryptionUtils.decryptInputStream(mediaInputStream, false, mediaInfo, Constants.ARROYO_ENCRYPTION_PROTO_INDEX)
+</a><a href="#h1-2-6" id="h1-2-6" class="d">-                            }
+</a><a href="#h1-2-7" id="h1-2-7" class="d">-
+</a><a href="#h1-2-8" id="h1-2-8" class="d">-                            val mediaByteArray = mediaInputStream.readBytes()
+</a><a href="#h1-2-9" id="h1-2-9" class="d">-                            val bitmapPreview = PreviewUtils.createPreview(mediaByteArray, mediaType == MediaReferenceType.VIDEO)!!
+</a><a href="#h1-2-10" id="h1-2-10" class="i">+                            val downloadedMedia = MediaDownloaderHelper.downloadMediaFromKey(urlKey, mergeOverlay = false, isPreviewMode = false) {
+</a><a href="#h1-2-11" id="h1-2-11" class="i">+                                if (mediaInfo.exists(Constants.ARROYO_ENCRYPTION_PROTO_INDEX))
+</a><a href="#h1-2-12" id="h1-2-12" class="i">+                                    EncryptionUtils.decryptInputStream(it, false, mediaInfo, Constants.ARROYO_ENCRYPTION_PROTO_INDEX)
+</a><a href="#h1-2-13" id="h1-2-13" class="i">+                                else it
+</a><a href="#h1-2-14" id="h1-2-14" class="i">+                            }[MediaType.ORIGINAL] ?: throw Throwable(&quot;Failed to download media from key $urlKey&quot;)
+</a> 
+<a href="#h1-2-16" id="h1-2-16" class="i">+                            val bitmapPreview = PreviewUtils.createPreview(downloadedMedia, mediaType == MediaReferenceType.VIDEO)!!
+</a>                             val notificationBuilder = XposedHelpers.newInstance(
+                                 Notification.Builder::class.java,
+                                 context.androidContext,
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/util/MediaDownloaderHelper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/util/MediaDownloaderHelper.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/util/MediaDownloaderHelper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/util/MediaDownloaderHelper.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -0,0 +1,91 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="i">+package me.rhunk.snapenhance.util
+</a><a href="#h2-0-1" id="h2-0-1" class="i">+
+</a><a href="#h2-0-2" id="h2-0-2" class="i">+import com.arthenica.ffmpegkit.FFmpegKit
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.Logger
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import me.rhunk.snapenhance.data.FileType
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+import me.rhunk.snapenhance.util.download.CdnDownloader
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+import java.io.ByteArrayInputStream
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+import java.io.File
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+import java.io.FileInputStream
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+import java.io.FileNotFoundException
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+import java.io.FileOutputStream
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+import java.io.InputStream
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+import java.util.zip.ZipInputStream
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+enum class MediaType {
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+    ORIGINAL, OVERLAY
+</a><a href="#h2-0-16" id="h2-0-16" class="i">+}
+</a><a href="#h2-0-17" id="h2-0-17" class="i">+object MediaDownloaderHelper {
+</a><a href="#h2-0-18" id="h2-0-18" class="i">+    fun downloadMediaFromKey(key: String, mergeOverlay: Boolean, isPreviewMode: Boolean, decryptionCallback: (InputStream) -&gt; InputStream): Map&lt;MediaType, ByteArray&gt; {
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+        val inputStream: InputStream = CdnDownloader.downloadWithDefaultEndpoints(key) ?: throw FileNotFoundException(&quot;Unable to get $key from cdn list. Check the logs for more info&quot;)
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+        val content = decryptionCallback(inputStream).readBytes().also { inputStream.close() }
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+        val fileType = FileType.fromByteArray(content)
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+        val isZipFile = fileType == FileType.ZIP
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+        //videos with overlay are packed in a zip file
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+        //there are 2 files in the zip file, the video (webm) and the overlay (png)
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+        if (isZipFile) {
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+            var videoData: ByteArray? = null
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+            var overlayData: ByteArray? = null
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+            val zipInputStream = ZipInputStream(ByteArrayInputStream(content))
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+            while (zipInputStream.nextEntry != null) {
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+                val zipEntryData: ByteArray = zipInputStream.readBytes()
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+                val entryFileType = FileType.fromByteArray(zipEntryData)
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+                if (entryFileType.isVideo) {
+</a><a href="#h2-0-34" id="h2-0-34" class="i">+                    videoData = zipEntryData
+</a><a href="#h2-0-35" id="h2-0-35" class="i">+                } else if (entryFileType.isImage) {
+</a><a href="#h2-0-36" id="h2-0-36" class="i">+                    overlayData = zipEntryData
+</a><a href="#h2-0-37" id="h2-0-37" class="i">+                }
+</a><a href="#h2-0-38" id="h2-0-38" class="i">+            }
+</a><a href="#h2-0-39" id="h2-0-39" class="i">+            videoData ?: throw FileNotFoundException(&quot;Unable to find video file in zip file&quot;)
+</a><a href="#h2-0-40" id="h2-0-40" class="i">+            overlayData ?: throw FileNotFoundException(&quot;Unable to find overlay file in zip file&quot;)
+</a><a href="#h2-0-41" id="h2-0-41" class="i">+            if (mergeOverlay) {
+</a><a href="#h2-0-42" id="h2-0-42" class="i">+                val mergedVideo = mergeOverlay(videoData, overlayData, isPreviewMode)
+</a><a href="#h2-0-43" id="h2-0-43" class="i">+                return mapOf(MediaType.ORIGINAL to mergedVideo)
+</a><a href="#h2-0-44" id="h2-0-44" class="i">+            }
+</a><a href="#h2-0-45" id="h2-0-45" class="i">+            return mapOf(MediaType.ORIGINAL to videoData, MediaType.OVERLAY to overlayData)
+</a><a href="#h2-0-46" id="h2-0-46" class="i">+        }
+</a><a href="#h2-0-47" id="h2-0-47" class="i">+
+</a><a href="#h2-0-48" id="h2-0-48" class="i">+        return mapOf(MediaType.ORIGINAL to content)
+</a><a href="#h2-0-49" id="h2-0-49" class="i">+    }
+</a><a href="#h2-0-50" id="h2-0-50" class="i">+
+</a><a href="#h2-0-51" id="h2-0-51" class="i">+    fun mergeOverlay(original: ByteArray, overlay: ByteArray, isPreviewMode: Boolean): ByteArray {
+</a><a href="#h2-0-52" id="h2-0-52" class="i">+        val originalFileType = FileType.fromByteArray(original)
+</a><a href="#h2-0-53" id="h2-0-53" class="i">+        val overlayFileType = FileType.fromByteArray(overlay)
+</a><a href="#h2-0-54" id="h2-0-54" class="i">+        //merge files
+</a><a href="#h2-0-55" id="h2-0-55" class="i">+        val mergedFile = File.createTempFile(&quot;merged&quot;, &quot;.&quot; + originalFileType.fileExtension)
+</a><a href="#h2-0-56" id="h2-0-56" class="i">+        val tempVideoFile = File.createTempFile(&quot;original&quot;, &quot;.&quot; + originalFileType.fileExtension).also {
+</a><a href="#h2-0-57" id="h2-0-57" class="i">+            with(FileOutputStream(it)) {
+</a><a href="#h2-0-58" id="h2-0-58" class="i">+                write(original)
+</a><a href="#h2-0-59" id="h2-0-59" class="i">+                close()
+</a><a href="#h2-0-60" id="h2-0-60" class="i">+            }
+</a><a href="#h2-0-61" id="h2-0-61" class="i">+        }
+</a><a href="#h2-0-62" id="h2-0-62" class="i">+        val tempOverlayFile = File.createTempFile(&quot;overlay&quot;, &quot;.&quot; + overlayFileType.fileExtension).also {
+</a><a href="#h2-0-63" id="h2-0-63" class="i">+            with(FileOutputStream(it)) {
+</a><a href="#h2-0-64" id="h2-0-64" class="i">+                write(overlay)
+</a><a href="#h2-0-65" id="h2-0-65" class="i">+                close()
+</a><a href="#h2-0-66" id="h2-0-66" class="i">+            }
+</a><a href="#h2-0-67" id="h2-0-67" class="i">+        }
+</a><a href="#h2-0-68" id="h2-0-68" class="i">+
+</a><a href="#h2-0-69" id="h2-0-69" class="i">+        //TODO: improve ffmpeg speed
+</a><a href="#h2-0-70" id="h2-0-70" class="i">+        val fFmpegSession = FFmpegKit.execute(
+</a><a href="#h2-0-71" id="h2-0-71" class="i">+            &quot;-y -i &quot; +
+</a><a href="#h2-0-72" id="h2-0-72" class="i">+                    tempVideoFile.absolutePath +
+</a><a href="#h2-0-73" id="h2-0-73" class="i">+                    &quot; -i &quot; +
+</a><a href="#h2-0-74" id="h2-0-74" class="i">+                    tempOverlayFile.absolutePath +
+</a><a href="#h2-0-75" id="h2-0-75" class="i">+                    &quot; -filter_complex \&quot;[0]scale2ref[img][vid];[img]setsar=1[img];[vid]nullsink; [img][1]overlay=(W-w)/2:(H-h)/2,scale=2*trunc(iw*sar/2):2*trunc(ih/2)\&quot; -c:v libx264 -q:v 13 -c:a copy &quot; +
+</a><a href="#h2-0-76" id="h2-0-76" class="i">+                    &quot;  -threads 6 ${(if (isPreviewMode) &quot;-frames:v 1&quot; else &quot;&quot;)} &quot; +
+</a><a href="#h2-0-77" id="h2-0-77" class="i">+                    mergedFile.absolutePath
+</a><a href="#h2-0-78" id="h2-0-78" class="i">+        )
+</a><a href="#h2-0-79" id="h2-0-79" class="i">+        tempVideoFile.delete()
+</a><a href="#h2-0-80" id="h2-0-80" class="i">+        tempOverlayFile.delete()
+</a><a href="#h2-0-81" id="h2-0-81" class="i">+        if (fFmpegSession.returnCode.value != 0) {
+</a><a href="#h2-0-82" id="h2-0-82" class="i">+            mergedFile.delete()
+</a><a href="#h2-0-83" id="h2-0-83" class="i">+            Logger.xposedLog(fFmpegSession.output)
+</a><a href="#h2-0-84" id="h2-0-84" class="i">+            throw IllegalStateException(&quot;Failed to merge video and overlay. See logs for more details.&quot;)
+</a><a href="#h2-0-85" id="h2-0-85" class="i">+        }
+</a><a href="#h2-0-86" id="h2-0-86" class="i">+        val mergedFileData: ByteArray = FileInputStream(mergedFile).readBytes()
+</a><a href="#h2-0-87" id="h2-0-87" class="i">+        mergedFile.delete()
+</a><a href="#h2-0-88" id="h2-0-88" class="i">+        return mergedFileData
+</a><a href="#h2-0-89" id="h2-0-89" class="i">+    }
+</a><a href="#h2-0-90" id="h2-0-90" class="i">+}</a><a href="#h2-0-91" id="h2-0-91" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

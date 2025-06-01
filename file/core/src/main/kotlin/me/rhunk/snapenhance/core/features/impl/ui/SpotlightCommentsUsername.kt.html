@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SpotlightCommentsUsername.kt - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../../../../../../../../../../../../logo.png"/>
+<link rel="alternate icon" href="../../../../../../../../../../../../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../../../../../../../../../../../../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../../../../../../../../../../../../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../../../../../../../../../../../../"><img src="../../../../../../../../../../../../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../../../../../../../../../../../../about.html">About</a> | <a href="../../../../../../../../../../../../log.html">Log</a> | <a href="../../../../../../../../../../../../files.html">Files</a> | <a href="../../../../../../../../../../../../refs.html">Refs</a> | <a href="../../../../../../../../../../../../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<p> SpotlightCommentsUsername.kt (2582B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/SpotlightCommentsUsername.kt">raw</a></p><hr/><pre id="blob">
+<a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core.features.impl.ui
+<a href="#l2" class="line" id="l2">      2</a> 
+<a href="#l3" class="line" id="l3">      3</a> import android.annotation.SuppressLint
+<a href="#l4" class="line" id="l4">      4</a> import android.view.ViewGroup
+<a href="#l5" class="line" id="l5">      5</a> import android.widget.TextView
+<a href="#l6" class="line" id="l6">      6</a> import kotlinx.coroutines.Dispatchers
+<a href="#l7" class="line" id="l7">      7</a> import kotlinx.coroutines.launch
+<a href="#l8" class="line" id="l8">      8</a> import kotlinx.coroutines.withContext
+<a href="#l9" class="line" id="l9">      9</a> import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+<a href="#l10" class="line" id="l10">     10</a> import me.rhunk.snapenhance.core.features.Feature
+<a href="#l11" class="line" id="l11">     11</a> import me.rhunk.snapenhance.core.features.impl.messaging.Messaging
+<a href="#l12" class="line" id="l12">     12</a> import me.rhunk.snapenhance.core.ui.children
+<a href="#l13" class="line" id="l13">     13</a> import me.rhunk.snapenhance.core.util.EvictingMap
+<a href="#l14" class="line" id="l14">     14</a> 
+<a href="#l15" class="line" id="l15">     15</a> class SpotlightCommentsUsername : Feature(&quot;SpotlightCommentsUsername&quot;) {
+<a href="#l16" class="line" id="l16">     16</a>     private val usernameCache = EvictingMap&lt;String, String&gt;(150)
+<a href="#l17" class="line" id="l17">     17</a> 
+<a href="#l18" class="line" id="l18">     18</a>     @SuppressLint(&quot;SetTextI18n&quot;)
+<a href="#l19" class="line" id="l19">     19</a>     override fun init() {
+<a href="#l20" class="line" id="l20">     20</a>         if (!context.config.global.spotlightCommentsUsername.get()) return
+<a href="#l21" class="line" id="l21">     21</a> 
+<a href="#l22" class="line" id="l22">     22</a>         onNextActivityCreate(defer = true) {
+<a href="#l23" class="line" id="l23">     23</a>             val messaging = context.feature(Messaging::class)
+<a href="#l24" class="line" id="l24">     24</a>             context.event.subscribe(BindViewEvent::class) { event -&gt;
+<a href="#l25" class="line" id="l25">     25</a>                 val posterUserId = event.prevModel.toString().takeIf { it.startsWith(&quot;Comment&quot;) }
+<a href="#l26" class="line" id="l26">     26</a>                     ?.substringAfter(&quot;posterUserId=&quot;)?.substringBefore(&quot;,&quot;)?.substringBefore(&quot;)&quot;) ?: return@subscribe
+<a href="#l27" class="line" id="l27">     27</a> 
+<a href="#l28" class="line" id="l28">     28</a>                 if (posterUserId == &quot;null&quot;) return@subscribe
+<a href="#l29" class="line" id="l29">     29</a> 
+<a href="#l30" class="line" id="l30">     30</a>                 fun setUsername(username: String) {
+<a href="#l31" class="line" id="l31">     31</a>                     usernameCache[posterUserId] = username
+<a href="#l32" class="line" id="l32">     32</a>                     val commentsCreatorBadgeTimestamp = (event.view as ViewGroup).children().filterIsInstance&lt;TextView&gt;()
+<a href="#l33" class="line" id="l33">     33</a>                         .getOrNull(1) ?: return
+<a href="#l34" class="line" id="l34">     34</a>                     if (commentsCreatorBadgeTimestamp.text.contains(username)) return
+<a href="#l35" class="line" id="l35">     35</a>                     commentsCreatorBadgeTimestamp.text = &quot; (${username})&quot; + commentsCreatorBadgeTimestamp?.text.toString()
+<a href="#l36" class="line" id="l36">     36</a>                 }
+<a href="#l37" class="line" id="l37">     37</a> 
+<a href="#l38" class="line" id="l38">     38</a>                 event.view.post {
+<a href="#l39" class="line" id="l39">     39</a>                     usernameCache[posterUserId]?.let {
+<a href="#l40" class="line" id="l40">     40</a>                         setUsername(it)
+<a href="#l41" class="line" id="l41">     41</a>                         return@post
+<a href="#l42" class="line" id="l42">     42</a>                     }
+<a href="#l43" class="line" id="l43">     43</a> 
+<a href="#l44" class="line" id="l44">     44</a>                     context.coroutineScope.launch {
+<a href="#l45" class="line" id="l45">     45</a>                         val username = runCatching {
+<a href="#l46" class="line" id="l46">     46</a>                             messaging.fetchSnapchatterInfos(listOf(posterUserId)).firstOrNull()
+<a href="#l47" class="line" id="l47">     47</a>                         }.onFailure {
+<a href="#l48" class="line" id="l48">     48</a>                             context.log.error(&quot;Failed to fetch snapchatter info for user $posterUserId&quot;, it)
+<a href="#l49" class="line" id="l49">     49</a>                         }.getOrNull()?.username ?: return@launch
+<a href="#l50" class="line" id="l50">     50</a> 
+<a href="#l51" class="line" id="l51">     51</a>                         withContext(Dispatchers.Main) {
+<a href="#l52" class="line" id="l52">     52</a>                             setUsername(username)
+<a href="#l53" class="line" id="l53">     53</a>                         }
+<a href="#l54" class="line" id="l54">     54</a>                     }
+<a href="#l55" class="line" id="l55">     55</a>                 }
+<a href="#l56" class="line" id="l56">     56</a>             }
+<a href="#l57" class="line" id="l57">     57</a>         }
+<a href="#l58" class="line" id="l58">     58</a>     }
+<a href="#l59" class="line" id="l59">     59</a> }</pre>
+</div>
+</body>
+</html>

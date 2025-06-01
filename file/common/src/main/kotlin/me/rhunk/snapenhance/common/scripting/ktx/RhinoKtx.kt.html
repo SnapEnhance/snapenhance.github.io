@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RhinoKtx.kt - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../../../../../../../../../../../logo.png"/>
+<link rel="alternate icon" href="../../../../../../../../../../../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../../../../../../../../../../../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../../../../../../../../../../../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../../../../../../../../../../../"><img src="../../../../../../../../../../../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../../../../../../../../../../../about.html">About</a> | <a href="../../../../../../../../../../../log.html">Log</a> | <a href="../../../../../../../../../../../files.html">Files</a> | <a href="../../../../../../../../../../../refs.html">Refs</a> | <a href="../../../../../../../../../../../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<p> RhinoKtx.kt (1776B) - <a href="../../../../../../../../../../../raw/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ktx/RhinoKtx.kt">raw</a></p><hr/><pre id="blob">
+<a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.common.scripting.ktx
+<a href="#l2" class="line" id="l2">      2</a> 
+<a href="#l3" class="line" id="l3">      3</a> import com.faendir.rhino_android.RhinoAndroidHelper
+<a href="#l4" class="line" id="l4">      4</a> import org.mozilla.javascript.Context
+<a href="#l5" class="line" id="l5">      5</a> import org.mozilla.javascript.Function
+<a href="#l6" class="line" id="l6">      6</a> import org.mozilla.javascript.Scriptable
+<a href="#l7" class="line" id="l7">      7</a> import org.mozilla.javascript.ScriptableObject
+<a href="#l8" class="line" id="l8">      8</a> import org.mozilla.javascript.Wrapper
+<a href="#l9" class="line" id="l9">      9</a> import java.io.File
+<a href="#l10" class="line" id="l10">     10</a> 
+<a href="#l11" class="line" id="l11">     11</a> private val rhinoAndroidHelper = RhinoAndroidHelper(null as File?)
+<a href="#l12" class="line" id="l12">     12</a> 
+<a href="#l13" class="line" id="l13">     13</a> fun contextScope(shouldOptimize: Boolean = false, f: Context.() -&gt; Any?): Any? {
+<a href="#l14" class="line" id="l14">     14</a>     val context = rhinoAndroidHelper.enterContext().apply {
+<a href="#l15" class="line" id="l15">     15</a>         languageVersion = Context.VERSION_ES6
+<a href="#l16" class="line" id="l16">     16</a>         optimizationLevel = if (!shouldOptimize) -1 else 0
+<a href="#l17" class="line" id="l17">     17</a>     }
+<a href="#l18" class="line" id="l18">     18</a>     try {
+<a href="#l19" class="line" id="l19">     19</a>         return context.f().let {
+<a href="#l20" class="line" id="l20">     20</a>             if (it is Wrapper) {
+<a href="#l21" class="line" id="l21">     21</a>                 it.unwrap()
+<a href="#l22" class="line" id="l22">     22</a>             } else it
+<a href="#l23" class="line" id="l23">     23</a>         }
+<a href="#l24" class="line" id="l24">     24</a>     } finally {
+<a href="#l25" class="line" id="l25">     25</a>         Context.exit()
+<a href="#l26" class="line" id="l26">     26</a>     }
+<a href="#l27" class="line" id="l27">     27</a> }
+<a href="#l28" class="line" id="l28">     28</a> 
+<a href="#l29" class="line" id="l29">     29</a> fun Scriptable.scriptable(name: String): Scriptable? {
+<a href="#l30" class="line" id="l30">     30</a>     return this.get(name, this) as? Scriptable
+<a href="#l31" class="line" id="l31">     31</a> }
+<a href="#l32" class="line" id="l32">     32</a> 
+<a href="#l33" class="line" id="l33">     33</a> fun Scriptable.function(name: String): Function? {
+<a href="#l34" class="line" id="l34">     34</a>     return this.get(name, this) as? Function
+<a href="#l35" class="line" id="l35">     35</a> }
+<a href="#l36" class="line" id="l36">     36</a> 
+<a href="#l37" class="line" id="l37">     37</a> fun ScriptableObject.putFunction(name: String, proxy: Scriptable.(Array&lt;out Any?&gt;?) -&gt; Any?) {
+<a href="#l38" class="line" id="l38">     38</a>     this.putConst(name, this, object: org.mozilla.javascript.BaseFunction() {
+<a href="#l39" class="line" id="l39">     39</a>         override fun call(
+<a href="#l40" class="line" id="l40">     40</a>             cx: Context?,
+<a href="#l41" class="line" id="l41">     41</a>             scope: Scriptable,
+<a href="#l42" class="line" id="l42">     42</a>             thisObj: Scriptable,
+<a href="#l43" class="line" id="l43">     43</a>             args: Array&lt;out Any&gt;?
+<a href="#l44" class="line" id="l44">     44</a>         ): Any? {
+<a href="#l45" class="line" id="l45">     45</a>             return thisObj.proxy(args?.map {
+<a href="#l46" class="line" id="l46">     46</a>                 if (it is Wrapper) {
+<a href="#l47" class="line" id="l47">     47</a>                     it.unwrap()
+<a href="#l48" class="line" id="l48">     48</a>                 } else it
+<a href="#l49" class="line" id="l49">     49</a>             }?.toTypedArray())
+<a href="#l50" class="line" id="l50">     50</a>         }
+<a href="#l51" class="line" id="l51">     51</a>     })
+<a href="#l52" class="line" id="l52">     52</a> }
+<a href="#l53" class="line" id="l53">     53</a> 
+<a href="#l54" class="line" id="l54">     54</a> fun scriptableObject(name: String? = &quot;ScriptableObject&quot;, f: ScriptableObject.() -&gt; Unit): ScriptableObject {
+<a href="#l55" class="line" id="l55">     55</a>     return object: ScriptableObject() {
+<a href="#l56" class="line" id="l56">     56</a>         override fun getClassName() = name
+<a href="#l57" class="line" id="l57">     57</a>     }.apply(f)
+<a href="#l58" class="line" id="l58">     58</a> }</pre>
+</div>
+</body>
+</html>

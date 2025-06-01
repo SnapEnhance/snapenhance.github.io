@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BulkMessagingAction.kt - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../../../../../../../../../../../logo.png"/>
+<link rel="alternate icon" href="../../../../../../../../../../../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../../../../../../../../../../../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../../../../../../../../../../../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../../../../../../../../../../../"><img src="../../../../../../../../../../../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../../../../../../../../../../../about.html">About</a> | <a href="../../../../../../../../../../../log.html">Log</a> | <a href="../../../../../../../../../../../files.html">Files</a> | <a href="../../../../../../../../../../../refs.html">Refs</a> | <a href="../../../../../../../../../../../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<p> BulkMessagingAction.kt (29953B) - <a href="../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt">raw</a></p><hr/><pre id="blob">
+<a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core.action.impl
+<a href="#l2" class="line" id="l2">      2</a> 
+<a href="#l3" class="line" id="l3">      3</a> import android.content.Context
+<a href="#l4" class="line" id="l4">      4</a> import android.graphics.Bitmap
+<a href="#l5" class="line" id="l5">      5</a> import android.graphics.BitmapFactory
+<a href="#l6" class="line" id="l6">      6</a> import android.view.Gravity
+<a href="#l7" class="line" id="l7">      7</a> import android.view.View
+<a href="#l8" class="line" id="l8">      8</a> import android.widget.LinearLayout
+<a href="#l9" class="line" id="l9">      9</a> import android.widget.ProgressBar
+<a href="#l10" class="line" id="l10">     10</a> import android.widget.TextView
+<a href="#l11" class="line" id="l11">     11</a> import androidx.compose.foundation.ExperimentalFoundationApi
+<a href="#l12" class="line" id="l12">     12</a> import androidx.compose.foundation.Image
+<a href="#l13" class="line" id="l13">     13</a> import androidx.compose.foundation.background
+<a href="#l14" class="line" id="l14">     14</a> import androidx.compose.foundation.clickable
+<a href="#l15" class="line" id="l15">     15</a> import androidx.compose.foundation.gestures.detectTapGestures
+<a href="#l16" class="line" id="l16">     16</a> import androidx.compose.foundation.layout.*
+<a href="#l17" class="line" id="l17">     17</a> import androidx.compose.foundation.lazy.LazyColumn
+<a href="#l18" class="line" id="l18">     18</a> import androidx.compose.foundation.lazy.items
+<a href="#l19" class="line" id="l19">     19</a> import androidx.compose.material3.*
+<a href="#l20" class="line" id="l20">     20</a> import androidx.compose.runtime.*
+<a href="#l21" class="line" id="l21">     21</a> import androidx.compose.ui.Alignment
+<a href="#l22" class="line" id="l22">     22</a> import androidx.compose.ui.Modifier
+<a href="#l23" class="line" id="l23">     23</a> import androidx.compose.ui.graphics.Color
+<a href="#l24" class="line" id="l24">     24</a> import androidx.compose.ui.graphics.asImageBitmap
+<a href="#l25" class="line" id="l25">     25</a> import androidx.compose.ui.input.pointer.pointerInput
+<a href="#l26" class="line" id="l26">     26</a> import androidx.compose.ui.platform.LocalContext
+<a href="#l27" class="line" id="l27">     27</a> import androidx.compose.ui.platform.LocalFocusManager
+<a href="#l28" class="line" id="l28">     28</a> import androidx.compose.ui.text.font.FontWeight
+<a href="#l29" class="line" id="l29">     29</a> import androidx.compose.ui.text.style.TextAlign
+<a href="#l30" class="line" id="l30">     30</a> import androidx.compose.ui.text.style.TextOverflow
+<a href="#l31" class="line" id="l31">     31</a> import androidx.compose.ui.unit.dp
+<a href="#l32" class="line" id="l32">     32</a> import androidx.compose.ui.unit.sp
+<a href="#l33" class="line" id="l33">     33</a> import kotlinx.coroutines.Dispatchers
+<a href="#l34" class="line" id="l34">     34</a> import kotlinx.coroutines.delay
+<a href="#l35" class="line" id="l35">     35</a> import kotlinx.coroutines.launch
+<a href="#l36" class="line" id="l36">     36</a> import kotlinx.coroutines.withContext
+<a href="#l37" class="line" id="l37">     37</a> import me.rhunk.snapenhance.common.data.ContentType
+<a href="#l38" class="line" id="l38">     38</a> import me.rhunk.snapenhance.common.data.FriendLinkType
+<a href="#l39" class="line" id="l39">     39</a> import me.rhunk.snapenhance.common.database.impl.ConversationMessage
+<a href="#l40" class="line" id="l40">     40</a> import me.rhunk.snapenhance.common.database.impl.FriendInfo
+<a href="#l41" class="line" id="l41">     41</a> import me.rhunk.snapenhance.common.messaging.MessagingConstraints
+<a href="#l42" class="line" id="l42">     42</a> import me.rhunk.snapenhance.common.messaging.MessagingTask
+<a href="#l43" class="line" id="l43">     43</a> import me.rhunk.snapenhance.common.messaging.MessagingTaskType
+<a href="#l44" class="line" id="l44">     44</a> import me.rhunk.snapenhance.common.ui.createComposeAlertDialog
+<a href="#l45" class="line" id="l45">     45</a> import me.rhunk.snapenhance.common.ui.rememberAsyncMutableState
+<a href="#l46" class="line" id="l46">     46</a> import me.rhunk.snapenhance.common.util.ktx.copyToClipboard
+<a href="#l47" class="line" id="l47">     47</a> import me.rhunk.snapenhance.common.util.snap.BitmojiSelfie
+<a href="#l48" class="line" id="l48">     48</a> import me.rhunk.snapenhance.common.util.snap.RemoteMediaResolver
+<a href="#l49" class="line" id="l49">     49</a> import me.rhunk.snapenhance.core.action.AbstractAction
+<a href="#l50" class="line" id="l50">     50</a> import me.rhunk.snapenhance.core.features.impl.experiments.AddFriendSourceSpoof
+<a href="#l51" class="line" id="l51">     51</a> import me.rhunk.snapenhance.core.features.impl.experiments.BetterLocation
+<a href="#l52" class="line" id="l52">     52</a> import me.rhunk.snapenhance.core.features.impl.messaging.Messaging
+<a href="#l53" class="line" id="l53">     53</a> import me.rhunk.snapenhance.core.ui.ViewAppearanceHelper
+<a href="#l54" class="line" id="l54">     54</a> import me.rhunk.snapenhance.core.util.EvictingMap
+<a href="#l55" class="line" id="l55">     55</a> import me.rhunk.snapenhance.core.util.dataBuilder
+<a href="#l56" class="line" id="l56">     56</a> import me.rhunk.snapenhance.mapper.impl.FriendRelationshipChangerMapper
+<a href="#l57" class="line" id="l57">     57</a> import java.net.URL
+<a href="#l58" class="line" id="l58">     58</a> import java.text.DateFormat
+<a href="#l59" class="line" id="l59">     59</a> import java.util.Date
+<a href="#l60" class="line" id="l60">     60</a> import kotlin.random.Random
+<a href="#l61" class="line" id="l61">     61</a> 
+<a href="#l62" class="line" id="l62">     62</a> class BulkMessagingAction : AbstractAction() {
+<a href="#l63" class="line" id="l63">     63</a>     enum class SortBy {
+<a href="#l64" class="line" id="l64">     64</a>         NONE,
+<a href="#l65" class="line" id="l65">     65</a>         USERNAME,
+<a href="#l66" class="line" id="l66">     66</a>         ADDED_TIMESTAMP,
+<a href="#l67" class="line" id="l67">     67</a>         SNAP_SCORE,
+<a href="#l68" class="line" id="l68">     68</a>         STREAK_LENGTH,
+<a href="#l69" class="line" id="l69">     69</a>         MOST_MESSAGES_SENT,
+<a href="#l70" class="line" id="l70">     70</a>         MOST_RECENT_MESSAGE,
+<a href="#l71" class="line" id="l71">     71</a>         NEAREST_LOCATION
+<a href="#l72" class="line" id="l72">     72</a>     }
+<a href="#l73" class="line" id="l73">     73</a> 
+<a href="#l74" class="line" id="l74">     74</a>     enum class Filter {
+<a href="#l75" class="line" id="l75">     75</a>         ALL,
+<a href="#l76" class="line" id="l76">     76</a>         MY_FRIENDS,
+<a href="#l77" class="line" id="l77">     77</a>         BLOCKED,
+<a href="#l78" class="line" id="l78">     78</a>         REMOVED_ME,
+<a href="#l79" class="line" id="l79">     79</a>         DELETED,
+<a href="#l80" class="line" id="l80">     80</a>         SUGGESTED,
+<a href="#l81" class="line" id="l81">     81</a>         BUSINESS_ACCOUNTS,
+<a href="#l82" class="line" id="l82">     82</a>         STREAKS,
+<a href="#l83" class="line" id="l83">     83</a>         NON_STREAKS,
+<a href="#l84" class="line" id="l84">     84</a>         LOCATION_ON_MAP
+<a href="#l85" class="line" id="l85">     85</a>     }
+<a href="#l86" class="line" id="l86">     86</a> 
+<a href="#l87" class="line" id="l87">     87</a>     private val translation by lazy { context.translation.getCategory(&quot;bulk_messaging_action&quot;) }
+<a href="#l88" class="line" id="l88">     88</a>     private val betterLocation by lazy { context.feature(BetterLocation::class) }
+<a href="#l89" class="line" id="l89">     89</a> 
+<a href="#l90" class="line" id="l90">     90</a>     private fun removeAction(
+<a href="#l91" class="line" id="l91">     91</a>         ctx: Context,
+<a href="#l92" class="line" id="l92">     92</a>         ids: List&lt;String&gt;,
+<a href="#l93" class="line" id="l93">     93</a>         delay: Pair&lt;Long, Long&gt;,
+<a href="#l94" class="line" id="l94">     94</a>         action: suspend (id: String, setDialogMessage: (String) -&gt; Unit) -&gt; Unit = { _, _ -&gt; }
+<a href="#l95" class="line" id="l95">     95</a>     ) = context.coroutineScope.launch {
+<a href="#l96" class="line" id="l96">     96</a>         val statusTextView = TextView(ctx)
+<a href="#l97" class="line" id="l97">     97</a>         val dialog = withContext(Dispatchers.Main) {
+<a href="#l98" class="line" id="l98">     98</a>             ViewAppearanceHelper.newAlertDialogBuilder(ctx)
+<a href="#l99" class="line" id="l99">     99</a>                 .setTitle(&quot;...&quot;)
+<a href="#l100" class="line" id="l100">    100</a>                 .setView(LinearLayout(ctx).apply {
+<a href="#l101" class="line" id="l101">    101</a>                     orientation = LinearLayout.VERTICAL
+<a href="#l102" class="line" id="l102">    102</a>                     gravity = Gravity.CENTER
+<a href="#l103" class="line" id="l103">    103</a>                     addView(statusTextView.apply {
+<a href="#l104" class="line" id="l104">    104</a>                         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+<a href="#l105" class="line" id="l105">    105</a>                         textAlignment = View.TEXT_ALIGNMENT_CENTER
+<a href="#l106" class="line" id="l106">    106</a>                     })
+<a href="#l107" class="line" id="l107">    107</a>                     addView(ProgressBar(ctx))
+<a href="#l108" class="line" id="l108">    108</a>                 })
+<a href="#l109" class="line" id="l109">    109</a>                 .setCancelable(false)
+<a href="#l110" class="line" id="l110">    110</a>                 .show()
+<a href="#l111" class="line" id="l111">    111</a>         }
+<a href="#l112" class="line" id="l112">    112</a> 
+<a href="#l113" class="line" id="l113">    113</a>         ids.forEachIndexed { index, id -&gt;
+<a href="#l114" class="line" id="l114">    114</a>             launch(Dispatchers.Main) {
+<a href="#l115" class="line" id="l115">    115</a>                 dialog.setTitle(
+<a href="#l116" class="line" id="l116">    116</a>                     translation.format(&quot;progress_status&quot;, &quot;index&quot; to (index + 1).toString(), &quot;total&quot; to ids.size.toString())
+<a href="#l117" class="line" id="l117">    117</a>                 )
+<a href="#l118" class="line" id="l118">    118</a>             }
+<a href="#l119" class="line" id="l119">    119</a>             runCatching {
+<a href="#l120" class="line" id="l120">    120</a>                 action(id) {
+<a href="#l121" class="line" id="l121">    121</a>                     launch(Dispatchers.Main) {
+<a href="#l122" class="line" id="l122">    122</a>                         statusTextView.text = it
+<a href="#l123" class="line" id="l123">    123</a>                     }
+<a href="#l124" class="line" id="l124">    124</a>                 }
+<a href="#l125" class="line" id="l125">    125</a>             }.onFailure {
+<a href="#l126" class="line" id="l126">    126</a>                 context.log.error(&quot;Failed to process $it&quot;, it)
+<a href="#l127" class="line" id="l127">    127</a>                 context.shortToast(&quot;Failed to process $id&quot;)
+<a href="#l128" class="line" id="l128">    128</a>             }
+<a href="#l129" class="line" id="l129">    129</a>             delay(Random.nextLong(delay.first, delay.second))
+<a href="#l130" class="line" id="l130">    130</a>         }
+<a href="#l131" class="line" id="l131">    131</a>         withContext(Dispatchers.Main) {
+<a href="#l132" class="line" id="l132">    132</a>             dialog.dismiss()
+<a href="#l133" class="line" id="l133">    133</a>         }
+<a href="#l134" class="line" id="l134">    134</a>     }
+<a href="#l135" class="line" id="l135">    135</a> 
+<a href="#l136" class="line" id="l136">    136</a>     @Composable
+<a href="#l137" class="line" id="l137">    137</a>     private fun ConfirmationDialog(
+<a href="#l138" class="line" id="l138">    138</a>         onConfirm: () -&gt; Unit,
+<a href="#l139" class="line" id="l139">    139</a>         onCancel: () -&gt; Unit,
+<a href="#l140" class="line" id="l140">    140</a>     ) {
+<a href="#l141" class="line" id="l141">    141</a>         AlertDialog(
+<a href="#l142" class="line" id="l142">    142</a>             onDismissRequest = onCancel,
+<a href="#l143" class="line" id="l143">    143</a>             title = { Text(text = translation[&quot;confirmation_dialog.title&quot;]) },
+<a href="#l144" class="line" id="l144">    144</a>             text = { Text(text = translation[&quot;confirmation_dialog.message&quot;]) },
+<a href="#l145" class="line" id="l145">    145</a>             confirmButton = {
+<a href="#l146" class="line" id="l146">    146</a>                 TextButton(onClick = onConfirm) {
+<a href="#l147" class="line" id="l147">    147</a>                     Text(text = context.translation[&quot;button.positive&quot;])
+<a href="#l148" class="line" id="l148">    148</a>                 }
+<a href="#l149" class="line" id="l149">    149</a>             },
+<a href="#l150" class="line" id="l150">    150</a>             dismissButton = {
+<a href="#l151" class="line" id="l151">    151</a>                 TextButton(onClick = onCancel) {
+<a href="#l152" class="line" id="l152">    152</a>                     Text(text = context.translation[&quot;button.negative&quot;])
+<a href="#l153" class="line" id="l153">    153</a>                 }
+<a href="#l154" class="line" id="l154">    154</a>             }
+<a href="#l155" class="line" id="l155">    155</a>         )
+<a href="#l156" class="line" id="l156">    156</a>     }
+<a href="#l157" class="line" id="l157">    157</a> 
+<a href="#l158" class="line" id="l158">    158</a>     private fun filterFriends(friends: List&lt;FriendInfo&gt;, filter: Filter, nameFilter: String): List&lt;FriendInfo&gt; {
+<a href="#l159" class="line" id="l159">    159</a>         val userIdBlacklist = arrayOf(
+<a href="#l160" class="line" id="l160">    160</a>             context.database.myUserId,
+<a href="#l161" class="line" id="l161">    161</a>             &quot;b42f1f70-5a8b-4c53-8c25-34e7ec9e6781&quot;, // myai
+<a href="#l162" class="line" id="l162">    162</a>             &quot;84ee8839-3911-492d-8b94-72dd80f3713a&quot;, // teamsnapchat
+<a href="#l163" class="line" id="l163">    163</a>         )
+<a href="#l164" class="line" id="l164">    164</a> 
+<a href="#l165" class="line" id="l165">    165</a>         return friends.filter { friend -&gt;
+<a href="#l166" class="line" id="l166">    166</a>             friend.userId !in userIdBlacklist &amp;&amp; when (filter) {
+<a href="#l167" class="line" id="l167">    167</a>                 Filter.ALL -&gt; true
+<a href="#l168" class="line" id="l168">    168</a>                 Filter.MY_FRIENDS -&gt; friend.friendLinkType == FriendLinkType.MUTUAL.value &amp;&amp; friend.addedTimestamp &gt; 0
+<a href="#l169" class="line" id="l169">    169</a>                 Filter.BLOCKED -&gt; friend.friendLinkType == FriendLinkType.BLOCKED.value
+<a href="#l170" class="line" id="l170">    170</a>                 Filter.REMOVED_ME -&gt; friend.friendLinkType == FriendLinkType.OUTGOING.value &amp;&amp; friend.addedTimestamp &gt; 0 &amp;&amp; friend.businessCategory == 0 // ignore followed accounts
+<a href="#l171" class="line" id="l171">    171</a>                 Filter.SUGGESTED -&gt; friend.friendLinkType == FriendLinkType.SUGGESTED.value
+<a href="#l172" class="line" id="l172">    172</a>                 Filter.DELETED -&gt; friend.friendLinkType == FriendLinkType.DELETED.value
+<a href="#l173" class="line" id="l173">    173</a>                 Filter.BUSINESS_ACCOUNTS -&gt; friend.businessCategory &gt; 0
+<a href="#l174" class="line" id="l174">    174</a>                 Filter.STREAKS -&gt; friend.friendLinkType == FriendLinkType.MUTUAL.value &amp;&amp; friend.addedTimestamp &gt; 0 &amp;&amp; friend.streakLength != 0
+<a href="#l175" class="line" id="l175">    175</a>                 Filter.NON_STREAKS -&gt; friend.friendLinkType == FriendLinkType.MUTUAL.value&amp;&amp; friend.addedTimestamp &gt; 0 &amp;&amp; friend.streakLength == 0
+<a href="#l176" class="line" id="l176">    176</a>                 Filter.LOCATION_ON_MAP -&gt; betterLocation.locationHistory.contains(friend.userId)
+<a href="#l177" class="line" id="l177">    177</a>             } &amp;&amp; nameFilter.takeIf { it.isNotBlank() }?.let { name -&gt;
+<a href="#l178" class="line" id="l178">    178</a>                 friend.mutableUsername?.contains(
+<a href="#l179" class="line" id="l179">    179</a>                     name,
+<a href="#l180" class="line" id="l180">    180</a>                     ignoreCase = true
+<a href="#l181" class="line" id="l181">    181</a>                 ) == true || friend.displayName?.contains(name, ignoreCase = true) == true
+<a href="#l182" class="line" id="l182">    182</a>             } ?: true
+<a href="#l183" class="line" id="l183">    183</a>         }
+<a href="#l184" class="line" id="l184">    184</a>     }
+<a href="#l185" class="line" id="l185">    185</a> 
+<a href="#l186" class="line" id="l186">    186</a>     private fun getDMLastMessage(userId: String?): ConversationMessage? {
+<a href="#l187" class="line" id="l187">    187</a>         return context.database.getConversationLinkFromUserId(userId ?: return null)?.clientConversationId?.let {
+<a href="#l188" class="line" id="l188">    188</a>             context.database.getMessagesFromConversationId(it, 1)
+<a href="#l189" class="line" id="l189">    189</a>         }?.firstOrNull()
+<a href="#l190" class="line" id="l190">    190</a>     }
+<a href="#l191" class="line" id="l191">    191</a> 
+<a href="#l192" class="line" id="l192">    192</a>     @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+<a href="#l193" class="line" id="l193">    193</a>     @Composable
+<a href="#l194" class="line" id="l194">    194</a>     private fun BulkMessagingDialog() {
+<a href="#l195" class="line" id="l195">    195</a>         val coroutineScope = rememberCoroutineScope { Dispatchers.IO }
+<a href="#l196" class="line" id="l196">    196</a>         var sortBy by remember { mutableStateOf(SortBy.USERNAME) }
+<a href="#l197" class="line" id="l197">    197</a>         var filter by remember { mutableStateOf(Filter.REMOVED_ME) }
+<a href="#l198" class="line" id="l198">    198</a>         var sortReverseOrder by remember { mutableStateOf(false) }
+<a href="#l199" class="line" id="l199">    199</a>         val selectedFriends = remember { mutableStateListOf&lt;String&gt;() }
+<a href="#l200" class="line" id="l200">    200</a>         val friends = remember { mutableStateListOf&lt;FriendInfo&gt;() }
+<a href="#l201" class="line" id="l201">    201</a>         val bitmojiCache = remember { EvictingMap&lt;String, Bitmap&gt;(50) }
+<a href="#l202" class="line" id="l202">    202</a>         val noBitmojiBitmap = remember { BitmapFactory.decodeResource(context.resources, android.R.drawable.ic_menu_report_image).asImageBitmap() }
+<a href="#l203" class="line" id="l203">    203</a> 
+<a href="#l204" class="line" id="l204">    204</a>         val focusManager = LocalFocusManager.current
+<a href="#l205" class="line" id="l205">    205</a>         var nameFilter by remember { mutableStateOf(&quot;&quot;) }
+<a href="#l206" class="line" id="l206">    206</a> 
+<a href="#l207" class="line" id="l207">    207</a>         suspend fun refreshList(clearSelected: Boolean = true) {
+<a href="#l208" class="line" id="l208">    208</a>             val myLocation = betterLocation.locationHistory[context.database.myUserId]
+<a href="#l209" class="line" id="l209">    209</a> 
+<a href="#l210" class="line" id="l210">    210</a>             withContext(Dispatchers.IO) {
+<a href="#l211" class="line" id="l211">    211</a>                 val newFriends = context.database.getAllFriends().let { friends -&gt;
+<a href="#l212" class="line" id="l212">    212</a>                     filterFriends(friends, filter, nameFilter)
+<a href="#l213" class="line" id="l213">    213</a>                 }.toMutableList()
+<a href="#l214" class="line" id="l214">    214</a>                 when (sortBy) {
+<a href="#l215" class="line" id="l215">    215</a>                     SortBy.NONE -&gt; {}
+<a href="#l216" class="line" id="l216">    216</a>                     SortBy.USERNAME -&gt; newFriends.sortBy { it.mutableUsername }
+<a href="#l217" class="line" id="l217">    217</a>                     SortBy.ADDED_TIMESTAMP -&gt; newFriends.sortBy { it.addedTimestamp }
+<a href="#l218" class="line" id="l218">    218</a>                     SortBy.SNAP_SCORE -&gt; newFriends.sortBy { it.snapScore }
+<a href="#l219" class="line" id="l219">    219</a>                     SortBy.STREAK_LENGTH -&gt; newFriends.sortBy { it.streakLength }
+<a href="#l220" class="line" id="l220">    220</a>                     SortBy.MOST_MESSAGES_SENT -&gt; newFriends.sortByDescending {
+<a href="#l221" class="line" id="l221">    221</a>                         getDMLastMessage(it.userId)?.serverMessageId ?: 0
+<a href="#l222" class="line" id="l222">    222</a>                     }
+<a href="#l223" class="line" id="l223">    223</a>                     SortBy.MOST_RECENT_MESSAGE -&gt; newFriends.sortByDescending {
+<a href="#l224" class="line" id="l224">    224</a>                         getDMLastMessage(it.userId)?.creationTimestamp
+<a href="#l225" class="line" id="l225">    225</a>                     }
+<a href="#l226" class="line" id="l226">    226</a>                     SortBy.NEAREST_LOCATION -&gt; {
+<a href="#l227" class="line" id="l227">    227</a>                         if (myLocation != null) {
+<a href="#l228" class="line" id="l228">    228</a>                             newFriends.sortBy {
+<a href="#l229" class="line" id="l229">    229</a>                                 betterLocation.locationHistory[it.userId]?.distanceTo(myLocation)
+<a href="#l230" class="line" id="l230">    230</a>                                     ?: Double.MAX_VALUE
+<a href="#l231" class="line" id="l231">    231</a>                             }
+<a href="#l232" class="line" id="l232">    232</a>                         }
+<a href="#l233" class="line" id="l233">    233</a>                     }
+<a href="#l234" class="line" id="l234">    234</a>                 }
+<a href="#l235" class="line" id="l235">    235</a>                 if (sortReverseOrder) newFriends.reverse()
+<a href="#l236" class="line" id="l236">    236</a>                 withContext(Dispatchers.Main) {
+<a href="#l237" class="line" id="l237">    237</a>                     if (clearSelected) selectedFriends.clear()
+<a href="#l238" class="line" id="l238">    238</a>                     friends.clear()
+<a href="#l239" class="line" id="l239">    239</a>                     friends.addAll(newFriends)
+<a href="#l240" class="line" id="l240">    240</a>                 }
+<a href="#l241" class="line" id="l241">    241</a>             }
+<a href="#l242" class="line" id="l242">    242</a>         }
+<a href="#l243" class="line" id="l243">    243</a> 
+<a href="#l244" class="line" id="l244">    244</a>         Column(
+<a href="#l245" class="line" id="l245">    245</a>             modifier = Modifier
+<a href="#l246" class="line" id="l246">    246</a>                 .fillMaxWidth()
+<a href="#l247" class="line" id="l247">    247</a>                 .padding(10.dp),
+<a href="#l248" class="line" id="l248">    248</a>             verticalArrangement = Arrangement.spacedBy(10.dp)
+<a href="#l249" class="line" id="l249">    249</a>         ) {
+<a href="#l250" class="line" id="l250">    250</a>             Row(
+<a href="#l251" class="line" id="l251">    251</a>                 modifier = Modifier.fillMaxWidth(),
+<a href="#l252" class="line" id="l252">    252</a>                 horizontalArrangement = Arrangement.SpaceEvenly,
+<a href="#l253" class="line" id="l253">    253</a>                 verticalAlignment = Alignment.CenterVertically
+<a href="#l254" class="line" id="l254">    254</a>             ) {
+<a href="#l255" class="line" id="l255">    255</a>                 var filterMenuExpanded by remember { mutableStateOf(false) }
+<a href="#l256" class="line" id="l256">    256</a> 
+<a href="#l257" class="line" id="l257">    257</a>                 ExposedDropdownMenuBox(
+<a href="#l258" class="line" id="l258">    258</a>                     expanded = filterMenuExpanded,
+<a href="#l259" class="line" id="l259">    259</a>                     onExpandedChange = { filterMenuExpanded = it },
+<a href="#l260" class="line" id="l260">    260</a>                 ) {
+<a href="#l261" class="line" id="l261">    261</a>                     ElevatedCard(
+<a href="#l262" class="line" id="l262">    262</a>                         modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable)
+<a href="#l263" class="line" id="l263">    263</a>                     ) {
+<a href="#l264" class="line" id="l264">    264</a>                         Text(text = filter.name, modifier = Modifier.padding(5.dp))
+<a href="#l265" class="line" id="l265">    265</a>                     }
+<a href="#l266" class="line" id="l266">    266</a> 
+<a href="#l267" class="line" id="l267">    267</a>                     DropdownMenu(
+<a href="#l268" class="line" id="l268">    268</a>                         expanded = filterMenuExpanded,
+<a href="#l269" class="line" id="l269">    269</a>                         onDismissRequest = { filterMenuExpanded = false }
+<a href="#l270" class="line" id="l270">    270</a>                     ) {
+<a href="#l271" class="line" id="l271">    271</a>                         Filter.entries.forEach { entry -&gt;
+<a href="#l272" class="line" id="l272">    272</a>                             DropdownMenuItem(onClick = {
+<a href="#l273" class="line" id="l273">    273</a>                                 filter = entry
+<a href="#l274" class="line" id="l274">    274</a>                                 filterMenuExpanded = false
+<a href="#l275" class="line" id="l275">    275</a>                             }, text = {
+<a href="#l276" class="line" id="l276">    276</a>                                 Text(text = entry.name, fontWeight = if (entry == filter) FontWeight.Bold else FontWeight.Normal)
+<a href="#l277" class="line" id="l277">    277</a>                             })
+<a href="#l278" class="line" id="l278">    278</a>                         }
+<a href="#l279" class="line" id="l279">    279</a>                     }
+<a href="#l280" class="line" id="l280">    280</a>                 }
+<a href="#l281" class="line" id="l281">    281</a> 
+<a href="#l282" class="line" id="l282">    282</a>                 var sortMenuExpanded by remember { mutableStateOf(false) }
+<a href="#l283" class="line" id="l283">    283</a> 
+<a href="#l284" class="line" id="l284">    284</a>                 ExposedDropdownMenuBox(
+<a href="#l285" class="line" id="l285">    285</a>                     expanded = sortMenuExpanded,
+<a href="#l286" class="line" id="l286">    286</a>                     onExpandedChange = { sortMenuExpanded = it },
+<a href="#l287" class="line" id="l287">    287</a>                 ) {
+<a href="#l288" class="line" id="l288">    288</a>                     ElevatedCard(
+<a href="#l289" class="line" id="l289">    289</a>                         modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable)
+<a href="#l290" class="line" id="l290">    290</a>                     ) {
+<a href="#l291" class="line" id="l291">    291</a>                         Text(text = &quot;Sort by&quot;, modifier = Modifier.padding(5.dp))
+<a href="#l292" class="line" id="l292">    292</a>                     }
+<a href="#l293" class="line" id="l293">    293</a> 
+<a href="#l294" class="line" id="l294">    294</a>                     DropdownMenu(
+<a href="#l295" class="line" id="l295">    295</a>                         expanded = sortMenuExpanded,
+<a href="#l296" class="line" id="l296">    296</a>                         onDismissRequest = { sortMenuExpanded = false }
+<a href="#l297" class="line" id="l297">    297</a>                     ) {
+<a href="#l298" class="line" id="l298">    298</a>                         SortBy.entries.forEach { entry -&gt;
+<a href="#l299" class="line" id="l299">    299</a>                             DropdownMenuItem(onClick = {
+<a href="#l300" class="line" id="l300">    300</a>                                 sortBy = entry
+<a href="#l301" class="line" id="l301">    301</a>                                 sortMenuExpanded = false
+<a href="#l302" class="line" id="l302">    302</a>                             }, text = {
+<a href="#l303" class="line" id="l303">    303</a>                                 Text(text = entry.name, fontWeight = if (entry == sortBy) FontWeight.Bold else FontWeight.Normal)
+<a href="#l304" class="line" id="l304">    304</a>                             })
+<a href="#l305" class="line" id="l305">    305</a>                         }
+<a href="#l306" class="line" id="l306">    306</a>                     }
+<a href="#l307" class="line" id="l307">    307</a>                 }
+<a href="#l308" class="line" id="l308">    308</a> 
+<a href="#l309" class="line" id="l309">    309</a>                 Row(
+<a href="#l310" class="line" id="l310">    310</a>                     verticalAlignment = Alignment.CenterVertically
+<a href="#l311" class="line" id="l311">    311</a>                 ) {
+<a href="#l312" class="line" id="l312">    312</a>                     Checkbox(
+<a href="#l313" class="line" id="l313">    313</a>                         checked = sortReverseOrder,
+<a href="#l314" class="line" id="l314">    314</a>                         onCheckedChange = { sortReverseOrder = it },
+<a href="#l315" class="line" id="l315">    315</a>                     )
+<a href="#l316" class="line" id="l316">    316</a>                     Text(text = &quot;Reverse order&quot;, fontSize = 15.sp, fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
+<a href="#l317" class="line" id="l317">    317</a>                 }
+<a href="#l318" class="line" id="l318">    318</a>             }
+<a href="#l319" class="line" id="l319">    319</a> 
+<a href="#l320" class="line" id="l320">    320</a>             LazyColumn(
+<a href="#l321" class="line" id="l321">    321</a>                 modifier = Modifier
+<a href="#l322" class="line" id="l322">    322</a>                     .fillMaxWidth()
+<a href="#l323" class="line" id="l323">    323</a>                     .weight(1f),
+<a href="#l324" class="line" id="l324">    324</a>                 verticalArrangement = Arrangement.spacedBy(3.dp)
+<a href="#l325" class="line" id="l325">    325</a>             ) {
+<a href="#l326" class="line" id="l326">    326</a>                 stickyHeader {
+<a href="#l327" class="line" id="l327">    327</a>                     Row(
+<a href="#l328" class="line" id="l328">    328</a>                         modifier = Modifier
+<a href="#l329" class="line" id="l329">    329</a>                             .fillMaxWidth()
+<a href="#l330" class="line" id="l330">    330</a>                             .background(MaterialTheme.colorScheme.surface)
+<a href="#l331" class="line" id="l331">    331</a>                             .padding(bottom = 2.dp),
+<a href="#l332" class="line" id="l332">    332</a>                         horizontalArrangement = Arrangement.End,
+<a href="#l333" class="line" id="l333">    333</a>                         verticalAlignment = Alignment.CenterVertically,
+<a href="#l334" class="line" id="l334">    334</a>                     ) {
+<a href="#l335" class="line" id="l335">    335</a>                         TextField(
+<a href="#l336" class="line" id="l336">    336</a>                             value = nameFilter,
+<a href="#l337" class="line" id="l337">    337</a>                             onValueChange = {
+<a href="#l338" class="line" id="l338">    338</a>                                 nameFilter = it
+<a href="#l339" class="line" id="l339">    339</a>                                 coroutineScope.launch { refreshList(clearSelected = false) }
+<a href="#l340" class="line" id="l340">    340</a>                             },
+<a href="#l341" class="line" id="l341">    341</a>                             placeholder = { Text(text = &quot;Search by name&quot;) },
+<a href="#l342" class="line" id="l342">    342</a>                             singleLine = true,
+<a href="#l343" class="line" id="l343">    343</a>                             modifier = Modifier
+<a href="#l344" class="line" id="l344">    344</a>                                 .padding(end = 5.dp),
+<a href="#l345" class="line" id="l345">    345</a>                             colors = TextFieldDefaults.colors(
+<a href="#l346" class="line" id="l346">    346</a>                                 focusedContainerColor = Color.Transparent,
+<a href="#l347" class="line" id="l347">    347</a>                                 unfocusedContainerColor = Color.Transparent
+<a href="#l348" class="line" id="l348">    348</a>                             ),
+<a href="#l349" class="line" id="l349">    349</a>                         )
+<a href="#l350" class="line" id="l350">    350</a> 
+<a href="#l351" class="line" id="l351">    351</a>                         Checkbox(
+<a href="#l352" class="line" id="l352">    352</a>                             checked = if (friends.isEmpty() || selectedFriends.size &lt; friends.size) false else friends.all { friend -&gt; selectedFriends.contains(friend.userId) },
+<a href="#l353" class="line" id="l353">    353</a>                             onCheckedChange = { state -&gt;
+<a href="#l354" class="line" id="l354">    354</a>                                 if (state) {
+<a href="#l355" class="line" id="l355">    355</a>                                     friends.mapNotNull { it.userId }.forEach { userId -&gt;
+<a href="#l356" class="line" id="l356">    356</a>                                         if (!selectedFriends.contains(userId)) {
+<a href="#l357" class="line" id="l357">    357</a>                                             selectedFriends.add(userId)
+<a href="#l358" class="line" id="l358">    358</a>                                         }
+<a href="#l359" class="line" id="l359">    359</a>                                     }
+<a href="#l360" class="line" id="l360">    360</a>                                 } else {
+<a href="#l361" class="line" id="l361">    361</a>                                     if (nameFilter.isNotBlank()) {
+<a href="#l362" class="line" id="l362">    362</a>                                         filterFriends(friends, filter, nameFilter).mapNotNull { it.userId }.forEach { userId -&gt;
+<a href="#l363" class="line" id="l363">    363</a>                                             selectedFriends.remove(userId)
+<a href="#l364" class="line" id="l364">    364</a>                                         }
+<a href="#l365" class="line" id="l365">    365</a>                                     } else {
+<a href="#l366" class="line" id="l366">    366</a>                                         selectedFriends.clear()
+<a href="#l367" class="line" id="l367">    367</a>                                     }
+<a href="#l368" class="line" id="l368">    368</a>                                 }
+<a href="#l369" class="line" id="l369">    369</a>                             }
+<a href="#l370" class="line" id="l370">    370</a>                         )
+<a href="#l371" class="line" id="l371">    371</a>                     }
+<a href="#l372" class="line" id="l372">    372</a>                 }
+<a href="#l373" class="line" id="l373">    373</a>                 item {
+<a href="#l374" class="line" id="l374">    374</a>                     if (friends.isEmpty()) {
+<a href="#l375" class="line" id="l375">    375</a>                         Text(text = &quot;No friends found&quot;, fontSize = 12.sp, fontWeight = FontWeight.Light, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+<a href="#l376" class="line" id="l376">    376</a>                     }
+<a href="#l377" class="line" id="l377">    377</a>                 }
+<a href="#l378" class="line" id="l378">    378</a>                 items(friends, key = { it.userId!! }) { friendInfo -&gt;
+<a href="#l379" class="line" id="l379">    379</a>                     var bitmojiBitmap by remember(friendInfo) { mutableStateOf(bitmojiCache[friendInfo.bitmojiAvatarId]) }
+<a href="#l380" class="line" id="l380">    380</a> 
+<a href="#l381" class="line" id="l381">    381</a>                     fun selectFriend(state: Boolean) {
+<a href="#l382" class="line" id="l382">    382</a>                         friendInfo.userId?.let {
+<a href="#l383" class="line" id="l383">    383</a>                             if (state) {
+<a href="#l384" class="line" id="l384">    384</a>                                 selectedFriends.add(it)
+<a href="#l385" class="line" id="l385">    385</a>                             } else {
+<a href="#l386" class="line" id="l386">    386</a>                                 selectedFriends.remove(it)
+<a href="#l387" class="line" id="l387">    387</a>                             }
+<a href="#l388" class="line" id="l388">    388</a>                         }
+<a href="#l389" class="line" id="l389">    389</a>                     }
+<a href="#l390" class="line" id="l390">    390</a> 
+<a href="#l391" class="line" id="l391">    391</a>                     Row(
+<a href="#l392" class="line" id="l392">    392</a>                         modifier = Modifier
+<a href="#l393" class="line" id="l393">    393</a>                             .fillMaxWidth()
+<a href="#l394" class="line" id="l394">    394</a>                             .clickable {
+<a href="#l395" class="line" id="l395">    395</a>                                 selectFriend(!selectedFriends.contains(friendInfo.userId))
+<a href="#l396" class="line" id="l396">    396</a>                             }.pointerInput(Unit) {
+<a href="#l397" class="line" id="l397">    397</a>                                 detectTapGestures(
+<a href="#l398" class="line" id="l398">    398</a>                                     onLongPress = { context.androidContext.copyToClipboard(friendInfo.mutableUsername.toString()) }
+<a href="#l399" class="line" id="l399">    399</a>                                 )
+<a href="#l400" class="line" id="l400">    400</a>                             },
+<a href="#l401" class="line" id="l401">    401</a>                         verticalAlignment = Alignment.CenterVertically,
+<a href="#l402" class="line" id="l402">    402</a>                         horizontalArrangement = Arrangement.spacedBy(10.dp)
+<a href="#l403" class="line" id="l403">    403</a>                     ) {
+<a href="#l404" class="line" id="l404">    404</a>                         LaunchedEffect(friendInfo) {
+<a href="#l405" class="line" id="l405">    405</a>                             withContext(Dispatchers.IO) {
+<a href="#l406" class="line" id="l406">    406</a>                                 if (bitmojiBitmap != null || friendInfo.bitmojiAvatarId == null || friendInfo.bitmojiSelfieId == null) return@withContext
+<a href="#l407" class="line" id="l407">    407</a> 
+<a href="#l408" class="line" id="l408">    408</a>                                 val bitmojiUrl = BitmojiSelfie.getBitmojiSelfie(friendInfo.bitmojiSelfieId, friendInfo.bitmojiAvatarId, BitmojiSelfie.BitmojiSelfieType.NEW_THREE_D) ?: return@withContext
+<a href="#l409" class="line" id="l409">    409</a> 
+<a href="#l410" class="line" id="l410">    410</a>                                 runCatching {
+<a href="#l411" class="line" id="l411">    411</a>                                     RemoteMediaResolver.downloadMedia(bitmojiUrl) { inputStream, length -&gt;
+<a href="#l412" class="line" id="l412">    412</a>                                         bitmojiCache[friendInfo.bitmojiAvatarId ?: return@withContext] = BitmapFactory.decodeStream(inputStream).also {
+<a href="#l413" class="line" id="l413">    413</a>                                             bitmojiBitmap = it
+<a href="#l414" class="line" id="l414">    414</a>                                         }
+<a href="#l415" class="line" id="l415">    415</a>                                     }
+<a href="#l416" class="line" id="l416">    416</a>                                 }
+<a href="#l417" class="line" id="l417">    417</a>                             }
+<a href="#l418" class="line" id="l418">    418</a>                         }
+<a href="#l419" class="line" id="l419">    419</a> 
+<a href="#l420" class="line" id="l420">    420</a>                         Image(
+<a href="#l421" class="line" id="l421">    421</a>                             bitmap = remember (bitmojiBitmap) { bitmojiBitmap?.asImageBitmap() ?: noBitmojiBitmap },
+<a href="#l422" class="line" id="l422">    422</a>                             contentDescription = null,
+<a href="#l423" class="line" id="l423">    423</a>                             modifier = Modifier.size(35.dp)
+<a href="#l424" class="line" id="l424">    424</a>                         )
+<a href="#l425" class="line" id="l425">    425</a> 
+<a href="#l426" class="line" id="l426">    426</a>                         Column(
+<a href="#l427" class="line" id="l427">    427</a>                             modifier = Modifier.weight(1f),
+<a href="#l428" class="line" id="l428">    428</a>                         ) {
+<a href="#l429" class="line" id="l429">    429</a>                             Row(
+<a href="#l430" class="line" id="l430">    430</a>                                 modifier = Modifier.fillMaxWidth(),
+<a href="#l431" class="line" id="l431">    431</a>                                 horizontalArrangement = Arrangement.spacedBy(3.dp),
+<a href="#l432" class="line" id="l432">    432</a>                                 verticalAlignment = Alignment.CenterVertically
+<a href="#l433" class="line" id="l433">    433</a>                             ){
+<a href="#l434" class="line" id="l434">    434</a>                                 Text(text = (friendInfo.displayName ?: friendInfo.mutableUsername).toString(), fontSize = 16.sp, fontWeight = FontWeight.Bold, overflow = TextOverflow.Ellipsis, maxLines = 1, lineHeight = 10.sp)
+<a href="#l435" class="line" id="l435">    435</a>                                 Text(text = friendInfo.mutableUsername.toString(), fontSize = 10.sp, fontWeight = FontWeight.Light, overflow = TextOverflow.Ellipsis, maxLines = 1, lineHeight = 10.sp)
+<a href="#l436" class="line" id="l436">    436</a>                             }
+<a href="#l437" class="line" id="l437">    437</a>                             val lastMessage by rememberAsyncMutableState(defaultValue = null) {
+<a href="#l438" class="line" id="l438">    438</a>                                 getDMLastMessage(friendInfo.userId)
+<a href="#l439" class="line" id="l439">    439</a>                             }
+<a href="#l440" class="line" id="l440">    440</a> 
+<a href="#l441" class="line" id="l441">    441</a>                             val userInfo = remember(friendInfo, lastMessage) {
+<a href="#l442" class="line" id="l442">    442</a>                                 buildString {
+<a href="#l443" class="line" id="l443">    443</a>                                     append(&quot;Relationship: &quot;)
+<a href="#l444" class="line" id="l444">    444</a>                                     append(context.translation[&quot;friendship_link_type.${FriendLinkType.fromValue(friendInfo.friendLinkType).shortName}&quot;])
+<a href="#l445" class="line" id="l445">    445</a>                                     friendInfo.addedTimestamp.takeIf { it &gt; 0L }?.let {
+<a href="#l446" class="line" id="l446">    446</a>                                         append(&quot;\nAdded ${DateFormat.getDateTimeInstance().format(Date(it))}&quot;)
+<a href="#l447" class="line" id="l447">    447</a>                                     }
+<a href="#l448" class="line" id="l448">    448</a>                                     friendInfo.snapScore.takeIf { it &gt; 0 }?.let {
+<a href="#l449" class="line" id="l449">    449</a>                                         append(&quot;\nSnap Score: $it&quot;)
+<a href="#l450" class="line" id="l450">    450</a>                                     }
+<a href="#l451" class="line" id="l451">    451</a>                                     friendInfo.streakLength.takeIf { it &gt; 0 }?.let {
+<a href="#l452" class="line" id="l452">    452</a>                                         append(&quot;\nStreaks length: $it&quot;)
+<a href="#l453" class="line" id="l453">    453</a>                                     }
+<a href="#l454" class="line" id="l454">    454</a>                                     lastMessage?.let {
+<a href="#l455" class="line" id="l455">    455</a>                                         append(&quot;\nSent messages: ${it.serverMessageId}&quot;)
+<a href="#l456" class="line" id="l456">    456</a>                                         append(&quot;\nLast message: ${DateFormat.getDateTimeInstance().format(Date(it.creationTimestamp))}&quot;)
+<a href="#l457" class="line" id="l457">    457</a>                                     }
+<a href="#l458" class="line" id="l458">    458</a>                                     betterLocation.locationHistory[context.database.myUserId]?.let { myLocation -&gt;
+<a href="#l459" class="line" id="l459">    459</a>                                         betterLocation.locationHistory[friendInfo.userId]?.let {
+<a href="#l460" class="line" id="l460">    460</a>                                             append(&quot;\n${myLocation.distanceTo(it).let { distance -&gt;
+<a href="#l461" class="line" id="l461">    461</a>                                                 if (distance &lt; 1) &quot;${(distance * 1000).toInt()} m&quot; else &quot;${distance.toInt()} km&quot;
+<a href="#l462" class="line" id="l462">    462</a>                                             } } away&quot;)
+<a href="#l463" class="line" id="l463">    463</a>                                         }
+<a href="#l464" class="line" id="l464">    464</a>                                     }
+<a href="#l465" class="line" id="l465">    465</a>                                 }
+<a href="#l466" class="line" id="l466">    466</a>                             }
+<a href="#l467" class="line" id="l467">    467</a>                             Text(text = userInfo, fontSize = 12.sp, fontWeight = FontWeight.Light, lineHeight = 12.sp, overflow = TextOverflow.Ellipsis)
+<a href="#l468" class="line" id="l468">    468</a>                         }
+<a href="#l469" class="line" id="l469">    469</a> 
+<a href="#l470" class="line" id="l470">    470</a>                         Checkbox(
+<a href="#l471" class="line" id="l471">    471</a>                             checked = selectedFriends.contains(friendInfo.userId),
+<a href="#l472" class="line" id="l472">    472</a>                             onCheckedChange = { selectFriend(it) }
+<a href="#l473" class="line" id="l473">    473</a>                         )
+<a href="#l474" class="line" id="l474">    474</a>                     }
+<a href="#l475" class="line" id="l475">    475</a>                 }
+<a href="#l476" class="line" id="l476">    476</a>             }
+<a href="#l477" class="line" id="l477">    477</a> 
+<a href="#l478" class="line" id="l478">    478</a>             var showConfirmationDialog by remember { mutableStateOf(false) }
+<a href="#l479" class="line" id="l479">    479</a>             var action by remember { mutableStateOf({}) }
+<a href="#l480" class="line" id="l480">    480</a> 
+<a href="#l481" class="line" id="l481">    481</a>             if (showConfirmationDialog) {
+<a href="#l482" class="line" id="l482">    482</a>                 ConfirmationDialog(
+<a href="#l483" class="line" id="l483">    483</a>                     onConfirm = {
+<a href="#l484" class="line" id="l484">    484</a>                         action()
+<a href="#l485" class="line" id="l485">    485</a>                         action = {}
+<a href="#l486" class="line" id="l486">    486</a>                         showConfirmationDialog = false
+<a href="#l487" class="line" id="l487">    487</a>                     },
+<a href="#l488" class="line" id="l488">    488</a>                     onCancel = {
+<a href="#l489" class="line" id="l489">    489</a>                         action = {}
+<a href="#l490" class="line" id="l490">    490</a>                         showConfirmationDialog = false
+<a href="#l491" class="line" id="l491">    491</a>                     }
+<a href="#l492" class="line" id="l492">    492</a>                 )
+<a href="#l493" class="line" id="l493">    493</a>             }
+<a href="#l494" class="line" id="l494">    494</a> 
+<a href="#l495" class="line" id="l495">    495</a>             val ctx = LocalContext.current
+<a href="#l496" class="line" id="l496">    496</a> 
+<a href="#l497" class="line" id="l497">    497</a>             val actions = remember {
+<a href="#l498" class="line" id="l498">    498</a>                 mapOf&lt;() -&gt; String, () -&gt; Unit&gt;(
+<a href="#l499" class="line" id="l499">    499</a>                     { &quot;Clean &quot; + selectedFriends.size + &quot; conversations&quot; } to {
+<a href="#l500" class="line" id="l500">    500</a>                         context.feature(Messaging::class).conversationManager?.getOneOnOneConversationIds(selectedFriends.toList().also {
+<a href="#l501" class="line" id="l501">    501</a>                             selectedFriends.clear()
+<a href="#l502" class="line" id="l502">    502</a>                         }, onError = { error -&gt;
+<a href="#l503" class="line" id="l503">    503</a>                             context.shortToast(&quot;Failed to fetch conversations: $error&quot;)
+<a href="#l504" class="line" id="l504">    504</a>                         }, onSuccess = { conversations -&gt;
+<a href="#l505" class="line" id="l505">    505</a>                             removeAction(ctx, conversations.map { it.second }.distinct(), delay = 10L to 40L) { conversationId, setDialogMessage -&gt;
+<a href="#l506" class="line" id="l506">    506</a>                                 cleanConversation(
+<a href="#l507" class="line" id="l507">    507</a>                                     conversationId, setDialogMessage
+<a href="#l508" class="line" id="l508">    508</a>                                 )
+<a href="#l509" class="line" id="l509">    509</a>                             }.invokeOnCompletion {
+<a href="#l510" class="line" id="l510">    510</a>                                 coroutineScope.launch { refreshList() }
+<a href="#l511" class="line" id="l511">    511</a>                             }
+<a href="#l512" class="line" id="l512">    512</a>                         })
+<a href="#l513" class="line" id="l513">    513</a>                     },
+<a href="#l514" class="line" id="l514">    514</a>                     { &quot;Remove &quot; + selectedFriends.size + &quot; friends&quot; } to {
+<a href="#l515" class="line" id="l515">    515</a>                         removeAction(ctx, selectedFriends.toList().also {
+<a href="#l516" class="line" id="l516">    516</a>                             selectedFriends.clear()
+<a href="#l517" class="line" id="l517">    517</a>                         }, delay = 500L to 1200L) { userId, _ -&gt; removeFriend(userId) }.invokeOnCompletion {
+<a href="#l518" class="line" id="l518">    518</a>                             coroutineScope.launch { refreshList() }
+<a href="#l519" class="line" id="l519">    519</a>                         }
+<a href="#l520" class="line" id="l520">    520</a>                     },
+<a href="#l521" class="line" id="l521">    521</a>                     { &quot;Clean &quot; + selectedFriends.size + &quot; conversations and remove &quot; + selectedFriends.size + &quot; friends&quot; } to {
+<a href="#l522" class="line" id="l522">    522</a>                         context.feature(Messaging::class).conversationManager?.getOneOnOneConversationIds(selectedFriends.toList().also {
+<a href="#l523" class="line" id="l523">    523</a>                             selectedFriends.clear()
+<a href="#l524" class="line" id="l524">    524</a>                         }, onError = { error -&gt;
+<a href="#l525" class="line" id="l525">    525</a>                             context.shortToast(&quot;Failed to fetch conversations: $error&quot;)
+<a href="#l526" class="line" id="l526">    526</a>                         }, onSuccess = { conversations -&gt;
+<a href="#l527" class="line" id="l527">    527</a>                             removeAction(ctx, conversations.map { it.second }.distinct(), delay = 500L to 1200L) { conversationId, setDialogMessage -&gt;
+<a href="#l528" class="line" id="l528">    528</a>                                 cleanConversation(
+<a href="#l529" class="line" id="l529">    529</a>                                     conversationId, setDialogMessage
+<a href="#l530" class="line" id="l530">    530</a>                                 )
+<a href="#l531" class="line" id="l531">    531</a>                                 removeFriend(conversations.firstOrNull { it.second == conversationId }?.first ?: return@removeAction)
+<a href="#l532" class="line" id="l532">    532</a>                             }.invokeOnCompletion {
+<a href="#l533" class="line" id="l533">    533</a>                                 coroutineScope.launch { refreshList() }
+<a href="#l534" class="line" id="l534">    534</a>                             }
+<a href="#l535" class="line" id="l535">    535</a>                         })
+<a href="#l536" class="line" id="l536">    536</a>                     }
+<a href="#l537" class="line" id="l537">    537</a>                 )
+<a href="#l538" class="line" id="l538">    538</a>             }
+<a href="#l539" class="line" id="l539">    539</a> 
+<a href="#l540" class="line" id="l540">    540</a>             Column(
+<a href="#l541" class="line" id="l541">    541</a>                 modifier = Modifier.fillMaxWidth(),
+<a href="#l542" class="line" id="l542">    542</a>             ) {
+<a href="#l543" class="line" id="l543">    543</a>                 actions.forEach { (text, actionFunction) -&gt;
+<a href="#l544" class="line" id="l544">    544</a>                     Button(
+<a href="#l545" class="line" id="l545">    545</a>                         modifier = Modifier
+<a href="#l546" class="line" id="l546">    546</a>                             .fillMaxWidth()
+<a href="#l547" class="line" id="l547">    547</a>                             .padding(2.dp),
+<a href="#l548" class="line" id="l548">    548</a>                         onClick = {
+<a href="#l549" class="line" id="l549">    549</a>                             showConfirmationDialog = true
+<a href="#l550" class="line" id="l550">    550</a>                             action = actionFunction
+<a href="#l551" class="line" id="l551">    551</a>                         },
+<a href="#l552" class="line" id="l552">    552</a>                         enabled = selectedFriends.isNotEmpty()
+<a href="#l553" class="line" id="l553">    553</a>                     ) {
+<a href="#l554" class="line" id="l554">    554</a>                         Text(text = remember(selectedFriends.size) { text() })
+<a href="#l555" class="line" id="l555">    555</a>                     }
+<a href="#l556" class="line" id="l556">    556</a>                 }
+<a href="#l557" class="line" id="l557">    557</a>             }
+<a href="#l558" class="line" id="l558">    558</a>         }
+<a href="#l559" class="line" id="l559">    559</a> 
+<a href="#l560" class="line" id="l560">    560</a>         LaunchedEffect(sortBy, sortReverseOrder) {
+<a href="#l561" class="line" id="l561">    561</a>             coroutineScope.launch {
+<a href="#l562" class="line" id="l562">    562</a>                 refreshList(clearSelected = false)
+<a href="#l563" class="line" id="l563">    563</a>             }
+<a href="#l564" class="line" id="l564">    564</a>             focusManager.clearFocus()
+<a href="#l565" class="line" id="l565">    565</a>         }
+<a href="#l566" class="line" id="l566">    566</a> 
+<a href="#l567" class="line" id="l567">    567</a>         LaunchedEffect(filter) {
+<a href="#l568" class="line" id="l568">    568</a>             coroutineScope.launch {
+<a href="#l569" class="line" id="l569">    569</a>                 refreshList()
+<a href="#l570" class="line" id="l570">    570</a>             }
+<a href="#l571" class="line" id="l571">    571</a>             focusManager.clearFocus()
+<a href="#l572" class="line" id="l572">    572</a>         }
+<a href="#l573" class="line" id="l573">    573</a>     }
+<a href="#l574" class="line" id="l574">    574</a> 
+<a href="#l575" class="line" id="l575">    575</a>     override fun run() {
+<a href="#l576" class="line" id="l576">    576</a>         context.coroutineScope.launch(Dispatchers.Main) {
+<a href="#l577" class="line" id="l577">    577</a>             createComposeAlertDialog(context.mainActivity!!) {
+<a href="#l578" class="line" id="l578">    578</a>                 BulkMessagingDialog()
+<a href="#l579" class="line" id="l579">    579</a>             }.apply {
+<a href="#l580" class="line" id="l580">    580</a>                 setCanceledOnTouchOutside(false)
+<a href="#l581" class="line" id="l581">    581</a>                 show()
+<a href="#l582" class="line" id="l582">    582</a>             }
+<a href="#l583" class="line" id="l583">    583</a>         }
+<a href="#l584" class="line" id="l584">    584</a>     }
+<a href="#l585" class="line" id="l585">    585</a> 
+<a href="#l586" class="line" id="l586">    586</a>     private fun removeFriend(userId: String) {
+<a href="#l587" class="line" id="l587">    587</a>         context.mappings.useMapper(FriendRelationshipChangerMapper::class) {
+<a href="#l588" class="line" id="l588">    588</a>             val friendRelationshipChangerInstance = context.feature(AddFriendSourceSpoof::class).friendRelationshipChangerInstance!!
+<a href="#l589" class="line" id="l589">    589</a>             val runFriendDurableJobMethod = classReference.getAsClass()?.methods?.first {
+<a href="#l590" class="line" id="l590">    590</a>                 it.name == runFriendDurableJob.getAsString()
+<a href="#l591" class="line" id="l591">    591</a>             } ?: throw Exception(&quot;Failed to find runFriendDurableJobMethod method&quot;)
+<a href="#l592" class="line" id="l592">    592</a> 
+<a href="#l593" class="line" id="l593">    593</a>             val removeFriendDurableJob = context.androidContext.classLoader.loadClass(&quot;com.snap.identity.job.snapchatter.RemoveFriendDurableJob&quot;)
+<a href="#l594" class="line" id="l594">    594</a>                 .constructors.firstOrNull {
+<a href="#l595" class="line" id="l595">    595</a>                 it.parameterTypes.size == 1
+<a href="#l596" class="line" id="l596">    596</a>             }?.run {
+<a href="#l597" class="line" id="l597">    597</a>                 newInstance(
+<a href="#l598" class="line" id="l598">    598</a>                     parameterTypes[0].dataBuilder {
+<a href="#l599" class="line" id="l599">    599</a>                         set(&quot;a&quot;, userId) // userId
+<a href="#l600" class="line" id="l600">    600</a>                         set(&quot;b&quot;, &quot;DELETED_BY_MY_FRIENDS&quot;) // deleteSourceType
+<a href="#l601" class="line" id="l601">    601</a>                         set(&quot;f&quot;, &quot;&quot;)
+<a href="#l602" class="line" id="l602">    602</a>                     }
+<a href="#l603" class="line" id="l603">    603</a>                 )
+<a href="#l604" class="line" id="l604">    604</a>             } ?: throw Exception(&quot;Failed to create RemoveFriendDurableJob instance&quot;)
+<a href="#l605" class="line" id="l605">    605</a> 
+<a href="#l606" class="line" id="l606">    606</a>             val completable = runFriendDurableJobMethod.invoke(null,
+<a href="#l607" class="line" id="l607">    607</a>                 friendRelationshipChangerInstance,
+<a href="#l608" class="line" id="l608">    608</a>                 userId, // userId
+<a href="#l609" class="line" id="l609">    609</a>                 removeFriendDurableJob, // friend durable job
+<a href="#l610" class="line" id="l610">    610</a>                 0x5, // action type
+<a href="#l611" class="line" id="l611">    611</a>                 &quot;DELETED_BY_MY_FRIENDS&quot;, // deleteSourceType
+<a href="#l612" class="line" id="l612">    612</a>             )!!
+<a href="#l613" class="line" id="l613">    613</a>             completable::class.java.methods.first {
+<a href="#l614" class="line" id="l614">    614</a>                 it.name == &quot;subscribe&quot; &amp;&amp; it.parameterTypes.isEmpty()
+<a href="#l615" class="line" id="l615">    615</a>             }.invoke(completable)
+<a href="#l616" class="line" id="l616">    616</a>         }
+<a href="#l617" class="line" id="l617">    617</a>     }
+<a href="#l618" class="line" id="l618">    618</a> 
+<a href="#l619" class="line" id="l619">    619</a>     private suspend fun cleanConversation(
+<a href="#l620" class="line" id="l620">    620</a>         conversationId: String,
+<a href="#l621" class="line" id="l621">    621</a>         setDialogMessage: (String) -&gt; Unit
+<a href="#l622" class="line" id="l622">    622</a>     ) {
+<a href="#l623" class="line" id="l623">    623</a>         val messageCount = mutableIntStateOf(0)
+<a href="#l624" class="line" id="l624">    624</a>         MessagingTask(
+<a href="#l625" class="line" id="l625">    625</a>             context.messagingBridge,
+<a href="#l626" class="line" id="l626">    626</a>             conversationId,
+<a href="#l627" class="line" id="l627">    627</a>             taskType = MessagingTaskType.DELETE,
+<a href="#l628" class="line" id="l628">    628</a>             constraints = listOf(MessagingConstraints.MY_USER_ID(context.messagingBridge), {
+<a href="#l629" class="line" id="l629">    629</a>                 contentType != ContentType.STATUS.id
+<a href="#l630" class="line" id="l630">    630</a>             }),
+<a href="#l631" class="line" id="l631">    631</a>             processedMessageCount = messageCount,
+<a href="#l632" class="line" id="l632">    632</a>             onSuccess = {
+<a href="#l633" class="line" id="l633">    633</a>                 setDialogMessage(&quot;${messageCount.intValue} deleted messages&quot;)
+<a href="#l634" class="line" id="l634">    634</a>             },
+<a href="#l635" class="line" id="l635">    635</a>         ).run()
+<a href="#l636" class="line" id="l636">    636</a>     }
+<a href="#l637" class="line" id="l637">    637</a> }
+</pre>
+</div>
+</body>
+</html>

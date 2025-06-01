@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: force voice note audio format - add custom ffmpeg options - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/89a155227794b987bb91abd003c33db9d9a50161.html">89a155227794b987bb91abd003c33db9d9a50161</a>
+<b>parent</b> <a href="../commit/94d064e0a548432049e144af10953172afe87b25.html">94d064e0a548432049e144af10953172afe87b25</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri,  1 Sep 2023 15:10:14 +0200
+
+feat: force voice note audio format
+- add custom ffmpeg options
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/build.gradle.kts</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a></td><td> | </td><td class="num">40</td><td><span class="i">++++++++++++++++++++++++++++</span><span class="d">------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt</a></td><td> | </td><td class="num">122</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/build.gradle.kts</a></td><td> | </td><td class="num">1</td><td><span class="i"></span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">34</td><td><span class="i">++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/config/ConfigObjects.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/DownloaderConfig.kt</a></td><td> | </td><td class="num">15</td><td><span class="i">+++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/core/download/DownloadManagerClient.kt</a></td><td> | </td><td class="num">17</td><td><span class="i">++++++++++++</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadRequest.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">core/src/main/kotlin/me/rhunk/snapenhance/data/FileType.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">++++++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">++++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h11">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt</a></td><td> | </td><td class="num">44</td><td><span class="i"></span><span class="d">--------------------------------------------</span></td></tr>
+</table></pre><pre>12 files changed, 229 insertions(+), 68 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/build.gradle.kts.html">app/build.gradle.kts</a> b/<a href="../file/app/build.gradle.kts.html">app/build.gradle.kts</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -101,6 +101,7 @@ dependencies {
+</a>     implementation(libs.gson)
+     implementation(libs.coil.compose)
+     implementation(libs.coil.video)
+<a href="#h0-0-3" id="h0-0-3" class="i">+    implementation(libs.ffmpeg.kit)
+</a>     implementation(libs.osmdroid.android)
+ 
+     debugImplementation(&quot;androidx.compose.ui:ui-tooling:1.4.3&quot;)
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -27,7 +27,6 @@ import me.rhunk.snapenhance.core.download.data.DownloadStage
+</a> import me.rhunk.snapenhance.core.download.data.InputMedia
+ import me.rhunk.snapenhance.core.download.data.MediaEncryptionKeyPair
+ import me.rhunk.snapenhance.util.download.RemoteMediaResolver
+<a href="#h1-0-3" id="h1-0-3" class="d">-import me.rhunk.snapenhance.util.snap.MediaDownloaderHelper
+</a> import java.io.File
+ import java.io.InputStream
+ import java.net.HttpURLConnection
+<a href="#h1-1" id="h1-1" class="h">@@ -63,9 +62,8 @@ class DownloadProcessor (
+</a>         remoteSideContext.translation.getCategory(&quot;download_processor&quot;)
+     }
+ 
+<a href="#h1-1-3" id="h1-1-3" class="d">-    private val gson by lazy {
+</a><a href="#h1-1-4" id="h1-1-4" class="d">-        GsonBuilder().setPrettyPrinting().create()
+</a><a href="#h1-1-5" id="h1-1-5" class="d">-    }
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+    private val ffmpegProcessor by lazy { FFMpegProcessor(remoteSideContext.config.root.downloader.ffmpegOptions) }
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+    private val gson by lazy { GsonBuilder().setPrettyPrinting().create() }
+</a> 
+     private fun fallbackToast(message: Any) {
+         android.os.Handler(remoteSideContext.androidContext.mainLooper).post {
+<a href="#h1-2" id="h1-2" class="h">@@ -251,6 +249,21 @@ class DownloadProcessor (
+</a>             val media = downloadedMedias[inputMedia]!!
+ 
+             if (!downloadRequest.isDashPlaylist) {
+<a href="#h1-2-3" id="h1-2-3" class="i">+                if (inputMedia.messageContentType == &quot;NOTE&quot;) {
+</a><a href="#h1-2-4" id="h1-2-4" class="i">+                    remoteSideContext.config.root.downloader.forceVoiceNoteFormat.getNullable()?.let { format -&gt;
+</a><a href="#h1-2-5" id="h1-2-5" class="i">+                        val outputFile = File.createTempFile(&quot;voice_note&quot;, &quot;.$format&quot;)
+</a><a href="#h1-2-6" id="h1-2-6" class="i">+                        ffmpegProcessor.execute(FFMpegProcessor.Request(
+</a><a href="#h1-2-7" id="h1-2-7" class="i">+                            action = FFMpegProcessor.Action.AUDIO_CONVERSION,
+</a><a href="#h1-2-8" id="h1-2-8" class="i">+                            input = media.file,
+</a><a href="#h1-2-9" id="h1-2-9" class="i">+                            output = outputFile
+</a><a href="#h1-2-10" id="h1-2-10" class="i">+                        ))
+</a><a href="#h1-2-11" id="h1-2-11" class="i">+                        media.file.delete()
+</a><a href="#h1-2-12" id="h1-2-12" class="i">+                        saveMediaToGallery(outputFile, downloadObjectObject)
+</a><a href="#h1-2-13" id="h1-2-13" class="i">+                        outputFile.delete()
+</a><a href="#h1-2-14" id="h1-2-14" class="i">+                        return
+</a><a href="#h1-2-15" id="h1-2-15" class="i">+                    }
+</a><a href="#h1-2-16" id="h1-2-16" class="i">+                }
+</a><a href="#h1-2-17" id="h1-2-17" class="i">+
+</a>                 saveMediaToGallery(media.file, downloadObjectObject)
+                 media.file.delete()
+                 return
+<a href="#h1-3" id="h1-3" class="h">@@ -275,11 +288,13 @@ class DownloadProcessor (
+</a>             callbackOnProgress(translation.format(&quot;download_toast&quot;, &quot;path&quot; to dashPlaylistFile.nameWithoutExtension))
+             val outputFile = File.createTempFile(&quot;dash&quot;, &quot;.mp4&quot;)
+             runCatching {
+<a href="#h1-3-3" id="h1-3-3" class="d">-                MediaDownloaderHelper.downloadDashChapterFile(
+</a><a href="#h1-3-4" id="h1-3-4" class="d">-                    dashPlaylist = dashPlaylistFile,
+</a><a href="#h1-3-5" id="h1-3-5" class="i">+                ffmpegProcessor.execute(FFMpegProcessor.Request(
+</a><a href="#h1-3-6" id="h1-3-6" class="i">+                    action = FFMpegProcessor.Action.DOWNLOAD_DASH,
+</a><a href="#h1-3-7" id="h1-3-7" class="i">+                    input = dashPlaylistFile,
+</a>                     output = outputFile,
+                     startTime = dashOptions.offsetTime,
+<a href="#h1-3-10" id="h1-3-10" class="d">-                    duration = dashOptions.duration)
+</a><a href="#h1-3-11" id="h1-3-11" class="i">+                    duration = dashOptions.duration
+</a><a href="#h1-3-12" id="h1-3-12" class="i">+                ))
+</a>                 saveMediaToGallery(outputFile, downloadObjectObject)
+             }.onFailure { exception -&gt;
+                 if (coroutineContext.job.isCancelled) return@onFailure
+<a href="#h1-4" id="h1-4" class="h">@@ -370,11 +385,12 @@ class DownloadProcessor (
+</a>                         callbackOnProgress(translation.format(&quot;download_toast&quot;, &quot;path&quot; to media.file.nameWithoutExtension))
+                         downloadObjectObject.downloadStage = DownloadStage.MERGING
+ 
+<a href="#h1-4-3" id="h1-4-3" class="d">-                        MediaDownloaderHelper.mergeOverlayFile(
+</a><a href="#h1-4-4" id="h1-4-4" class="d">-                            media = renamedMedia,
+</a><a href="#h1-4-5" id="h1-4-5" class="d">-                            overlay = renamedOverlayMedia,
+</a><a href="#h1-4-6" id="h1-4-6" class="d">-                            output = mergedOverlay
+</a><a href="#h1-4-7" id="h1-4-7" class="d">-                        )
+</a><a href="#h1-4-8" id="h1-4-8" class="i">+                        ffmpegProcessor.execute(FFMpegProcessor.Request(
+</a><a href="#h1-4-9" id="h1-4-9" class="i">+                            action = FFMpegProcessor.Action.MERGE_OVERLAY,
+</a><a href="#h1-4-10" id="h1-4-10" class="i">+                            input = renamedMedia,
+</a><a href="#h1-4-11" id="h1-4-11" class="i">+                            output = mergedOverlay,
+</a><a href="#h1-4-12" id="h1-4-12" class="i">+                            overlay = renamedOverlayMedia
+</a><a href="#h1-4-13" id="h1-4-13" class="i">+                        ))
+</a> 
+                         saveMediaToGallery(mergedOverlay, downloadObjectObject)
+                     }.onFailure { exception -&gt;
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -0,0 +1,121 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="i">+package me.rhunk.snapenhance.download
+</a><a href="#h2-0-1" id="h2-0-1" class="i">+
+</a><a href="#h2-0-2" id="h2-0-2" class="i">+import com.arthenica.ffmpegkit.FFmpegKit
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+import com.arthenica.ffmpegkit.FFmpegSession
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import kotlinx.coroutines.suspendCancellableCoroutine
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+import me.rhunk.snapenhance.Logger
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+import me.rhunk.snapenhance.core.config.impl.DownloaderConfig
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+import java.io.File
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+import java.util.concurrent.Executors
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+class ArgumentList : LinkedHashMap&lt;String, MutableList&lt;String&gt;&gt;() {
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+    operator fun plusAssign(stringPair: Pair&lt;String, String&gt;) {
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+        val (key, value) = stringPair
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+        if (this.containsKey(key)) {
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+            this[key]!!.add(value)
+</a><a href="#h2-0-16" id="h2-0-16" class="i">+        } else {
+</a><a href="#h2-0-17" id="h2-0-17" class="i">+            this[key] = mutableListOf(value)
+</a><a href="#h2-0-18" id="h2-0-18" class="i">+        }
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+    }
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+    operator fun plusAssign(key: String) {
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+        this[key] = mutableListOf&lt;String&gt;().apply {
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+            this += &quot;&quot;
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+        }
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+    }
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+    operator fun minusAssign(key: String) {
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+        this.remove(key)
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+    }
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+}
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+class FFMpegProcessor(
+</a><a href="#h2-0-34" id="h2-0-34" class="i">+    private val ffmpegOptions: DownloaderConfig.FFMpegOptions
+</a><a href="#h2-0-35" id="h2-0-35" class="i">+) {
+</a><a href="#h2-0-36" id="h2-0-36" class="i">+    enum class Action {
+</a><a href="#h2-0-37" id="h2-0-37" class="i">+        DOWNLOAD_DASH,
+</a><a href="#h2-0-38" id="h2-0-38" class="i">+        MERGE_OVERLAY,
+</a><a href="#h2-0-39" id="h2-0-39" class="i">+        AUDIO_CONVERSION,
+</a><a href="#h2-0-40" id="h2-0-40" class="i">+    }
+</a><a href="#h2-0-41" id="h2-0-41" class="i">+
+</a><a href="#h2-0-42" id="h2-0-42" class="i">+    data class Request(
+</a><a href="#h2-0-43" id="h2-0-43" class="i">+        val action: Action,
+</a><a href="#h2-0-44" id="h2-0-44" class="i">+        val input: File,
+</a><a href="#h2-0-45" id="h2-0-45" class="i">+        val output: File,
+</a><a href="#h2-0-46" id="h2-0-46" class="i">+        val overlay: File? = null, //only for MERGE_OVERLAY
+</a><a href="#h2-0-47" id="h2-0-47" class="i">+        val startTime: Long? = null, //only for DOWNLOAD_DASH
+</a><a href="#h2-0-48" id="h2-0-48" class="i">+        val duration: Long? = null //only for DOWNLOAD_DASH
+</a><a href="#h2-0-49" id="h2-0-49" class="i">+    )
+</a><a href="#h2-0-50" id="h2-0-50" class="i">+
+</a><a href="#h2-0-51" id="h2-0-51" class="i">+
+</a><a href="#h2-0-52" id="h2-0-52" class="i">+    private suspend fun newFFMpegTask(globalArguments: ArgumentList, inputArguments: ArgumentList, outputArguments: ArgumentList) = suspendCancellableCoroutine&lt;FFmpegSession&gt; {
+</a><a href="#h2-0-53" id="h2-0-53" class="i">+        val stringBuilder = StringBuilder()
+</a><a href="#h2-0-54" id="h2-0-54" class="i">+        arrayOf(globalArguments, inputArguments, outputArguments).forEach { argumentList -&gt;
+</a><a href="#h2-0-55" id="h2-0-55" class="i">+            argumentList.forEach { (key, values) -&gt;
+</a><a href="#h2-0-56" id="h2-0-56" class="i">+                values.forEach valueForEach@{ value -&gt;
+</a><a href="#h2-0-57" id="h2-0-57" class="i">+                    if (value.isEmpty()) {
+</a><a href="#h2-0-58" id="h2-0-58" class="i">+                        stringBuilder.append(&quot;$key &quot;)
+</a><a href="#h2-0-59" id="h2-0-59" class="i">+                        return@valueForEach
+</a><a href="#h2-0-60" id="h2-0-60" class="i">+                    }
+</a><a href="#h2-0-61" id="h2-0-61" class="i">+                    stringBuilder.append(&quot;$key $value &quot;)
+</a><a href="#h2-0-62" id="h2-0-62" class="i">+                }
+</a><a href="#h2-0-63" id="h2-0-63" class="i">+            }
+</a><a href="#h2-0-64" id="h2-0-64" class="i">+        }
+</a><a href="#h2-0-65" id="h2-0-65" class="i">+
+</a><a href="#h2-0-66" id="h2-0-66" class="i">+        Logger.directDebug(&quot;arguments: $stringBuilder&quot;, &quot;FFMpegProcessor&quot;)
+</a><a href="#h2-0-67" id="h2-0-67" class="i">+
+</a><a href="#h2-0-68" id="h2-0-68" class="i">+        FFmpegKit.executeAsync(stringBuilder.toString(), { session -&gt;
+</a><a href="#h2-0-69" id="h2-0-69" class="i">+            it.resumeWith(
+</a><a href="#h2-0-70" id="h2-0-70" class="i">+                if (session.returnCode.isValueSuccess) {
+</a><a href="#h2-0-71" id="h2-0-71" class="i">+                    Result.success(session)
+</a><a href="#h2-0-72" id="h2-0-72" class="i">+                } else {
+</a><a href="#h2-0-73" id="h2-0-73" class="i">+                    Result.failure(Exception(session.output))
+</a><a href="#h2-0-74" id="h2-0-74" class="i">+                }
+</a><a href="#h2-0-75" id="h2-0-75" class="i">+            )
+</a><a href="#h2-0-76" id="h2-0-76" class="i">+        },  Executors.newSingleThreadExecutor())
+</a><a href="#h2-0-77" id="h2-0-77" class="i">+    }
+</a><a href="#h2-0-78" id="h2-0-78" class="i">+
+</a><a href="#h2-0-79" id="h2-0-79" class="i">+    suspend fun execute(args: Request) {
+</a><a href="#h2-0-80" id="h2-0-80" class="i">+        val globalArguments = ArgumentList().apply {
+</a><a href="#h2-0-81" id="h2-0-81" class="i">+            this += &quot;-y&quot;
+</a><a href="#h2-0-82" id="h2-0-82" class="i">+            this += &quot;-threads&quot; to ffmpegOptions.threads.get().toString()
+</a><a href="#h2-0-83" id="h2-0-83" class="i">+        }
+</a><a href="#h2-0-84" id="h2-0-84" class="i">+
+</a><a href="#h2-0-85" id="h2-0-85" class="i">+        val inputArguments = ArgumentList().apply {
+</a><a href="#h2-0-86" id="h2-0-86" class="i">+            this += &quot;-i&quot; to args.input.absolutePath
+</a><a href="#h2-0-87" id="h2-0-87" class="i">+        }
+</a><a href="#h2-0-88" id="h2-0-88" class="i">+
+</a><a href="#h2-0-89" id="h2-0-89" class="i">+        val outputArguments = ArgumentList().apply {
+</a><a href="#h2-0-90" id="h2-0-90" class="i">+            this += &quot;-preset&quot; to (ffmpegOptions.preset.getNullable() ?: &quot;ultrafast&quot;)
+</a><a href="#h2-0-91" id="h2-0-91" class="i">+            this += &quot;-c:v&quot; to (ffmpegOptions.customVideoCodec.get().takeIf { it.isNotEmpty() } ?: &quot;libx264&quot;)
+</a><a href="#h2-0-92" id="h2-0-92" class="i">+            this += &quot;-c:a&quot; to (ffmpegOptions.customAudioCodec.get().takeIf { it.isNotEmpty() } ?: &quot;copy&quot;)
+</a><a href="#h2-0-93" id="h2-0-93" class="i">+            this += &quot;-crf&quot; to ffmpegOptions.constantRateFactor.get().let { &quot;\&quot;$it\&quot;&quot; }
+</a><a href="#h2-0-94" id="h2-0-94" class="i">+            this += &quot;-b:v&quot; to ffmpegOptions.videoBitrate.get().toString() + &quot;K&quot;
+</a><a href="#h2-0-95" id="h2-0-95" class="i">+        }
+</a><a href="#h2-0-96" id="h2-0-96" class="i">+
+</a><a href="#h2-0-97" id="h2-0-97" class="i">+        when (args.action) {
+</a><a href="#h2-0-98" id="h2-0-98" class="i">+            Action.DOWNLOAD_DASH -&gt; {
+</a><a href="#h2-0-99" id="h2-0-99" class="i">+                outputArguments += &quot;-ss&quot; to &quot;&#39;${args.startTime}ms&#39;&quot;
+</a><a href="#h2-0-100" id="h2-0-100" class="i">+                if (args.duration != null) {
+</a><a href="#h2-0-101" id="h2-0-101" class="i">+                    outputArguments += &quot;-t&quot; to &quot;&#39;${args.duration}ms&#39;&quot;
+</a><a href="#h2-0-102" id="h2-0-102" class="i">+                }
+</a><a href="#h2-0-103" id="h2-0-103" class="i">+            }
+</a><a href="#h2-0-104" id="h2-0-104" class="i">+            Action.MERGE_OVERLAY -&gt; {
+</a><a href="#h2-0-105" id="h2-0-105" class="i">+                inputArguments += &quot;-i&quot; to args.overlay!!.absolutePath
+</a><a href="#h2-0-106" id="h2-0-106" class="i">+                outputArguments += &quot;-filter_complex&quot; to &quot;\&quot;[0]scale2ref[img][vid];[img]setsar=1[img];[vid]nullsink;[img][1]overlay=(W-w)/2:(H-h)/2,scale=2*trunc(iw*sar/2):2*trunc(ih/2)\&quot;&quot;
+</a><a href="#h2-0-107" id="h2-0-107" class="i">+            }
+</a><a href="#h2-0-108" id="h2-0-108" class="i">+            Action.AUDIO_CONVERSION -&gt; {
+</a><a href="#h2-0-109" id="h2-0-109" class="i">+                if (ffmpegOptions.customAudioCodec.isEmpty()) {
+</a><a href="#h2-0-110" id="h2-0-110" class="i">+                    outputArguments -= &quot;-c:a&quot;
+</a><a href="#h2-0-111" id="h2-0-111" class="i">+                }
+</a><a href="#h2-0-112" id="h2-0-112" class="i">+                if (ffmpegOptions.customVideoCodec.isEmpty()) {
+</a><a href="#h2-0-113" id="h2-0-113" class="i">+                    outputArguments -= &quot;-c:v&quot;
+</a><a href="#h2-0-114" id="h2-0-114" class="i">+                }
+</a><a href="#h2-0-115" id="h2-0-115" class="i">+            }
+</a><a href="#h2-0-116" id="h2-0-116" class="i">+        }
+</a><a href="#h2-0-117" id="h2-0-117" class="i">+        outputArguments += args.output.absolutePath
+</a><a href="#h2-0-118" id="h2-0-118" class="i">+        newFFMpegTask(globalArguments, inputArguments, outputArguments)
+</a><a href="#h2-0-119" id="h2-0-119" class="i">+    }
+</a><a href="#h2-0-120" id="h2-0-120" class="i">+}</a><a href="#h2-0-121" id="h2-0-121" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h3" href="../file/core/build.gradle.kts.html">core/build.gradle.kts</a> b/<a href="../file/core/build.gradle.kts.html">core/build.gradle.kts</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -37,7 +37,6 @@ dependencies {
+</a>     implementation(libs.kotlin.reflect)
+     implementation(libs.recyclerview)
+     implementation(libs.gson)
+<a href="#h3-0-3" id="h3-0-3" class="d">-    implementation(libs.ffmpeg.kit)
+</a>     implementation(libs.okhttp)
+     implementation(libs.androidx.documentfile)
+ 
+<b>diff --git a/<a id="h4" href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a> b/<a href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -115,10 +115,44 @@
+</a>                         &quot;name&quot;: &quot;Force Image Format&quot;,
+                         &quot;description&quot;: &quot;Forces images to be saved as a specific format&quot;
+                     },
+<a href="#h4-0-3" id="h4-0-3" class="i">+                    &quot;force_voice_note_format&quot;: {
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+                        &quot;name&quot;: &quot;Force Voice Note Format&quot;,
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+                        &quot;description&quot;: &quot;Forces voice notes to be saved as a specific format&quot;
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+                    },
+</a>                     &quot;chat_download_context_menu&quot;: {
+                         &quot;name&quot;: &quot;Chat Download Context Menu&quot;,
+                         &quot;description&quot;: &quot;Allows to download messages from a conversation by long pressing them&quot;
+                     },
+<a href="#h4-0-11" id="h4-0-11" class="i">+                    &quot;ffmpeg_options&quot;: {
+</a><a href="#h4-0-12" id="h4-0-12" class="i">+                        &quot;name&quot;: &quot;FFmpeg Options&quot;,
+</a><a href="#h4-0-13" id="h4-0-13" class="i">+                        &quot;description&quot;: &quot;Specify additional FFmpeg options&quot;,
+</a><a href="#h4-0-14" id="h4-0-14" class="i">+                        &quot;properties&quot;: {
+</a><a href="#h4-0-15" id="h4-0-15" class="i">+                            &quot;threads&quot;: {
+</a><a href="#h4-0-16" id="h4-0-16" class="i">+                                &quot;name&quot;: &quot;Threads&quot;,
+</a><a href="#h4-0-17" id="h4-0-17" class="i">+                                &quot;description&quot;: &quot;The amount of threads to use&quot;
+</a><a href="#h4-0-18" id="h4-0-18" class="i">+                            },
+</a><a href="#h4-0-19" id="h4-0-19" class="i">+                            &quot;preset&quot;: {
+</a><a href="#h4-0-20" id="h4-0-20" class="i">+                                &quot;name&quot;: &quot;Preset&quot;,
+</a><a href="#h4-0-21" id="h4-0-21" class="i">+                                &quot;description&quot;: &quot;Set the speed of the conversion&quot;
+</a><a href="#h4-0-22" id="h4-0-22" class="i">+                            },
+</a><a href="#h4-0-23" id="h4-0-23" class="i">+                            &quot;constant_rate_factor&quot;: {
+</a><a href="#h4-0-24" id="h4-0-24" class="i">+                                &quot;name&quot;: &quot;Constant Rate Factor&quot;,
+</a><a href="#h4-0-25" id="h4-0-25" class="i">+                                &quot;description&quot;: &quot;Set the constant rate factor for the video encoder\nFrom 0 to 51 for libx264 (lower to higher quality)&quot;
+</a><a href="#h4-0-26" id="h4-0-26" class="i">+                            },
+</a><a href="#h4-0-27" id="h4-0-27" class="i">+                            &quot;video_bitrate&quot;: {
+</a><a href="#h4-0-28" id="h4-0-28" class="i">+                                &quot;name&quot;: &quot;Video Bitrate&quot;,
+</a><a href="#h4-0-29" id="h4-0-29" class="i">+                                &quot;description&quot;: &quot;Set the video bitrate (in kbps)&quot;
+</a><a href="#h4-0-30" id="h4-0-30" class="i">+                            },
+</a><a href="#h4-0-31" id="h4-0-31" class="i">+                            &quot;custom_video_codec&quot;: {
+</a><a href="#h4-0-32" id="h4-0-32" class="i">+                                &quot;name&quot;: &quot;Custom Video Codec&quot;,
+</a><a href="#h4-0-33" id="h4-0-33" class="i">+                                &quot;description&quot;: &quot;Set a custom video codec (e.g. libx264)&quot;
+</a><a href="#h4-0-34" id="h4-0-34" class="i">+                            },
+</a><a href="#h4-0-35" id="h4-0-35" class="i">+                            &quot;custom_audio_codec&quot;: {
+</a><a href="#h4-0-36" id="h4-0-36" class="i">+                                &quot;name&quot;: &quot;Custom Audio Codec&quot;,
+</a><a href="#h4-0-37" id="h4-0-37" class="i">+                                &quot;description&quot;: &quot;Set a custom audio codec (e.g. aac)&quot;
+</a><a href="#h4-0-38" id="h4-0-38" class="i">+                            }
+</a><a href="#h4-0-39" id="h4-0-39" class="i">+                        }
+</a><a href="#h4-0-40" id="h4-0-40" class="i">+                    },
+</a>                     &quot;logging&quot;: {
+                         &quot;name&quot;: &quot;Logging&quot;,
+                         &quot;description&quot;: &quot;Shows toasts when media is downloading&quot;
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/ConfigObjects.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/ConfigObjects.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/ConfigObjects.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/ConfigObjects.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -65,6 +65,7 @@ class PropertyValue&lt;T&gt;(
+</a> 
+     fun isSet() = value != null
+     fun getNullable() = value?.takeIf { it != &quot;null&quot; }
+<a href="#h5-0-3" id="h5-0-3" class="i">+    fun isEmpty() = value == null || value == &quot;null&quot; || value.toString().isEmpty()
+</a>     fun get() = getNullable() ?: throw IllegalStateException(&quot;Property is not set&quot;)
+     fun set(value: T?) { this.value = value }
+     @Suppress(&quot;UNCHECKED_CAST&quot;)
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/DownloaderConfig.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/DownloaderConfig.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/DownloaderConfig.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/DownloaderConfig.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -5,6 +5,17 @@ import me.rhunk.snapenhance.core.config.ConfigFlag
+</a> import me.rhunk.snapenhance.core.config.FeatureNotice
+ 
+ class DownloaderConfig : ConfigContainer() {
+<a href="#h6-0-3" id="h6-0-3" class="i">+    inner class FFMpegOptions : ConfigContainer() {
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+        val threads = integer(&quot;threads&quot;, 1)
+</a><a href="#h6-0-5" id="h6-0-5" class="i">+        val preset = unique(&quot;preset&quot;, &quot;ultrafast&quot;, &quot;superfast&quot;, &quot;veryfast&quot;, &quot;faster&quot;, &quot;fast&quot;, &quot;medium&quot;, &quot;slow&quot;, &quot;slower&quot;, &quot;veryslow&quot;) {
+</a><a href="#h6-0-6" id="h6-0-6" class="i">+            addFlags(ConfigFlag.NO_TRANSLATE)
+</a><a href="#h6-0-7" id="h6-0-7" class="i">+        }
+</a><a href="#h6-0-8" id="h6-0-8" class="i">+        val constantRateFactor = integer(&quot;constant_rate_factor&quot;, 30)
+</a><a href="#h6-0-9" id="h6-0-9" class="i">+        val videoBitrate = integer(&quot;video_bitrate&quot;, 5000)
+</a><a href="#h6-0-10" id="h6-0-10" class="i">+        val customVideoCodec = string(&quot;custom_video_codec&quot;) { addFlags(ConfigFlag.NO_TRANSLATE) }
+</a><a href="#h6-0-11" id="h6-0-11" class="i">+        val customAudioCodec = string(&quot;custom_audio_codec&quot;) { addFlags(ConfigFlag.NO_TRANSLATE) }
+</a><a href="#h6-0-12" id="h6-0-12" class="i">+    }
+</a><a href="#h6-0-13" id="h6-0-13" class="i">+
+</a>     val saveFolder = string(&quot;save_folder&quot;) { addFlags(ConfigFlag.FOLDER) }
+     val autoDownloadSources = multiple(&quot;auto_download_sources&quot;,
+         &quot;friend_snaps&quot;,
+<a href="#h6-1" id="h6-1" class="h">@@ -26,7 +37,11 @@ class DownloaderConfig : ConfigContainer() {
+</a>     val forceImageFormat = unique(&quot;force_image_format&quot;, &quot;jpg&quot;, &quot;png&quot;, &quot;webp&quot;) {
+         addFlags(ConfigFlag.NO_TRANSLATE)
+     }
+<a href="#h6-1-3" id="h6-1-3" class="i">+    val forceVoiceNoteFormat = unique(&quot;force_voice_note_format&quot;, &quot;aac&quot;, &quot;mp3&quot;, &quot;opus&quot;) {
+</a><a href="#h6-1-4" id="h6-1-4" class="i">+        addFlags(ConfigFlag.NO_TRANSLATE)
+</a><a href="#h6-1-5" id="h6-1-5" class="i">+    }
+</a>     val chatDownloadContextMenu = boolean(&quot;chat_download_context_menu&quot;)
+<a href="#h6-1-7" id="h6-1-7" class="i">+    val ffmpegOptions = container(&quot;ffmpeg_options&quot;, FFMpegOptions()) { addNotices(FeatureNotice.UNSTABLE) }
+</a>     val logging = multiple(&quot;logging&quot;, &quot;started&quot;, &quot;success&quot;, &quot;progress&quot;, &quot;failure&quot;).apply {
+         set(mutableListOf(&quot;started&quot;, &quot;success&quot;))
+     }
+<b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/DownloadManagerClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/DownloadManagerClient.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/DownloadManagerClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/DownloadManagerClient.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -10,6 +10,7 @@ import me.rhunk.snapenhance.core.download.data.DownloadMetadata
+</a> import me.rhunk.snapenhance.core.download.data.DownloadRequest
+ import me.rhunk.snapenhance.core.download.data.InputMedia
+ import me.rhunk.snapenhance.core.download.data.MediaEncryptionKeyPair
+<a href="#h7-0-3" id="h7-0-3" class="i">+import me.rhunk.snapenhance.data.ContentType
+</a> 
+ class DownloadManagerClient (
+     private val context: ModContext,
+<a href="#h7-1" id="h7-1" class="h">@@ -45,15 +46,21 @@ class DownloadManagerClient (
+</a>         )
+     }
+ 
+<a href="#h7-1-3" id="h7-1-3" class="d">-    fun downloadSingleMedia(mediaData: String, mediaType: DownloadMediaType, encryption: MediaEncryptionKeyPair? = null) {
+</a><a href="#h7-1-4" id="h7-1-4" class="i">+    fun downloadSingleMedia(
+</a><a href="#h7-1-5" id="h7-1-5" class="i">+        mediaData: String,
+</a><a href="#h7-1-6" id="h7-1-6" class="i">+        mediaType: DownloadMediaType,
+</a><a href="#h7-1-7" id="h7-1-7" class="i">+        encryption: MediaEncryptionKeyPair? = null,
+</a><a href="#h7-1-8" id="h7-1-8" class="i">+        messageContentType: ContentType? = null
+</a><a href="#h7-1-9" id="h7-1-9" class="i">+    ) {
+</a>         enqueueDownloadRequest(
+             DownloadRequest(
+                 inputMedias = arrayOf(
+                     InputMedia(
+<a href="#h7-1-14" id="h7-1-14" class="d">-                    content = mediaData,
+</a><a href="#h7-1-15" id="h7-1-15" class="d">-                    type = mediaType,
+</a><a href="#h7-1-16" id="h7-1-16" class="d">-                    encryption = encryption
+</a><a href="#h7-1-17" id="h7-1-17" class="d">-                )
+</a><a href="#h7-1-18" id="h7-1-18" class="i">+                        content = mediaData,
+</a><a href="#h7-1-19" id="h7-1-19" class="i">+                        type = mediaType,
+</a><a href="#h7-1-20" id="h7-1-20" class="i">+                        encryption = encryption,
+</a><a href="#h7-1-21" id="h7-1-21" class="i">+                        messageContentType = messageContentType?.name
+</a><a href="#h7-1-22" id="h7-1-22" class="i">+                    )
+</a>                 )
+             )
+         )
+<b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadRequest.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadRequest.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadRequest.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadRequest.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -5,7 +5,8 @@ data class DashOptions(val offsetTime: Long, val duration: Long?)
+</a> data class InputMedia(
+     val content: String,
+     val type: DownloadMediaType,
+<a href="#h8-0-3" id="h8-0-3" class="d">-    val encryption: MediaEncryptionKeyPair? = null
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+    val encryption: MediaEncryptionKeyPair? = null,
+</a><a href="#h8-0-5" id="h8-0-5" class="i">+    val messageContentType: String? = null,
+</a> )
+ 
+ class DownloadRequest(
+<b>diff --git a/<a id="h9" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/data/FileType.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/data/FileType.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/data/FileType.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/data/FileType.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -1,5 +1,6 @@
+</a> package me.rhunk.snapenhance.data
+ 
+<a href="#h9-0-2" id="h9-0-2" class="i">+import me.rhunk.snapenhance.Logger
+</a> import java.io.File
+ import java.io.InputStream
+ 
+<a href="#h9-1" id="h9-1" class="h">@@ -14,6 +15,8 @@ enum class FileType(
+</a>     PNG(&quot;png&quot;, &quot;image/png&quot;, false, true, false),
+     MP4(&quot;mp4&quot;, &quot;video/mp4&quot;, true, false, false),
+     MP3(&quot;mp3&quot;, &quot;audio/mp3&quot;,false, false, true),
+<a href="#h9-1-3" id="h9-1-3" class="i">+    OPUS(&quot;opus&quot;, &quot;audio/opus&quot;, false, false, true),
+</a><a href="#h9-1-4" id="h9-1-4" class="i">+    AAC(&quot;aac&quot;, &quot;audio/aac&quot;, false, false, true),
+</a>     JPG(&quot;jpg&quot;, &quot;image/jpg&quot;,false, true, false),
+     ZIP(&quot;zip&quot;, &quot;application/zip&quot;, false, false, false),
+     WEBP(&quot;webp&quot;, &quot;image/webp&quot;, false, true, false),
+<a href="#h9-2" id="h9-2" class="h">@@ -25,9 +28,12 @@ enum class FileType(
+</a>             &quot;52494646&quot; to WEBP,
+             &quot;504b0304&quot; to ZIP,
+             &quot;89504e47&quot; to PNG,
+<a href="#h9-2-3" id="h9-2-3" class="d">-            &quot;00000020&quot; to  MP4,
+</a><a href="#h9-2-4" id="h9-2-4" class="i">+            &quot;00000020&quot; to MP4,
+</a>             &quot;00000018&quot; to MP4,
+             &quot;0000001c&quot; to MP4,
+<a href="#h9-2-7" id="h9-2-7" class="i">+            &quot;494433&quot; to MP3,
+</a><a href="#h9-2-8" id="h9-2-8" class="i">+            &quot;4f676753&quot; to OPUS,
+</a><a href="#h9-2-9" id="h9-2-9" class="i">+            &quot;fff15&quot; to AAC,
+</a>             &quot;ffd8ff&quot; to JPG,
+         )
+ 
+<a href="#h9-3" id="h9-3" class="h">@@ -55,7 +61,9 @@ enum class FileType(
+</a>             val headerBytes = ByteArray(16)
+             System.arraycopy(array, 0, headerBytes, 0, 16)
+             val hex = bytesToHex(headerBytes)
+<a href="#h9-3-3" id="h9-3-3" class="d">-            return fileSignatures.entries.firstOrNull { hex.startsWith(it.key) }?.value ?: UNKNOWN
+</a><a href="#h9-3-4" id="h9-3-4" class="i">+            return fileSignatures.entries.firstOrNull { hex.startsWith(it.key) }?.value ?: UNKNOWN.also {
+</a><a href="#h9-3-5" id="h9-3-5" class="i">+                Logger.directDebug(&quot;unknown file type, header: $hex&quot;, &quot;FileType&quot;)
+</a><a href="#h9-3-6" id="h9-3-6" class="i">+            }
+</a>         }
+ 
+         fun fromInputStream(inputStream: InputStream): FileType {
+<b>diff --git a/<a id="h10" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -473,9 +473,10 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>                     mediaAuthor = authorName,
+                     friendInfo = friendInfo
+                 ).downloadSingleMedia(
+<a href="#h10-0-3" id="h10-0-3" class="d">-                    Base64.UrlSafe.encode(urlProto),
+</a><a href="#h10-0-4" id="h10-0-4" class="d">-                    DownloadMediaType.PROTO_MEDIA,
+</a><a href="#h10-0-5" id="h10-0-5" class="d">-                    encryption = encryptionKeys?.toKeyPair()
+</a><a href="#h10-0-6" id="h10-0-6" class="i">+                    mediaData = Base64.UrlSafe.encode(urlProto),
+</a><a href="#h10-0-7" id="h10-0-7" class="i">+                    mediaType = DownloadMediaType.PROTO_MEDIA,
+</a><a href="#h10-0-8" id="h10-0-8" class="i">+                    encryption = encryptionKeys?.toKeyPair(),
+</a><a href="#h10-0-9" id="h10-0-9" class="i">+                    messageContentType = contentType
+</a>                 )
+                 return
+             }
+<b>diff --git a/<a id="h11" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt</a></b>
+<a href="#h11-0" id="h11-0" class="h">@@ -1,8 +1,5 @@
+</a> package me.rhunk.snapenhance.util.snap
+ 
+<a href="#h11-0-2" id="h11-0-2" class="d">-import com.arthenica.ffmpegkit.FFmpegKit
+</a><a href="#h11-0-3" id="h11-0-3" class="d">-import com.arthenica.ffmpegkit.FFmpegSession
+</a><a href="#h11-0-4" id="h11-0-4" class="d">-import kotlinx.coroutines.suspendCancellableCoroutine
+</a> import me.rhunk.snapenhance.Constants
+ import me.rhunk.snapenhance.core.download.data.SplitMediaAssetType
+ import me.rhunk.snapenhance.data.ContentType
+<a href="#h11-1" id="h11-1" class="h">@@ -10,10 +7,8 @@ import me.rhunk.snapenhance.data.FileType
+</a> import me.rhunk.snapenhance.util.download.RemoteMediaResolver
+ import me.rhunk.snapenhance.util.protobuf.ProtoReader
+ import java.io.ByteArrayInputStream
+<a href="#h11-1-3" id="h11-1-3" class="d">-import java.io.File
+</a> import java.io.FileNotFoundException
+ import java.io.InputStream
+<a href="#h11-1-6" id="h11-1-6" class="d">-import java.util.concurrent.Executors
+</a> import java.util.zip.ZipInputStream
+ 
+ 
+<a href="#h11-2" id="h11-2" class="h">@@ -69,43 +64,4 @@ object MediaDownloaderHelper {
+</a> 
+         return mapOf(SplitMediaAssetType.ORIGINAL to content)
+     }
+<a href="#h11-2-3" id="h11-2-3" class="d">-
+</a><a href="#h11-2-4" id="h11-2-4" class="d">-
+</a><a href="#h11-2-5" id="h11-2-5" class="d">-    private suspend fun runFFmpegAsync(vararg args: String) = suspendCancellableCoroutine&lt;FFmpegSession&gt; {
+</a><a href="#h11-2-6" id="h11-2-6" class="d">-        FFmpegKit.executeAsync(args.joinToString(&quot; &quot;), { session -&gt;
+</a><a href="#h11-2-7" id="h11-2-7" class="d">-            it.resumeWith(
+</a><a href="#h11-2-8" id="h11-2-8" class="d">-                if (session.returnCode.isValueSuccess) {
+</a><a href="#h11-2-9" id="h11-2-9" class="d">-                    Result.success(session)
+</a><a href="#h11-2-10" id="h11-2-10" class="d">-                } else {
+</a><a href="#h11-2-11" id="h11-2-11" class="d">-                    Result.failure(Exception(session.output))
+</a><a href="#h11-2-12" id="h11-2-12" class="d">-                }
+</a><a href="#h11-2-13" id="h11-2-13" class="d">-            )
+</a><a href="#h11-2-14" id="h11-2-14" class="d">-        },
+</a><a href="#h11-2-15" id="h11-2-15" class="d">-            Executors.newSingleThreadExecutor())
+</a><a href="#h11-2-16" id="h11-2-16" class="d">-    }
+</a><a href="#h11-2-17" id="h11-2-17" class="d">-
+</a><a href="#h11-2-18" id="h11-2-18" class="d">-    //TODO: implement setting parameters
+</a><a href="#h11-2-19" id="h11-2-19" class="d">-
+</a><a href="#h11-2-20" id="h11-2-20" class="d">-    suspend fun downloadDashChapterFile(
+</a><a href="#h11-2-21" id="h11-2-21" class="d">-        dashPlaylist: File,
+</a><a href="#h11-2-22" id="h11-2-22" class="d">-        output: File,
+</a><a href="#h11-2-23" id="h11-2-23" class="d">-        startTime: Long,
+</a><a href="#h11-2-24" id="h11-2-24" class="d">-        duration: Long?) {
+</a><a href="#h11-2-25" id="h11-2-25" class="d">-        runFFmpegAsync(
+</a><a href="#h11-2-26" id="h11-2-26" class="d">-            &quot;-y&quot;, &quot;-i&quot;, dashPlaylist.absolutePath, &quot;-ss&quot;, &quot;&#39;${startTime}ms&#39;&quot;, *(if (duration != null) arrayOf(&quot;-t&quot;, &quot;&#39;${duration}ms&#39;&quot;) else arrayOf()),
+</a><a href="#h11-2-27" id="h11-2-27" class="d">-            &quot;-c:v&quot;, &quot;libx264&quot;, &quot;-preset&quot;, &quot;ultrafast&quot;, &quot;-threads&quot;, &quot;6&quot;, &quot;-q:v&quot;, &quot;13&quot;, output.absolutePath
+</a><a href="#h11-2-28" id="h11-2-28" class="d">-        )
+</a><a href="#h11-2-29" id="h11-2-29" class="d">-    }
+</a><a href="#h11-2-30" id="h11-2-30" class="d">-
+</a><a href="#h11-2-31" id="h11-2-31" class="d">-    suspend fun mergeOverlayFile(
+</a><a href="#h11-2-32" id="h11-2-32" class="d">-        media: File,
+</a><a href="#h11-2-33" id="h11-2-33" class="d">-        overlay: File,
+</a><a href="#h11-2-34" id="h11-2-34" class="d">-        output: File
+</a><a href="#h11-2-35" id="h11-2-35" class="d">-    ) {
+</a><a href="#h11-2-36" id="h11-2-36" class="d">-        runFFmpegAsync(
+</a><a href="#h11-2-37" id="h11-2-37" class="d">-            &quot;-y&quot;, &quot;-i&quot;, media.absolutePath, &quot;-i&quot;, overlay.absolutePath,
+</a><a href="#h11-2-38" id="h11-2-38" class="d">-            &quot;-filter_complex&quot;, &quot;\&quot;[0]scale2ref[img][vid];[img]setsar=1[img];[vid]nullsink;[img][1]overlay=(W-w)/2:(H-h)/2,scale=2*trunc(iw*sar/2):2*trunc(ih/2)\&quot;&quot;,
+</a><a href="#h11-2-39" id="h11-2-39" class="d">-            &quot;-c:v&quot;, &quot;libx264&quot;, &quot;-b:v&quot;, &quot;5M&quot;, &quot;-c:a&quot;, &quot;copy&quot;, &quot;-preset&quot;, &quot;ultrafast&quot;, &quot;-threads&quot;, &quot;6&quot;, output.absolutePath
+</a><a href="#h11-2-40" id="h11-2-40" class="d">-        )
+</a><a href="#h11-2-41" id="h11-2-41" class="d">-    }
+</a> } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

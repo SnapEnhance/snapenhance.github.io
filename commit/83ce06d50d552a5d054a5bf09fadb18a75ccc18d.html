@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core): hide friend feed entry - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/83ce06d50d552a5d054a5bf09fadb18a75ccc18d.html">83ce06d50d552a5d054a5bf09fadb18a75ccc18d</a>
+<b>parent</b> <a href="../commit/d3d33dea534198024b3e149a05575a9992904fb3.html">d3d33dea534198024b3e149a05575a9992904fb3</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 20 Jan 2024 00:49:04 +0100
+
+fix(core): hide friend feed entry
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideFriendFeedEntry.kt</a></td><td> | </td><td class="num">34</td><td><span class="i">++++++++++++++++</span><span class="d">------------------</span></td></tr>
+</table></pre><pre>1 file changed, 16 insertions(+), 18 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideFriendFeedEntry.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideFriendFeedEntry.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideFriendFeedEntry.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideFriendFeedEntry.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -4,34 +4,26 @@ import me.rhunk.snapenhance.common.data.MessagingRuleType
+</a> import me.rhunk.snapenhance.common.data.RuleState
+ import me.rhunk.snapenhance.core.features.FeatureLoadParams
+ import me.rhunk.snapenhance.core.features.MessagingRuleFeature
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.core.util.dataBuilder
+</a> import me.rhunk.snapenhance.core.util.hook.HookStage
+ import me.rhunk.snapenhance.core.util.hook.hook
+ import me.rhunk.snapenhance.core.util.ktx.getObjectField
+<a href="#h0-0-7" id="h0-0-7" class="d">-import me.rhunk.snapenhance.core.util.ktx.setObjectField
+</a> import me.rhunk.snapenhance.core.wrapper.impl.SnapUUID
+ import me.rhunk.snapenhance.mapper.impl.CallbackMapper
+ 
+ class HideFriendFeedEntry : MessagingRuleFeature(&quot;HideFriendFeedEntry&quot;, ruleType = MessagingRuleType.HIDE_FRIEND_FEED, loadParams = FeatureLoadParams.INIT_SYNC) {
+<a href="#h0-0-12" id="h0-0-12" class="d">-    private fun createDeletedFeedEntry(conversationId: String) = context.gson.fromJson(
+</a><a href="#h0-0-13" id="h0-0-13" class="d">-        &quot;&quot;&quot;
+</a><a href="#h0-0-14" id="h0-0-14" class="d">-            {
+</a><a href="#h0-0-15" id="h0-0-15" class="d">-                &quot;mFeedEntryIdentifier&quot;: {
+</a><a href="#h0-0-16" id="h0-0-16" class="d">-                    &quot;mConversationId&quot;: null
+</a><a href="#h0-0-17" id="h0-0-17" class="d">-                },
+</a><a href="#h0-0-18" id="h0-0-18" class="d">-                &quot;mReason&quot;: &quot;CLEAR_CONVERSATION&quot;
+</a><a href="#h0-0-19" id="h0-0-19" class="d">-            }
+</a><a href="#h0-0-20" id="h0-0-20" class="d">-        &quot;&quot;&quot;.trimIndent(),
+</a><a href="#h0-0-21" id="h0-0-21" class="d">-        findClass(&quot;com.snapchat.client.messaging.DeletedFeedEntry&quot;)
+</a><a href="#h0-0-22" id="h0-0-22" class="d">-    ).also {
+</a><a href="#h0-0-23" id="h0-0-23" class="d">-        it.getObjectField(&quot;mFeedEntryIdentifier&quot;)?.setObjectField(&quot;mConversationId&quot;, SnapUUID.fromString(conversationId).instanceNonNull())
+</a><a href="#h0-0-24" id="h0-0-24" class="i">+    private fun createDeletedFeedEntry(conversationIdInstance: Any) = findClass(&quot;com.snapchat.client.messaging.DeletedFeedEntry&quot;).dataBuilder {
+</a><a href="#h0-0-25" id="h0-0-25" class="i">+        from(&quot;mFeedEntryIdentifier&quot;) {
+</a><a href="#h0-0-26" id="h0-0-26" class="i">+            set(&quot;mConversationId&quot;, conversationIdInstance)
+</a><a href="#h0-0-27" id="h0-0-27" class="i">+        }
+</a><a href="#h0-0-28" id="h0-0-28" class="i">+        set(&quot;mReason&quot;, &quot;CLEAR_CONVERSATION&quot;)
+</a>     }
+ 
+     private fun filterFriendFeed(entries: ArrayList&lt;Any&gt;, deletedEntries: ArrayList&lt;Any&gt;? = null) {
+         entries.removeIf { feedEntry -&gt;
+<a href="#h0-0-33" id="h0-0-33" class="d">-            val conversationId = SnapUUID(feedEntry.getObjectField(&quot;mConversationId&quot;)).toString()
+</a><a href="#h0-0-34" id="h0-0-34" class="d">-
+</a><a href="#h0-0-35" id="h0-0-35" class="d">-            if (canUseRule(conversationId)) {
+</a><a href="#h0-0-36" id="h0-0-36" class="d">-                deletedEntries?.add(createDeletedFeedEntry(conversationId))
+</a><a href="#h0-0-37" id="h0-0-37" class="i">+            val conversationIdInstance = feedEntry.getObjectField(&quot;mConversationId&quot;) ?: return@removeIf false
+</a><a href="#h0-0-38" id="h0-0-38" class="i">+            if (canUseRule(SnapUUID(conversationIdInstance).toString())) {
+</a><a href="#h0-0-39" id="h0-0-39" class="i">+                deletedEntries?.add(createDeletedFeedEntry(conversationIdInstance)!!)
+</a>                 true
+             } else {
+                 false
+<a href="#h0-1" id="h0-1" class="h">@@ -44,10 +36,12 @@ class HideFriendFeedEntry : MessagingRuleFeature(&quot;HideFriendFeedEntry&quot;, ruleType
+</a> 
+         context.mappings.useMapper(CallbackMapper::class) {
+             arrayOf(
+<a href="#h0-1-3" id="h0-1-3" class="i">+                &quot;FetchAndSyncFeedWithConversationIdsCallback&quot; to &quot;onFetchAndSyncFeedComplete&quot;,
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+                &quot;FetchFeedCallback&quot; to &quot;onFetchFeedComplete&quot;,
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+                &quot;FetchFeedEntriesCallback&quot; to &quot;onFetchFeedEntriesComplete&quot;,
+</a>                 &quot;QueryFeedCallback&quot; to &quot;onQueryFeedComplete&quot;,
+                 &quot;FeedManagerDelegate&quot; to &quot;onFeedEntriesUpdated&quot;,
+                 &quot;FeedManagerDelegate&quot; to &quot;onInternalSyncFeed&quot;,
+<a href="#h0-1-9" id="h0-1-9" class="d">-                &quot;SyncFeedCallback&quot; to &quot;onSyncFeedComplete&quot;,
+</a>             ).forEach { (callbackName, methodName) -&gt;
+                 findClass(callbacks.get()!![callbackName] ?: return@forEach).hook(methodName, HookStage.BEFORE) { param -&gt;
+                     filterFriendFeed(param.arg(0))
+<a href="#h0-2" id="h0-2" class="h">@@ -66,6 +60,10 @@ class HideFriendFeedEntry : MessagingRuleFeature(&quot;HideFriendFeedEntry&quot;, ruleType
+</a>                         param.setArg(4, true)
+                     }
+                 }
+<a href="#h0-2-3" id="h0-2-3" class="i">+            callbacks.getClass(&quot;SyncFeedCallback&quot;)
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+                ?.hook(&quot;onSyncFeedComplete&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+                    filterFriendFeed(param.arg(0), param.arg(2))
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+                }
+</a>         }
+     }
+ 
+</pre>
+</div>
+</body>
+</html>

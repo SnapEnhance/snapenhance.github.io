@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: config &amp; notification filter - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/0389157471118adc366f0e813c05dc2ea967291c.html">0389157471118adc366f0e813c05dc2ea967291c</a>
+<b>parent</b> <a href="../commit/651c69d22f5bb20f036f11f06dd8512b5058e33d.html">651c69d22f5bb20f036f11f06dd8512b5058e33d</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 26 May 2023 16:23:16 +0200
+
+feat: config &amp; notification filter
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">14</td><td><span class="i">++++++++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigAccessor.kt</a></td><td> | </td><td class="num">32</td><td><span class="i">++++++++++++++++</span><span class="d">----------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt</a></td><td> | </td><td class="num">94</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">--------------------------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigValue.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h4">app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigIntegerValue.kt</a></td><td> | </td><td class="num">18</td><td><span class="i">++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h5">app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigStateListValue.kt</a></td><td> | </td><td class="num">28</td><td><span class="i">++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h6">app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigStateValue.kt</a></td><td> | </td><td class="num">18</td><td><span class="i">++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h7">app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigStringValue.kt</a></td><td> | </td><td class="num">18</td><td><span class="i">++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/Notifications.kt</a></td><td> | </td><td class="num">24</td><td><span class="i">+++++++++++++++++++++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/SettingsMenu.kt</a></td><td> | </td><td class="num">62</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/ConfigManager.kt</a></td><td> | </td><td class="num">21</td><td><span class="i">++++++++</span><span class="d">-------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h11">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/TranslationManager.kt</a></td><td> | </td><td class="num">17</td><td><span class="i">++++++++++</span><span class="d">-------</span></td></tr>
+</table></pre><pre>12 files changed, 256 insertions(+), 98 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/assets/lang/en_US.json.html">app/src/main/assets/lang/en_US.json</a> b/<a href="../file/app/src/main/assets/lang/en_US.json.html">app/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -18,7 +18,8 @@
+</a>         &quot;save_folder&quot;: &quot;Save Folder&quot;,
+         &quot;prevent_read_receipts&quot;: &quot;Prevent Read Receipts&quot;,
+         &quot;hide_bitmoji_presence&quot;: &quot;Hide Bitmoji Presence&quot;,
+<a href="#h0-0-3" id="h0-0-3" class="d">-        &quot;show_message_content&quot;: &quot;Show Message Content&quot;,
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        &quot;show_message_content_in_notifications&quot;: &quot;Show Message Content In Notifications&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+        &quot;notification_filter&quot;: &quot;Notification Filter&quot;,
+</a>         &quot;message_logger&quot;: &quot;Message Logger&quot;,
+         &quot;unlimited_snap_view_time&quot;: &quot;Unlimited Snap View Time&quot;,
+         &quot;auto_download_snaps&quot;: &quot;Auto Download Snaps&quot;,
+<a href="#h0-1" id="h0-1" class="h">@@ -49,7 +50,16 @@
+</a>         &quot;new_map_ui&quot;: &quot;New Map UI&quot;,
+         &quot;use_download_manager&quot;: &quot;Use Android Download Manager&quot;
+     },
+<a href="#h0-1-3" id="h0-1-3" class="d">-   
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+    &quot;option&quot;: {
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+        &quot;property&quot;: {
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+            &quot;notification_filter&quot;: {
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+                &quot;chat&quot;: &quot;Chat&quot;,
+</a><a href="#h0-1-9" id="h0-1-9" class="i">+                &quot;snap&quot;: &quot;Snap&quot;,
+</a><a href="#h0-1-10" id="h0-1-10" class="i">+                &quot;typing&quot;: &quot;Typing&quot;
+</a><a href="#h0-1-11" id="h0-1-11" class="i">+            }
+</a><a href="#h0-1-12" id="h0-1-12" class="i">+        }
+</a><a href="#h0-1-13" id="h0-1-13" class="i">+    },
+</a> 
+     &quot;friend_menu_option&quot;: {
+         &quot;preview&quot;: &quot;Preview&quot;,
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigAccessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigAccessor.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigAccessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigAccessor.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,58 +1,58 @@
+</a> package me.rhunk.snapenhance.config
+ 
+ open class ConfigAccessor(
+<a href="#h1-0-3" id="h1-0-3" class="d">-    private val configMap: MutableMap&lt;ConfigProperty, Any?&gt;
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    private val configMap: MutableMap&lt;ConfigProperty, ConfigValue&lt;*&gt;&gt; = mutableMapOf()
+</a> ) {
+     fun bool(key: ConfigProperty): Boolean {
+<a href="#h1-0-7" id="h1-0-7" class="d">-        return get(key) as Boolean
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+        return get(key).value() as Boolean
+</a>     }
+ 
+     fun int(key: ConfigProperty): Int {
+<a href="#h1-0-12" id="h1-0-12" class="d">-        return get(key) as Int
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+        return get(key).value() as Int
+</a>     }
+ 
+     fun string(key: ConfigProperty): String {
+<a href="#h1-0-17" id="h1-0-17" class="d">-        return get(key) as String
+</a><a href="#h1-0-18" id="h1-0-18" class="i">+        return get(key).value() as String
+</a>     }
+ 
+     fun double(key: ConfigProperty): Double {
+<a href="#h1-0-22" id="h1-0-22" class="d">-        return get(key) as Double
+</a><a href="#h1-0-23" id="h1-0-23" class="i">+        return get(key).value() as Double
+</a>     }
+ 
+     fun float(key: ConfigProperty): Float {
+<a href="#h1-0-27" id="h1-0-27" class="d">-        return get(key) as Float
+</a><a href="#h1-0-28" id="h1-0-28" class="i">+        return get(key).value() as Float
+</a>     }
+ 
+     fun long(key: ConfigProperty): Long {
+<a href="#h1-0-32" id="h1-0-32" class="d">-        return get(key) as Long
+</a><a href="#h1-0-33" id="h1-0-33" class="i">+        return get(key).value() as Long
+</a>     }
+ 
+     fun short(key: ConfigProperty): Short {
+<a href="#h1-0-37" id="h1-0-37" class="d">-        return get(key) as Short
+</a><a href="#h1-0-38" id="h1-0-38" class="i">+        return get(key).value() as Short
+</a>     }
+ 
+     fun byte(key: ConfigProperty): Byte {
+<a href="#h1-0-42" id="h1-0-42" class="d">-        return get(key) as Byte
+</a><a href="#h1-0-43" id="h1-0-43" class="i">+        return get(key).value() as Byte
+</a>     }
+ 
+     fun char(key: ConfigProperty): Char {
+<a href="#h1-0-47" id="h1-0-47" class="d">-        return get(key) as Char
+</a><a href="#h1-0-48" id="h1-0-48" class="i">+        return get(key).value() as Char
+</a>     }
+ 
+     @Suppress(&quot;UNCHECKED_CAST&quot;)
+<a href="#h1-0-52" id="h1-0-52" class="d">-    fun &lt;T&gt; list(key: ConfigProperty): List&lt;T&gt; {
+</a><a href="#h1-0-53" id="h1-0-53" class="d">-        return get(key) as List&lt;T&gt;
+</a><a href="#h1-0-54" id="h1-0-54" class="i">+    fun options(key: ConfigProperty): Map&lt;String, Boolean&gt; {
+</a><a href="#h1-0-55" id="h1-0-55" class="i">+        return get(key).value() as Map&lt;String, Boolean&gt;
+</a>     }
+ 
+<a href="#h1-0-58" id="h1-0-58" class="d">-    fun get(key: ConfigProperty): Any? {
+</a><a href="#h1-0-59" id="h1-0-59" class="d">-        return configMap[key]
+</a><a href="#h1-0-60" id="h1-0-60" class="i">+    fun get(key: ConfigProperty): ConfigValue&lt;*&gt; {
+</a><a href="#h1-0-61" id="h1-0-61" class="i">+        return configMap[key]!!
+</a>     }
+ 
+<a href="#h1-0-64" id="h1-0-64" class="d">-    fun set(key: ConfigProperty, value: Any?) {
+</a><a href="#h1-0-65" id="h1-0-65" class="i">+    fun set(key: ConfigProperty, value: ConfigValue&lt;*&gt;) {
+</a>         configMap[key] = value
+     }
+ 
+<a href="#h1-0-69" id="h1-0-69" class="d">-    fun entries(): Set&lt;Map.Entry&lt;ConfigProperty, Any?&gt;&gt; {
+</a><a href="#h1-0-70" id="h1-0-70" class="i">+    fun entries(): Set&lt;Map.Entry&lt;ConfigProperty, ConfigValue&lt;*&gt;&gt;&gt; {
+</a>         return configMap.entries
+     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,174 +1,192 @@
+</a> package me.rhunk.snapenhance.config
+ 
+ import android.os.Environment
+<a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.config.impl.ConfigIntegerValue
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import me.rhunk.snapenhance.config.impl.ConfigStateListValue
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+import me.rhunk.snapenhance.config.impl.ConfigStateValue
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+import me.rhunk.snapenhance.config.impl.ConfigStringValue
+</a> import java.io.File
+ 
+ enum class ConfigProperty(
+     val nameKey: String,
+     val descriptionKey: String,
+     val category: ConfigCategory,
+<a href="#h2-0-13" id="h2-0-13" class="d">-    val defaultValue: Any
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+    val valueContainer: ConfigValue&lt;*&gt;
+</a> ) {
+     SAVE_FOLDER(
+         &quot;property.save_folder&quot;, &quot;description.save_folder&quot;, ConfigCategory.GENERAL,
+<a href="#h2-0-18" id="h2-0-18" class="d">-        File(
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+        ConfigStringValue(File(
+</a>             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).absolutePath + &quot;/Snapchat&quot;,
+             &quot;SnapEnhance&quot;
+<a href="#h2-0-22" id="h2-0-22" class="d">-        ).absolutePath
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+        ).absolutePath)
+</a>     ),
+ 
+     PREVENT_READ_RECEIPTS(
+         &quot;property.prevent_read_receipts&quot;,
+         &quot;description.prevent_read_receipts&quot;,
+         ConfigCategory.SPY,
+<a href="#h2-0-30" id="h2-0-30" class="d">-        false
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+        ConfigStateValue(false)
+</a>     ),
+     HIDE_BITMOJI_PRESENCE(
+         &quot;property.hide_bitmoji_presence&quot;,
+         &quot;description.hide_bitmoji_presence&quot;,
+         ConfigCategory.SPY,
+<a href="#h2-0-37" id="h2-0-37" class="d">-        false
+</a><a href="#h2-0-38" id="h2-0-38" class="i">+        ConfigStateValue(false)
+</a>     ),
+<a href="#h2-0-40" id="h2-0-40" class="d">-    SHOW_MESSAGE_CONTENT(
+</a><a href="#h2-0-41" id="h2-0-41" class="d">-        &quot;property.show_message_content&quot;,
+</a><a href="#h2-0-42" id="h2-0-42" class="d">-        &quot;description.show_message_content&quot;,
+</a><a href="#h2-0-43" id="h2-0-43" class="i">+    SHOW_MESSAGE_CONTENT_IN_NOTIFICATIONS(
+</a><a href="#h2-0-44" id="h2-0-44" class="i">+        &quot;property.show_message_content_in_notifications&quot;,
+</a><a href="#h2-0-45" id="h2-0-45" class="i">+        &quot;description.show_message_content_in_notifications&quot;,
+</a>         ConfigCategory.SPY,
+<a href="#h2-0-47" id="h2-0-47" class="d">-        false
+</a><a href="#h2-0-48" id="h2-0-48" class="i">+        ConfigStateValue(false)
+</a>     ),
+<a href="#h2-0-50" id="h2-0-50" class="d">-    MESSAGE_LOGGER(&quot;property.message_logger&quot;, &quot;description.message_logger&quot;, ConfigCategory.SPY, false),
+</a><a href="#h2-0-51" id="h2-0-51" class="d">-    UNLIMITED_SNAP_VIEW_TIME(&quot;property.unlimited_snap_view_time&quot;, &quot;description.unlimited_snap_view_time&quot;, ConfigCategory.SPY, false),
+</a><a href="#h2-0-52" id="h2-0-52" class="i">+    NOTIFICATION_FILTER(
+</a><a href="#h2-0-53" id="h2-0-53" class="i">+        &quot;property.notification_filter&quot;,
+</a><a href="#h2-0-54" id="h2-0-54" class="i">+        &quot;description.notification_filter&quot;,
+</a><a href="#h2-0-55" id="h2-0-55" class="i">+        ConfigCategory.SPY,
+</a><a href="#h2-0-56" id="h2-0-56" class="i">+        ConfigStateListValue(
+</a><a href="#h2-0-57" id="h2-0-57" class="i">+            listOf(&quot;snap&quot;, &quot;chat&quot;, &quot;typing&quot;),
+</a><a href="#h2-0-58" id="h2-0-58" class="i">+            mutableMapOf(
+</a><a href="#h2-0-59" id="h2-0-59" class="i">+                &quot;snap&quot; to true,
+</a><a href="#h2-0-60" id="h2-0-60" class="i">+                &quot;chat&quot; to true,
+</a><a href="#h2-0-61" id="h2-0-61" class="i">+                &quot;typing&quot; to true
+</a><a href="#h2-0-62" id="h2-0-62" class="i">+            )
+</a><a href="#h2-0-63" id="h2-0-63" class="i">+        )
+</a><a href="#h2-0-64" id="h2-0-64" class="i">+    ),
+</a><a href="#h2-0-65" id="h2-0-65" class="i">+
+</a><a href="#h2-0-66" id="h2-0-66" class="i">+    MESSAGE_LOGGER(&quot;property.message_logger&quot;, &quot;description.message_logger&quot;, ConfigCategory.SPY, ConfigStateValue(false)),
+</a><a href="#h2-0-67" id="h2-0-67" class="i">+    UNLIMITED_SNAP_VIEW_TIME(&quot;property.unlimited_snap_view_time&quot;, &quot;description.unlimited_snap_view_time&quot;, ConfigCategory.SPY, ConfigStateValue(false)),
+</a> 
+     AUTO_DOWNLOAD_SNAPS(
+         &quot;property.auto_download_snaps&quot;,
+         &quot;description.auto_download_snaps&quot;,
+         ConfigCategory.MEDIA_DOWNLOADER,
+<a href="#h2-0-73" id="h2-0-73" class="d">-        true
+</a><a href="#h2-0-74" id="h2-0-74" class="i">+        ConfigStateValue(false)
+</a>     ),
+     AUTO_DOWNLOAD_STORIES(
+         &quot;property.auto_download_stories&quot;,
+         &quot;description.auto_download_stories&quot;,
+         ConfigCategory.MEDIA_DOWNLOADER,
+<a href="#h2-0-80" id="h2-0-80" class="d">-        false
+</a><a href="#h2-0-81" id="h2-0-81" class="i">+        ConfigStateValue(false)
+</a>     ),
+     AUTO_DOWNLOAD_PUBLIC_STORIES(
+         &quot;property.auto_download_public_stories&quot;,
+         &quot;description.auto_download_public_stories&quot;,
+         ConfigCategory.MEDIA_DOWNLOADER,
+<a href="#h2-0-87" id="h2-0-87" class="d">-        false
+</a><a href="#h2-0-88" id="h2-0-88" class="i">+        ConfigStateValue(false)
+</a>     ),
+     AUTO_DOWNLOAD_SPOTLIGHT(
+         &quot;property.auto_download_spotlight&quot;,
+         &quot;description.auto_download_spotlight&quot;,
+         ConfigCategory.MEDIA_DOWNLOADER,
+<a href="#h2-0-94" id="h2-0-94" class="d">-        false
+</a><a href="#h2-0-95" id="h2-0-95" class="i">+        ConfigStateValue(false)
+</a>     ),
+     OVERLAY_MERGE(
+         &quot;property.overlay_merge&quot;,
+         &quot;description.overlay_merge&quot;,
+         ConfigCategory.MEDIA_DOWNLOADER,
+<a href="#h2-0-101" id="h2-0-101" class="d">-        true
+</a><a href="#h2-0-102" id="h2-0-102" class="i">+        ConfigStateValue(false)
+</a>     ),
+     DOWNLOAD_INCHAT_SNAPS(
+         &quot;property.download_inchat_snaps&quot;,
+         &quot;description.download_inchat_snaps&quot;,
+         ConfigCategory.MEDIA_DOWNLOADER,
+<a href="#h2-0-108" id="h2-0-108" class="d">-        true
+</a><a href="#h2-0-109" id="h2-0-109" class="i">+        ConfigStateValue(false)
+</a>     ),
+     ANTI_DOWNLOAD_BUTTON(
+         &quot;property.anti_auto_download_button&quot;,
+         &quot;description.anti_auto_download_button&quot;,
+         ConfigCategory.MEDIA_DOWNLOADER,
+<a href="#h2-0-115" id="h2-0-115" class="d">-        false
+</a><a href="#h2-0-116" id="h2-0-116" class="i">+        ConfigStateValue(false)
+</a>     ),
+ 
+<a href="#h2-0-119" id="h2-0-119" class="d">-    DISABLE_METRICS(&quot;property.disable_metrics&quot;, &quot;description.disable_metrics&quot;, ConfigCategory.PRIVACY, true),
+</a><a href="#h2-0-120" id="h2-0-120" class="i">+    DISABLE_METRICS(&quot;property.disable_metrics&quot;, &quot;description.disable_metrics&quot;, ConfigCategory.PRIVACY, ConfigStateValue(false)),
+</a>     PREVENT_SCREENSHOT_NOTIFICATIONS(
+         &quot;property.prevent_screenshot_notifications&quot;,
+         &quot;description.prevent_screenshot_notifications&quot;,
+         ConfigCategory.PRIVACY,
+<a href="#h2-0-125" id="h2-0-125" class="d">-        true
+</a><a href="#h2-0-126" id="h2-0-126" class="i">+        ConfigStateValue(false)
+</a>     ),
+     PREVENT_STATUS_NOTIFICATIONS(
+         &quot;property.prevent_status_notifications&quot;,
+         &quot;description.prevent_status_notifications&quot;,
+         ConfigCategory.PRIVACY,
+<a href="#h2-0-132" id="h2-0-132" class="d">-        true
+</a><a href="#h2-0-133" id="h2-0-133" class="i">+        ConfigStateValue(false)
+</a>     ),
+     ANONYMOUS_STORY_VIEW(
+         &quot;property.anonymous_story_view&quot;,
+         &quot;description.anonymous_story_view&quot;,
+         ConfigCategory.PRIVACY,
+<a href="#h2-0-139" id="h2-0-139" class="d">-        false
+</a><a href="#h2-0-140" id="h2-0-140" class="i">+        ConfigStateValue(false)
+</a>     ),
+     HIDE_TYPING_NOTIFICATION(
+         &quot;property.hide_typing_notification&quot;,
+         &quot;description.hide_typing_notification&quot;,
+         ConfigCategory.PRIVACY,
+<a href="#h2-0-146" id="h2-0-146" class="d">-        false
+</a><a href="#h2-0-147" id="h2-0-147" class="i">+        ConfigStateValue(false)
+</a>     ),
+ 
+<a href="#h2-0-150" id="h2-0-150" class="d">-    MENU_SLOT_ID(&quot;property.menu_slot_id&quot;, &quot;description.menu_slot_id&quot;, ConfigCategory.UI, 1),
+</a><a href="#h2-0-151" id="h2-0-151" class="i">+    MENU_SLOT_ID(&quot;property.menu_slot_id&quot;, &quot;description.menu_slot_id&quot;, ConfigCategory.UI, ConfigIntegerValue(1)),
+</a>     MESSAGE_PREVIEW_LENGTH(
+         &quot;property.message_preview_length&quot;,
+         &quot;description.message_preview_length&quot;,
+         ConfigCategory.UI,
+<a href="#h2-0-156" id="h2-0-156" class="d">-        20
+</a><a href="#h2-0-157" id="h2-0-157" class="i">+        ConfigIntegerValue(20)
+</a>     ),
+ 
+     EXTERNAL_MEDIA_AS_SNAP(
+         &quot;property.external_media_as_snap&quot;,
+         &quot;description.external_media_as_snap&quot;,
+         ConfigCategory.EXTRAS,
+<a href="#h2-0-164" id="h2-0-164" class="d">-        false
+</a><a href="#h2-0-165" id="h2-0-165" class="i">+        ConfigStateValue(false)
+</a>     ),
+<a href="#h2-0-167" id="h2-0-167" class="d">-    AUTO_SAVE(&quot;property.auto_save&quot;, &quot;description.auto_save&quot;, ConfigCategory.EXTRAS, false),
+</a><a href="#h2-0-168" id="h2-0-168" class="d">-    ANTI_AUTO_SAVE(&quot;property.anti_auto_save&quot;, &quot;description.anti_auto_save&quot;, ConfigCategory.EXTRAS, false),
+</a><a href="#h2-0-169" id="h2-0-169" class="d">-    SNAPCHAT_PLUS(&quot;property.snapchat_plus&quot;, &quot;description.snapchat_plus&quot;, ConfigCategory.EXTRAS, false),
+</a><a href="#h2-0-170" id="h2-0-170" class="i">+    AUTO_SAVE(&quot;property.auto_save&quot;, &quot;description.auto_save&quot;, ConfigCategory.EXTRAS, ConfigStateValue(false)),
+</a><a href="#h2-0-171" id="h2-0-171" class="i">+    ANTI_AUTO_SAVE(&quot;property.anti_auto_save&quot;, &quot;description.anti_auto_save&quot;, ConfigCategory.EXTRAS, ConfigStateValue(false)),
+</a><a href="#h2-0-172" id="h2-0-172" class="i">+    SNAPCHAT_PLUS(&quot;property.snapchat_plus&quot;, &quot;description.snapchat_plus&quot;, ConfigCategory.EXTRAS, ConfigStateValue(false)),
+</a> 
+     REMOVE_VOICE_RECORD_BUTTON(
+         &quot;property.remove_voice_record_button&quot;,
+         &quot;description.remove_voice_record_button&quot;,
+         ConfigCategory.TWEAKS,
+<a href="#h2-0-178" id="h2-0-178" class="d">-        false
+</a><a href="#h2-0-179" id="h2-0-179" class="i">+        ConfigStateValue(false)
+</a>     ),
+     REMOVE_STICKERS_BUTTON(
+         &quot;property.remove_stickers_button&quot;,
+         &quot;description.remove_stickers_button&quot;,
+         ConfigCategory.TWEAKS,
+<a href="#h2-0-185" id="h2-0-185" class="d">-        false
+</a><a href="#h2-0-186" id="h2-0-186" class="i">+        ConfigStateValue(false)
+</a>     ),
+     REMOVE_COGNAC_BUTTON(
+         &quot;property.remove_cognac_button&quot;,
+         &quot;description.remove_cognac_button&quot;,
+         ConfigCategory.TWEAKS,
+<a href="#h2-0-192" id="h2-0-192" class="d">-        false
+</a><a href="#h2-0-193" id="h2-0-193" class="i">+        ConfigStateValue(false)
+</a>     ),
+     REMOVE_CALL_BUTTONS(
+         &quot;property.remove_call_buttons&quot;,
+         &quot;description.remove_call_buttons&quot;,
+         ConfigCategory.TWEAKS,
+<a href="#h2-0-199" id="h2-0-199" class="d">-        false
+</a><a href="#h2-0-200" id="h2-0-200" class="i">+        ConfigStateValue(false)
+</a>     ),
+     DISABLE_SNAP_SPLITTING(
+         &quot;property.disable_snap_splitting&quot;,
+         &quot;description.disable_snap_splitting&quot;,
+         ConfigCategory.TWEAKS,
+<a href="#h2-0-206" id="h2-0-206" class="d">-        false
+</a><a href="#h2-0-207" id="h2-0-207" class="i">+        ConfigStateValue(false)
+</a>     ),
+<a href="#h2-0-209" id="h2-0-209" class="d">-    BLOCK_ADS(&quot;property.block_ads&quot;, &quot;description.block_ads&quot;, ConfigCategory.TWEAKS, false),
+</a><a href="#h2-0-210" id="h2-0-210" class="i">+    BLOCK_ADS(&quot;property.block_ads&quot;, &quot;description.block_ads&quot;, ConfigCategory.TWEAKS, ConfigStateValue(false)),
+</a>     STREAK_EXPIRATION_INFO(
+         &quot;property.streak_expiration_info&quot;,
+         &quot;description.streakexpirationinfo&quot;,
+         ConfigCategory.TWEAKS,
+<a href="#h2-0-215" id="h2-0-215" class="d">-        false
+</a><a href="#h2-0-216" id="h2-0-216" class="i">+        ConfigStateValue(false)
+</a>     ),
+<a href="#h2-0-218" id="h2-0-218" class="d">-    NEW_MAP_UI(&quot;property.new_map_ui&quot;, &quot;description.new_map_ui&quot;, ConfigCategory.TWEAKS, false),
+</a><a href="#h2-0-219" id="h2-0-219" class="i">+    NEW_MAP_UI(&quot;property.new_map_ui&quot;, &quot;description.new_map_ui&quot;, ConfigCategory.TWEAKS, ConfigStateValue(false)),
+</a> 
+     USE_DOWNLOAD_MANAGER(
+         &quot;property.use_download_manager&quot;,
+         &quot;description.use_download_manager&quot;,
+         ConfigCategory.EXPERIMENTAL,
+<a href="#h2-0-225" id="h2-0-225" class="d">-        false
+</a><a href="#h2-0-226" id="h2-0-226" class="i">+        ConfigStateValue(false)
+</a>     );
+ 
+     companion object {
+<b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigValue.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigValue.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigValue.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigValue.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -0,0 +1,7 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="i">+package me.rhunk.snapenhance.config
+</a><a href="#h3-0-1" id="h3-0-1" class="i">+
+</a><a href="#h3-0-2" id="h3-0-2" class="i">+abstract class ConfigValue&lt;T&gt; {
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+    abstract fun value(): T
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+    abstract fun write(): String
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+    abstract fun read(value: String)
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+}</a><a href="#h3-0-7" id="h3-0-7" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h4" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigIntegerValue.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigIntegerValue.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigIntegerValue.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigIntegerValue.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -0,0 +1,17 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="i">+package me.rhunk.snapenhance.config.impl
+</a><a href="#h4-0-1" id="h4-0-1" class="i">+
+</a><a href="#h4-0-2" id="h4-0-2" class="i">+import me.rhunk.snapenhance.config.ConfigValue
+</a><a href="#h4-0-3" id="h4-0-3" class="i">+
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+class ConfigIntegerValue(
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+    var value: Int
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+) : ConfigValue&lt;Int&gt;() {
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+    override fun value() = value
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+
+</a><a href="#h4-0-9" id="h4-0-9" class="i">+    override fun write(): String {
+</a><a href="#h4-0-10" id="h4-0-10" class="i">+        return value.toString()
+</a><a href="#h4-0-11" id="h4-0-11" class="i">+    }
+</a><a href="#h4-0-12" id="h4-0-12" class="i">+
+</a><a href="#h4-0-13" id="h4-0-13" class="i">+    override fun read(value: String) {
+</a><a href="#h4-0-14" id="h4-0-14" class="i">+        this.value = value.toInt()
+</a><a href="#h4-0-15" id="h4-0-15" class="i">+    }
+</a><a href="#h4-0-16" id="h4-0-16" class="i">+}</a><a href="#h4-0-17" id="h4-0-17" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h5" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigStateListValue.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigStateListValue.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigStateListValue.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigStateListValue.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -0,0 +1,27 @@
+</a><a href="#h5-0-0" id="h5-0-0" class="i">+package me.rhunk.snapenhance.config.impl
+</a><a href="#h5-0-1" id="h5-0-1" class="i">+
+</a><a href="#h5-0-2" id="h5-0-2" class="i">+import me.rhunk.snapenhance.config.ConfigValue
+</a><a href="#h5-0-3" id="h5-0-3" class="i">+
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+class ConfigStateListValue(
+</a><a href="#h5-0-5" id="h5-0-5" class="i">+    private val keys: List&lt;String&gt;,
+</a><a href="#h5-0-6" id="h5-0-6" class="i">+    var states: MutableMap&lt;String, Boolean&gt; = mutableMapOf()
+</a><a href="#h5-0-7" id="h5-0-7" class="i">+) : ConfigValue&lt;Map&lt;String, Boolean&gt;&gt;() {
+</a><a href="#h5-0-8" id="h5-0-8" class="i">+    override fun value() = states
+</a><a href="#h5-0-9" id="h5-0-9" class="i">+
+</a><a href="#h5-0-10" id="h5-0-10" class="i">+    fun value(key: String) = states[key] ?: false
+</a><a href="#h5-0-11" id="h5-0-11" class="i">+
+</a><a href="#h5-0-12" id="h5-0-12" class="i">+    override fun write(): String {
+</a><a href="#h5-0-13" id="h5-0-13" class="i">+        return keys.joinToString(&quot;|&quot;) { &quot;$it:${states[it]}&quot; }
+</a><a href="#h5-0-14" id="h5-0-14" class="i">+    }
+</a><a href="#h5-0-15" id="h5-0-15" class="i">+
+</a><a href="#h5-0-16" id="h5-0-16" class="i">+    override fun read(value: String) {
+</a><a href="#h5-0-17" id="h5-0-17" class="i">+        value.split(&quot;|&quot;).forEach {
+</a><a href="#h5-0-18" id="h5-0-18" class="i">+            val (key, state) = it.split(&quot;:&quot;)
+</a><a href="#h5-0-19" id="h5-0-19" class="i">+            states[key] = state.toBoolean()
+</a><a href="#h5-0-20" id="h5-0-20" class="i">+        }
+</a><a href="#h5-0-21" id="h5-0-21" class="i">+    }
+</a><a href="#h5-0-22" id="h5-0-22" class="i">+
+</a><a href="#h5-0-23" id="h5-0-23" class="i">+    override fun toString(): String {
+</a><a href="#h5-0-24" id="h5-0-24" class="i">+        return states.filter { it.value }.keys.joinToString(&quot;, &quot;) { it }
+</a><a href="#h5-0-25" id="h5-0-25" class="i">+    }
+</a><a href="#h5-0-26" id="h5-0-26" class="i">+}</a><a href="#h5-0-27" id="h5-0-27" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h6" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigStateValue.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigStateValue.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigStateValue.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigStateValue.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -0,0 +1,17 @@
+</a><a href="#h6-0-0" id="h6-0-0" class="i">+package me.rhunk.snapenhance.config.impl
+</a><a href="#h6-0-1" id="h6-0-1" class="i">+
+</a><a href="#h6-0-2" id="h6-0-2" class="i">+import me.rhunk.snapenhance.config.ConfigValue
+</a><a href="#h6-0-3" id="h6-0-3" class="i">+
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+class ConfigStateValue(
+</a><a href="#h6-0-5" id="h6-0-5" class="i">+    var value: Boolean
+</a><a href="#h6-0-6" id="h6-0-6" class="i">+) : ConfigValue&lt;Boolean&gt;() {
+</a><a href="#h6-0-7" id="h6-0-7" class="i">+    override fun value() = value
+</a><a href="#h6-0-8" id="h6-0-8" class="i">+
+</a><a href="#h6-0-9" id="h6-0-9" class="i">+    override fun write(): String {
+</a><a href="#h6-0-10" id="h6-0-10" class="i">+        return value.toString()
+</a><a href="#h6-0-11" id="h6-0-11" class="i">+    }
+</a><a href="#h6-0-12" id="h6-0-12" class="i">+
+</a><a href="#h6-0-13" id="h6-0-13" class="i">+    override fun read(value: String) {
+</a><a href="#h6-0-14" id="h6-0-14" class="i">+        this.value = value.toBoolean()
+</a><a href="#h6-0-15" id="h6-0-15" class="i">+    }
+</a><a href="#h6-0-16" id="h6-0-16" class="i">+}</a><a href="#h6-0-17" id="h6-0-17" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h7" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigStringValue.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigStringValue.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigStringValue.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/impl/ConfigStringValue.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -0,0 +1,17 @@
+</a><a href="#h7-0-0" id="h7-0-0" class="i">+package me.rhunk.snapenhance.config.impl
+</a><a href="#h7-0-1" id="h7-0-1" class="i">+
+</a><a href="#h7-0-2" id="h7-0-2" class="i">+import me.rhunk.snapenhance.config.ConfigValue
+</a><a href="#h7-0-3" id="h7-0-3" class="i">+
+</a><a href="#h7-0-4" id="h7-0-4" class="i">+class ConfigStringValue(
+</a><a href="#h7-0-5" id="h7-0-5" class="i">+    var value: String = &quot;&quot;
+</a><a href="#h7-0-6" id="h7-0-6" class="i">+) : ConfigValue&lt;String&gt;() {
+</a><a href="#h7-0-7" id="h7-0-7" class="i">+    override fun value() = value
+</a><a href="#h7-0-8" id="h7-0-8" class="i">+
+</a><a href="#h7-0-9" id="h7-0-9" class="i">+    override fun write(): String {
+</a><a href="#h7-0-10" id="h7-0-10" class="i">+        return value
+</a><a href="#h7-0-11" id="h7-0-11" class="i">+    }
+</a><a href="#h7-0-12" id="h7-0-12" class="i">+
+</a><a href="#h7-0-13" id="h7-0-13" class="i">+    override fun read(value: String) {
+</a><a href="#h7-0-14" id="h7-0-14" class="i">+        this.value = value
+</a><a href="#h7-0-15" id="h7-0-15" class="i">+    }
+</a><a href="#h7-0-16" id="h7-0-16" class="i">+}</a><a href="#h7-0-17" id="h7-0-17" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h8" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/Notifications.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/Notifications.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/Notifications.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/Notifications.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -154,11 +154,22 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>         }.clear()
+     }
+ 
+<a href="#h8-0-3" id="h8-0-3" class="i">+    private fun shouldIgnoreNotification(type: String): Boolean {
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+        Logger.debug(&quot;notification type: $type&quot;)
+</a><a href="#h8-0-5" id="h8-0-5" class="i">+        val states = context.config.options(ConfigProperty.NOTIFICATION_FILTER)
+</a><a href="#h8-0-6" id="h8-0-6" class="i">+
+</a><a href="#h8-0-7" id="h8-0-7" class="i">+        states[&quot;snap&quot;]?.let { if (type.endsWith(&quot;SNAP&quot;) &amp;&amp; it) return true }
+</a><a href="#h8-0-8" id="h8-0-8" class="i">+        states[&quot;chat&quot;]?.let { if (type.endsWith(&quot;CHAT&quot;) &amp;&amp; it) return true }
+</a><a href="#h8-0-9" id="h8-0-9" class="i">+        states[&quot;typing&quot;]?.let { if (type.endsWith(&quot;TYPING&quot;) &amp;&amp; it) return true }
+</a><a href="#h8-0-10" id="h8-0-10" class="i">+
+</a><a href="#h8-0-11" id="h8-0-11" class="i">+        return false
+</a><a href="#h8-0-12" id="h8-0-12" class="i">+    }
+</a><a href="#h8-0-13" id="h8-0-13" class="i">+
+</a>     override fun init() {
+         val fetchConversationWithMessagesCallback = context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;FetchConversationWithMessagesCallback&quot;)
+ 
+<a href="#h8-0-17" id="h8-0-17" class="d">-        Hooker.hook(notifyAsUserMethod, HookStage.BEFORE, { context.config.bool(ConfigProperty.SHOW_MESSAGE_CONTENT) }) {
+</a><a href="#h8-0-18" id="h8-0-18" class="d">-            val notificationData = NotificationData(it.argNullable(0), it.arg(1), it.arg(2), it.arg(3))
+</a><a href="#h8-0-19" id="h8-0-19" class="i">+        Hooker.hook(notifyAsUserMethod, HookStage.BEFORE) { param -&gt;
+</a><a href="#h8-0-20" id="h8-0-20" class="i">+            val notificationData = NotificationData(param.argNullable(0), param.arg(1), param.arg(2), param.arg(3))
+</a> 
+             val extras: Bundle = notificationData.notification.extras.getBundle(&quot;system_notification_extras&quot;)?: return@hook
+ 
+<a href="#h8-1" id="h8-1" class="h">@@ -166,6 +177,13 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>             val notificationType = extras.getString(&quot;notification_type&quot;) ?: return@hook
+             val conversationId = extras.getString(&quot;conversation_id&quot;) ?: return@hook
+ 
+<a href="#h8-1-3" id="h8-1-3" class="i">+            if (shouldIgnoreNotification(notificationType)) {
+</a><a href="#h8-1-4" id="h8-1-4" class="i">+                param.setResult(null)
+</a><a href="#h8-1-5" id="h8-1-5" class="i">+                return@hook
+</a><a href="#h8-1-6" id="h8-1-6" class="i">+            }
+</a><a href="#h8-1-7" id="h8-1-7" class="i">+
+</a><a href="#h8-1-8" id="h8-1-8" class="i">+            if (!context.config.bool(ConfigProperty.SHOW_MESSAGE_CONTENT_IN_NOTIFICATIONS)) return@hook
+</a><a href="#h8-1-9" id="h8-1-9" class="i">+
+</a>             if (!notificationType.endsWith(&quot;CHAT&quot;) &amp;&amp; !notificationType.endsWith(&quot;SNAP&quot;)) return@hook
+ 
+             val conversationManager: Any = context.feature(Messaging::class).conversationManager
+<a href="#h8-2" id="h8-2" class="h">@@ -181,7 +199,7 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>                 }.build()
+ 
+             fetchConversationWithMessagesMethod.invoke(conversationManager, SnapUUID.fromString(conversationId).instanceNonNull(), callback)
+<a href="#h8-2-3" id="h8-2-3" class="d">-            it.setResult(null)
+</a><a href="#h8-2-4" id="h8-2-4" class="i">+            param.setResult(null)
+</a>         }
+ 
+         Hooker.hook(cancelAsUserMethod, HookStage.BEFORE) { param -&gt;
+<b>diff --git a/<a id="h9" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/SettingsMenu.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/SettingsMenu.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/SettingsMenu.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/SettingsMenu.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -11,6 +11,10 @@ import android.widget.TextView
+</a> import me.rhunk.snapenhance.BuildConfig
+ import me.rhunk.snapenhance.Constants
+ import me.rhunk.snapenhance.config.ConfigProperty
+<a href="#h9-0-3" id="h9-0-3" class="i">+import me.rhunk.snapenhance.config.impl.ConfigIntegerValue
+</a><a href="#h9-0-4" id="h9-0-4" class="i">+import me.rhunk.snapenhance.config.impl.ConfigStateListValue
+</a><a href="#h9-0-5" id="h9-0-5" class="i">+import me.rhunk.snapenhance.config.impl.ConfigStateValue
+</a><a href="#h9-0-6" id="h9-0-6" class="i">+import me.rhunk.snapenhance.config.impl.ConfigStringValue
+</a> import me.rhunk.snapenhance.features.impl.ui.menus.AbstractMenu
+ import me.rhunk.snapenhance.features.impl.ui.menus.ViewAppearanceHelper
+ 
+<a href="#h9-1" id="h9-1" class="h">@@ -35,7 +39,7 @@ class SettingsMenu : AbstractMenu() {
+</a> 
+             val input = EditText(viewModel.context)
+             input.inputType = InputType.TYPE_CLASS_TEXT
+<a href="#h9-1-3" id="h9-1-3" class="d">-            input.setText(context.config.get(property).toString())
+</a><a href="#h9-1-4" id="h9-1-4" class="i">+            input.setText(property.valueContainer.value().toString())
+</a> 
+             builder.setView(input)
+             builder.setPositiveButton(&quot;OK&quot;) { _, _ -&gt;
+<a href="#h9-2" id="h9-2" class="h">@@ -46,34 +50,26 @@ class SettingsMenu : AbstractMenu() {
+</a>             builder.show()
+         }
+ 
+<a href="#h9-2-3" id="h9-2-3" class="d">-        val resultView: View = when (property.defaultValue) {
+</a><a href="#h9-2-4" id="h9-2-4" class="d">-            is String -&gt; {
+</a><a href="#h9-2-5" id="h9-2-5" class="i">+        val resultView: View = when (property.valueContainer) {
+</a><a href="#h9-2-6" id="h9-2-6" class="i">+            is ConfigStringValue -&gt; {
+</a>                 val textView = TextView(viewModel.context)
+<a href="#h9-2-8" id="h9-2-8" class="d">-                updateButtonText(textView, context.config.string(property))
+</a><a href="#h9-2-9" id="h9-2-9" class="i">+                updateButtonText(textView, property.valueContainer.value)
+</a>                 ViewAppearanceHelper.applyTheme(viewModel, textView)
+                 textView.setOnClickListener {
+                     textEditor { value -&gt;
+<a href="#h9-2-13" id="h9-2-13" class="d">-                        context.config.set(property, value)
+</a><a href="#h9-2-14" id="h9-2-14" class="i">+                        property.valueContainer.value = value
+</a>                         updateButtonText(textView, value)
+                     }
+                 }
+                 textView
+             }
+<a href="#h9-2-20" id="h9-2-20" class="d">-            is Number -&gt; {
+</a><a href="#h9-2-21" id="h9-2-21" class="i">+            is ConfigIntegerValue -&gt; {
+</a>                 val button = Button(viewModel.context)
+<a href="#h9-2-23" id="h9-2-23" class="d">-                updateButtonText(button, context.config.get(property).toString())
+</a><a href="#h9-2-24" id="h9-2-24" class="i">+                updateButtonText(button, property.valueContainer.value.toString())
+</a>                 button.setOnClickListener {
+                     textEditor { value -&gt;
+                         runCatching {
+<a href="#h9-2-28" id="h9-2-28" class="d">-                            context.config.set(property, when (property.defaultValue) {
+</a><a href="#h9-2-29" id="h9-2-29" class="d">-                                is Int -&gt; value.toInt()
+</a><a href="#h9-2-30" id="h9-2-30" class="d">-                                is Double -&gt; value.toDouble()
+</a><a href="#h9-2-31" id="h9-2-31" class="d">-                                is Float -&gt; value.toFloat()
+</a><a href="#h9-2-32" id="h9-2-32" class="d">-                                is Long -&gt; value.toLong()
+</a><a href="#h9-2-33" id="h9-2-33" class="d">-                                is Short -&gt; value.toShort()
+</a><a href="#h9-2-34" id="h9-2-34" class="d">-                                is Byte -&gt; value.toByte()
+</a><a href="#h9-2-35" id="h9-2-35" class="d">-                                else -&gt; throw IllegalArgumentException()
+</a><a href="#h9-2-36" id="h9-2-36" class="d">-                            })
+</a><a href="#h9-2-37" id="h9-2-37" class="i">+                            property.valueContainer.value = value.toInt()
+</a>                             updateButtonText(button, value)
+                         }.onFailure {
+                             context.shortToast(&quot;Invalid value&quot;)
+<a href="#h9-3" id="h9-3" class="h">@@ -83,16 +79,44 @@ class SettingsMenu : AbstractMenu() {
+</a>                 ViewAppearanceHelper.applyTheme(viewModel, button)
+                 button
+             }
+<a href="#h9-3-3" id="h9-3-3" class="d">-            is Boolean -&gt; {
+</a><a href="#h9-3-4" id="h9-3-4" class="i">+            is ConfigStateValue -&gt; {
+</a>                 val switch = Switch(viewModel.context)
+                 switch.text = context.translation.get(property.nameKey)
+<a href="#h9-3-7" id="h9-3-7" class="d">-                switch.isChecked = context.config.bool(property)
+</a><a href="#h9-3-8" id="h9-3-8" class="i">+                switch.isChecked = property.valueContainer.value
+</a>                 switch.setOnCheckedChangeListener { _, isChecked -&gt;
+<a href="#h9-3-10" id="h9-3-10" class="d">-                    context.config.set(property, isChecked)
+</a><a href="#h9-3-11" id="h9-3-11" class="i">+                    property.valueContainer.value = isChecked
+</a>                 }
+                 ViewAppearanceHelper.applyTheme(viewModel, switch)
+                 switch
+             }
+<a href="#h9-3-16" id="h9-3-16" class="i">+            is ConfigStateListValue -&gt; {
+</a><a href="#h9-3-17" id="h9-3-17" class="i">+                val button = Button(viewModel.context)
+</a><a href="#h9-3-18" id="h9-3-18" class="i">+                updateButtonText(button, property.valueContainer.toString())
+</a><a href="#h9-3-19" id="h9-3-19" class="i">+
+</a><a href="#h9-3-20" id="h9-3-20" class="i">+                button.setOnClickListener {_ -&gt;
+</a><a href="#h9-3-21" id="h9-3-21" class="i">+                    val builder = AlertDialog.Builder(viewModel.context)
+</a><a href="#h9-3-22" id="h9-3-22" class="i">+                    builder.setTitle(context.translation.get(property.nameKey))
+</a><a href="#h9-3-23" id="h9-3-23" class="i">+
+</a><a href="#h9-3-24" id="h9-3-24" class="i">+                    val sortedStates = property.valueContainer.states.toSortedMap()
+</a><a href="#h9-3-25" id="h9-3-25" class="i">+
+</a><a href="#h9-3-26" id="h9-3-26" class="i">+                    builder.setMultiChoiceItems(
+</a><a href="#h9-3-27" id="h9-3-27" class="i">+                        sortedStates.toSortedMap().map { context.translation.get(&quot;option.&quot; + property.nameKey + &quot;.&quot; +it.key) }.toTypedArray(),
+</a><a href="#h9-3-28" id="h9-3-28" class="i">+                        sortedStates.map { it.value }.toBooleanArray()
+</a><a href="#h9-3-29" id="h9-3-29" class="i">+                    ) { _, which, isChecked -&gt;
+</a><a href="#h9-3-30" id="h9-3-30" class="i">+                        sortedStates.keys.toList()[which].let { key -&gt;
+</a><a href="#h9-3-31" id="h9-3-31" class="i">+                            property.valueContainer.states[key] = isChecked
+</a><a href="#h9-3-32" id="h9-3-32" class="i">+                        }
+</a><a href="#h9-3-33" id="h9-3-33" class="i">+                    }
+</a><a href="#h9-3-34" id="h9-3-34" class="i">+
+</a><a href="#h9-3-35" id="h9-3-35" class="i">+                    builder.setPositiveButton(&quot;OK&quot;) { _, _ -&gt;
+</a><a href="#h9-3-36" id="h9-3-36" class="i">+                        updateButtonText(button, property.valueContainer.toString())
+</a><a href="#h9-3-37" id="h9-3-37" class="i">+                    }
+</a><a href="#h9-3-38" id="h9-3-38" class="i">+
+</a><a href="#h9-3-39" id="h9-3-39" class="i">+                    builder.show()
+</a><a href="#h9-3-40" id="h9-3-40" class="i">+                }
+</a><a href="#h9-3-41" id="h9-3-41" class="i">+                ViewAppearanceHelper.applyTheme(viewModel, button)
+</a><a href="#h9-3-42" id="h9-3-42" class="i">+                button
+</a><a href="#h9-3-43" id="h9-3-43" class="i">+            }
+</a>             else -&gt; {
+                 TextView(viewModel.context)
+             }
+<b>diff --git a/<a id="h10" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/ConfigManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/ConfigManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/ConfigManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/ConfigManager.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -10,16 +10,12 @@ import me.rhunk.snapenhance.manager.Manager
+</a> import java.nio.charset.StandardCharsets
+ 
+ class ConfigManager(
+<a href="#h10-0-3" id="h10-0-3" class="d">-    private val context: ModContext,
+</a><a href="#h10-0-4" id="h10-0-4" class="d">-    config: MutableMap&lt;ConfigProperty, Any?&gt; = mutableMapOf()
+</a><a href="#h10-0-5" id="h10-0-5" class="d">-) : ConfigAccessor(config), Manager {
+</a><a href="#h10-0-6" id="h10-0-6" class="d">-
+</a><a href="#h10-0-7" id="h10-0-7" class="d">-    private val propertyList = ConfigProperty.sortedByCategory()
+</a><a href="#h10-0-8" id="h10-0-8" class="i">+    private val context: ModContext
+</a><a href="#h10-0-9" id="h10-0-9" class="i">+) : ConfigAccessor(), Manager {
+</a> 
+     override fun init() {
+<a href="#h10-0-12" id="h10-0-12" class="d">-        //generate default config
+</a><a href="#h10-0-13" id="h10-0-13" class="d">-        propertyList.forEach { key -&gt;
+</a><a href="#h10-0-14" id="h10-0-14" class="d">-            set(key, key.defaultValue)
+</a><a href="#h10-0-15" id="h10-0-15" class="i">+        ConfigProperty.sortedByCategory().forEach { key -&gt;
+</a><a href="#h10-0-16" id="h10-0-16" class="i">+            set(key, key.valueContainer)
+</a>         }
+ 
+         if (!context.bridgeClient.isFileExists(BridgeFileType.CONFIG)) {
+<a href="#h10-1" id="h10-1" class="h">@@ -44,16 +40,15 @@ class ConfigManager(
+</a>             String(configContent, StandardCharsets.UTF_8),
+             JsonObject::class.java
+         )
+<a href="#h10-1-3" id="h10-1-3" class="d">-        propertyList.forEach { key -&gt;
+</a><a href="#h10-1-4" id="h10-1-4" class="d">-            val value = context.gson.fromJson(configObject.get(key.name), key.defaultValue.javaClass) ?: key.defaultValue
+</a><a href="#h10-1-5" id="h10-1-5" class="d">-            set(key, value)
+</a><a href="#h10-1-6" id="h10-1-6" class="i">+        entries().forEach { (key, value) -&gt;
+</a><a href="#h10-1-7" id="h10-1-7" class="i">+            value.read(configObject.get(key.name)?.asString ?: value.write())
+</a>         }
+     }
+ 
+     fun writeConfig() {
+         val configObject = JsonObject()
+<a href="#h10-1-13" id="h10-1-13" class="d">-        propertyList.forEach { key -&gt;
+</a><a href="#h10-1-14" id="h10-1-14" class="d">-            configObject.add(key.name, context.gson.toJsonTree(get(key)))
+</a><a href="#h10-1-15" id="h10-1-15" class="i">+        entries().forEach { (key, value) -&gt;
+</a><a href="#h10-1-16" id="h10-1-16" class="i">+            configObject.addProperty(key.name, value.write())
+</a>         }
+         context.bridgeClient.writeFile(
+             BridgeFileType.CONFIG,
+<b>diff --git a/<a id="h11" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/TranslationManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/TranslationManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/TranslationManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/TranslationManager.kt</a></b>
+<a href="#h11-0" id="h11-0" class="h">@@ -1,5 +1,6 @@
+</a> package me.rhunk.snapenhance.manager.impl
+ 
+<a href="#h11-0-2" id="h11-0-2" class="i">+import com.google.gson.JsonObject
+</a> import com.google.gson.JsonParser
+ import me.rhunk.snapenhance.Logger
+ import me.rhunk.snapenhance.ModContext
+<a href="#h11-1" id="h11-1" class="h">@@ -22,15 +23,17 @@ class TranslationManager(
+</a>             return
+         }
+ 
+<a href="#h11-1-3" id="h11-1-3" class="d">-        translations.asJsonObject.entrySet().forEach {
+</a><a href="#h11-1-4" id="h11-1-4" class="d">-            if (it.value.isJsonPrimitive) {
+</a><a href="#h11-1-5" id="h11-1-5" class="d">-                translationMap[it.key] = it.value.asString
+</a><a href="#h11-1-6" id="h11-1-6" class="d">-            }
+</a><a href="#h11-1-7" id="h11-1-7" class="d">-            if (!it.value.isJsonObject) return@forEach
+</a><a href="#h11-1-8" id="h11-1-8" class="d">-            it.value.asJsonObject.entrySet().forEach { entry -&gt;
+</a><a href="#h11-1-9" id="h11-1-9" class="d">-                translationMap[&quot;${it.key}.${entry.key}&quot;] = entry.value.asString
+</a><a href="#h11-1-10" id="h11-1-10" class="i">+        fun scanObject(jsonObject: JsonObject, prefix: String = &quot;&quot;) {
+</a><a href="#h11-1-11" id="h11-1-11" class="i">+            jsonObject.entrySet().forEach {
+</a><a href="#h11-1-12" id="h11-1-12" class="i">+                if (it.value.isJsonPrimitive) {
+</a><a href="#h11-1-13" id="h11-1-13" class="i">+                    translationMap[&quot;$prefix${it.key}&quot;] = it.value.asString
+</a><a href="#h11-1-14" id="h11-1-14" class="i">+                }
+</a><a href="#h11-1-15" id="h11-1-15" class="i">+                if (!it.value.isJsonObject) return@forEach
+</a><a href="#h11-1-16" id="h11-1-16" class="i">+                scanObject(it.value.asJsonObject, &quot;$prefix${it.key}.&quot;)
+</a>             }
+         }
+<a href="#h11-1-19" id="h11-1-19" class="i">+
+</a><a href="#h11-1-20" id="h11-1-20" class="i">+        scanObject(translations)
+</a>     }
+ 
+ 
+</pre>
+</div>
+</body>
+</html>

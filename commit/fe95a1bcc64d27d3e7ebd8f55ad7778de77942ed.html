@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(core/experimental): custom story expiration - refactor send override - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/fe95a1bcc64d27d3e7ebd8f55ad7778de77942ed.html">fe95a1bcc64d27d3e7ebd8f55ad7778de77942ed</a>
+<b>parent</b> <a href="../commit/a01c2b09ca9c344d8e95e92a0734c9cf544eb28d.html">a01c2b09ca9c344d8e95e92a0734c9cf544eb28d</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 11 Oct 2023 23:58:33 +0200
+
+feat(core/experimental): custom story expiration
+- refactor send override
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">8</td><td><span class="i">++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/SendOverride.kt</a></td><td> | </td><td class="num">44</td><td><span class="i">++++++++++++++++++++++++++</span><span class="d">------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+</table></pre><pre>4 files changed, 33 insertions(+), 24 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -460,10 +460,6 @@
+</a>                             &quot;disable_bitmoji&quot;: {
+                                 &quot;name&quot;: &quot;Disable Bitmoji&quot;,
+                                 &quot;description&quot;: &quot;Disables Friends Profile Bitmoji&quot;
+<a href="#h0-0-3" id="h0-0-3" class="d">-                            },
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-                            &quot;fix_gallery_media_override&quot;: {
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-                                &quot;name&quot;: &quot;Fix Gallery Media Override&quot;,
+</a><a href="#h0-0-6" id="h0-0-6" class="d">-                                &quot;description&quot;: &quot;Fixes various issues with the Gallery Media Send Override feature (e.g. Save Snaps in chat)&quot;
+</a>                             }
+                         }
+                     },
+<a href="#h0-1" id="h0-1" class="h">@@ -519,6 +515,10 @@
+</a>                         &quot;name&quot;: &quot;Infinite Story Boost&quot;,
+                         &quot;description&quot;: &quot;Bypass the Story Boost Limit delay&quot;
+                     },
+<a href="#h0-1-3" id="h0-1-3" class="i">+                    &quot;custom_story_expiration&quot;: {
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+                        &quot;name&quot;: &quot;Custom Story Expiration&quot;,
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+                        &quot;description&quot;: &quot;Set a custom story expiration time in hours (0 to disable)&quot;
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+                    },
+</a>                     &quot;meo_passcode_bypass&quot;: {
+                         &quot;name&quot;: &quot;My Eyes Only Passcode Bypass&quot;,
+                         &quot;description&quot;: &quot;Bypass the My Eyes Only passcode\nThis will only work if the passcode has been entered correctly before&quot;
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -6,7 +6,6 @@ import me.rhunk.snapenhance.common.config.FeatureNotice
+</a> class Experimental : ConfigContainer() {
+     class NativeHooks : ConfigContainer(hasGlobalState = true) {
+         val disableBitmoji = boolean(&quot;disable_bitmoji&quot;)
+<a href="#h1-0-3" id="h1-0-3" class="d">-        val fixGalleryMediaOverride = boolean(&quot;fix_gallery_media_override&quot;)
+</a>     }
+ 
+     val nativeHooks = container(&quot;native_hooks&quot;, NativeHooks()) { icon = &quot;Memory&quot;; requireRestart() }
+<a href="#h1-1" id="h1-1" class="h">@@ -15,6 +14,7 @@ class Experimental : ConfigContainer() {
+</a>     val appPasscode = string(&quot;app_passcode&quot;)
+     val appLockOnResume = boolean(&quot;app_lock_on_resume&quot;)
+     val infiniteStoryBoost = boolean(&quot;infinite_story_boost&quot;)
+<a href="#h1-1-3" id="h1-1-3" class="i">+    val customStoryExpiration = integer(&quot;custom_story_expiration&quot;) { requireRestart(); nativeHooks() }
+</a>     val meoPasscodeBypass = boolean(&quot;meo_passcode_bypass&quot;)
+     val unlimitedMultiSnap = boolean(&quot;unlimited_multi_snap&quot;) { addNotices(FeatureNotice.BAN_RISK)}
+     val noFriendScoreDelay = boolean(&quot;no_friend_score_delay&quot;) { requireRestart()}
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/SendOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/SendOverride.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/SendOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/SendOverride.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -10,49 +10,57 @@ import me.rhunk.snapenhance.core.features.Feature
+</a> import me.rhunk.snapenhance.core.features.FeatureLoadParams
+ import me.rhunk.snapenhance.core.messaging.MessageSender
+ import me.rhunk.snapenhance.core.ui.ViewAppearanceHelper
+<a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.nativelib.NativeLib
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import kotlin.math.absoluteValue
+</a> 
+ class SendOverride : Feature(&quot;Send Override&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+     private var isLastSnapSavable = false
+<a href="#h2-0-8" id="h2-0-8" class="d">-
+</a><a href="#h2-0-9" id="h2-0-9" class="d">-    override fun init() {
+</a><a href="#h2-0-10" id="h2-0-10" class="d">-        val fixGalleryMediaSendOverride = context.config.experimental.nativeHooks.let {
+</a><a href="#h2-0-11" id="h2-0-11" class="d">-            it.globalState == true &amp;&amp; it.fixGalleryMediaOverride.get()
+</a><a href="#h2-0-12" id="h2-0-12" class="d">-        }
+</a><a href="#h2-0-13" id="h2-0-13" class="d">-        val typeNames = mutableListOf(
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+    private val typeNames by lazy {
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+        mutableListOf(
+</a>             &quot;ORIGINAL&quot;,
+             &quot;SNAP&quot;,
+             &quot;NOTE&quot;
+         ).also {
+<a href="#h2-0-20" id="h2-0-20" class="d">-            if (fixGalleryMediaSendOverride) {
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+            if (NativeLib.initialized) {
+</a>                 it.add(&quot;SAVABLE_SNAP&quot;)
+             }
+         }.associateWith {
+<a href="#h2-0-25" id="h2-0-25" class="d">-           it
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+            it
+</a>         }
+<a href="#h2-0-28" id="h2-0-28" class="i">+    }
+</a> 
+<a href="#h2-0-30" id="h2-0-30" class="d">-        context.event.subscribe(UnaryCallEvent::class, { fixGalleryMediaSendOverride }) { event -&gt;
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+    override fun init() {
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+        context.event.subscribe(UnaryCallEvent::class) { event -&gt;
+</a>             if (event.uri != &quot;/messagingcoreservice.MessagingCoreService/CreateContentMessage&quot;) return@subscribe
+<a href="#h2-0-34" id="h2-0-34" class="d">-            if (!isLastSnapSavable) return@subscribe
+</a><a href="#h2-0-35" id="h2-0-35" class="d">-            ProtoReader(event.buffer).also {
+</a><a href="#h2-0-36" id="h2-0-36" class="d">-                // only affect snaps
+</a><a href="#h2-0-37" id="h2-0-37" class="d">-                if (!it.containsPath(*Constants.ARROYO_MEDIA_CONTAINER_PROTO_PATH, 11)) return@subscribe
+</a><a href="#h2-0-38" id="h2-0-38" class="i">+            val protoEditor = ProtoEditor(event.buffer)
+</a><a href="#h2-0-39" id="h2-0-39" class="i">+
+</a><a href="#h2-0-40" id="h2-0-40" class="i">+            context.config.experimental.customStoryExpiration.get().takeIf { it &gt; 0 }?.absoluteValue?.also { expirationInHours -&gt;
+</a><a href="#h2-0-41" id="h2-0-41" class="i">+                protoEditor.edit(3, 2, 2) {
+</a><a href="#h2-0-42" id="h2-0-42" class="i">+                    remove(1)
+</a><a href="#h2-0-43" id="h2-0-43" class="i">+                    add(1) {
+</a><a href="#h2-0-44" id="h2-0-44" class="i">+                        from(2) {
+</a><a href="#h2-0-45" id="h2-0-45" class="i">+                            addVarInt(1, expirationInHours)
+</a><a href="#h2-0-46" id="h2-0-46" class="i">+                            context.log.verbose(&quot;add story expiration to $expirationInHours hours&quot;)
+</a><a href="#h2-0-47" id="h2-0-47" class="i">+                        }
+</a><a href="#h2-0-48" id="h2-0-48" class="i">+                    }
+</a><a href="#h2-0-49" id="h2-0-49" class="i">+                }
+</a>             }
+ 
+<a href="#h2-0-52" id="h2-0-52" class="d">-            event.buffer = ProtoEditor(event.buffer).apply {
+</a><a href="#h2-0-53" id="h2-0-53" class="d">-                //remove the max view time
+</a><a href="#h2-0-54" id="h2-0-54" class="d">-                edit(*Constants.ARROYO_MEDIA_CONTAINER_PROTO_PATH, 11, 5, 2) {
+</a><a href="#h2-0-55" id="h2-0-55" class="i">+            if (isLastSnapSavable &amp;&amp; ProtoReader(event.buffer).containsPath(*Constants.ARROYO_MEDIA_CONTAINER_PROTO_PATH, 11)) {
+</a><a href="#h2-0-56" id="h2-0-56" class="i">+                protoEditor.edit(*Constants.ARROYO_MEDIA_CONTAINER_PROTO_PATH, 11, 5, 2) {
+</a>                     remove(8)
+                     addBuffer(6, byteArrayOf())
+                 }
+                 //make snaps savable in chat
+<a href="#h2-0-61" id="h2-0-61" class="d">-                edit(4) {
+</a><a href="#h2-0-62" id="h2-0-62" class="i">+                protoEditor.edit(4) {
+</a>                     val savableState = firstOrNull(7)?.value ?: return@edit
+                     if (savableState == 2L) {
+                         remove(7)
+                         addVarInt(7, 3)
+                     }
+                 }
+<a href="#h2-0-69" id="h2-0-69" class="d">-            }.toByteArray()
+</a><a href="#h2-0-70" id="h2-0-70" class="i">+            }
+</a><a href="#h2-0-71" id="h2-0-71" class="i">+            event.buffer = protoEditor.toByteArray()
+</a>         }
+ 
+         context.event.subscribe(SendMessageWithContentEvent::class, {
+<b>diff --git a/<a id="h3" href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a> b/<a href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -5,7 +5,8 @@ import android.util.Log
+</a> class NativeLib {
+     var nativeUnaryCallCallback: (NativeRequestData) -&gt; Unit = {}
+     companion object {
+<a href="#h3-0-3" id="h3-0-3" class="d">-        private var initialized = false
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+        var initialized = false
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+            private set
+</a>     }
+ 
+     fun initOnce(classloader: ClassLoader) {
+</pre>
+</div>
+</body>
+</html>

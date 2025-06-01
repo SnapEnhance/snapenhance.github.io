@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(media_downloader): story voice note reply - refactor media author and download source - optimize download section - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/5776d4411103691e0f09a2e902cb6e0591a8ccb5.html">5776d4411103691e0f09a2e902cb6e0591a8ccb5</a>
+<b>parent</b> <a href="../commit/ea6260463c8339800f252c7744f6bccc19c8ab55.html">ea6260463c8339800f252c7744f6bccc19c8ab55</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri,  1 Sep 2023 11:50:42 +0200
+
+fix(media_downloader): story voice note reply
+- refactor media author and download source
+- optimize download section
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/LogManager.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadObject.kt</a></td><td> | </td><td class="num">34</td><td><span class="i">++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">+++++</span><span class="d">---</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h4">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadTaskManager.kt</a></td><td> | </td><td class="num">182</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/downloads/DownloadsSection.kt</a></td><td> | </td><td class="num">67</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">----------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/ComposeImageHelper.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">core/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">7</td><td><span class="i">++++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/DownloaderConfig.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">++++</span><span class="d">---</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h9">core/src/main/kotlin/me/rhunk/snapenhance/core/download/DownloadTaskManager.kt</a></td><td> | </td><td class="num">183</td><td><span class="i"></span><span class="d">-------------------------------------------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadMetadata.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h11">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadObject.kt</a></td><td> | </td><td class="num">32</td><td><span class="i"></span><span class="d">--------------------------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h12">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/MediaDownloadSource.kt</a></td><td> | </td><td class="num">29</td><td><span class="i">+++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="D">D</td><td><a href="#h13">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/MediaFilter.kt</a></td><td> | </td><td class="num">19</td><td><span class="i"></span><span class="d">-------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h14">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">96</td><td><span class="i">+++++++++++++++++++++++++++++++++++</span><span class="d">--------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h15">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/EncryptionHelper.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h16">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt</a></td><td> | </td><td class="num">11</td><td><span class="i">++++++</span><span class="d">-----</span></td></tr>
+</table></pre><pre>17 files changed, 361 insertions(+), 330 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/LogManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/LogManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/LogManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/LogManager.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -180,7 +180,7 @@ class LogManager(
+</a> 
+     fun error(message: Any?, throwable: Throwable, tag: String = TAG) {
+         internalLog(tag, LogLevel.ERROR, message)
+<a href="#h0-0-3" id="h0-0-3" class="d">-        internalLog(tag, LogLevel.ERROR, throwable)
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        internalLog(tag, LogLevel.ERROR, throwable.stackTraceToString())
+</a>     }
+ 
+     fun info(message: Any?, tag: String = TAG) {
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -20,7 +20,7 @@ import me.rhunk.snapenhance.core.BuildConfig
+</a> import me.rhunk.snapenhance.core.bridge.wrapper.LocaleWrapper
+ import me.rhunk.snapenhance.core.bridge.wrapper.MappingsWrapper
+ import me.rhunk.snapenhance.core.config.ModConfig
+<a href="#h1-0-3" id="h1-0-3" class="d">-import me.rhunk.snapenhance.core.download.DownloadTaskManager
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import me.rhunk.snapenhance.download.DownloadTaskManager
+</a> import me.rhunk.snapenhance.messaging.ModDatabase
+ import me.rhunk.snapenhance.messaging.StreaksReminder
+ import me.rhunk.snapenhance.ui.manager.MainActivity
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadObject.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadObject.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadObject.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadObject.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -0,0 +1,34 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="i">+package me.rhunk.snapenhance.download
+</a><a href="#h2-0-1" id="h2-0-1" class="i">+
+</a><a href="#h2-0-2" id="h2-0-2" class="i">+import kotlinx.coroutines.Job
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.core.download.data.DownloadMetadata
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import me.rhunk.snapenhance.core.download.data.DownloadStage
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+data class DownloadObject(
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+    var downloadId: Int = 0,
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+    var outputFile: String? = null,
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+    val metadata : DownloadMetadata
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+) {
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+    var job: Job? = null
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+    var changeListener = { _: DownloadStage, _: DownloadStage -&gt; }
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+    lateinit var updateTaskCallback: (DownloadObject) -&gt; Unit
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+
+</a><a href="#h2-0-16" id="h2-0-16" class="i">+    private var _stage: DownloadStage = DownloadStage.PENDING
+</a><a href="#h2-0-17" id="h2-0-17" class="i">+    var downloadStage: DownloadStage
+</a><a href="#h2-0-18" id="h2-0-18" class="i">+        get() = synchronized(this) {
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+            _stage
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+        }
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+        set(value) = synchronized(this) {
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+            changeListener(_stage, value)
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+            _stage = value
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+            updateTaskCallback(this)
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+        }
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+    fun isJobActive() = job?.isActive == true
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+    fun cancel() {
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+        downloadStage = DownloadStage.CANCELLED
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+        job?.cancel()
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+    }
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+}
+</a><b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -16,14 +16,12 @@ import kotlinx.coroutines.joinAll
+</a> import kotlinx.coroutines.launch
+ import kotlinx.coroutines.runBlocking
+ import me.rhunk.snapenhance.Constants
+<a href="#h3-0-3" id="h3-0-3" class="d">-import me.rhunk.snapenhance.Logger
+</a> import me.rhunk.snapenhance.RemoteSideContext
+ import me.rhunk.snapenhance.bridge.DownloadCallback
+ import me.rhunk.snapenhance.core.download.DownloadManagerClient
+ import me.rhunk.snapenhance.data.FileType
+ import me.rhunk.snapenhance.core.download.data.DownloadMediaType
+ import me.rhunk.snapenhance.core.download.data.DownloadMetadata
+<a href="#h3-0-10" id="h3-0-10" class="d">-import me.rhunk.snapenhance.core.download.data.DownloadObject
+</a> import me.rhunk.snapenhance.core.download.data.DownloadRequest
+ import me.rhunk.snapenhance.core.download.data.DownloadStage
+ import me.rhunk.snapenhance.core.download.data.InputMedia
+<a href="#h3-1" id="h3-1" class="h">@@ -320,7 +318,11 @@ class DownloadProcessor (
+</a> 
+             val downloadObjectObject = DownloadObject(
+                 metadata = downloadMetadata
+<a href="#h3-1-3" id="h3-1-3" class="d">-            ).apply { downloadTaskManager = remoteSideContext.downloadTaskManager }
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+            ).apply {
+</a><a href="#h3-1-5" id="h3-1-5" class="i">+                updateTaskCallback = {
+</a><a href="#h3-1-6" id="h3-1-6" class="i">+                    remoteSideContext.downloadTaskManager.updateTask(it)
+</a><a href="#h3-1-7" id="h3-1-7" class="i">+                }
+</a><a href="#h3-1-8" id="h3-1-8" class="i">+            }
+</a> 
+             downloadObjectObject.also {
+                 remoteSideContext.downloadTaskManager.addTask(it)
+<b>diff --git a/<a id="h4" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadTaskManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadTaskManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadTaskManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadTaskManager.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -0,0 +1,181 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="i">+package me.rhunk.snapenhance.download
+</a><a href="#h4-0-1" id="h4-0-1" class="i">+
+</a><a href="#h4-0-2" id="h4-0-2" class="i">+import android.annotation.SuppressLint
+</a><a href="#h4-0-3" id="h4-0-3" class="i">+import android.content.Context
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+import android.database.sqlite.SQLiteDatabase
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+import me.rhunk.snapenhance.core.download.data.DownloadMetadata
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+import me.rhunk.snapenhance.core.download.data.DownloadStage
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+import me.rhunk.snapenhance.core.download.data.MediaDownloadSource
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+import me.rhunk.snapenhance.util.SQLiteDatabaseHelper
+</a><a href="#h4-0-9" id="h4-0-9" class="i">+import me.rhunk.snapenhance.util.ktx.getIntOrNull
+</a><a href="#h4-0-10" id="h4-0-10" class="i">+import me.rhunk.snapenhance.util.ktx.getStringOrNull
+</a><a href="#h4-0-11" id="h4-0-11" class="i">+
+</a><a href="#h4-0-12" id="h4-0-12" class="i">+class DownloadTaskManager {
+</a><a href="#h4-0-13" id="h4-0-13" class="i">+    private lateinit var taskDatabase: SQLiteDatabase
+</a><a href="#h4-0-14" id="h4-0-14" class="i">+    private val pendingTasks = mutableMapOf&lt;Int, DownloadObject&gt;()
+</a><a href="#h4-0-15" id="h4-0-15" class="i">+    private val cachedTasks = mutableMapOf&lt;Int, DownloadObject&gt;()
+</a><a href="#h4-0-16" id="h4-0-16" class="i">+
+</a><a href="#h4-0-17" id="h4-0-17" class="i">+    @SuppressLint(&quot;Range&quot;)
+</a><a href="#h4-0-18" id="h4-0-18" class="i">+    fun init(context: Context) {
+</a><a href="#h4-0-19" id="h4-0-19" class="i">+        if (this::taskDatabase.isInitialized) return
+</a><a href="#h4-0-20" id="h4-0-20" class="i">+        taskDatabase = context.openOrCreateDatabase(&quot;download_tasks&quot;, Context.MODE_PRIVATE, null).apply {
+</a><a href="#h4-0-21" id="h4-0-21" class="i">+            SQLiteDatabaseHelper.createTablesFromSchema(this, mapOf(
+</a><a href="#h4-0-22" id="h4-0-22" class="i">+                &quot;tasks&quot; to listOf(
+</a><a href="#h4-0-23" id="h4-0-23" class="i">+                    &quot;id INTEGER PRIMARY KEY AUTOINCREMENT&quot;,
+</a><a href="#h4-0-24" id="h4-0-24" class="i">+                    &quot;hash VARCHAR UNIQUE&quot;,
+</a><a href="#h4-0-25" id="h4-0-25" class="i">+                    &quot;outputPath TEXT&quot;,
+</a><a href="#h4-0-26" id="h4-0-26" class="i">+                    &quot;outputFile TEXT&quot;,
+</a><a href="#h4-0-27" id="h4-0-27" class="i">+                    &quot;mediaAuthor TEXT&quot;,
+</a><a href="#h4-0-28" id="h4-0-28" class="i">+                    &quot;downloadSource TEXT&quot;,
+</a><a href="#h4-0-29" id="h4-0-29" class="i">+                    &quot;iconUrl TEXT&quot;,
+</a><a href="#h4-0-30" id="h4-0-30" class="i">+                    &quot;downloadStage TEXT&quot;
+</a><a href="#h4-0-31" id="h4-0-31" class="i">+                )
+</a><a href="#h4-0-32" id="h4-0-32" class="i">+            ))
+</a><a href="#h4-0-33" id="h4-0-33" class="i">+        }
+</a><a href="#h4-0-34" id="h4-0-34" class="i">+    }
+</a><a href="#h4-0-35" id="h4-0-35" class="i">+
+</a><a href="#h4-0-36" id="h4-0-36" class="i">+    fun addTask(task: DownloadObject): Int {
+</a><a href="#h4-0-37" id="h4-0-37" class="i">+        taskDatabase.execSQL(&quot;INSERT INTO tasks (hash, outputPath, outputFile, downloadSource, mediaAuthor, iconUrl, downloadStage) VALUES (?, ?, ?, ?, ?, ?, ?)&quot;,
+</a><a href="#h4-0-38" id="h4-0-38" class="i">+            arrayOf(
+</a><a href="#h4-0-39" id="h4-0-39" class="i">+                task.metadata.mediaIdentifier,
+</a><a href="#h4-0-40" id="h4-0-40" class="i">+                task.metadata.outputPath,
+</a><a href="#h4-0-41" id="h4-0-41" class="i">+                task.outputFile,
+</a><a href="#h4-0-42" id="h4-0-42" class="i">+                task.metadata.downloadSource,
+</a><a href="#h4-0-43" id="h4-0-43" class="i">+                task.metadata.mediaAuthor,
+</a><a href="#h4-0-44" id="h4-0-44" class="i">+                task.metadata.iconUrl,
+</a><a href="#h4-0-45" id="h4-0-45" class="i">+                task.downloadStage.name
+</a><a href="#h4-0-46" id="h4-0-46" class="i">+            )
+</a><a href="#h4-0-47" id="h4-0-47" class="i">+        )
+</a><a href="#h4-0-48" id="h4-0-48" class="i">+        task.downloadId = taskDatabase.rawQuery(&quot;SELECT last_insert_rowid()&quot;, null).use {
+</a><a href="#h4-0-49" id="h4-0-49" class="i">+            it.moveToFirst()
+</a><a href="#h4-0-50" id="h4-0-50" class="i">+            it.getInt(0)
+</a><a href="#h4-0-51" id="h4-0-51" class="i">+        }
+</a><a href="#h4-0-52" id="h4-0-52" class="i">+        pendingTasks[task.downloadId] = task
+</a><a href="#h4-0-53" id="h4-0-53" class="i">+        return task.downloadId
+</a><a href="#h4-0-54" id="h4-0-54" class="i">+    }
+</a><a href="#h4-0-55" id="h4-0-55" class="i">+
+</a><a href="#h4-0-56" id="h4-0-56" class="i">+    fun updateTask(task: DownloadObject) {
+</a><a href="#h4-0-57" id="h4-0-57" class="i">+        taskDatabase.execSQL(&quot;UPDATE tasks SET hash = ?, outputPath = ?, outputFile = ?, downloadSource = ?, mediaAuthor = ?, iconUrl = ?, downloadStage = ? WHERE id = ?&quot;,
+</a><a href="#h4-0-58" id="h4-0-58" class="i">+            arrayOf(
+</a><a href="#h4-0-59" id="h4-0-59" class="i">+                task.metadata.mediaIdentifier,
+</a><a href="#h4-0-60" id="h4-0-60" class="i">+                task.metadata.outputPath,
+</a><a href="#h4-0-61" id="h4-0-61" class="i">+                task.outputFile,
+</a><a href="#h4-0-62" id="h4-0-62" class="i">+                task.metadata.downloadSource,
+</a><a href="#h4-0-63" id="h4-0-63" class="i">+                task.metadata.mediaAuthor,
+</a><a href="#h4-0-64" id="h4-0-64" class="i">+                task.metadata.iconUrl,
+</a><a href="#h4-0-65" id="h4-0-65" class="i">+                task.downloadStage.name,
+</a><a href="#h4-0-66" id="h4-0-66" class="i">+                task.downloadId
+</a><a href="#h4-0-67" id="h4-0-67" class="i">+            )
+</a><a href="#h4-0-68" id="h4-0-68" class="i">+        )
+</a><a href="#h4-0-69" id="h4-0-69" class="i">+        //if the task is no longer active, move it to the cached tasks
+</a><a href="#h4-0-70" id="h4-0-70" class="i">+        if (task.isJobActive()) {
+</a><a href="#h4-0-71" id="h4-0-71" class="i">+            pendingTasks[task.downloadId] = task
+</a><a href="#h4-0-72" id="h4-0-72" class="i">+        } else {
+</a><a href="#h4-0-73" id="h4-0-73" class="i">+            pendingTasks.remove(task.downloadId)
+</a><a href="#h4-0-74" id="h4-0-74" class="i">+            cachedTasks[task.downloadId] = task
+</a><a href="#h4-0-75" id="h4-0-75" class="i">+        }
+</a><a href="#h4-0-76" id="h4-0-76" class="i">+    }
+</a><a href="#h4-0-77" id="h4-0-77" class="i">+
+</a><a href="#h4-0-78" id="h4-0-78" class="i">+    @SuppressLint(&quot;Range&quot;)
+</a><a href="#h4-0-79" id="h4-0-79" class="i">+    fun canDownloadMedia(mediaIdentifier: String?): DownloadStage? {
+</a><a href="#h4-0-80" id="h4-0-80" class="i">+        if (mediaIdentifier == null) return null
+</a><a href="#h4-0-81" id="h4-0-81" class="i">+
+</a><a href="#h4-0-82" id="h4-0-82" class="i">+        val cursor = taskDatabase.rawQuery(&quot;SELECT * FROM tasks WHERE hash = ?&quot;, arrayOf(mediaIdentifier))
+</a><a href="#h4-0-83" id="h4-0-83" class="i">+        if (cursor.count &gt; 0) {
+</a><a href="#h4-0-84" id="h4-0-84" class="i">+            cursor.moveToFirst()
+</a><a href="#h4-0-85" id="h4-0-85" class="i">+            val downloadStage = DownloadStage.valueOf(cursor.getString(cursor.getColumnIndex(&quot;downloadStage&quot;)))
+</a><a href="#h4-0-86" id="h4-0-86" class="i">+            cursor.close()
+</a><a href="#h4-0-87" id="h4-0-87" class="i">+
+</a><a href="#h4-0-88" id="h4-0-88" class="i">+            //if the stage has reached a final stage and is not in a saved state, remove the task
+</a><a href="#h4-0-89" id="h4-0-89" class="i">+            if (downloadStage.isFinalStage &amp;&amp; downloadStage != DownloadStage.SAVED) {
+</a><a href="#h4-0-90" id="h4-0-90" class="i">+                taskDatabase.execSQL(&quot;DELETE FROM tasks WHERE hash = ?&quot;, arrayOf(mediaIdentifier))
+</a><a href="#h4-0-91" id="h4-0-91" class="i">+                return null
+</a><a href="#h4-0-92" id="h4-0-92" class="i">+            }
+</a><a href="#h4-0-93" id="h4-0-93" class="i">+
+</a><a href="#h4-0-94" id="h4-0-94" class="i">+            return downloadStage
+</a><a href="#h4-0-95" id="h4-0-95" class="i">+        }
+</a><a href="#h4-0-96" id="h4-0-96" class="i">+        cursor.close()
+</a><a href="#h4-0-97" id="h4-0-97" class="i">+        return null
+</a><a href="#h4-0-98" id="h4-0-98" class="i">+    }
+</a><a href="#h4-0-99" id="h4-0-99" class="i">+
+</a><a href="#h4-0-100" id="h4-0-100" class="i">+    fun isEmpty(): Boolean {
+</a><a href="#h4-0-101" id="h4-0-101" class="i">+        return cachedTasks.isEmpty() &amp;&amp; pendingTasks.isEmpty()
+</a><a href="#h4-0-102" id="h4-0-102" class="i">+    }
+</a><a href="#h4-0-103" id="h4-0-103" class="i">+
+</a><a href="#h4-0-104" id="h4-0-104" class="i">+    private fun removeTask(id: Int) {
+</a><a href="#h4-0-105" id="h4-0-105" class="i">+        taskDatabase.execSQL(&quot;DELETE FROM tasks WHERE id = ?&quot;, arrayOf(id))
+</a><a href="#h4-0-106" id="h4-0-106" class="i">+        cachedTasks.remove(id)
+</a><a href="#h4-0-107" id="h4-0-107" class="i">+        pendingTasks.remove(id)
+</a><a href="#h4-0-108" id="h4-0-108" class="i">+    }
+</a><a href="#h4-0-109" id="h4-0-109" class="i">+
+</a><a href="#h4-0-110" id="h4-0-110" class="i">+    fun removeTask(task: DownloadObject) {
+</a><a href="#h4-0-111" id="h4-0-111" class="i">+        removeTask(task.downloadId)
+</a><a href="#h4-0-112" id="h4-0-112" class="i">+    }
+</a><a href="#h4-0-113" id="h4-0-113" class="i">+
+</a><a href="#h4-0-114" id="h4-0-114" class="i">+    fun queryFirstTasks(filter: MediaDownloadSource): Map&lt;Int, DownloadObject&gt; {
+</a><a href="#h4-0-115" id="h4-0-115" class="i">+        val isPendingFilter = filter == MediaDownloadSource.PENDING
+</a><a href="#h4-0-116" id="h4-0-116" class="i">+        val tasks = mutableMapOf&lt;Int, DownloadObject&gt;()
+</a><a href="#h4-0-117" id="h4-0-117" class="i">+
+</a><a href="#h4-0-118" id="h4-0-118" class="i">+        tasks.putAll(pendingTasks.filter { isPendingFilter || filter.matches(it.value.metadata.downloadSource) })
+</a><a href="#h4-0-119" id="h4-0-119" class="i">+        if (isPendingFilter) {
+</a><a href="#h4-0-120" id="h4-0-120" class="i">+            return tasks.toSortedMap(reverseOrder())
+</a><a href="#h4-0-121" id="h4-0-121" class="i">+        }
+</a><a href="#h4-0-122" id="h4-0-122" class="i">+
+</a><a href="#h4-0-123" id="h4-0-123" class="i">+        tasks.putAll(queryTasks(
+</a><a href="#h4-0-124" id="h4-0-124" class="i">+            from = tasks.values.lastOrNull()?.downloadId ?: Int.MAX_VALUE,
+</a><a href="#h4-0-125" id="h4-0-125" class="i">+            amount = 30,
+</a><a href="#h4-0-126" id="h4-0-126" class="i">+            filter = filter
+</a><a href="#h4-0-127" id="h4-0-127" class="i">+        ))
+</a><a href="#h4-0-128" id="h4-0-128" class="i">+
+</a><a href="#h4-0-129" id="h4-0-129" class="i">+        return tasks.toSortedMap(reverseOrder())
+</a><a href="#h4-0-130" id="h4-0-130" class="i">+    }
+</a><a href="#h4-0-131" id="h4-0-131" class="i">+
+</a><a href="#h4-0-132" id="h4-0-132" class="i">+    @SuppressLint(&quot;Range&quot;)
+</a><a href="#h4-0-133" id="h4-0-133" class="i">+    fun queryTasks(from: Int, amount: Int = 30, filter: MediaDownloadSource = MediaDownloadSource.NONE): Map&lt;Int, DownloadObject&gt; {
+</a><a href="#h4-0-134" id="h4-0-134" class="i">+        if (filter == MediaDownloadSource.PENDING) {
+</a><a href="#h4-0-135" id="h4-0-135" class="i">+            return emptyMap()
+</a><a href="#h4-0-136" id="h4-0-136" class="i">+        }
+</a><a href="#h4-0-137" id="h4-0-137" class="i">+
+</a><a href="#h4-0-138" id="h4-0-138" class="i">+        val cursor = taskDatabase.rawQuery(
+</a><a href="#h4-0-139" id="h4-0-139" class="i">+            &quot;SELECT * FROM tasks WHERE id &lt; ? AND downloadSource LIKE ? ORDER BY id DESC LIMIT ?&quot;,
+</a><a href="#h4-0-140" id="h4-0-140" class="i">+            arrayOf(
+</a><a href="#h4-0-141" id="h4-0-141" class="i">+                from.toString(),
+</a><a href="#h4-0-142" id="h4-0-142" class="i">+                if (filter.ignoreFilter) &quot;%&quot; else &quot;%${filter.key}&quot;,
+</a><a href="#h4-0-143" id="h4-0-143" class="i">+                amount.toString()
+</a><a href="#h4-0-144" id="h4-0-144" class="i">+            )
+</a><a href="#h4-0-145" id="h4-0-145" class="i">+        )
+</a><a href="#h4-0-146" id="h4-0-146" class="i">+
+</a><a href="#h4-0-147" id="h4-0-147" class="i">+        val result = sortedMapOf&lt;Int, DownloadObject&gt;()
+</a><a href="#h4-0-148" id="h4-0-148" class="i">+
+</a><a href="#h4-0-149" id="h4-0-149" class="i">+        while (cursor.moveToNext()) {
+</a><a href="#h4-0-150" id="h4-0-150" class="i">+            val task = DownloadObject(
+</a><a href="#h4-0-151" id="h4-0-151" class="i">+                downloadId = cursor.getIntOrNull(&quot;id&quot;)!!,
+</a><a href="#h4-0-152" id="h4-0-152" class="i">+                outputFile = cursor.getStringOrNull(&quot;outputFile&quot;),
+</a><a href="#h4-0-153" id="h4-0-153" class="i">+                metadata = DownloadMetadata(
+</a><a href="#h4-0-154" id="h4-0-154" class="i">+                    outputPath = cursor.getStringOrNull(&quot;outputPath&quot;)!!,
+</a><a href="#h4-0-155" id="h4-0-155" class="i">+                    mediaIdentifier = cursor.getStringOrNull(&quot;hash&quot;),
+</a><a href="#h4-0-156" id="h4-0-156" class="i">+                    downloadSource = cursor.getStringOrNull(&quot;downloadSource&quot;) ?: MediaDownloadSource.NONE.key,
+</a><a href="#h4-0-157" id="h4-0-157" class="i">+                    mediaAuthor = cursor.getStringOrNull(&quot;mediaAuthor&quot;),
+</a><a href="#h4-0-158" id="h4-0-158" class="i">+                    iconUrl = cursor.getStringOrNull(&quot;iconUrl&quot;)
+</a><a href="#h4-0-159" id="h4-0-159" class="i">+                )
+</a><a href="#h4-0-160" id="h4-0-160" class="i">+            ).apply {
+</a><a href="#h4-0-161" id="h4-0-161" class="i">+                updateTaskCallback = { updateTask(it) }
+</a><a href="#h4-0-162" id="h4-0-162" class="i">+                downloadStage = DownloadStage.valueOf(cursor.getStringOrNull(&quot;downloadStage&quot;)!!)
+</a><a href="#h4-0-163" id="h4-0-163" class="i">+                //if downloadStage is not saved, it means the app was killed before the download was finished
+</a><a href="#h4-0-164" id="h4-0-164" class="i">+                if (downloadStage != DownloadStage.SAVED) {
+</a><a href="#h4-0-165" id="h4-0-165" class="i">+                    downloadStage = DownloadStage.FAILED
+</a><a href="#h4-0-166" id="h4-0-166" class="i">+                }
+</a><a href="#h4-0-167" id="h4-0-167" class="i">+            }
+</a><a href="#h4-0-168" id="h4-0-168" class="i">+            result[task.downloadId] = task
+</a><a href="#h4-0-169" id="h4-0-169" class="i">+        }
+</a><a href="#h4-0-170" id="h4-0-170" class="i">+        cursor.close()
+</a><a href="#h4-0-171" id="h4-0-171" class="i">+
+</a><a href="#h4-0-172" id="h4-0-172" class="i">+        return result.toSortedMap(reverseOrder())
+</a><a href="#h4-0-173" id="h4-0-173" class="i">+    }
+</a><a href="#h4-0-174" id="h4-0-174" class="i">+
+</a><a href="#h4-0-175" id="h4-0-175" class="i">+    fun removeAllTasks() {
+</a><a href="#h4-0-176" id="h4-0-176" class="i">+        taskDatabase.execSQL(&quot;DELETE FROM tasks&quot;)
+</a><a href="#h4-0-177" id="h4-0-177" class="i">+        cachedTasks.clear()
+</a><a href="#h4-0-178" id="h4-0-178" class="i">+        pendingTasks.clear()
+</a><a href="#h4-0-179" id="h4-0-179" class="i">+    }
+</a><a href="#h4-0-180" id="h4-0-180" class="i">+}</a><a href="#h4-0-181" id="h4-0-181" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h5" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/downloads/DownloadsSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/downloads/DownloadsSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/downloads/DownloadsSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/downloads/DownloadsSection.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
+</a> import androidx.compose.ui.Modifier
+ import androidx.compose.ui.draw.blur
+ import androidx.compose.ui.draw.clip
+<a href="#h5-0-3" id="h5-0-3" class="i">+import androidx.compose.ui.graphics.FilterQuality
+</a> import androidx.compose.ui.layout.ContentScale
+ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.text.style.TextAlign
+<a href="#h5-1" id="h5-1" class="h">@@ -49,27 +50,42 @@ import androidx.compose.ui.text.style.TextOverflow
+</a> import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+ import coil.compose.rememberAsyncImagePainter
+<a href="#h5-1-3" id="h5-1-3" class="i">+import kotlinx.coroutines.CoroutineScope
+</a><a href="#h5-1-4" id="h5-1-4" class="i">+import kotlinx.coroutines.Dispatchers
+</a><a href="#h5-1-5" id="h5-1-5" class="i">+import kotlinx.coroutines.future.asCompletableFuture
+</a> import kotlinx.coroutines.launch
+<a href="#h5-1-7" id="h5-1-7" class="i">+import me.rhunk.snapenhance.core.download.data.MediaDownloadSource
+</a> import me.rhunk.snapenhance.data.FileType
+<a href="#h5-1-9" id="h5-1-9" class="d">-import me.rhunk.snapenhance.core.download.data.DownloadObject
+</a><a href="#h5-1-10" id="h5-1-10" class="d">-import me.rhunk.snapenhance.core.download.data.MediaFilter
+</a><a href="#h5-1-11" id="h5-1-11" class="i">+import me.rhunk.snapenhance.download.DownloadObject
+</a> import me.rhunk.snapenhance.ui.manager.Section
+ import me.rhunk.snapenhance.ui.util.BitmojiImage
+ import me.rhunk.snapenhance.ui.util.ImageRequestHelper
+ 
+ class DownloadsSection : Section() {
+     private val loadedDownloads = mutableStateOf(mapOf&lt;Int, DownloadObject&gt;())
+<a href="#h5-1-18" id="h5-1-18" class="d">-    private var currentFilter = mutableStateOf(MediaFilter.NONE)
+</a><a href="#h5-1-19" id="h5-1-19" class="i">+    private var currentFilter = mutableStateOf(MediaDownloadSource.NONE)
+</a><a href="#h5-1-20" id="h5-1-20" class="i">+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+</a> 
+     override fun onResumed() {
+         super.onResumed()
+<a href="#h5-1-24" id="h5-1-24" class="d">-        loadByFilter(currentFilter.value)
+</a><a href="#h5-1-25" id="h5-1-25" class="i">+        coroutineScope.launch {
+</a><a href="#h5-1-26" id="h5-1-26" class="i">+            loadByFilter(currentFilter.value)
+</a><a href="#h5-1-27" id="h5-1-27" class="i">+        }
+</a>     }
+ 
+<a href="#h5-1-30" id="h5-1-30" class="d">-    private fun loadByFilter(filter: MediaFilter) {
+</a><a href="#h5-1-31" id="h5-1-31" class="i">+    private fun loadByFilter(filter: MediaDownloadSource) {
+</a>         this.currentFilter.value = filter
+         synchronized(loadedDownloads) {
+<a href="#h5-1-34" id="h5-1-34" class="d">-            loadedDownloads.value = context.downloadTaskManager.queryFirstTasks(filter)
+</a><a href="#h5-1-35" id="h5-1-35" class="i">+            loadedDownloads.value = context.downloadTaskManager.queryFirstTasks(filter).toMutableMap()
+</a><a href="#h5-1-36" id="h5-1-36" class="i">+        }
+</a><a href="#h5-1-37" id="h5-1-37" class="i">+    }
+</a><a href="#h5-1-38" id="h5-1-38" class="i">+
+</a><a href="#h5-1-39" id="h5-1-39" class="i">+    private fun removeTask(download: DownloadObject) {
+</a><a href="#h5-1-40" id="h5-1-40" class="i">+        synchronized(loadedDownloads) {
+</a><a href="#h5-1-41" id="h5-1-41" class="i">+            loadedDownloads.value = loadedDownloads.value.toMutableMap().also {
+</a><a href="#h5-1-42" id="h5-1-42" class="i">+                it.remove(download.downloadId)
+</a><a href="#h5-1-43" id="h5-1-43" class="i">+            }
+</a><a href="#h5-1-44" id="h5-1-44" class="i">+            context.downloadTaskManager.removeTask(download)
+</a>         }
+     }
+ 
+<a href="#h5-2" id="h5-2" class="h">@@ -87,7 +103,6 @@ class DownloadsSection : Section() {
+</a> 
+     @Composable
+     private fun FilterList() {
+<a href="#h5-2-3" id="h5-2-3" class="d">-        val coroutineScope = rememberCoroutineScope()
+</a>         var showMenu by remember { mutableStateOf(false) }
+         IconButton(onClick = { showMenu = !showMenu}) {
+             Icon(
+<a href="#h5-3" id="h5-3" class="h">@@ -97,7 +112,7 @@ class DownloadsSection : Section() {
+</a>         }
+ 
+         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+<a href="#h5-3-3" id="h5-3-3" class="d">-            MediaFilter.values().toList().forEach { filter -&gt;
+</a><a href="#h5-3-4" id="h5-3-4" class="i">+            MediaDownloadSource.values().toList().forEach { filter -&gt;
+</a>                 DropdownMenuItem(
+                     text = {
+                         Row(
+<a href="#h5-4" id="h5-4" class="h">@@ -110,7 +125,7 @@ class DownloadsSection : Section() {
+</a>                                 selected = (currentFilter.value == filter),
+                                 onClick = null
+                             )
+<a href="#h5-4-3" id="h5-4-3" class="d">-                            Text(filter.name, modifier = Modifier.weight(1f))
+</a><a href="#h5-4-4" id="h5-4-4" class="i">+                            Text(filter.displayName, modifier = Modifier.weight(1f))
+</a>                         }
+                    },
+                     onClick = {
+<a href="#h5-5" id="h5-5" class="h">@@ -144,11 +159,12 @@ class DownloadsSection : Section() {
+</a>                             context.androidContext,
+                             download.outputFile
+                         ),
+<a href="#h5-5-3" id="h5-5-3" class="d">-                        imageLoader = context.imageLoader
+</a><a href="#h5-5-4" id="h5-5-4" class="i">+                        imageLoader = context.imageLoader,
+</a><a href="#h5-5-5" id="h5-5-5" class="i">+                        filterQuality = FilterQuality.None,
+</a>                     ),
+                     modifier = Modifier
+                         .matchParentSize()
+<a href="#h5-5-9" id="h5-5-9" class="d">-                        .blur(12.dp),
+</a><a href="#h5-5-10" id="h5-5-10" class="i">+                        .blur(5.dp),
+</a>                     contentDescription = null,
+                     contentScale = ContentScale.FillWidth
+                 )
+<a href="#h5-6" id="h5-6" class="h">@@ -156,9 +172,9 @@ class DownloadsSection : Section() {
+</a>                 Row(
+                     modifier = Modifier
+                         .padding(start = 10.dp, end = 10.dp)
+<a href="#h5-6-3" id="h5-6-3" class="d">-                        .fillMaxWidth()
+</a>                         .fillMaxHeight(),
+<a href="#h5-6-5" id="h5-6-5" class="d">-                    verticalAlignment = Alignment.CenterVertically
+</a><a href="#h5-6-6" id="h5-6-6" class="i">+
+</a><a href="#h5-6-7" id="h5-6-7" class="i">+                    verticalAlignment = Alignment.CenterVertically,
+</a>                 ){
+                     //info card
+                     Row(
+<a href="#h5-7" id="h5-7" class="h">@@ -177,13 +193,13 @@ class DownloadsSection : Section() {
+</a>                             verticalArrangement = Arrangement.SpaceBetween
+                         ) {
+                             Text(
+<a href="#h5-7-3" id="h5-7-3" class="d">-                                text = download.metadata.mediaDisplayType ?: &quot;&quot;,
+</a><a href="#h5-7-4" id="h5-7-4" class="i">+                                text = MediaDownloadSource.fromKey(download.metadata.downloadSource).displayName,
+</a>                                 overflow = TextOverflow.Ellipsis,
+                                 fontSize = 16.sp,
+                                 fontWeight = FontWeight.Bold
+                             )
+                             Text(
+<a href="#h5-7-10" id="h5-7-10" class="d">-                                text = download.metadata.mediaDisplaySource ?: &quot;&quot;,
+</a><a href="#h5-7-11" id="h5-7-11" class="i">+                                text = download.metadata.mediaAuthor ?: &quot;&quot;,
+</a>                                 overflow = TextOverflow.Ellipsis,
+                                 fontSize = 12.sp,
+                                 fontWeight = FontWeight.Light
+<a href="#h5-8" id="h5-8" class="h">@@ -191,16 +207,17 @@ class DownloadsSection : Section() {
+</a>                         }
+                     }
+ 
+<a href="#h5-8-3" id="h5-8-3" class="d">-                    Spacer(modifier = Modifier.weight(1f))
+</a><a href="#h5-8-4" id="h5-8-4" class="d">-
+</a>                     //action buttons
+                     Row(
+                         modifier = Modifier
+<a href="#h5-8-8" id="h5-8-8" class="d">-                            .padding(5.dp),
+</a><a href="#h5-8-9" id="h5-8-9" class="i">+                            .padding(5.dp)
+</a><a href="#h5-8-10" id="h5-8-10" class="i">+                            .fillMaxWidth(),
+</a><a href="#h5-8-11" id="h5-8-11" class="i">+                        horizontalArrangement = Arrangement.End,
+</a>                         verticalAlignment = Alignment.CenterVertically
+                     ) {
+                         FilledIconButton(
+                             onClick = {
+<a href="#h5-8-16" id="h5-8-16" class="i">+                                removeTask(download)
+</a>                             },
+                             colors = IconButtonDefaults.iconButtonColors(
+                                 containerColor = MaterialTheme.colorScheme.error,
+<a href="#h5-9" id="h5-9" class="h">@@ -240,6 +257,7 @@ class DownloadsSection : Section() {
+</a>     @Composable
+     override fun Content() {
+         val scrollState = rememberLazyListState()
+<a href="#h5-9-3" id="h5-9-3" class="i">+        val scope = rememberCoroutineScope()
+</a> 
+         LazyColumn(
+             state = scrollState,
+<a href="#h5-10" id="h5-10" class="h">@@ -252,14 +270,19 @@ class DownloadsSection : Section() {
+</a>             item {
+                 Spacer(Modifier.height(20.dp))
+                 if (loadedDownloads.value.isEmpty()) {
+<a href="#h5-10-3" id="h5-10-3" class="d">-                    Text(text = &quot;No downloads&quot;, fontSize = 20.sp, modifier = Modifier
+</a><a href="#h5-10-4" id="h5-10-4" class="i">+                    Text(text = &quot;(empty)&quot;, fontSize = 20.sp, modifier = Modifier
+</a>                         .fillMaxWidth()
+                         .padding(10.dp), textAlign = TextAlign.Center)
+                 }
+<a href="#h5-10-8" id="h5-10-8" class="d">-                LaunchedEffect(true) {
+</a><a href="#h5-10-9" id="h5-10-9" class="i">+                LaunchedEffect(Unit) {
+</a>                     val lastItemIndex = (loadedDownloads.value.size - 1).takeIf { it &gt;= 0 } ?: return@LaunchedEffect
+<a href="#h5-10-11" id="h5-10-11" class="d">-                    lazyLoadFromIndex(lastItemIndex)
+</a><a href="#h5-10-12" id="h5-10-12" class="d">-                    scrollState.animateScrollToItem(lastItemIndex)
+</a><a href="#h5-10-13" id="h5-10-13" class="i">+                    scope.launch(Dispatchers.IO) {
+</a><a href="#h5-10-14" id="h5-10-14" class="i">+                        lazyLoadFromIndex(lastItemIndex)
+</a><a href="#h5-10-15" id="h5-10-15" class="i">+                    }.asCompletableFuture().thenAccept {
+</a><a href="#h5-10-16" id="h5-10-16" class="i">+                        scope.launch {
+</a><a href="#h5-10-17" id="h5-10-17" class="i">+                            scrollState.animateScrollToItem(lastItemIndex)
+</a><a href="#h5-10-18" id="h5-10-18" class="i">+                        }
+</a><a href="#h5-10-19" id="h5-10-19" class="i">+                    }
+</a>                 }
+             }
+         }
+<b>diff --git a/<a id="h6" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/util/ComposeImageHelper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/ComposeImageHelper.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/util/ComposeImageHelper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/ComposeImageHelper.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -53,6 +53,8 @@ object ImageRequestHelper {
+</a>     fun newDownloadPreviewImageRequest(context: Context, filePath: String?) = ImageRequest.Builder(context)
+         .data(filePath)
+         .cacheKey(filePath)
+<a href="#h6-0-3" id="h6-0-3" class="i">+        .memoryCacheKey(filePath)
+</a>         .crossfade(true)
+<a href="#h6-0-5" id="h6-0-5" class="i">+        .crossfade(200)
+</a>         .build()
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h7" href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a> b/<a href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -388,11 +388,12 @@
+</a>                 &quot;conversation_info&quot;: &quot;\uD83D\uDC64 Conversation Info&quot;
+             },
+             &quot;path_format&quot;: {
+<a href="#h7-0-3" id="h7-0-3" class="d">-                &quot;create_user_folder&quot;: &quot;Create folder for each user&quot;,
+</a><a href="#h7-0-4" id="h7-0-4" class="i">+                &quot;create_author_folder&quot;: &quot;Create folder for each author&quot;,
+</a><a href="#h7-0-5" id="h7-0-5" class="i">+                &quot;create_source_folder&quot;: &quot;Create folder for each media source type&quot;,
+</a>                 &quot;append_hash&quot;: &quot;Add a unique hash to the file name&quot;,
+<a href="#h7-0-7" id="h7-0-7" class="i">+                &quot;append_source&quot;: &quot;Add the media source to the file name&quot;,
+</a>                 &quot;append_username&quot;: &quot;Add the username to the file name&quot;,
+<a href="#h7-0-9" id="h7-0-9" class="d">-                &quot;append_date_time&quot;: &quot;Add the date and time to the file name&quot;,
+</a><a href="#h7-0-10" id="h7-0-10" class="d">-                &quot;append_type&quot;: &quot;Add the media type to the file name&quot;
+</a><a href="#h7-0-11" id="h7-0-11" class="i">+                &quot;append_date_time&quot;: &quot;Add the date and time to the file name&quot;
+</a>             },
+             &quot;auto_download_sources&quot;: {
+                 &quot;friend_snaps&quot;: &quot;Friend Snaps&quot;,
+<b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/DownloaderConfig.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/DownloaderConfig.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/DownloaderConfig.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/DownloaderConfig.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -14,11 +14,12 @@ class DownloaderConfig : ConfigContainer() {
+</a>     )
+     val preventSelfAutoDownload = boolean(&quot;prevent_self_auto_download&quot;)
+     val pathFormat = multiple(&quot;path_format&quot;,
+<a href="#h8-0-3" id="h8-0-3" class="d">-        &quot;create_user_folder&quot;,
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+        &quot;create_author_folder&quot;,
+</a><a href="#h8-0-5" id="h8-0-5" class="i">+        &quot;create_source_folder&quot;,
+</a>         &quot;append_hash&quot;,
+<a href="#h8-0-7" id="h8-0-7" class="i">+        &quot;append_source&quot;,
+</a><a href="#h8-0-8" id="h8-0-8" class="i">+        &quot;append_username&quot;,
+</a>         &quot;append_date_time&quot;,
+<a href="#h8-0-10" id="h8-0-10" class="d">-        &quot;append_type&quot;,
+</a><a href="#h8-0-11" id="h8-0-11" class="d">-        &quot;append_username&quot;
+</a>     ).apply { set(mutableListOf(&quot;append_hash&quot;, &quot;append_date_time&quot;, &quot;append_type&quot;, &quot;append_username&quot;)) }
+     val allowDuplicate = boolean(&quot;allow_duplicate&quot;)
+     val mergeOverlays = boolean(&quot;merge_overlays&quot;) { addNotices(FeatureNotice.MAY_CAUSE_CRASHES) }
+<b>diff --git a/<a id="h9" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/DownloadTaskManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/DownloadTaskManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/DownloadTaskManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/DownloadTaskManager.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -1,182 +0,0 @@
+</a><a href="#h9-0-0" id="h9-0-0" class="d">-package me.rhunk.snapenhance.core.download
+</a><a href="#h9-0-1" id="h9-0-1" class="d">-
+</a><a href="#h9-0-2" id="h9-0-2" class="d">-import android.annotation.SuppressLint
+</a><a href="#h9-0-3" id="h9-0-3" class="d">-import android.content.Context
+</a><a href="#h9-0-4" id="h9-0-4" class="d">-import android.database.sqlite.SQLiteDatabase
+</a><a href="#h9-0-5" id="h9-0-5" class="d">-import me.rhunk.snapenhance.core.download.data.DownloadMetadata
+</a><a href="#h9-0-6" id="h9-0-6" class="d">-import me.rhunk.snapenhance.core.download.data.DownloadObject
+</a><a href="#h9-0-7" id="h9-0-7" class="d">-import me.rhunk.snapenhance.core.download.data.DownloadStage
+</a><a href="#h9-0-8" id="h9-0-8" class="d">-import me.rhunk.snapenhance.core.download.data.MediaFilter
+</a><a href="#h9-0-9" id="h9-0-9" class="d">-import me.rhunk.snapenhance.util.SQLiteDatabaseHelper
+</a><a href="#h9-0-10" id="h9-0-10" class="d">-import me.rhunk.snapenhance.util.ktx.getIntOrNull
+</a><a href="#h9-0-11" id="h9-0-11" class="d">-import me.rhunk.snapenhance.util.ktx.getStringOrNull
+</a><a href="#h9-0-12" id="h9-0-12" class="d">-
+</a><a href="#h9-0-13" id="h9-0-13" class="d">-class DownloadTaskManager {
+</a><a href="#h9-0-14" id="h9-0-14" class="d">-    private lateinit var taskDatabase: SQLiteDatabase
+</a><a href="#h9-0-15" id="h9-0-15" class="d">-    private val pendingTasks = mutableMapOf&lt;Int, DownloadObject&gt;()
+</a><a href="#h9-0-16" id="h9-0-16" class="d">-    private val cachedTasks = mutableMapOf&lt;Int, DownloadObject&gt;()
+</a><a href="#h9-0-17" id="h9-0-17" class="d">-
+</a><a href="#h9-0-18" id="h9-0-18" class="d">-    @SuppressLint(&quot;Range&quot;)
+</a><a href="#h9-0-19" id="h9-0-19" class="d">-    fun init(context: Context) {
+</a><a href="#h9-0-20" id="h9-0-20" class="d">-        if (this::taskDatabase.isInitialized) return
+</a><a href="#h9-0-21" id="h9-0-21" class="d">-        taskDatabase = context.openOrCreateDatabase(&quot;download_tasks&quot;, Context.MODE_PRIVATE, null).apply {
+</a><a href="#h9-0-22" id="h9-0-22" class="d">-            SQLiteDatabaseHelper.createTablesFromSchema(this, mapOf(
+</a><a href="#h9-0-23" id="h9-0-23" class="d">-                &quot;tasks&quot; to listOf(
+</a><a href="#h9-0-24" id="h9-0-24" class="d">-                    &quot;id INTEGER PRIMARY KEY AUTOINCREMENT&quot;,
+</a><a href="#h9-0-25" id="h9-0-25" class="d">-                    &quot;hash VARCHAR UNIQUE&quot;,
+</a><a href="#h9-0-26" id="h9-0-26" class="d">-                    &quot;outputPath TEXT&quot;,
+</a><a href="#h9-0-27" id="h9-0-27" class="d">-                    &quot;outputFile TEXT&quot;,
+</a><a href="#h9-0-28" id="h9-0-28" class="d">-                    &quot;mediaDisplayType TEXT&quot;,
+</a><a href="#h9-0-29" id="h9-0-29" class="d">-                    &quot;mediaDisplaySource TEXT&quot;,
+</a><a href="#h9-0-30" id="h9-0-30" class="d">-                    &quot;iconUrl TEXT&quot;,
+</a><a href="#h9-0-31" id="h9-0-31" class="d">-                    &quot;downloadStage TEXT&quot;
+</a><a href="#h9-0-32" id="h9-0-32" class="d">-                )
+</a><a href="#h9-0-33" id="h9-0-33" class="d">-            ))
+</a><a href="#h9-0-34" id="h9-0-34" class="d">-        }
+</a><a href="#h9-0-35" id="h9-0-35" class="d">-    }
+</a><a href="#h9-0-36" id="h9-0-36" class="d">-
+</a><a href="#h9-0-37" id="h9-0-37" class="d">-    fun addTask(task: DownloadObject): Int {
+</a><a href="#h9-0-38" id="h9-0-38" class="d">-        taskDatabase.execSQL(&quot;INSERT INTO tasks (hash, outputPath, outputFile, mediaDisplayType, mediaDisplaySource, iconUrl, downloadStage) VALUES (?, ?, ?, ?, ?, ?, ?)&quot;,
+</a><a href="#h9-0-39" id="h9-0-39" class="d">-            arrayOf(
+</a><a href="#h9-0-40" id="h9-0-40" class="d">-                task.metadata.mediaIdentifier,
+</a><a href="#h9-0-41" id="h9-0-41" class="d">-                task.metadata.outputPath,
+</a><a href="#h9-0-42" id="h9-0-42" class="d">-                task.outputFile,
+</a><a href="#h9-0-43" id="h9-0-43" class="d">-                task.metadata.mediaDisplayType,
+</a><a href="#h9-0-44" id="h9-0-44" class="d">-                task.metadata.mediaDisplaySource,
+</a><a href="#h9-0-45" id="h9-0-45" class="d">-                task.metadata.iconUrl,
+</a><a href="#h9-0-46" id="h9-0-46" class="d">-                task.downloadStage.name
+</a><a href="#h9-0-47" id="h9-0-47" class="d">-            )
+</a><a href="#h9-0-48" id="h9-0-48" class="d">-        )
+</a><a href="#h9-0-49" id="h9-0-49" class="d">-        task.downloadId = taskDatabase.rawQuery(&quot;SELECT last_insert_rowid()&quot;, null).use {
+</a><a href="#h9-0-50" id="h9-0-50" class="d">-            it.moveToFirst()
+</a><a href="#h9-0-51" id="h9-0-51" class="d">-            it.getInt(0)
+</a><a href="#h9-0-52" id="h9-0-52" class="d">-        }
+</a><a href="#h9-0-53" id="h9-0-53" class="d">-        pendingTasks[task.downloadId] = task
+</a><a href="#h9-0-54" id="h9-0-54" class="d">-        return task.downloadId
+</a><a href="#h9-0-55" id="h9-0-55" class="d">-    }
+</a><a href="#h9-0-56" id="h9-0-56" class="d">-
+</a><a href="#h9-0-57" id="h9-0-57" class="d">-    fun updateTask(task: DownloadObject) {
+</a><a href="#h9-0-58" id="h9-0-58" class="d">-        taskDatabase.execSQL(&quot;UPDATE tasks SET hash = ?, outputPath = ?, outputFile = ?, mediaDisplayType = ?, mediaDisplaySource = ?, iconUrl = ?, downloadStage = ? WHERE id = ?&quot;,
+</a><a href="#h9-0-59" id="h9-0-59" class="d">-            arrayOf(
+</a><a href="#h9-0-60" id="h9-0-60" class="d">-                task.metadata.mediaIdentifier,
+</a><a href="#h9-0-61" id="h9-0-61" class="d">-                task.metadata.outputPath,
+</a><a href="#h9-0-62" id="h9-0-62" class="d">-                task.outputFile,
+</a><a href="#h9-0-63" id="h9-0-63" class="d">-                task.metadata.mediaDisplayType,
+</a><a href="#h9-0-64" id="h9-0-64" class="d">-                task.metadata.mediaDisplaySource,
+</a><a href="#h9-0-65" id="h9-0-65" class="d">-                task.metadata.iconUrl,
+</a><a href="#h9-0-66" id="h9-0-66" class="d">-                task.downloadStage.name,
+</a><a href="#h9-0-67" id="h9-0-67" class="d">-                task.downloadId
+</a><a href="#h9-0-68" id="h9-0-68" class="d">-            )
+</a><a href="#h9-0-69" id="h9-0-69" class="d">-        )
+</a><a href="#h9-0-70" id="h9-0-70" class="d">-        //if the task is no longer active, move it to the cached tasks
+</a><a href="#h9-0-71" id="h9-0-71" class="d">-        if (task.isJobActive()) {
+</a><a href="#h9-0-72" id="h9-0-72" class="d">-            pendingTasks[task.downloadId] = task
+</a><a href="#h9-0-73" id="h9-0-73" class="d">-        } else {
+</a><a href="#h9-0-74" id="h9-0-74" class="d">-            pendingTasks.remove(task.downloadId)
+</a><a href="#h9-0-75" id="h9-0-75" class="d">-            cachedTasks[task.downloadId] = task
+</a><a href="#h9-0-76" id="h9-0-76" class="d">-        }
+</a><a href="#h9-0-77" id="h9-0-77" class="d">-    }
+</a><a href="#h9-0-78" id="h9-0-78" class="d">-
+</a><a href="#h9-0-79" id="h9-0-79" class="d">-    @SuppressLint(&quot;Range&quot;)
+</a><a href="#h9-0-80" id="h9-0-80" class="d">-    fun canDownloadMedia(mediaIdentifier: String?): DownloadStage? {
+</a><a href="#h9-0-81" id="h9-0-81" class="d">-        if (mediaIdentifier == null) return null
+</a><a href="#h9-0-82" id="h9-0-82" class="d">-
+</a><a href="#h9-0-83" id="h9-0-83" class="d">-        val cursor = taskDatabase.rawQuery(&quot;SELECT * FROM tasks WHERE hash = ?&quot;, arrayOf(mediaIdentifier))
+</a><a href="#h9-0-84" id="h9-0-84" class="d">-        if (cursor.count &gt; 0) {
+</a><a href="#h9-0-85" id="h9-0-85" class="d">-            cursor.moveToFirst()
+</a><a href="#h9-0-86" id="h9-0-86" class="d">-            val downloadStage = DownloadStage.valueOf(cursor.getString(cursor.getColumnIndex(&quot;downloadStage&quot;)))
+</a><a href="#h9-0-87" id="h9-0-87" class="d">-            cursor.close()
+</a><a href="#h9-0-88" id="h9-0-88" class="d">-
+</a><a href="#h9-0-89" id="h9-0-89" class="d">-            //if the stage has reached a final stage and is not in a saved state, remove the task
+</a><a href="#h9-0-90" id="h9-0-90" class="d">-            if (downloadStage.isFinalStage &amp;&amp; downloadStage != DownloadStage.SAVED) {
+</a><a href="#h9-0-91" id="h9-0-91" class="d">-                taskDatabase.execSQL(&quot;DELETE FROM tasks WHERE hash = ?&quot;, arrayOf(mediaIdentifier))
+</a><a href="#h9-0-92" id="h9-0-92" class="d">-                return null
+</a><a href="#h9-0-93" id="h9-0-93" class="d">-            }
+</a><a href="#h9-0-94" id="h9-0-94" class="d">-
+</a><a href="#h9-0-95" id="h9-0-95" class="d">-            return downloadStage
+</a><a href="#h9-0-96" id="h9-0-96" class="d">-        }
+</a><a href="#h9-0-97" id="h9-0-97" class="d">-        cursor.close()
+</a><a href="#h9-0-98" id="h9-0-98" class="d">-        return null
+</a><a href="#h9-0-99" id="h9-0-99" class="d">-    }
+</a><a href="#h9-0-100" id="h9-0-100" class="d">-
+</a><a href="#h9-0-101" id="h9-0-101" class="d">-    fun isEmpty(): Boolean {
+</a><a href="#h9-0-102" id="h9-0-102" class="d">-        return cachedTasks.isEmpty() &amp;&amp; pendingTasks.isEmpty()
+</a><a href="#h9-0-103" id="h9-0-103" class="d">-    }
+</a><a href="#h9-0-104" id="h9-0-104" class="d">-
+</a><a href="#h9-0-105" id="h9-0-105" class="d">-    private fun removeTask(id: Int) {
+</a><a href="#h9-0-106" id="h9-0-106" class="d">-        taskDatabase.execSQL(&quot;DELETE FROM tasks WHERE id = ?&quot;, arrayOf(id))
+</a><a href="#h9-0-107" id="h9-0-107" class="d">-        cachedTasks.remove(id)
+</a><a href="#h9-0-108" id="h9-0-108" class="d">-        pendingTasks.remove(id)
+</a><a href="#h9-0-109" id="h9-0-109" class="d">-    }
+</a><a href="#h9-0-110" id="h9-0-110" class="d">-
+</a><a href="#h9-0-111" id="h9-0-111" class="d">-    fun removeTask(task: DownloadObject) {
+</a><a href="#h9-0-112" id="h9-0-112" class="d">-        removeTask(task.downloadId)
+</a><a href="#h9-0-113" id="h9-0-113" class="d">-    }
+</a><a href="#h9-0-114" id="h9-0-114" class="d">-
+</a><a href="#h9-0-115" id="h9-0-115" class="d">-    fun queryFirstTasks(filter: MediaFilter): Map&lt;Int, DownloadObject&gt; {
+</a><a href="#h9-0-116" id="h9-0-116" class="d">-        val isPendingFilter = filter == MediaFilter.PENDING
+</a><a href="#h9-0-117" id="h9-0-117" class="d">-        val tasks = mutableMapOf&lt;Int, DownloadObject&gt;()
+</a><a href="#h9-0-118" id="h9-0-118" class="d">-
+</a><a href="#h9-0-119" id="h9-0-119" class="d">-        tasks.putAll(pendingTasks.filter { isPendingFilter || filter.matches(it.value.metadata.mediaDisplayType) })
+</a><a href="#h9-0-120" id="h9-0-120" class="d">-        if (isPendingFilter) {
+</a><a href="#h9-0-121" id="h9-0-121" class="d">-            return tasks.toSortedMap(reverseOrder())
+</a><a href="#h9-0-122" id="h9-0-122" class="d">-        }
+</a><a href="#h9-0-123" id="h9-0-123" class="d">-
+</a><a href="#h9-0-124" id="h9-0-124" class="d">-        tasks.putAll(queryTasks(
+</a><a href="#h9-0-125" id="h9-0-125" class="d">-            from = tasks.values.lastOrNull()?.downloadId ?: Int.MAX_VALUE,
+</a><a href="#h9-0-126" id="h9-0-126" class="d">-            amount = 30,
+</a><a href="#h9-0-127" id="h9-0-127" class="d">-            filter = filter
+</a><a href="#h9-0-128" id="h9-0-128" class="d">-        ))
+</a><a href="#h9-0-129" id="h9-0-129" class="d">-
+</a><a href="#h9-0-130" id="h9-0-130" class="d">-        return tasks.toSortedMap(reverseOrder())
+</a><a href="#h9-0-131" id="h9-0-131" class="d">-    }
+</a><a href="#h9-0-132" id="h9-0-132" class="d">-
+</a><a href="#h9-0-133" id="h9-0-133" class="d">-    @SuppressLint(&quot;Range&quot;)
+</a><a href="#h9-0-134" id="h9-0-134" class="d">-    fun queryTasks(from: Int, amount: Int = 30, filter: MediaFilter = MediaFilter.NONE): Map&lt;Int, DownloadObject&gt; {
+</a><a href="#h9-0-135" id="h9-0-135" class="d">-        if (filter == MediaFilter.PENDING) {
+</a><a href="#h9-0-136" id="h9-0-136" class="d">-            return emptyMap()
+</a><a href="#h9-0-137" id="h9-0-137" class="d">-        }
+</a><a href="#h9-0-138" id="h9-0-138" class="d">-
+</a><a href="#h9-0-139" id="h9-0-139" class="d">-        val cursor = taskDatabase.rawQuery(
+</a><a href="#h9-0-140" id="h9-0-140" class="d">-            &quot;SELECT * FROM tasks WHERE id &lt; ? AND mediaDisplayType LIKE ? ORDER BY id DESC LIMIT ?&quot;,
+</a><a href="#h9-0-141" id="h9-0-141" class="d">-            arrayOf(
+</a><a href="#h9-0-142" id="h9-0-142" class="d">-                from.toString(),
+</a><a href="#h9-0-143" id="h9-0-143" class="d">-                if (filter.shouldIgnoreFilter) &quot;%&quot; else &quot;%${filter.key}&quot;,
+</a><a href="#h9-0-144" id="h9-0-144" class="d">-                amount.toString()
+</a><a href="#h9-0-145" id="h9-0-145" class="d">-            )
+</a><a href="#h9-0-146" id="h9-0-146" class="d">-        )
+</a><a href="#h9-0-147" id="h9-0-147" class="d">-
+</a><a href="#h9-0-148" id="h9-0-148" class="d">-        val result = sortedMapOf&lt;Int, DownloadObject&gt;()
+</a><a href="#h9-0-149" id="h9-0-149" class="d">-
+</a><a href="#h9-0-150" id="h9-0-150" class="d">-        while (cursor.moveToNext()) {
+</a><a href="#h9-0-151" id="h9-0-151" class="d">-            val task = DownloadObject(
+</a><a href="#h9-0-152" id="h9-0-152" class="d">-                downloadId = cursor.getIntOrNull(&quot;id&quot;)!!,
+</a><a href="#h9-0-153" id="h9-0-153" class="d">-                outputFile = cursor.getStringOrNull(&quot;outputFile&quot;),
+</a><a href="#h9-0-154" id="h9-0-154" class="d">-                metadata = DownloadMetadata(
+</a><a href="#h9-0-155" id="h9-0-155" class="d">-                    outputPath = cursor.getStringOrNull(&quot;outputPath&quot;)!!,
+</a><a href="#h9-0-156" id="h9-0-156" class="d">-                    mediaIdentifier = cursor.getStringOrNull(&quot;hash&quot;),
+</a><a href="#h9-0-157" id="h9-0-157" class="d">-                    mediaDisplayType = cursor.getStringOrNull(&quot;mediaDisplayType&quot;),
+</a><a href="#h9-0-158" id="h9-0-158" class="d">-                    mediaDisplaySource = cursor.getStringOrNull(&quot;mediaDisplaySource&quot;),
+</a><a href="#h9-0-159" id="h9-0-159" class="d">-                    iconUrl = cursor.getStringOrNull(&quot;iconUrl&quot;)
+</a><a href="#h9-0-160" id="h9-0-160" class="d">-                )
+</a><a href="#h9-0-161" id="h9-0-161" class="d">-            ).apply {
+</a><a href="#h9-0-162" id="h9-0-162" class="d">-                downloadTaskManager = this@DownloadTaskManager
+</a><a href="#h9-0-163" id="h9-0-163" class="d">-                downloadStage = DownloadStage.valueOf(cursor.getStringOrNull(&quot;downloadStage&quot;)!!)
+</a><a href="#h9-0-164" id="h9-0-164" class="d">-                //if downloadStage is not saved, it means the app was killed before the download was finished
+</a><a href="#h9-0-165" id="h9-0-165" class="d">-                if (downloadStage != DownloadStage.SAVED) {
+</a><a href="#h9-0-166" id="h9-0-166" class="d">-                    downloadStage = DownloadStage.FAILED
+</a><a href="#h9-0-167" id="h9-0-167" class="d">-                }
+</a><a href="#h9-0-168" id="h9-0-168" class="d">-            }
+</a><a href="#h9-0-169" id="h9-0-169" class="d">-            result[task.downloadId] = task
+</a><a href="#h9-0-170" id="h9-0-170" class="d">-        }
+</a><a href="#h9-0-171" id="h9-0-171" class="d">-        cursor.close()
+</a><a href="#h9-0-172" id="h9-0-172" class="d">-
+</a><a href="#h9-0-173" id="h9-0-173" class="d">-        return result.toSortedMap(reverseOrder())
+</a><a href="#h9-0-174" id="h9-0-174" class="d">-    }
+</a><a href="#h9-0-175" id="h9-0-175" class="d">-
+</a><a href="#h9-0-176" id="h9-0-176" class="d">-    fun removeAllTasks() {
+</a><a href="#h9-0-177" id="h9-0-177" class="d">-        taskDatabase.execSQL(&quot;DELETE FROM tasks&quot;)
+</a><a href="#h9-0-178" id="h9-0-178" class="d">-        cachedTasks.clear()
+</a><a href="#h9-0-179" id="h9-0-179" class="d">-        pendingTasks.clear()
+</a><a href="#h9-0-180" id="h9-0-180" class="d">-    }
+</a><a href="#h9-0-181" id="h9-0-181" class="d">-}</a><a href="#h9-0-182" id="h9-0-182" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h10" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadMetadata.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadMetadata.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadMetadata.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadMetadata.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -3,7 +3,7 @@ package me.rhunk.snapenhance.core.download.data
+</a> data class DownloadMetadata(
+     val mediaIdentifier: String?,
+     val outputPath: String,
+<a href="#h10-0-3" id="h10-0-3" class="d">-    val mediaDisplaySource: String?,
+</a><a href="#h10-0-4" id="h10-0-4" class="d">-    val mediaDisplayType: String?,
+</a><a href="#h10-0-5" id="h10-0-5" class="i">+    val mediaAuthor: String?,
+</a><a href="#h10-0-6" id="h10-0-6" class="i">+    val downloadSource: String,
+</a>     val iconUrl: String?
+ ) 
+\ No newline at end of file
+<b>diff --git a/<a id="h11" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadObject.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadObject.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadObject.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/DownloadObject.kt</a></b>
+<a href="#h11-0" id="h11-0" class="h">@@ -1,32 +0,0 @@
+</a><a href="#h11-0-0" id="h11-0-0" class="d">-package me.rhunk.snapenhance.core.download.data
+</a><a href="#h11-0-1" id="h11-0-1" class="d">-
+</a><a href="#h11-0-2" id="h11-0-2" class="d">-import kotlinx.coroutines.Job
+</a><a href="#h11-0-3" id="h11-0-3" class="d">-import me.rhunk.snapenhance.core.download.DownloadTaskManager
+</a><a href="#h11-0-4" id="h11-0-4" class="d">-
+</a><a href="#h11-0-5" id="h11-0-5" class="d">-data class DownloadObject(
+</a><a href="#h11-0-6" id="h11-0-6" class="d">-    var downloadId: Int = 0,
+</a><a href="#h11-0-7" id="h11-0-7" class="d">-    var outputFile: String? = null,
+</a><a href="#h11-0-8" id="h11-0-8" class="d">-    val metadata : DownloadMetadata
+</a><a href="#h11-0-9" id="h11-0-9" class="d">-) {
+</a><a href="#h11-0-10" id="h11-0-10" class="d">-    lateinit var downloadTaskManager: DownloadTaskManager
+</a><a href="#h11-0-11" id="h11-0-11" class="d">-    var job: Job? = null
+</a><a href="#h11-0-12" id="h11-0-12" class="d">-
+</a><a href="#h11-0-13" id="h11-0-13" class="d">-    var changeListener = { _: DownloadStage, _: DownloadStage -&gt; }
+</a><a href="#h11-0-14" id="h11-0-14" class="d">-    private var _stage: DownloadStage = DownloadStage.PENDING
+</a><a href="#h11-0-15" id="h11-0-15" class="d">-    var downloadStage: DownloadStage
+</a><a href="#h11-0-16" id="h11-0-16" class="d">-        get() = synchronized(this) {
+</a><a href="#h11-0-17" id="h11-0-17" class="d">-            _stage
+</a><a href="#h11-0-18" id="h11-0-18" class="d">-        }
+</a><a href="#h11-0-19" id="h11-0-19" class="d">-        set(value) = synchronized(this) {
+</a><a href="#h11-0-20" id="h11-0-20" class="d">-            changeListener(_stage, value)
+</a><a href="#h11-0-21" id="h11-0-21" class="d">-            _stage = value
+</a><a href="#h11-0-22" id="h11-0-22" class="d">-            downloadTaskManager.updateTask(this)
+</a><a href="#h11-0-23" id="h11-0-23" class="d">-        }
+</a><a href="#h11-0-24" id="h11-0-24" class="d">-
+</a><a href="#h11-0-25" id="h11-0-25" class="d">-    fun isJobActive() = job?.isActive == true
+</a><a href="#h11-0-26" id="h11-0-26" class="d">-
+</a><a href="#h11-0-27" id="h11-0-27" class="d">-    fun cancel() {
+</a><a href="#h11-0-28" id="h11-0-28" class="d">-        downloadStage = DownloadStage.CANCELLED
+</a><a href="#h11-0-29" id="h11-0-29" class="d">-        job?.cancel()
+</a><a href="#h11-0-30" id="h11-0-30" class="d">-    }
+</a><a href="#h11-0-31" id="h11-0-31" class="d">-}
+</a><b>diff --git a/<a id="h12" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/MediaDownloadSource.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/MediaDownloadSource.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/MediaDownloadSource.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/MediaDownloadSource.kt</a></b>
+<a href="#h12-0" id="h12-0" class="h">@@ -0,0 +1,28 @@
+</a><a href="#h12-0-0" id="h12-0-0" class="i">+package me.rhunk.snapenhance.core.download.data
+</a><a href="#h12-0-1" id="h12-0-1" class="i">+
+</a><a href="#h12-0-2" id="h12-0-2" class="i">+enum class MediaDownloadSource(
+</a><a href="#h12-0-3" id="h12-0-3" class="i">+    val key: String,
+</a><a href="#h12-0-4" id="h12-0-4" class="i">+    val displayName: String = key,
+</a><a href="#h12-0-5" id="h12-0-5" class="i">+    val pathName: String = key,
+</a><a href="#h12-0-6" id="h12-0-6" class="i">+    val ignoreFilter: Boolean = false
+</a><a href="#h12-0-7" id="h12-0-7" class="i">+) {
+</a><a href="#h12-0-8" id="h12-0-8" class="i">+    NONE(&quot;none&quot;, &quot;None&quot;, ignoreFilter = true),
+</a><a href="#h12-0-9" id="h12-0-9" class="i">+    PENDING(&quot;pending&quot;, &quot;Pending&quot;, ignoreFilter = true),
+</a><a href="#h12-0-10" id="h12-0-10" class="i">+    CHAT_MEDIA(&quot;chat_media&quot;, &quot;Chat Media&quot;, &quot;chat_media&quot;),
+</a><a href="#h12-0-11" id="h12-0-11" class="i">+    STORY(&quot;story&quot;, &quot;Story&quot;, &quot;story&quot;),
+</a><a href="#h12-0-12" id="h12-0-12" class="i">+    PUBLIC_STORY(&quot;public_story&quot;, &quot;Public Story&quot;, &quot;public_story&quot;),
+</a><a href="#h12-0-13" id="h12-0-13" class="i">+    SPOTLIGHT(&quot;spotlight&quot;, &quot;Spotlight&quot;, &quot;spotlight&quot;),
+</a><a href="#h12-0-14" id="h12-0-14" class="i">+    PROFILE_PICTURE(&quot;profile_picture&quot;, &quot;Profile Picture&quot;, &quot;profile_picture&quot;);
+</a><a href="#h12-0-15" id="h12-0-15" class="i">+
+</a><a href="#h12-0-16" id="h12-0-16" class="i">+    fun matches(source: String?): Boolean {
+</a><a href="#h12-0-17" id="h12-0-17" class="i">+        if (source == null) return false
+</a><a href="#h12-0-18" id="h12-0-18" class="i">+        return source.contains(key, ignoreCase = true)
+</a><a href="#h12-0-19" id="h12-0-19" class="i">+    }
+</a><a href="#h12-0-20" id="h12-0-20" class="i">+
+</a><a href="#h12-0-21" id="h12-0-21" class="i">+    companion object {
+</a><a href="#h12-0-22" id="h12-0-22" class="i">+        fun fromKey(key: String?): MediaDownloadSource {
+</a><a href="#h12-0-23" id="h12-0-23" class="i">+            if (key == null) return NONE
+</a><a href="#h12-0-24" id="h12-0-24" class="i">+            return values().find { it.key == key } ?: NONE
+</a><a href="#h12-0-25" id="h12-0-25" class="i">+        }
+</a><a href="#h12-0-26" id="h12-0-26" class="i">+    }
+</a><a href="#h12-0-27" id="h12-0-27" class="i">+}</a><a href="#h12-0-28" id="h12-0-28" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h13" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/MediaFilter.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/MediaFilter.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/MediaFilter.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/download/data/MediaFilter.kt</a></b>
+<a href="#h13-0" id="h13-0" class="h">@@ -1,18 +0,0 @@
+</a><a href="#h13-0-0" id="h13-0-0" class="d">-package me.rhunk.snapenhance.core.download.data
+</a><a href="#h13-0-1" id="h13-0-1" class="d">-
+</a><a href="#h13-0-2" id="h13-0-2" class="d">-enum class MediaFilter(
+</a><a href="#h13-0-3" id="h13-0-3" class="d">-    val key: String,
+</a><a href="#h13-0-4" id="h13-0-4" class="d">-    val shouldIgnoreFilter: Boolean = false
+</a><a href="#h13-0-5" id="h13-0-5" class="d">-) {
+</a><a href="#h13-0-6" id="h13-0-6" class="d">-    NONE(&quot;none&quot;, true),
+</a><a href="#h13-0-7" id="h13-0-7" class="d">-    PENDING(&quot;pending&quot;, true),
+</a><a href="#h13-0-8" id="h13-0-8" class="d">-    CHAT_MEDIA(&quot;chat_media&quot;),
+</a><a href="#h13-0-9" id="h13-0-9" class="d">-    STORY(&quot;story&quot;),
+</a><a href="#h13-0-10" id="h13-0-10" class="d">-    SPOTLIGHT(&quot;spotlight&quot;),
+</a><a href="#h13-0-11" id="h13-0-11" class="d">-    PROFILE_PICTURE(&quot;profile_picture&quot;);
+</a><a href="#h13-0-12" id="h13-0-12" class="d">-
+</a><a href="#h13-0-13" id="h13-0-13" class="d">-    fun matches(source: String?): Boolean {
+</a><a href="#h13-0-14" id="h13-0-14" class="d">-        if (source == null) return false
+</a><a href="#h13-0-15" id="h13-0-15" class="d">-        return source.contains(key, ignoreCase = true)
+</a><a href="#h13-0-16" id="h13-0-16" class="d">-    }
+</a><a href="#h13-0-17" id="h13-0-17" class="d">-}</a><a href="#h13-0-18" id="h13-0-18" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h14" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h14-0" id="h14-0" class="h">@@ -12,7 +12,7 @@ import me.rhunk.snapenhance.core.download.DownloadManagerClient
+</a> import me.rhunk.snapenhance.core.download.data.DownloadMediaType
+ import me.rhunk.snapenhance.core.download.data.DownloadMetadata
+ import me.rhunk.snapenhance.core.download.data.InputMedia
+<a href="#h14-0-3" id="h14-0-3" class="d">-import me.rhunk.snapenhance.core.download.data.MediaFilter
+</a><a href="#h14-0-4" id="h14-0-4" class="i">+import me.rhunk.snapenhance.core.download.data.MediaDownloadSource
+</a> import me.rhunk.snapenhance.core.download.data.SplitMediaAssetType
+ import me.rhunk.snapenhance.core.download.data.toKeyPair
+ import me.rhunk.snapenhance.core.messaging.MessagingRuleType
+<a href="#h14-1" id="h14-1" class="h">@@ -45,16 +45,20 @@ import kotlin.coroutines.suspendCoroutine
+</a> import kotlin.io.encoding.Base64
+ import kotlin.io.encoding.ExperimentalEncodingApi
+ 
+<a href="#h14-1-3" id="h14-1-3" class="i">+private fun String.sanitizeForPath(): String {
+</a><a href="#h14-1-4" id="h14-1-4" class="i">+    return this.replace(&quot; &quot;, &quot;_&quot;)
+</a><a href="#h14-1-5" id="h14-1-5" class="i">+        .replace(Regex(&quot;\\p{Cntrl}&quot;), &quot;&quot;)
+</a><a href="#h14-1-6" id="h14-1-6" class="i">+}
+</a><a href="#h14-1-7" id="h14-1-7" class="i">+
+</a> @OptIn(ExperimentalEncodingApi::class)
+ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleType.AUTO_DOWNLOAD, loadParams = FeatureLoadParams.ACTIVITY_CREATE_ASYNC) {
+     private var lastSeenMediaInfoMap: MutableMap&lt;SplitMediaAssetType, MediaInfo&gt;? = null
+     private var lastSeenMapParams: ParamMap? = null
+ 
+     private fun provideDownloadManagerClient(
+<a href="#h14-1-14" id="h14-1-14" class="d">-        pathSuffix: String,
+</a>         mediaIdentifier: String,
+<a href="#h14-1-16" id="h14-1-16" class="d">-        mediaDisplaySource: String? = null,
+</a><a href="#h14-1-17" id="h14-1-17" class="d">-        mediaDisplayType: String? = null,
+</a><a href="#h14-1-18" id="h14-1-18" class="i">+        mediaAuthor: String,
+</a><a href="#h14-1-19" id="h14-1-19" class="i">+        downloadSource: MediaDownloadSource,
+</a>         friendInfo: FriendInfo? = null
+     ): DownloadManagerClient {
+         val generatedHash = mediaIdentifier.hashCode().toString(16).replaceFirst(&quot;-&quot;, &quot;&quot;)
+<a href="#h14-2" id="h14-2" class="h">@@ -66,7 +70,7 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>             context.shortToast(context.translation[&quot;download_processor.download_started_toast&quot;])
+         }
+ 
+<a href="#h14-2-3" id="h14-2-3" class="d">-        val outputPath = createNewFilePath(generatedHash, mediaDisplayType, pathSuffix)
+</a><a href="#h14-2-4" id="h14-2-4" class="i">+        val outputPath = createNewFilePath(generatedHash, downloadSource, mediaAuthor)
+</a> 
+         return DownloadManagerClient(
+             context = context,
+<a href="#h14-3" id="h14-3" class="h">@@ -74,8 +78,8 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>                 mediaIdentifier = if (!context.config.downloader.allowDuplicate.get()) {
+                     generatedHash
+                 } else null,
+<a href="#h14-3-3" id="h14-3-3" class="d">-                mediaDisplaySource = mediaDisplaySource,
+</a><a href="#h14-3-4" id="h14-3-4" class="d">-                mediaDisplayType = mediaDisplayType,
+</a><a href="#h14-3-5" id="h14-3-5" class="i">+                mediaAuthor = mediaAuthor,
+</a><a href="#h14-3-6" id="h14-3-6" class="i">+                downloadSource = downloadSource.key,
+</a>                 iconUrl = iconUrl,
+                 outputPath = outputPath
+             ),
+<a href="#h14-4" id="h14-4" class="h">@@ -106,13 +110,9 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>     }
+ 
+ 
+<a href="#h14-4-3" id="h14-4-3" class="d">-    //TODO: implement subfolder argument
+</a><a href="#h14-4-4" id="h14-4-4" class="d">-    private fun createNewFilePath(hexHash: String, mediaDisplayType: String?, pathPrefix: String): String {
+</a><a href="#h14-4-5" id="h14-4-5" class="i">+    private fun createNewFilePath(hexHash: String, downloadSource: MediaDownloadSource, mediaAuthor: String): String {
+</a>         val pathFormat by context.config.downloader.pathFormat
+<a href="#h14-4-7" id="h14-4-7" class="d">-        val sanitizedPathPrefix = pathPrefix
+</a><a href="#h14-4-8" id="h14-4-8" class="d">-            .replace(&quot; &quot;, &quot;_&quot;)
+</a><a href="#h14-4-9" id="h14-4-9" class="d">-            .replace(Regex(&quot;[\\p{Cntrl}]&quot;), &quot;&quot;)
+</a><a href="#h14-4-10" id="h14-4-10" class="d">-            .ifEmpty { hexHash }
+</a><a href="#h14-4-11" id="h14-4-11" class="i">+        val sanitizedMediaAuthor = mediaAuthor.sanitizeForPath().ifEmpty { hexHash }
+</a> 
+         val currentDateTime = SimpleDateFormat(&quot;yyyy-MM-dd_HH-mm-ss&quot;, Locale.ENGLISH).format(System.currentTimeMillis())
+ 
+<a href="#h14-5" id="h14-5" class="h">@@ -126,19 +126,20 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>             }
+         }
+ 
+<a href="#h14-5-3" id="h14-5-3" class="d">-        if (pathFormat.contains(&quot;create_user_folder&quot;)) {
+</a><a href="#h14-5-4" id="h14-5-4" class="d">-            finalPath.append(sanitizedPathPrefix).append(&quot;/&quot;)
+</a><a href="#h14-5-5" id="h14-5-5" class="i">+        if (pathFormat.contains(&quot;create_author_folder&quot;)) {
+</a><a href="#h14-5-6" id="h14-5-6" class="i">+            finalPath.append(sanitizedMediaAuthor).append(&quot;/&quot;)
+</a><a href="#h14-5-7" id="h14-5-7" class="i">+        }
+</a><a href="#h14-5-8" id="h14-5-8" class="i">+        if (pathFormat.contains(&quot;create_source_folder&quot;)) {
+</a><a href="#h14-5-9" id="h14-5-9" class="i">+            finalPath.append(downloadSource.pathName).append(&quot;/&quot;)
+</a>         }
+         if (pathFormat.contains(&quot;append_hash&quot;)) {
+             appendFileName(hexHash)
+         }
+<a href="#h14-5-14" id="h14-5-14" class="d">-        mediaDisplayType?.let {
+</a><a href="#h14-5-15" id="h14-5-15" class="d">-            if (pathFormat.contains(&quot;append_type&quot;)) {
+</a><a href="#h14-5-16" id="h14-5-16" class="d">-                appendFileName(it.lowercase().replace(&quot; &quot;, &quot;-&quot;))
+</a><a href="#h14-5-17" id="h14-5-17" class="d">-            }
+</a><a href="#h14-5-18" id="h14-5-18" class="i">+        if (pathFormat.contains(&quot;append_source&quot;)) {
+</a><a href="#h14-5-19" id="h14-5-19" class="i">+            appendFileName(downloadSource.pathName)
+</a>         }
+         if (pathFormat.contains(&quot;append_username&quot;)) {
+<a href="#h14-5-22" id="h14-5-22" class="d">-            appendFileName(sanitizedPathPrefix)
+</a><a href="#h14-5-23" id="h14-5-23" class="i">+            appendFileName(sanitizedMediaAuthor)
+</a>         }
+         if (pathFormat.contains(&quot;append_date_time&quot;)) {
+             appendFileName(currentDateTime)
+<a href="#h14-6" id="h14-6" class="h">@@ -235,10 +236,9 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>             val authorUsername = author.usernameForSorting!!
+ 
+             downloadOperaMedia(provideDownloadManagerClient(
+<a href="#h14-6-3" id="h14-6-3" class="d">-                pathSuffix = authorUsername,
+</a>                 mediaIdentifier = &quot;$conversationId$senderId${conversationMessage.serverMessageId}&quot;,
+<a href="#h14-6-5" id="h14-6-5" class="d">-                mediaDisplaySource = authorUsername,
+</a><a href="#h14-6-6" id="h14-6-6" class="d">-                mediaDisplayType = MediaFilter.CHAT_MEDIA.key,
+</a><a href="#h14-6-7" id="h14-6-7" class="i">+                mediaAuthor = authorUsername,
+</a><a href="#h14-6-8" id="h14-6-8" class="i">+                downloadSource = MediaDownloadSource.CHAT_MEDIA,
+</a>                 friendInfo = author
+             ), mediaInfoMap)
+ 
+<a href="#h14-7" id="h14-7" class="h">@@ -278,10 +278,9 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>             if (!forceDownload &amp;&amp; !canUseRule(author.userId!!)) return
+ 
+             downloadOperaMedia(provideDownloadManagerClient(
+<a href="#h14-7-3" id="h14-7-3" class="d">-                pathSuffix = authorName,
+</a>                 mediaIdentifier = paramMap[&quot;MEDIA_ID&quot;].toString(),
+<a href="#h14-7-5" id="h14-7-5" class="d">-                mediaDisplaySource = authorName,
+</a><a href="#h14-7-6" id="h14-7-6" class="d">-                mediaDisplayType = MediaFilter.STORY.key,
+</a><a href="#h14-7-7" id="h14-7-7" class="i">+                mediaAuthor = authorName,
+</a><a href="#h14-7-8" id="h14-7-8" class="i">+                downloadSource = MediaDownloadSource.STORY,
+</a>                 friendInfo = author
+             ), mediaInfoMap)
+             return
+<a href="#h14-8" id="h14-8" class="h">@@ -292,15 +291,12 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>         //public stories
+         if ((snapSource == &quot;PUBLIC_USER&quot; || snapSource == &quot;SAVED_STORY&quot;) &amp;&amp;
+             (forceDownload || canAutoDownload(&quot;public_stories&quot;))) {
+<a href="#h14-8-3" id="h14-8-3" class="d">-            val userDisplayName = (if (paramMap.containsKey(&quot;USER_DISPLAY_NAME&quot;)) paramMap[&quot;USER_DISPLAY_NAME&quot;].toString() else &quot;&quot;).replace(
+</a><a href="#h14-8-4" id="h14-8-4" class="d">-                     &quot;[\\p{Cntrl}]&quot;.toRegex(),
+</a><a href="#h14-8-5" id="h14-8-5" class="d">-                    &quot;&quot;)
+</a><a href="#h14-8-6" id="h14-8-6" class="i">+            val userDisplayName = (if (paramMap.containsKey(&quot;USER_DISPLAY_NAME&quot;)) paramMap[&quot;USER_DISPLAY_NAME&quot;].toString() else &quot;&quot;).sanitizeForPath()
+</a> 
+             downloadOperaMedia(provideDownloadManagerClient(
+<a href="#h14-8-9" id="h14-8-9" class="d">-                pathSuffix = &quot;Public-Stories/$userDisplayName&quot;,
+</a>                 mediaIdentifier = paramMap[&quot;SNAP_ID&quot;].toString(),
+<a href="#h14-8-11" id="h14-8-11" class="d">-                mediaDisplayType = userDisplayName,
+</a><a href="#h14-8-12" id="h14-8-12" class="d">-                mediaDisplaySource = &quot;Public Story&quot;
+</a><a href="#h14-8-13" id="h14-8-13" class="i">+                mediaAuthor = userDisplayName,
+</a><a href="#h14-8-14" id="h14-8-14" class="i">+                downloadSource = MediaDownloadSource.PUBLIC_STORY,
+</a>             ), mediaInfoMap)
+             return
+         }
+<a href="#h14-9" id="h14-9" class="h">@@ -308,10 +304,9 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>         //spotlight
+         if (snapSource == &quot;SINGLE_SNAP_STORY&quot; &amp;&amp; (forceDownload || canAutoDownload(&quot;spotlight&quot;))) {
+             downloadOperaMedia(provideDownloadManagerClient(
+<a href="#h14-9-3" id="h14-9-3" class="d">-                pathSuffix = &quot;Spotlight&quot;,
+</a>                 mediaIdentifier = paramMap[&quot;SNAP_ID&quot;].toString(),
+<a href="#h14-9-5" id="h14-9-5" class="d">-                mediaDisplayType = MediaFilter.SPOTLIGHT.key,
+</a><a href="#h14-9-6" id="h14-9-6" class="d">-                mediaDisplaySource = paramMap[&quot;TIME_STAMP&quot;].toString()
+</a><a href="#h14-9-7" id="h14-9-7" class="i">+                downloadSource = MediaDownloadSource.SPOTLIGHT,
+</a><a href="#h14-9-8" id="h14-9-8" class="i">+                mediaAuthor = paramMap[&quot;TIME_STAMP&quot;].toString()
+</a>             ), mediaInfoMap)
+             return
+         }
+<a href="#h14-10" id="h14-10" class="h">@@ -319,9 +314,7 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>         //stories with mpeg dash media
+         //TODO: option to download multiple chapters
+         if (paramMap.containsKey(&quot;LONGFORM_VIDEO_PLAYLIST_ITEM&quot;) &amp;&amp; forceDownload) {
+<a href="#h14-10-3" id="h14-10-3" class="d">-            val storyName = paramMap[&quot;STORY_NAME&quot;].toString().replace(
+</a><a href="#h14-10-4" id="h14-10-4" class="d">-                 &quot;[\\p{Cntrl}]&quot;.toRegex(),
+</a><a href="#h14-10-5" id="h14-10-5" class="d">-                &quot;&quot;)
+</a><a href="#h14-10-6" id="h14-10-6" class="i">+            val storyName = paramMap[&quot;STORY_NAME&quot;].toString().sanitizeForPath()
+</a> 
+             //get the position of the media in the playlist and the duration
+             val snapItem = SnapPlaylistItem(paramMap[&quot;SNAP_PLAYLIST_ITEM&quot;]!!)
+<a href="#h14-11" id="h14-11" class="h">@@ -338,20 +331,19 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>             val duration: Long? = nextChapter?.startTimeMs?.minus(snapChapterTimestamp)
+ 
+             //get the mpd playlist and append the cdn url to baseurl nodes
+<a href="#h14-11-3" id="h14-11-3" class="i">+            context.log.verbose(&quot;Downloading dash media ${paramMap[&quot;MEDIA_ID&quot;].toString()}&quot;, featureKey)
+</a>             val playlistUrl = paramMap[&quot;MEDIA_ID&quot;].toString().let {
+<a href="#h14-11-5" id="h14-11-5" class="d">-                val urlIndex = it.indexOf(&quot;https://cf-st.sc-cdn.net&quot;)
+</a><a href="#h14-11-6" id="h14-11-6" class="d">-                if (urlIndex == -1) {
+</a><a href="#h14-11-7" id="h14-11-7" class="d">-                    &quot;${RemoteMediaResolver.CF_ST_CDN_D}$it&quot;
+</a><a href="#h14-11-8" id="h14-11-8" class="d">-                } else {
+</a><a href="#h14-11-9" id="h14-11-9" class="d">-                    it.substring(urlIndex)
+</a><a href="#h14-11-10" id="h14-11-10" class="d">-                }
+</a><a href="#h14-11-11" id="h14-11-11" class="i">+                val urlIndexes = arrayOf(it.indexOf(&quot;https://cf-st.sc-cdn.net&quot;), it.indexOf(&quot;https://bolt-gcdn.sc-cdn.net&quot;))
+</a><a href="#h14-11-12" id="h14-11-12" class="i">+
+</a><a href="#h14-11-13" id="h14-11-13" class="i">+                urlIndexes.firstOrNull { index -&gt; index != -1 }?.let { validIndex -&gt;
+</a><a href="#h14-11-14" id="h14-11-14" class="i">+                    it.substring(validIndex)
+</a><a href="#h14-11-15" id="h14-11-15" class="i">+                } ?: &quot;${RemoteMediaResolver.CF_ST_CDN_D}$it&quot;
+</a>             }
+ 
+             provideDownloadManagerClient(
+<a href="#h14-11-19" id="h14-11-19" class="d">-                pathSuffix = &quot;Pro-Stories/${storyName}&quot;,
+</a>                 mediaIdentifier = &quot;${paramMap[&quot;STORY_ID&quot;]}-${snapItem.snapId}&quot;,
+<a href="#h14-11-21" id="h14-11-21" class="d">-                mediaDisplaySource = storyName,
+</a><a href="#h14-11-22" id="h14-11-22" class="d">-                mediaDisplayType = &quot;Pro Story&quot;
+</a><a href="#h14-11-23" id="h14-11-23" class="i">+                downloadSource = MediaDownloadSource.PUBLIC_STORY,
+</a><a href="#h14-11-24" id="h14-11-24" class="i">+                mediaAuthor = storyName
+</a>             ).downloadDashMedia(
+                 playlistUrl,
+                 snapChapterTimestamp,
+<a href="#h14-12" id="h14-12" class="h">@@ -476,10 +468,9 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>             if (!isPreview) {
+                 val encryptionKeys = EncryptionHelper.getEncryptionKeys(contentType, messageReader, isArroyo = isArroyoMessage)
+                 provideDownloadManagerClient(
+<a href="#h14-12-3" id="h14-12-3" class="d">-                    pathSuffix = authorName,
+</a>                     mediaIdentifier = &quot;${message.clientConversationId}${message.senderId}${message.serverMessageId}&quot;,
+<a href="#h14-12-5" id="h14-12-5" class="d">-                    mediaDisplaySource = authorName,
+</a><a href="#h14-12-6" id="h14-12-6" class="d">-                    mediaDisplayType = MediaFilter.CHAT_MEDIA.key,
+</a><a href="#h14-12-7" id="h14-12-7" class="i">+                    downloadSource = MediaDownloadSource.CHAT_MEDIA,
+</a><a href="#h14-12-8" id="h14-12-8" class="i">+                    mediaAuthor = authorName,
+</a>                     friendInfo = friendInfo
+                 ).downloadSingleMedia(
+                     Base64.UrlSafe.encode(urlProto),
+<a href="#h14-13" id="h14-13" class="h">@@ -532,10 +523,9 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a> 
+     fun downloadProfilePicture(url: String, author: String) {
+         provideDownloadManagerClient(
+<a href="#h14-13-3" id="h14-13-3" class="d">-            pathSuffix = &quot;Profile Pictures&quot;,
+</a>             mediaIdentifier = url.hashCode().toString(16).replaceFirst(&quot;-&quot;, &quot;&quot;),
+<a href="#h14-13-5" id="h14-13-5" class="d">-            mediaDisplaySource = author,
+</a><a href="#h14-13-6" id="h14-13-6" class="d">-            mediaDisplayType = MediaFilter.PROFILE_PICTURE.key
+</a><a href="#h14-13-7" id="h14-13-7" class="i">+            mediaAuthor = author,
+</a><a href="#h14-13-8" id="h14-13-8" class="i">+            downloadSource = MediaDownloadSource.PROFILE_PICTURE
+</a>         ).downloadSingleMedia(
+             url,
+             DownloadMediaType.REMOTE_MEDIA
+<b>diff --git a/<a id="h15" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/snap/EncryptionHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/EncryptionHelper.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/snap/EncryptionHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/EncryptionHelper.kt</a></b>
+<a href="#h15-0" id="h15-0" class="h">@@ -12,13 +12,13 @@ import javax.crypto.spec.SecretKeySpec
+</a> 
+ object EncryptionHelper {
+     fun getEncryptionKeys(contentType: ContentType, messageProto: ProtoReader, isArroyo: Boolean): Pair&lt;ByteArray, ByteArray&gt;? {
+<a href="#h15-0-3" id="h15-0-3" class="d">-        val messageMediaInfo = MediaDownloaderHelper.getMessageMediaInfo(messageProto, contentType, isArroyo) ?: return null
+</a><a href="#h15-0-4" id="h15-0-4" class="d">-        val encryptionProtoIndex = if (messageMediaInfo.contains(Constants.ENCRYPTION_PROTO_INDEX_V2)) {
+</a><a href="#h15-0-5" id="h15-0-5" class="i">+        val mediaEncryptionInfo = MediaDownloaderHelper.getMessageMediaEncryptionInfo(messageProto, contentType, isArroyo) ?: return null
+</a><a href="#h15-0-6" id="h15-0-6" class="i">+        val encryptionProtoIndex = if (mediaEncryptionInfo.contains(Constants.ENCRYPTION_PROTO_INDEX_V2)) {
+</a>             Constants.ENCRYPTION_PROTO_INDEX_V2
+         } else {
+             Constants.ENCRYPTION_PROTO_INDEX
+         }
+<a href="#h15-0-11" id="h15-0-11" class="d">-        val encryptionProto = messageMediaInfo.followPath(encryptionProtoIndex) ?: return null
+</a><a href="#h15-0-12" id="h15-0-12" class="i">+        val encryptionProto = mediaEncryptionInfo.followPath(encryptionProtoIndex) ?: return null
+</a> 
+         var key: ByteArray = encryptionProto.getByteArray(1)!!
+         var iv: ByteArray = encryptionProto.getByteArray(2)!!
+<b>diff --git a/<a id="h16" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt</a></b>
+<a href="#h16-0" id="h16-0" class="h">@@ -18,7 +18,7 @@ import java.util.zip.ZipInputStream
+</a> 
+ 
+ object MediaDownloaderHelper {
+<a href="#h16-0-3" id="h16-0-3" class="d">-    fun getMessageMediaInfo(protoReader: ProtoReader, contentType: ContentType, isArroyo: Boolean): ProtoReader? {
+</a><a href="#h16-0-4" id="h16-0-4" class="i">+    fun getMessageMediaEncryptionInfo(protoReader: ProtoReader, contentType: ContentType, isArroyo: Boolean): ProtoReader? {
+</a>         val messageContainerPath = if (isArroyo) protoReader.followPath(*Constants.ARROYO_MEDIA_CONTAINER_PROTO_PATH)!! else protoReader
+         val mediaContainerPath = if (contentType == ContentType.NOTE) intArrayOf(6, 1, 1) else intArrayOf(5, 1, 1)
+ 
+<a href="#h16-1" id="h16-1" class="h">@@ -27,12 +27,13 @@ object MediaDownloaderHelper {
+</a>             ContentType.SNAP -&gt; messageContainerPath.followPath(*(intArrayOf(11) + mediaContainerPath))
+             ContentType.EXTERNAL_MEDIA -&gt; {
+                 val externalMediaTypes = arrayOf(
+<a href="#h16-1-3" id="h16-1-3" class="d">-                    intArrayOf(3, 3), //normal external media
+</a><a href="#h16-1-4" id="h16-1-4" class="d">-                    intArrayOf(7, 12, 3), //attached story reply
+</a><a href="#h16-1-5" id="h16-1-5" class="d">-                    intArrayOf(7, 3) //original story reply
+</a><a href="#h16-1-6" id="h16-1-6" class="i">+                    intArrayOf(3, 3, *mediaContainerPath), //normal external media
+</a><a href="#h16-1-7" id="h16-1-7" class="i">+                    intArrayOf(7, 15, 1, 1), //attached audio note
+</a><a href="#h16-1-8" id="h16-1-8" class="i">+                    intArrayOf(7, 12, 3, *mediaContainerPath), //attached story reply
+</a><a href="#h16-1-9" id="h16-1-9" class="i">+                    intArrayOf(7, 3, *mediaContainerPath), //original story reply
+</a>                 )
+                 externalMediaTypes.forEach { path -&gt;
+<a href="#h16-1-12" id="h16-1-12" class="d">-                    messageContainerPath.followPath(*(path + mediaContainerPath))?.also { return it }
+</a><a href="#h16-1-13" id="h16-1-13" class="i">+                    messageContainerPath.followPath(*path)?.also { return it }
+</a>                 }
+                 null
+             }
+</pre>
+</div>
+</body>
+</html>

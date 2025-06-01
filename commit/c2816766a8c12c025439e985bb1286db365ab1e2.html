@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(experimental): better location - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/c2816766a8c12c025439e985bb1286db365ab1e2.html">c2816766a8c12c025439e985bb1286db365ab1e2</a>
+<b>parent</b> <a href="../commit/10bcb93d45a7207380303a30035ab182fd7d1038.html">10bcb93d45a7207380303a30035ab182fd7d1038</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 23 Mar 2024 02:09:09 +0100
+
+feat(experimental): better location
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">32</td><td><span class="i">++++++++++++++++++++++++</span><span class="d">--------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">++++++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt</a></td><td> | </td><td class="num">117</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="D">D</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/LocationSpoofer.kt</a></td><td> | </td><td class="num">29</td><td><span class="i"></span><span class="d">-----------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SuspendLocationUpdates.kt</a></td><td> | </td><td class="num">59</td><td><span class="i">+++++++</span><span class="d">----------------------------------------------------</span></td></tr>
+</table></pre><pre>6 files changed, 157 insertions(+), 94 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -500,20 +500,36 @@
+</a>                 &quot;name&quot;: &quot;Global&quot;,
+                 &quot;description&quot;: &quot;Tweak Global Snapchat Settings&quot;,
+                 &quot;properties&quot;: {
+<a href="#h0-0-3" id="h0-0-3" class="d">-                    &quot;spoofLocation&quot;: {
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-                        &quot;name&quot;: &quot;Location&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-                        &quot;description&quot;: &quot;Spoof your location&quot;,
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                    &quot;better_location&quot;: {
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+                        &quot;name&quot;: &quot;Better Location&quot;,
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+                        &quot;description&quot;: &quot;Enhances the Snapchat Location&quot;,
+</a>                         &quot;properties&quot;: {
+<a href="#h0-0-10" id="h0-0-10" class="i">+                            &quot;spoof_location&quot;: {
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+                                &quot;name&quot;: &quot;Spoof Location&quot;,
+</a><a href="#h0-0-12" id="h0-0-12" class="i">+                                &quot;description&quot;: &quot;Spoofs your location to a specified one&quot;
+</a><a href="#h0-0-13" id="h0-0-13" class="i">+                            },
+</a>                             &quot;coordinates&quot;: {
+                                 &quot;name&quot;: &quot;Coordinates&quot;,
+<a href="#h0-0-16" id="h0-0-16" class="d">-                                &quot;description&quot;: &quot;Set the coordinates&quot;
+</a><a href="#h0-0-17" id="h0-0-17" class="i">+                                &quot;description&quot;: &quot;Set the coordinates of the spoofed location&quot;
+</a><a href="#h0-0-18" id="h0-0-18" class="i">+                            },
+</a><a href="#h0-0-19" id="h0-0-19" class="i">+                            &quot;always_update_location&quot;: {
+</a><a href="#h0-0-20" id="h0-0-20" class="i">+                                &quot;name&quot;: &quot;Always Update Location&quot;,
+</a><a href="#h0-0-21" id="h0-0-21" class="i">+                                &quot;description&quot;: &quot;Force Snapchat to update location even if no GPS data is received&quot;
+</a><a href="#h0-0-22" id="h0-0-22" class="i">+                            },
+</a><a href="#h0-0-23" id="h0-0-23" class="i">+                            &quot;suspend_location_updates&quot;: {
+</a><a href="#h0-0-24" id="h0-0-24" class="i">+                                &quot;name&quot;: &quot;Suspend Location Updates&quot;,
+</a><a href="#h0-0-25" id="h0-0-25" class="i">+                                &quot;description&quot;: &quot;Adds a button in map settings to suspend location updates&quot;
+</a><a href="#h0-0-26" id="h0-0-26" class="i">+                            },
+</a><a href="#h0-0-27" id="h0-0-27" class="i">+                            &quot;spoof_battery_level&quot;: {
+</a><a href="#h0-0-28" id="h0-0-28" class="i">+                                &quot;name&quot;: &quot;Spoof Battery Level&quot;,
+</a><a href="#h0-0-29" id="h0-0-29" class="i">+                                &quot;description&quot;: &quot;Spoofs the battery level of your device on map\nValue must be between 0 and 100&quot;
+</a><a href="#h0-0-30" id="h0-0-30" class="i">+                            },
+</a><a href="#h0-0-31" id="h0-0-31" class="i">+                            &quot;spoof_headphones&quot;: {
+</a><a href="#h0-0-32" id="h0-0-32" class="i">+                                &quot;name&quot;: &quot;Spoof Headphones&quot;,
+</a><a href="#h0-0-33" id="h0-0-33" class="i">+                                &quot;description&quot;: &quot;Spoofs the status of listening to music on map&quot;
+</a>                             }
+                         }
+                     },
+<a href="#h0-0-37" id="h0-0-37" class="d">-                    &quot;suspend_location_updates&quot;: {
+</a><a href="#h0-0-38" id="h0-0-38" class="d">-                        &quot;name&quot;: &quot;Suspend Location Updates&quot;,
+</a><a href="#h0-0-39" id="h0-0-39" class="d">-                        &quot;description&quot;: &quot;Adds a button in map settings to suspend location updates&quot;
+</a><a href="#h0-0-40" id="h0-0-40" class="d">-                    },
+</a>                     &quot;snapchat_plus&quot;: {
+                         &quot;name&quot;: &quot;Snapchat Plus&quot;,
+                         &quot;description&quot;: &quot;Enables Snapchat Plus features\nSome Server-sided features may not work&quot;
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -18,11 +18,15 @@ class Global : ConfigContainer() {
+</a>         )
+     }
+ 
+<a href="#h1-0-3" id="h1-0-3" class="d">-    inner class SpoofLocation : ConfigContainer(hasGlobalState = true) {
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-        val coordinates = mapCoordinates(&quot;coordinates&quot;, 0.0 to 0.0) { requireRestart()} // lat, long
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+    inner class BetterLocation : ConfigContainer(hasGlobalState = true) {
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+        val spoofLocation = boolean(&quot;spoof_location&quot;) { requireRestart() }
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+        val coordinates = mapCoordinates(&quot;coordinates&quot;, 0.0 to 0.0) // lat, long
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+        val alwaysUpdateLocation = boolean(&quot;always_update_location&quot;) { requireRestart() }
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+        val suspendLocationUpdates = boolean(&quot;suspend_location_updates&quot;) { requireRestart() }
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+        val spoofBatteryLevel = string(&quot;spoof_battery_level&quot;) { requireRestart(); inputCheck = { it.isEmpty() || it.toIntOrNull() in 0..100 } }
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+        val spoofHeadphones = boolean(&quot;spoof_headphones&quot;) { requireRestart() }
+</a>     }
+<a href="#h1-0-13" id="h1-0-13" class="d">-    val spoofLocation = container(&quot;spoofLocation&quot;, SpoofLocation())
+</a><a href="#h1-0-14" id="h1-0-14" class="d">-    val suspendLocationUpdates = boolean(&quot;suspend_location_updates&quot;) { requireRestart() }
+</a><a href="#h1-0-15" id="h1-0-15" class="i">+    val betterLocation = container(&quot;better_location&quot;, BetterLocation())
+</a>     val snapchatPlus = boolean(&quot;snapchat_plus&quot;) { requireRestart() }
+     val disableConfirmationDialogs = multiple(&quot;disable_confirmation_dialogs&quot;, &quot;remove_friend&quot;, &quot;block_friend&quot;, &quot;ignore_friend&quot;, &quot;hide_friend&quot;, &quot;hide_conversation&quot;, &quot;clear_conversation&quot;) { requireRestart() }
+     val disableMetrics = boolean(&quot;disable_metrics&quot;) { requireRestart() }
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/FeatureManager.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -85,7 +85,6 @@ class FeatureManager(
+</a>             MediaQualityLevelOverride(),
+             MeoPasscodeBypass(),
+             AppPasscode(),
+<a href="#h2-0-3" id="h2-0-3" class="d">-            LocationSpoofer(),
+</a>             CameraTweaks(),
+             InfiniteStoryBoost(),
+             AmoledDarkMode(),
+<a href="#h2-1" id="h2-1" class="h">@@ -126,6 +125,7 @@ class FeatureManager(
+</a>             AccountSwitcher(),
+             RemoveGroupsLockedStatus(),
+             BypassMessageActionRestrictions(),
+<a href="#h2-1-3" id="h2-1-3" class="i">+            BetterLocation(),
+</a>         )
+ 
+         initializeFeatures()
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -0,0 +1,116 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="i">+package me.rhunk.snapenhance.core.features.impl.experiments
+</a><a href="#h3-0-1" id="h3-0-1" class="i">+
+</a><a href="#h3-0-2" id="h3-0-2" class="i">+import android.location.Location
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+import android.location.LocationManager
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import me.rhunk.snapenhance.common.util.protobuf.EditorContext
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+import me.rhunk.snapenhance.common.util.protobuf.ProtoEditor
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+import me.rhunk.snapenhance.core.event.events.impl.UnaryCallEvent
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+import me.rhunk.snapenhance.core.features.Feature
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+import me.rhunk.snapenhance.core.features.FeatureLoadParams
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+import me.rhunk.snapenhance.core.features.impl.global.SuspendLocationUpdates
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+import me.rhunk.snapenhance.core.util.hook.HookStage
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+import me.rhunk.snapenhance.core.util.hook.hook
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+import java.nio.ByteBuffer
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+import kotlin.time.Duration.Companion.days
+</a><a href="#h3-0-14" id="h3-0-14" class="i">+
+</a><a href="#h3-0-15" id="h3-0-15" class="i">+class BetterLocation : Feature(&quot;Better Location&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+</a><a href="#h3-0-16" id="h3-0-16" class="i">+    private fun editClientUpdate(editor: EditorContext) {
+</a><a href="#h3-0-17" id="h3-0-17" class="i">+        val config = context.config.global.betterLocation
+</a><a href="#h3-0-18" id="h3-0-18" class="i">+
+</a><a href="#h3-0-19" id="h3-0-19" class="i">+        editor.apply {
+</a><a href="#h3-0-20" id="h3-0-20" class="i">+            // SCVSLocationUpdate
+</a><a href="#h3-0-21" id="h3-0-21" class="i">+            edit(1) {
+</a><a href="#h3-0-22" id="h3-0-22" class="i">+                context.log.verbose(&quot;SCVSLocationUpdate ${this@apply}&quot;)
+</a><a href="#h3-0-23" id="h3-0-23" class="i">+                if (config.spoofLocation.get()) {
+</a><a href="#h3-0-24" id="h3-0-24" class="i">+                    val coordinates by config.coordinates
+</a><a href="#h3-0-25" id="h3-0-25" class="i">+                    remove(1)
+</a><a href="#h3-0-26" id="h3-0-26" class="i">+                    remove(2)
+</a><a href="#h3-0-27" id="h3-0-27" class="i">+                    addFixed32(1, coordinates.first.toFloat()) // lat
+</a><a href="#h3-0-28" id="h3-0-28" class="i">+                    addFixed32(2, coordinates.second.toFloat()) // lng
+</a><a href="#h3-0-29" id="h3-0-29" class="i">+                }
+</a><a href="#h3-0-30" id="h3-0-30" class="i">+
+</a><a href="#h3-0-31" id="h3-0-31" class="i">+                if (config.alwaysUpdateLocation.get()) {
+</a><a href="#h3-0-32" id="h3-0-32" class="i">+                    remove(7)
+</a><a href="#h3-0-33" id="h3-0-33" class="i">+                    addVarInt(7, System.currentTimeMillis()) // timestamp
+</a><a href="#h3-0-34" id="h3-0-34" class="i">+                }
+</a><a href="#h3-0-35" id="h3-0-35" class="i">+
+</a><a href="#h3-0-36" id="h3-0-36" class="i">+                if (context.feature(SuspendLocationUpdates::class).isSuspended()) {
+</a><a href="#h3-0-37" id="h3-0-37" class="i">+                    remove(7)
+</a><a href="#h3-0-38" id="h3-0-38" class="i">+                    addVarInt(7, System.currentTimeMillis() - 15.days.inWholeMilliseconds)
+</a><a href="#h3-0-39" id="h3-0-39" class="i">+                }
+</a><a href="#h3-0-40" id="h3-0-40" class="i">+            }
+</a><a href="#h3-0-41" id="h3-0-41" class="i">+
+</a><a href="#h3-0-42" id="h3-0-42" class="i">+            // SCVSDeviceData
+</a><a href="#h3-0-43" id="h3-0-43" class="i">+            edit(3) {
+</a><a href="#h3-0-44" id="h3-0-44" class="i">+                config.spoofBatteryLevel.getNullable()?.takeIf { it.isNotEmpty() }?.let {
+</a><a href="#h3-0-45" id="h3-0-45" class="i">+                    val value = it.toIntOrNull()?.toFloat()?.div(100) ?: return@edit
+</a><a href="#h3-0-46" id="h3-0-46" class="i">+                    remove(2)
+</a><a href="#h3-0-47" id="h3-0-47" class="i">+                    addFixed32(2, value)
+</a><a href="#h3-0-48" id="h3-0-48" class="i">+                    if (value == 100F) {
+</a><a href="#h3-0-49" id="h3-0-49" class="i">+                        remove(3)
+</a><a href="#h3-0-50" id="h3-0-50" class="i">+                        addVarInt(3, 1) // devicePluggedIn
+</a><a href="#h3-0-51" id="h3-0-51" class="i">+                    }
+</a><a href="#h3-0-52" id="h3-0-52" class="i">+                }
+</a><a href="#h3-0-53" id="h3-0-53" class="i">+
+</a><a href="#h3-0-54" id="h3-0-54" class="i">+                if (config.spoofHeadphones.get()) {
+</a><a href="#h3-0-55" id="h3-0-55" class="i">+                    remove(4)
+</a><a href="#h3-0-56" id="h3-0-56" class="i">+                    addVarInt(4, 1) // headphoneOutput
+</a><a href="#h3-0-57" id="h3-0-57" class="i">+                    remove(6)
+</a><a href="#h3-0-58" id="h3-0-58" class="i">+                    addVarInt(6, 1) // isOtherAudioPlaying
+</a><a href="#h3-0-59" id="h3-0-59" class="i">+                }
+</a><a href="#h3-0-60" id="h3-0-60" class="i">+
+</a><a href="#h3-0-61" id="h3-0-61" class="i">+                edit(10) {
+</a><a href="#h3-0-62" id="h3-0-62" class="i">+                    remove(1)
+</a><a href="#h3-0-63" id="h3-0-63" class="i">+                    addVarInt(1, 4) // type = ALWAYS
+</a><a href="#h3-0-64" id="h3-0-64" class="i">+                    remove(2)
+</a><a href="#h3-0-65" id="h3-0-65" class="i">+                    addVarInt(2, 1) // precise = true
+</a><a href="#h3-0-66" id="h3-0-66" class="i">+                }
+</a><a href="#h3-0-67" id="h3-0-67" class="i">+            }
+</a><a href="#h3-0-68" id="h3-0-68" class="i">+        }
+</a><a href="#h3-0-69" id="h3-0-69" class="i">+    }
+</a><a href="#h3-0-70" id="h3-0-70" class="i">+
+</a><a href="#h3-0-71" id="h3-0-71" class="i">+    override fun init() {
+</a><a href="#h3-0-72" id="h3-0-72" class="i">+        if (context.config.global.betterLocation.globalState != true) return
+</a><a href="#h3-0-73" id="h3-0-73" class="i">+
+</a><a href="#h3-0-74" id="h3-0-74" class="i">+        if (context.config.global.betterLocation.spoofLocation.get()) {
+</a><a href="#h3-0-75" id="h3-0-75" class="i">+            LocationManager::class.java.apply {
+</a><a href="#h3-0-76" id="h3-0-76" class="i">+                hook(&quot;isProviderEnabled&quot;, HookStage.BEFORE) { it.setResult(true) }
+</a><a href="#h3-0-77" id="h3-0-77" class="i">+                hook(&quot;isProviderEnabledForUser&quot;, HookStage.BEFORE) { it.setResult(true) }
+</a><a href="#h3-0-78" id="h3-0-78" class="i">+            }
+</a><a href="#h3-0-79" id="h3-0-79" class="i">+            Location::class.java.apply {
+</a><a href="#h3-0-80" id="h3-0-80" class="i">+                hook(&quot;getLatitude&quot;, HookStage.BEFORE) {
+</a><a href="#h3-0-81" id="h3-0-81" class="i">+                    it.setResult(context.config.global.betterLocation.coordinates.get().first) }
+</a><a href="#h3-0-82" id="h3-0-82" class="i">+                hook(&quot;getLongitude&quot;, HookStage.BEFORE) {
+</a><a href="#h3-0-83" id="h3-0-83" class="i">+                    it.setResult(context.config.global.betterLocation.coordinates.get().second)
+</a><a href="#h3-0-84" id="h3-0-84" class="i">+                }
+</a><a href="#h3-0-85" id="h3-0-85" class="i">+            }
+</a><a href="#h3-0-86" id="h3-0-86" class="i">+        }
+</a><a href="#h3-0-87" id="h3-0-87" class="i">+
+</a><a href="#h3-0-88" id="h3-0-88" class="i">+        context.event.subscribe(UnaryCallEvent::class) { event -&gt;
+</a><a href="#h3-0-89" id="h3-0-89" class="i">+            if (event.uri == &quot;/snapchat.valis.Valis/SendClientUpdate&quot;) {
+</a><a href="#h3-0-90" id="h3-0-90" class="i">+                event.buffer = ProtoEditor(event.buffer).apply {
+</a><a href="#h3-0-91" id="h3-0-91" class="i">+                    edit {
+</a><a href="#h3-0-92" id="h3-0-92" class="i">+                        editEach(1) {
+</a><a href="#h3-0-93" id="h3-0-93" class="i">+                            editClientUpdate(this)
+</a><a href="#h3-0-94" id="h3-0-94" class="i">+                        }
+</a><a href="#h3-0-95" id="h3-0-95" class="i">+                    }
+</a><a href="#h3-0-96" id="h3-0-96" class="i">+                }.toByteArray()
+</a><a href="#h3-0-97" id="h3-0-97" class="i">+            }
+</a><a href="#h3-0-98" id="h3-0-98" class="i">+        }
+</a><a href="#h3-0-99" id="h3-0-99" class="i">+
+</a><a href="#h3-0-100" id="h3-0-100" class="i">+        findClass(&quot;com.snapchat.client.grpc.ClientStreamSendHandler\$CppProxy&quot;).hook(&quot;send&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h3-0-101" id="h3-0-101" class="i">+            val array = param.arg&lt;ByteBuffer&gt;(0).let {
+</a><a href="#h3-0-102" id="h3-0-102" class="i">+                it.position(0)
+</a><a href="#h3-0-103" id="h3-0-103" class="i">+                ByteArray(it.capacity()).also { buffer -&gt; it.get(buffer); it.position(0) }
+</a><a href="#h3-0-104" id="h3-0-104" class="i">+            }
+</a><a href="#h3-0-105" id="h3-0-105" class="i">+
+</a><a href="#h3-0-106" id="h3-0-106" class="i">+            param.setArg(0, ProtoEditor(array).apply {
+</a><a href="#h3-0-107" id="h3-0-107" class="i">+                edit {
+</a><a href="#h3-0-108" id="h3-0-108" class="i">+                    editClientUpdate(this)
+</a><a href="#h3-0-109" id="h3-0-109" class="i">+                }
+</a><a href="#h3-0-110" id="h3-0-110" class="i">+            }.toByteArray().let {
+</a><a href="#h3-0-111" id="h3-0-111" class="i">+                ByteBuffer.allocateDirect(it.size).put(it).rewind()
+</a><a href="#h3-0-112" id="h3-0-112" class="i">+            })
+</a><a href="#h3-0-113" id="h3-0-113" class="i">+        }
+</a><a href="#h3-0-114" id="h3-0-114" class="i">+    }
+</a><a href="#h3-0-115" id="h3-0-115" class="i">+}</a><a href="#h3-0-116" id="h3-0-116" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/LocationSpoofer.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/LocationSpoofer.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/LocationSpoofer.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/LocationSpoofer.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -1,28 +0,0 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="d">-package me.rhunk.snapenhance.core.features.impl.global
+</a><a href="#h4-0-1" id="h4-0-1" class="d">-
+</a><a href="#h4-0-2" id="h4-0-2" class="d">-import android.location.Location
+</a><a href="#h4-0-3" id="h4-0-3" class="d">-import android.location.LocationManager
+</a><a href="#h4-0-4" id="h4-0-4" class="d">-import me.rhunk.snapenhance.core.features.Feature
+</a><a href="#h4-0-5" id="h4-0-5" class="d">-import me.rhunk.snapenhance.core.features.FeatureLoadParams
+</a><a href="#h4-0-6" id="h4-0-6" class="d">-import me.rhunk.snapenhance.core.util.hook.HookStage
+</a><a href="#h4-0-7" id="h4-0-7" class="d">-import me.rhunk.snapenhance.core.util.hook.hook
+</a><a href="#h4-0-8" id="h4-0-8" class="d">-
+</a><a href="#h4-0-9" id="h4-0-9" class="d">-class LocationSpoofer: Feature(&quot;LocationSpoof&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+</a><a href="#h4-0-10" id="h4-0-10" class="d">-    override fun init() {
+</a><a href="#h4-0-11" id="h4-0-11" class="d">-        if (context.config.global.spoofLocation.globalState != true) return
+</a><a href="#h4-0-12" id="h4-0-12" class="d">-
+</a><a href="#h4-0-13" id="h4-0-13" class="d">-        val coordinates by context.config.global.spoofLocation.coordinates
+</a><a href="#h4-0-14" id="h4-0-14" class="d">-
+</a><a href="#h4-0-15" id="h4-0-15" class="d">-        Location::class.java.apply {
+</a><a href="#h4-0-16" id="h4-0-16" class="d">-            hook(&quot;getLatitude&quot;, HookStage.BEFORE) { it.setResult(coordinates.first) }
+</a><a href="#h4-0-17" id="h4-0-17" class="d">-            hook(&quot;getLongitude&quot;, HookStage.BEFORE) { it.setResult(coordinates.second) }
+</a><a href="#h4-0-18" id="h4-0-18" class="d">-            hook(&quot;getAccuracy&quot;, HookStage.BEFORE) { it.setResult(0.0F) }
+</a><a href="#h4-0-19" id="h4-0-19" class="d">-        }
+</a><a href="#h4-0-20" id="h4-0-20" class="d">-
+</a><a href="#h4-0-21" id="h4-0-21" class="d">-        LocationManager::class.java.apply {
+</a><a href="#h4-0-22" id="h4-0-22" class="d">-            //Might be redundant because it calls isProviderEnabledForUser which we also hook, meaning if isProviderEnabledForUser returns true this will also return true
+</a><a href="#h4-0-23" id="h4-0-23" class="d">-            hook(&quot;isProviderEnabled&quot;, HookStage.BEFORE) { it.setResult(true) }
+</a><a href="#h4-0-24" id="h4-0-24" class="d">-            hook(&quot;isProviderEnabledForUser&quot;, HookStage.BEFORE) { it.setResult(true) }
+</a><a href="#h4-0-25" id="h4-0-25" class="d">-        }
+</a><a href="#h4-0-26" id="h4-0-26" class="d">-    }
+</a><a href="#h4-0-27" id="h4-0-27" class="d">-}</a><a href="#h4-0-28" id="h4-0-28" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SuspendLocationUpdates.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SuspendLocationUpdates.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SuspendLocationUpdates.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SuspendLocationUpdates.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -7,56 +7,17 @@ import me.rhunk.snapenhance.core.event.events.impl.AddViewEvent
+</a> import me.rhunk.snapenhance.core.features.BridgeFileFeature
+ import me.rhunk.snapenhance.core.features.FeatureLoadParams
+ import me.rhunk.snapenhance.core.ui.ViewAppearanceHelper
+<a href="#h5-0-3" id="h5-0-3" class="d">-import me.rhunk.snapenhance.core.util.hook.HookStage
+</a><a href="#h5-0-4" id="h5-0-4" class="d">-import me.rhunk.snapenhance.core.util.hook.hook
+</a> import me.rhunk.snapenhance.core.util.ktx.getId
+<a href="#h5-0-6" id="h5-0-6" class="d">-import java.util.WeakHashMap
+</a> 
+<a href="#h5-0-8" id="h5-0-8" class="d">-//TODO: bridge shared preferences
+</a> class SuspendLocationUpdates : BridgeFileFeature(
+     &quot;Suspend Location Updates&quot;,
+<a href="#h5-0-11" id="h5-0-11" class="d">-    loadParams = FeatureLoadParams.INIT_SYNC or FeatureLoadParams.ACTIVITY_CREATE_SYNC,
+</a><a href="#h5-0-12" id="h5-0-12" class="d">-    bridgeFileType = BridgeFileType.SUSPEND_LOCATION_STATE
+</a><a href="#h5-0-13" id="h5-0-13" class="d">-) {
+</a><a href="#h5-0-14" id="h5-0-14" class="d">-    private val streamSendHandlerInstanceMap = WeakHashMap&lt;Any, () -&gt; Unit&gt;()
+</a><a href="#h5-0-15" id="h5-0-15" class="d">-    private val isEnabled get() = context.config.global.suspendLocationUpdates.get()
+</a><a href="#h5-0-16" id="h5-0-16" class="d">-
+</a><a href="#h5-0-17" id="h5-0-17" class="d">-    override fun init() {
+</a><a href="#h5-0-18" id="h5-0-18" class="d">-        if (!isEnabled) return
+</a><a href="#h5-0-19" id="h5-0-19" class="d">-        reload()
+</a><a href="#h5-0-20" id="h5-0-20" class="d">-
+</a><a href="#h5-0-21" id="h5-0-21" class="d">-        findClass(&quot;com.snapchat.client.grpc.ClientStreamSendHandler\$CppProxy&quot;).hook(&quot;send&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h5-0-22" id="h5-0-22" class="d">-            if (param.nullableThisObject&lt;Any&gt;() !in streamSendHandlerInstanceMap) return@hook
+</a><a href="#h5-0-23" id="h5-0-23" class="d">-            if (!exists(&quot;true&quot;)) return@hook
+</a><a href="#h5-0-24" id="h5-0-24" class="d">-            param.setResult(null)
+</a><a href="#h5-0-25" id="h5-0-25" class="d">-        }
+</a><a href="#h5-0-26" id="h5-0-26" class="d">-
+</a><a href="#h5-0-27" id="h5-0-27" class="d">-        context.classCache.unifiedGrpcService.apply {
+</a><a href="#h5-0-28" id="h5-0-28" class="d">-            hook(&quot;unaryCall&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h5-0-29" id="h5-0-29" class="d">-                val uri = param.arg&lt;String&gt;(0)
+</a><a href="#h5-0-30" id="h5-0-30" class="d">-                if (exists(&quot;true&quot;) &amp;&amp; uri == &quot;/snapchat.valis.Valis/SendClientUpdate&quot;) {
+</a><a href="#h5-0-31" id="h5-0-31" class="d">-                    param.setResult(null)
+</a><a href="#h5-0-32" id="h5-0-32" class="d">-                }
+</a><a href="#h5-0-33" id="h5-0-33" class="d">-            }
+</a><a href="#h5-0-34" id="h5-0-34" class="d">-
+</a><a href="#h5-0-35" id="h5-0-35" class="d">-            hook(&quot;bidiStreamingCall&quot;, HookStage.AFTER) { param -&gt;
+</a><a href="#h5-0-36" id="h5-0-36" class="d">-                val uri = param.arg&lt;String&gt;(0)
+</a><a href="#h5-0-37" id="h5-0-37" class="d">-                if (uri != &quot;/snapchat.valis.Valis/Communicate&quot;) return@hook
+</a><a href="#h5-0-38" id="h5-0-38" class="d">-                param.getResult()?.let { instance -&gt;
+</a><a href="#h5-0-39" id="h5-0-39" class="d">-                    streamSendHandlerInstanceMap[instance] = {
+</a><a href="#h5-0-40" id="h5-0-40" class="d">-                        runCatching {
+</a><a href="#h5-0-41" id="h5-0-41" class="d">-                            instance::class.java.methods.first { it.name == &quot;closeStream&quot; }.invoke(instance)
+</a><a href="#h5-0-42" id="h5-0-42" class="d">-                        }.onFailure {
+</a><a href="#h5-0-43" id="h5-0-43" class="d">-                            context.log.error(&quot;Failed to close stream send handler instance&quot;, it)
+</a><a href="#h5-0-44" id="h5-0-44" class="d">-                        }
+</a><a href="#h5-0-45" id="h5-0-45" class="d">-                    }
+</a><a href="#h5-0-46" id="h5-0-46" class="d">-                }
+</a><a href="#h5-0-47" id="h5-0-47" class="d">-            }
+</a><a href="#h5-0-48" id="h5-0-48" class="d">-        }
+</a><a href="#h5-0-49" id="h5-0-49" class="d">-    }
+</a><a href="#h5-0-50" id="h5-0-50" class="i">+    loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC, bridgeFileType = BridgeFileType.SUSPEND_LOCATION_STATE) {
+</a><a href="#h5-0-51" id="h5-0-51" class="i">+    fun isSuspended() = exists(&quot;true&quot;)
+</a><a href="#h5-0-52" id="h5-0-52" class="i">+    private fun setSuspended(suspended: Boolean) = setState(&quot;true&quot;, suspended)
+</a> 
+     override fun onActivityCreate() {
+<a href="#h5-0-55" id="h5-0-55" class="d">-        if (!isEnabled) return
+</a><a href="#h5-0-56" id="h5-0-56" class="i">+        if (context.config.global.betterLocation.takeIf { it.globalState == true }?.suspendLocationUpdates?.get() != true) return
+</a><a href="#h5-0-57" id="h5-0-57" class="i">+        reload()
+</a> 
+         val locationSharingSettingsContainerId = context.resources.getId(&quot;location_sharing_settings_container&quot;)
+         val recyclerViewContainerId = context.resources.getId(&quot;recycler_view_container&quot;)
+<a href="#h5-1" id="h5-1" class="h">@@ -64,7 +25,7 @@ class SuspendLocationUpdates : BridgeFileFeature(
+</a>         context.event.subscribe(AddViewEvent::class) { event -&gt;
+             if (event.parent.id == locationSharingSettingsContainerId &amp;&amp; event.view.id == recyclerViewContainerId) {
+                 (event.view as ViewGroup).addView(Switch(event.view.context).apply {
+<a href="#h5-1-3" id="h5-1-3" class="d">-                    isChecked = exists(&quot;true&quot;)
+</a><a href="#h5-1-4" id="h5-1-4" class="i">+                    isChecked = isSuspended()
+</a>                     ViewAppearanceHelper.applyTheme(this)
+                     text = this@SuspendLocationUpdates.context.translation[&quot;suspend_location_updates.switch_text&quot;]
+                     layoutParams = ViewGroup.LayoutParams(
+<a href="#h5-2" id="h5-2" class="h">@@ -72,13 +33,7 @@ class SuspendLocationUpdates : BridgeFileFeature(
+</a>                         ViewGroup.LayoutParams.WRAP_CONTENT
+                     )
+                     setOnCheckedChangeListener { _, isChecked -&gt;
+<a href="#h5-2-3" id="h5-2-3" class="d">-                        if (isChecked) {
+</a><a href="#h5-2-4" id="h5-2-4" class="d">-                            streamSendHandlerInstanceMap.entries.removeIf { (_, closeStream) -&gt;
+</a><a href="#h5-2-5" id="h5-2-5" class="d">-                                closeStream()
+</a><a href="#h5-2-6" id="h5-2-6" class="d">-                                true
+</a><a href="#h5-2-7" id="h5-2-7" class="d">-                            }
+</a><a href="#h5-2-8" id="h5-2-8" class="d">-                        }
+</a><a href="#h5-2-9" id="h5-2-9" class="d">-                        setState(&quot;true&quot;, isChecked)
+</a><a href="#h5-2-10" id="h5-2-10" class="i">+                        setSuspended(isChecked)
+</a>                     }
+                 })
+             }
+</pre>
+</div>
+</body>
+</html>

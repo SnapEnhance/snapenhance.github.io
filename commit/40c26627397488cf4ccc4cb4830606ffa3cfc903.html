@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix: suspend location updates switch - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/40c26627397488cf4ccc4cb4830606ffa3cfc903.html">40c26627397488cf4ccc4cb4830606ffa3cfc903</a>
+<b>parent</b> <a href="../commit/1f54a6295f160c0288b713e6b25656484073c438.html">1f54a6295f160c0288b713e6b25656484073c438</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Tue, 16 Apr 2024 22:57:49 +0200
+
+fix: suspend location updates switch
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventDispatcher.kt</a></td><td> | </td><td class="num">25</td><td><span class="i">+++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/event/events/impl/LayoutInflateEvent.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SuspendLocationUpdates.kt</a></td><td> | </td><td class="num">14</td><td><span class="i">+++++++++</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/UITweaks.kt</a></td><td> | </td><td class="num">11</td><td><span class="i">++++</span><span class="d">-------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/util/ktx/AndroidExt.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">+++++</span><span class="d">--</span></td></tr>
+</table></pre><pre>5 files changed, 55 insertions(+), 14 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventDispatcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventDispatcher.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventDispatcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventDispatcher.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -2,6 +2,7 @@ package me.rhunk.snapenhance.core.event
+</a> 
+ import android.app.Activity
+ import android.content.Intent
+<a href="#h0-0-3" id="h0-0-3" class="i">+import android.view.LayoutInflater
+</a> import android.view.View
+ import android.view.ViewGroup
+ import android.view.ViewGroup.LayoutParams
+<a href="#h0-1" id="h0-1" class="h">@@ -132,6 +133,30 @@ class EventDispatcher(
+</a>             }
+         }
+ 
+<a href="#h0-1-3" id="h0-1-3" class="i">+        LayoutInflater::class.java.getMethod(
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+            &quot;inflate&quot;,
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+            Int::class.java,
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+            ViewGroup::class.java,
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+            Boolean::class.javaPrimitiveType
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+        ).hook(HookStage.AFTER) { param -&gt;
+</a><a href="#h0-1-9" id="h0-1-9" class="i">+            val layoutId = param.argNullable&lt;Int&gt;(0) ?: return@hook
+</a><a href="#h0-1-10" id="h0-1-10" class="i">+            val parent = param.argNullable&lt;ViewGroup&gt;(1)
+</a><a href="#h0-1-11" id="h0-1-11" class="i">+            val result = param.getResult() as? View
+</a><a href="#h0-1-12" id="h0-1-12" class="i">+
+</a><a href="#h0-1-13" id="h0-1-13" class="i">+            context.event.post(
+</a><a href="#h0-1-14" id="h0-1-14" class="i">+                LayoutInflateEvent(
+</a><a href="#h0-1-15" id="h0-1-15" class="i">+                    layoutId = layoutId,
+</a><a href="#h0-1-16" id="h0-1-16" class="i">+                    parent = parent,
+</a><a href="#h0-1-17" id="h0-1-17" class="i">+                    view = result
+</a><a href="#h0-1-18" id="h0-1-18" class="i">+                ).apply {
+</a><a href="#h0-1-19" id="h0-1-19" class="i">+                    adapter = param
+</a><a href="#h0-1-20" id="h0-1-20" class="i">+                }
+</a><a href="#h0-1-21" id="h0-1-21" class="i">+            ) {
+</a><a href="#h0-1-22" id="h0-1-22" class="i">+                if (canceled) param.setResult(null)
+</a><a href="#h0-1-23" id="h0-1-23" class="i">+                postHookEvent()
+</a><a href="#h0-1-24" id="h0-1-24" class="i">+            }
+</a><a href="#h0-1-25" id="h0-1-25" class="i">+        }
+</a><a href="#h0-1-26" id="h0-1-26" class="i">+
+</a>         context.classCache.networkApi.hook(&quot;submit&quot;, HookStage.BEFORE) { param -&gt;
+             val request = param.arg&lt;Any&gt;(0)
+ 
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/events/impl/LayoutInflateEvent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/events/impl/LayoutInflateEvent.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/events/impl/LayoutInflateEvent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/events/impl/LayoutInflateEvent.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -0,0 +1,11 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="i">+package me.rhunk.snapenhance.core.event.events.impl
+</a><a href="#h1-0-1" id="h1-0-1" class="i">+
+</a><a href="#h1-0-2" id="h1-0-2" class="i">+import android.view.View
+</a><a href="#h1-0-3" id="h1-0-3" class="i">+import android.view.ViewGroup
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import me.rhunk.snapenhance.core.event.events.AbstractHookEvent
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+class LayoutInflateEvent(
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+    val layoutId: Int,
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+    val parent: ViewGroup?,
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+    val view: View?
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+) : AbstractHookEvent()</a><a href="#h1-0-11" id="h1-0-11" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SuspendLocationUpdates.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SuspendLocationUpdates.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SuspendLocationUpdates.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SuspendLocationUpdates.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -3,11 +3,12 @@ package me.rhunk.snapenhance.core.features.impl.global
+</a> import android.view.ViewGroup
+ import android.widget.Switch
+ import me.rhunk.snapenhance.common.bridge.types.BridgeFileType
+<a href="#h2-0-3" id="h2-0-3" class="d">-import me.rhunk.snapenhance.core.event.events.impl.AddViewEvent
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import me.rhunk.snapenhance.core.event.events.impl.LayoutInflateEvent
+</a> import me.rhunk.snapenhance.core.features.BridgeFileFeature
+ import me.rhunk.snapenhance.core.features.FeatureLoadParams
+ import me.rhunk.snapenhance.core.ui.ViewAppearanceHelper
+ import me.rhunk.snapenhance.core.util.ktx.getId
+<a href="#h2-0-9" id="h2-0-9" class="i">+import me.rhunk.snapenhance.core.util.ktx.getLayoutId
+</a> 
+ class SuspendLocationUpdates : BridgeFileFeature(
+     &quot;Suspend Location Updates&quot;,
+<a href="#h2-1" id="h2-1" class="h">@@ -19,12 +20,15 @@ class SuspendLocationUpdates : BridgeFileFeature(
+</a>         if (context.config.global.betterLocation.takeIf { it.globalState == true }?.suspendLocationUpdates?.get() != true) return
+         reload()
+ 
+<a href="#h2-1-3" id="h2-1-3" class="d">-        val locationSharingSettingsContainerId = context.resources.getId(&quot;location_sharing_settings_container&quot;)
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+        val locationSharingSettingsContainerId = context.resources.getLayoutId(&quot;v3_screen_location_sharing_settings&quot;)
+</a>         val recyclerViewContainerId = context.resources.getId(&quot;recycler_view_container&quot;)
+ 
+<a href="#h2-1-7" id="h2-1-7" class="d">-        context.event.subscribe(AddViewEvent::class) { event -&gt;
+</a><a href="#h2-1-8" id="h2-1-8" class="d">-            if (event.parent.id == locationSharingSettingsContainerId &amp;&amp; event.view.id == recyclerViewContainerId) {
+</a><a href="#h2-1-9" id="h2-1-9" class="d">-                (event.view as ViewGroup).addView(Switch(event.view.context).apply {
+</a><a href="#h2-1-10" id="h2-1-10" class="i">+        context.event.subscribe(LayoutInflateEvent::class) { event -&gt;
+</a><a href="#h2-1-11" id="h2-1-11" class="i">+            if (event.layoutId != locationSharingSettingsContainerId) return@subscribe
+</a><a href="#h2-1-12" id="h2-1-12" class="i">+            val viewGroup = event.view as? ViewGroup ?: return@subscribe
+</a><a href="#h2-1-13" id="h2-1-13" class="i">+            viewGroup.post {
+</a><a href="#h2-1-14" id="h2-1-14" class="i">+                val container = viewGroup.findViewById&lt;ViewGroup&gt;(recyclerViewContainerId)
+</a><a href="#h2-1-15" id="h2-1-15" class="i">+                container.addView(Switch(event.view.context).apply {
+</a>                     isChecked = isSuspended()
+                     ViewAppearanceHelper.applyTheme(this)
+                     text = this@SuspendLocationUpdates.context.translation[&quot;suspend_location_updates.switch_text&quot;]
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/UITweaks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/UITweaks.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/UITweaks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/UITweaks.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -2,13 +2,13 @@ package me.rhunk.snapenhance.core.features.impl.ui
+</a> 
+ import android.content.res.Resources
+ import android.util.Size
+<a href="#h3-0-3" id="h3-0-3" class="d">-import android.view.LayoutInflater
+</a> import android.view.View
+ import android.view.ViewGroup.MarginLayoutParams
+ import android.widget.FrameLayout
+ import me.rhunk.snapenhance.common.util.ktx.findFieldsToString
+ import me.rhunk.snapenhance.core.event.events.impl.AddViewEvent
+ import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+<a href="#h3-0-10" id="h3-0-10" class="i">+import me.rhunk.snapenhance.core.event.events.impl.LayoutInflateEvent
+</a> import me.rhunk.snapenhance.core.features.Feature
+ import me.rhunk.snapenhance.core.features.FeatureLoadParams
+ import me.rhunk.snapenhance.core.util.hook.HookStage
+<a href="#h3-1" id="h3-1" class="h">@@ -72,12 +72,9 @@ class UITweaks : Feature(&quot;UITweaks&quot;, loadParams = FeatureLoadParams.ACTIVITY_CRE
+</a>             }
+         }
+ 
+<a href="#h3-1-3" id="h3-1-3" class="d">-        LayoutInflater::class.java.hook(&quot;inflate&quot;, HookStage.AFTER) { param -&gt;
+</a><a href="#h3-1-4" id="h3-1-4" class="d">-            val id = param.args().firstOrNull() as? Int ?: return@hook
+</a><a href="#h3-1-5" id="h3-1-5" class="d">-            val result = param.getResult() as? View ?: return@hook
+</a><a href="#h3-1-6" id="h3-1-6" class="d">-
+</a><a href="#h3-1-7" id="h3-1-7" class="d">-            if (id == getId(&quot;chat_input_bar_sharing_drawer_button&quot;, &quot;layout&quot;) &amp;&amp; hiddenElements.contains(&quot;hide_live_location_share_button&quot;)) {
+</a><a href="#h3-1-8" id="h3-1-8" class="d">-                hideView(result)
+</a><a href="#h3-1-9" id="h3-1-9" class="i">+        context.event.subscribe(LayoutInflateEvent::class) { event -&gt;
+</a><a href="#h3-1-10" id="h3-1-10" class="i">+            if (event.layoutId == getId(&quot;chat_input_bar_sharing_drawer_button&quot;, &quot;layout&quot;) &amp;&amp; hiddenElements.contains(&quot;hide_live_location_share_button&quot;)) {
+</a><a href="#h3-1-11" id="h3-1-11" class="i">+                hideView(event.view ?: return@subscribe)
+</a>             }
+         }
+ 
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/ktx/AndroidExt.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/ktx/AndroidExt.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/ktx/AndroidExt.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/ktx/AndroidExt.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -22,9 +22,12 @@ fun Resources.getIdentifier(name: String, type: String): Int {
+</a>     return getIdentifier(name, type, Constants.SNAPCHAT_PACKAGE_NAME)
+ }
+ 
+<a href="#h4-0-3" id="h4-0-3" class="d">-@SuppressLint(&quot;DiscouragedApi&quot;)
+</a> fun Resources.getId(name: String): Int {
+<a href="#h4-0-5" id="h4-0-5" class="d">-    return getIdentifier(name, &quot;id&quot;, Constants.SNAPCHAT_PACKAGE_NAME)
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+    return getIdentifier(name, &quot;id&quot;)
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+}
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+
+</a><a href="#h4-0-9" id="h4-0-9" class="i">+fun Resources.getLayoutId(name: String): Int {
+</a><a href="#h4-0-10" id="h4-0-10" class="i">+    return getIdentifier(name, &quot;layout&quot;)
+</a> }
+ 
+ fun Resources.getDimens(name: String): Int {
+</pre>
+</div>
+</body>
+</html>

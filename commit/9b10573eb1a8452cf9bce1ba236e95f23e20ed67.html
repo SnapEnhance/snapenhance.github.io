@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(bridge): chunked logs - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/9b10573eb1a8452cf9bce1ba236e95f23e20ed67.html">9b10573eb1a8452cf9bce1ba236e95f23e20ed67</a>
+<b>parent</b> <a href="../commit/fbd683251a7e2d92312996fbc75ea5e6651ad5ed.html">fbd683251a7e2d92312996fbc75ea5e6651ad5ed</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Tue, 30 Apr 2024 00:18:03 +0200
+
+fix(bridge): chunked logs
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+</table></pre><pre>2 files changed, 6 insertions(+), 2 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -118,7 +118,11 @@ class BridgeClient(
+</a>     }
+ 
+     fun broadcastLog(tag: String, level: String, message: String) {
+<a href="#h0-0-3" id="h0-0-3" class="d">-        safeServiceCall { service.broadcastLog(tag, level, message) }
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        message.chunked(1024 * 256).forEach {
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+            safeServiceCall {
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                service.broadcastLog(tag, level, it)
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+            }
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+        }
+</a>     }
+ 
+     //TODO: use interfaces instead of direct file access
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -167,7 +167,7 @@ class ComposerHooks: Feature(&quot;ComposerHooks&quot;, loadParams = FeatureLoadParams.ACT
+</a>             &quot;log&quot; -&gt; {
+                 if (argc &lt; 3) return false
+                 val logLevel = composerMarshaller.getUntyped(1) as? String ?: return false
+<a href="#h1-0-3" id="h1-0-3" class="d">-                val message = (composerMarshaller.getUntyped(2) as? String)?.takeIf { it.length &lt; 1024 * 512 } ?: return false
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+                val message = composerMarshaller.getUntyped(2) as? String ?: return false
+</a> 
+                 val tag = &quot;ComposerLogs&quot;
+ 
+</pre>
+</div>
+</body>
+</html>

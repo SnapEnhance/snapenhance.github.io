@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(manager): back handler - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/780d5b98588453fe51e8b77203210a79283cff89.html">780d5b98588453fe51e8b77203210a79283cff89</a>
+<b>parent</b> <a href="../commit/b549f77260dcdc475d6e988737efcbdf58987429.html">b549f77260dcdc475d6e988737efcbdf58987429</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 22 Nov 2023 16:53:21 +0100
+
+fix(manager): back handler
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">manager/src/main/AndroidManifest.xml</a></td><td> | </td><td class="num">6</td><td><span class="i">+++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">manager/src/main/kotlin/me/rhunk/snapenhance/manager/ui/tab/impl/download/InstallPackageTab.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">manager/src/main/kotlin/me/rhunk/snapenhance/manager/ui/tab/impl/download/LSPatchTab.kt</a></td><td> | </td><td class="num">197</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-----------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">manager/src/main/kotlin/me/rhunk/snapenhance/manager/ui/tab/impl/download/SnapchatPatchTab.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++</span><span class="d">---</span></td></tr>
+</table></pre><pre>4 files changed, 119 insertions(+), 92 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/manager/src/main/AndroidManifest.xml.html">manager/src/main/AndroidManifest.xml</a> b/<a href="../file/manager/src/main/AndroidManifest.xml.html">manager/src/main/AndroidManifest.xml</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -13,7 +13,11 @@
+</a>         tools:targetApi=&quot;34&quot;
+         android:enableOnBackInvokedCallback=&quot;true&quot;
+         android:icon=&quot;@android:drawable/ic_input_add&quot;&gt;
+<a href="#h0-0-3" id="h0-0-3" class="d">-        &lt;activity android:name=&quot;.ui.MainActivity&quot; android:exported=&quot;true&quot; android:theme=&quot;@style/AppTheme&quot;&gt;
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        &lt;activity
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+            android:name=&quot;.ui.MainActivity&quot;
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+            android:exported=&quot;true&quot;
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+            android:theme=&quot;@style/AppTheme&quot;
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+            android:screenOrientation=&quot;nosensor&quot;&gt;
+</a>             &lt;intent-filter&gt;
+                 &lt;action android:name=&quot;android.intent.action.MAIN&quot; /&gt;
+                 &lt;category android:name=&quot;android.intent.category.LAUNCHER&quot; /&gt;
+<b>diff --git a/<a id="h1" href="../file/manager/src/main/kotlin/me/rhunk/snapenhance/manager/ui/tab/impl/download/InstallPackageTab.kt.html">manager/src/main/kotlin/me/rhunk/snapenhance/manager/ui/tab/impl/download/InstallPackageTab.kt</a> b/<a href="../file/manager/src/main/kotlin/me/rhunk/snapenhance/manager/ui/tab/impl/download/InstallPackageTab.kt.html">manager/src/main/kotlin/me/rhunk/snapenhance/manager/ui/tab/impl/download/InstallPackageTab.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -4,6 +4,7 @@ import android.content.Intent
+</a> import android.net.Uri
+ import android.widget.Toast
+ import androidx.activity.ComponentActivity
+<a href="#h1-0-3" id="h1-0-3" class="i">+import androidx.activity.compose.BackHandler
+</a> import androidx.activity.result.ActivityResultLauncher
+ import androidx.activity.result.contract.ActivityResultContracts
+ import androidx.compose.foundation.layout.*
+<a href="#h1-1" id="h1-1" class="h">@@ -107,6 +108,7 @@ class InstallPackageTab : Tab(&quot;install_app&quot;) {
+</a>             } else it
+         } ?: false }
+ 
+<a href="#h1-1-3" id="h1-1-3" class="i">+        BackHandler(installStage != InstallStage.DONE || installStage != InstallStage.ERROR) {}
+</a>         Column(
+             modifier = Modifier.fillMaxSize().padding(16.dp),
+             horizontalAlignment = Alignment.CenterHorizontally,
+<b>diff --git a/<a id="h2" href="../file/manager/src/main/kotlin/me/rhunk/snapenhance/manager/ui/tab/impl/download/LSPatchTab.kt.html">manager/src/main/kotlin/me/rhunk/snapenhance/manager/ui/tab/impl/download/LSPatchTab.kt</a> b/<a href="../file/manager/src/main/kotlin/me/rhunk/snapenhance/manager/ui/tab/impl/download/LSPatchTab.kt.html">manager/src/main/kotlin/me/rhunk/snapenhance/manager/ui/tab/impl/download/LSPatchTab.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,6 +1,7 @@
+</a> package me.rhunk.snapenhance.manager.ui.tab.impl.download
+ 
+ import android.os.Bundle
+<a href="#h2-0-3" id="h2-0-3" class="i">+import androidx.activity.compose.BackHandler
+</a> import androidx.compose.foundation.layout.*
+ import androidx.compose.foundation.rememberScrollState
+ import androidx.compose.foundation.verticalScroll
+<a href="#h2-1" id="h2-1" class="h">@@ -15,8 +16,11 @@ import androidx.compose.ui.graphics.StrokeCap
+</a> import androidx.compose.ui.text.style.TextOverflow
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.window.Dialog
+<a href="#h2-1-3" id="h2-1-3" class="i">+import androidx.navigation.NavGraphBuilder
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+import androidx.navigation.compose.composable
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+import kotlinx.coroutines.CoroutineScope
+</a> import kotlinx.coroutines.Dispatchers
+<a href="#h2-1-7" id="h2-1-7" class="d">-import kotlinx.coroutines.cancel
+</a><a href="#h2-1-8" id="h2-1-8" class="i">+import kotlinx.coroutines.Job
+</a> import kotlinx.coroutines.launch
+ import me.rhunk.snapenhance.manager.data.APKMirror
+ import me.rhunk.snapenhance.manager.data.DownloadItem
+<a href="#h2-2" id="h2-2" class="h">@@ -25,15 +29,19 @@ import me.rhunk.snapenhance.manager.ui.components.DowngradeNoticeDialog
+</a> import me.rhunk.snapenhance.manager.ui.tab.Tab
+ import okio.use
+ import java.io.File
+<a href="#h2-2-3" id="h2-2-3" class="i">+import kotlin.properties.Delegates
+</a> 
+ class LSPatchTab : Tab(&quot;lspatch&quot;) {
+<a href="#h2-2-6" id="h2-2-6" class="d">-    private var localItemFile: File? = null
+</a><a href="#h2-2-7" id="h2-2-7" class="d">-    private var downloadItem: DownloadItem? = null
+</a><a href="#h2-2-8" id="h2-2-8" class="d">-    private var snapEnhanceModule: File? = null
+</a><a href="#h2-2-9" id="h2-2-9" class="d">-    private var patchedApk by mutableStateOf&lt;File?&gt;(null)
+</a>     private val apkMirror = APKMirror()
+ 
+<a href="#h2-2-12" id="h2-2-12" class="d">-    private fun patch(log: (Any?) -&gt; Unit, onProgress: (Float) -&gt; Unit) {
+</a><a href="#h2-2-13" id="h2-2-13" class="i">+    private fun patch(
+</a><a href="#h2-2-14" id="h2-2-14" class="i">+        log: (Any?) -&gt; Unit,
+</a><a href="#h2-2-15" id="h2-2-15" class="i">+        onProgress: (Float) -&gt; Unit,
+</a><a href="#h2-2-16" id="h2-2-16" class="i">+        downloadItem: DownloadItem? = null,
+</a><a href="#h2-2-17" id="h2-2-17" class="i">+        snapEnhanceModule: File? = null,
+</a><a href="#h2-2-18" id="h2-2-18" class="i">+        localItemFile: File? = null,
+</a><a href="#h2-2-19" id="h2-2-19" class="i">+        patchedApk: MutableState&lt;File?&gt;,
+</a><a href="#h2-2-20" id="h2-2-20" class="i">+    ) {
+</a>         var apkFile: File? = localItemFile
+ 
+         downloadItem?.let {
+<a href="#h2-3" id="h2-3" class="h">@@ -91,118 +99,131 @@ class LSPatchTab : Tab(&quot;lspatch&quot;) {
+</a>             log(&quot;== Patching apk ==&quot;)
+             val outputFiles = lsPatch.patchSplits(listOf(apkFile!!))
+ 
+<a href="#h2-3-3" id="h2-3-3" class="d">-            patchedApk = outputFiles[&quot;base.apk&quot;] ?: run {
+</a><a href="#h2-3-4" id="h2-3-4" class="i">+            patchedApk.value = outputFiles[&quot;base.apk&quot;] ?: run {
+</a>                 log(&quot;== Failed to patch apk ==&quot;)
+                 return
+             }
+             return
+         }
+<a href="#h2-3-10" id="h2-3-10" class="d">-        patchedApk = apkFile
+</a><a href="#h2-3-11" id="h2-3-11" class="i">+        patchedApk.value = apkFile
+</a>     }
+ 
+<a href="#h2-3-14" id="h2-3-14" class="d">-    @Composable
+</a>     @Suppress(&quot;DEPRECATION&quot;)
+<a href="#h2-3-16" id="h2-3-16" class="d">-    override fun Content() {
+</a><a href="#h2-3-17" id="h2-3-17" class="d">-        this.localItemFile = remember { getArguments()?.getString(&quot;localItemFile&quot;)?.let { File(it) } }
+</a><a href="#h2-3-18" id="h2-3-18" class="d">-        this.downloadItem = remember { getArguments()?.getParcelable(&quot;downloadItem&quot;) }
+</a><a href="#h2-3-19" id="h2-3-19" class="d">-        this.snapEnhanceModule = remember {
+</a><a href="#h2-3-20" id="h2-3-20" class="d">-            getArguments()?.getString(&quot;modulePath&quot;)?.let {
+</a><a href="#h2-3-21" id="h2-3-21" class="d">-                File(it)
+</a><a href="#h2-3-22" id="h2-3-22" class="i">+    override fun build(navGraphBuilder: NavGraphBuilder) {
+</a><a href="#h2-3-23" id="h2-3-23" class="i">+        var currentJob: Job? = null
+</a><a href="#h2-3-24" id="h2-3-24" class="i">+        val coroutineScope = CoroutineScope(Dispatchers.IO)
+</a><a href="#h2-3-25" id="h2-3-25" class="i">+        val patchedApk = mutableStateOf&lt;File?&gt;(null)
+</a><a href="#h2-3-26" id="h2-3-26" class="i">+        val status = mutableStateOf(&quot;&quot;)
+</a><a href="#h2-3-27" id="h2-3-27" class="i">+        var progress by mutableFloatStateOf(-1f)
+</a><a href="#h2-3-28" id="h2-3-28" class="i">+        var isRunning by Delegates.observable(false) { _, _, newValue -&gt;
+</a><a href="#h2-3-29" id="h2-3-29" class="i">+            if (!newValue) {
+</a><a href="#h2-3-30" id="h2-3-30" class="i">+                currentJob?.cancel()
+</a><a href="#h2-3-31" id="h2-3-31" class="i">+                currentJob = null
+</a><a href="#h2-3-32" id="h2-3-32" class="i">+                progress = -1f
+</a>             }
+         }
+ 
+<a href="#h2-3-36" id="h2-3-36" class="d">-        val coroutineScope = rememberCoroutineScope()
+</a><a href="#h2-3-37" id="h2-3-37" class="d">-        var showDowngradeNoticeDialog by remember { mutableStateOf(false) }
+</a><a href="#h2-3-38" id="h2-3-38" class="d">-
+</a><a href="#h2-3-39" id="h2-3-39" class="d">-        var status by remember { mutableStateOf(&quot;&quot;) }
+</a><a href="#h2-3-40" id="h2-3-40" class="d">-        var progress by remember { mutableFloatStateOf(-1f) }
+</a><a href="#h2-3-41" id="h2-3-41" class="d">-
+</a><a href="#h2-3-42" id="h2-3-42" class="d">-        LaunchedEffect(this.snapEnhanceModule) {
+</a><a href="#h2-3-43" id="h2-3-43" class="d">-            patchedApk = null
+</a><a href="#h2-3-44" id="h2-3-44" class="d">-            coroutineScope.launch(Dispatchers.IO) {
+</a><a href="#h2-3-45" id="h2-3-45" class="d">-                runCatching {
+</a><a href="#h2-3-46" id="h2-3-46" class="d">-                    patch(log = {
+</a><a href="#h2-3-47" id="h2-3-47" class="i">+        navGraphBuilder.composable(route) {
+</a><a href="#h2-3-48" id="h2-3-48" class="i">+            var showDowngradeNoticeDialog by remember { mutableStateOf(false) }
+</a><a href="#h2-3-49" id="h2-3-49" class="i">+
+</a><a href="#h2-3-50" id="h2-3-50" class="i">+            LaunchedEffect(Unit) {
+</a><a href="#h2-3-51" id="h2-3-51" class="i">+                if (isRunning) return@LaunchedEffect
+</a><a href="#h2-3-52" id="h2-3-52" class="i">+                status.value = &quot;&quot;
+</a><a href="#h2-3-53" id="h2-3-53" class="i">+                coroutineScope.launch(Dispatchers.IO) {
+</a><a href="#h2-3-54" id="h2-3-54" class="i">+                    isRunning = true
+</a><a href="#h2-3-55" id="h2-3-55" class="i">+                    runCatching {
+</a><a href="#h2-3-56" id="h2-3-56" class="i">+                        patch(
+</a><a href="#h2-3-57" id="h2-3-57" class="i">+                            localItemFile = getArguments()?.getString(&quot;localItemFile&quot;)?.let { File(it) } ,
+</a><a href="#h2-3-58" id="h2-3-58" class="i">+                            log = {
+</a><a href="#h2-3-59" id="h2-3-59" class="i">+                                coroutineScope.launch {
+</a><a href="#h2-3-60" id="h2-3-60" class="i">+                                    status.value += when (it) {
+</a><a href="#h2-3-61" id="h2-3-61" class="i">+                                        is Throwable -&gt; it.message + &quot;\n&quot; + it.stackTraceToString()
+</a><a href="#h2-3-62" id="h2-3-62" class="i">+                                        else -&gt; it.toString()
+</a><a href="#h2-3-63" id="h2-3-63" class="i">+                                    } + &quot;\n&quot;
+</a><a href="#h2-3-64" id="h2-3-64" class="i">+                                }
+</a><a href="#h2-3-65" id="h2-3-65" class="i">+                            },
+</a><a href="#h2-3-66" id="h2-3-66" class="i">+                            downloadItem = getArguments()?.getParcelable(&quot;downloadItem&quot;),
+</a><a href="#h2-3-67" id="h2-3-67" class="i">+                            snapEnhanceModule = getArguments()?.getString(&quot;modulePath&quot;)?.let {
+</a><a href="#h2-3-68" id="h2-3-68" class="i">+                                File(it)
+</a><a href="#h2-3-69" id="h2-3-69" class="i">+                            },
+</a><a href="#h2-3-70" id="h2-3-70" class="i">+                            patchedApk = patchedApk,
+</a><a href="#h2-3-71" id="h2-3-71" class="i">+                            onProgress = { progress = it }
+</a><a href="#h2-3-72" id="h2-3-72" class="i">+                        )
+</a><a href="#h2-3-73" id="h2-3-73" class="i">+                    }.onFailure {
+</a>                         coroutineScope.launch {
+<a href="#h2-3-75" id="h2-3-75" class="d">-                            status += when (it) {
+</a><a href="#h2-3-76" id="h2-3-76" class="d">-                                is Throwable -&gt; it.message + &quot;\n&quot; + it.stackTraceToString()
+</a><a href="#h2-3-77" id="h2-3-77" class="d">-                                else -&gt; it.toString()
+</a><a href="#h2-3-78" id="h2-3-78" class="d">-                            } + &quot;\n&quot;
+</a><a href="#h2-3-79" id="h2-3-79" class="i">+                            status.value += it.message + &quot;\n&quot; + it.stackTraceToString()
+</a>                         }
+<a href="#h2-3-81" id="h2-3-81" class="d">-                    }) {
+</a><a href="#h2-3-82" id="h2-3-82" class="d">-                        progress = it
+</a>                     }
+<a href="#h2-3-84" id="h2-3-84" class="d">-                }.onFailure {
+</a><a href="#h2-3-85" id="h2-3-85" class="d">-                    coroutineScope.launch {
+</a><a href="#h2-3-86" id="h2-3-86" class="d">-                        status += it.message + &quot;\n&quot; + it.stackTraceToString()
+</a><a href="#h2-3-87" id="h2-3-87" class="d">-                    }
+</a><a href="#h2-3-88" id="h2-3-88" class="d">-                }
+</a><a href="#h2-3-89" id="h2-3-89" class="i">+                    isRunning = false
+</a><a href="#h2-3-90" id="h2-3-90" class="i">+                }.also { currentJob = it }
+</a>             }
+<a href="#h2-3-92" id="h2-3-92" class="d">-        }
+</a> 
+<a href="#h2-3-94" id="h2-3-94" class="d">-        DisposableEffect(Unit) {
+</a><a href="#h2-3-95" id="h2-3-95" class="d">-            onDispose {
+</a><a href="#h2-3-96" id="h2-3-96" class="d">-                coroutineScope.cancel()
+</a><a href="#h2-3-97" id="h2-3-97" class="i">+            DisposableEffect(Unit) {
+</a><a href="#h2-3-98" id="h2-3-98" class="i">+                onDispose {
+</a><a href="#h2-3-99" id="h2-3-99" class="i">+                    if (isRunning) return@onDispose
+</a><a href="#h2-3-100" id="h2-3-100" class="i">+                    patchedApk.value = null
+</a><a href="#h2-3-101" id="h2-3-101" class="i">+                }
+</a>             }
+<a href="#h2-3-103" id="h2-3-103" class="d">-        }
+</a> 
+<a href="#h2-3-105" id="h2-3-105" class="d">-        val scrollState = rememberScrollState()
+</a><a href="#h2-3-106" id="h2-3-106" class="d">-
+</a><a href="#h2-3-107" id="h2-3-107" class="d">-        fun triggerInstallation(shouldUninstall: Boolean) {
+</a><a href="#h2-3-108" id="h2-3-108" class="d">-            navigation.navigateTo(InstallPackageTab::class, args = Bundle().apply {
+</a><a href="#h2-3-109" id="h2-3-109" class="d">-                putString(&quot;downloadPath&quot;, patchedApk?.absolutePath)
+</a><a href="#h2-3-110" id="h2-3-110" class="d">-                putString(&quot;appPackage&quot;, sharedConfig.snapchatPackageName)
+</a><a href="#h2-3-111" id="h2-3-111" class="d">-                putBoolean(&quot;uninstall&quot;, shouldUninstall)
+</a><a href="#h2-3-112" id="h2-3-112" class="d">-            })
+</a><a href="#h2-3-113" id="h2-3-113" class="d">-        }
+</a><a href="#h2-3-114" id="h2-3-114" class="i">+            val scrollState = rememberScrollState()
+</a> 
+<a href="#h2-3-116" id="h2-3-116" class="d">-        Column(
+</a><a href="#h2-3-117" id="h2-3-117" class="d">-            modifier = Modifier
+</a><a href="#h2-3-118" id="h2-3-118" class="d">-                .fillMaxSize()
+</a><a href="#h2-3-119" id="h2-3-119" class="d">-                .padding(20.dp),
+</a><a href="#h2-3-120" id="h2-3-120" class="d">-            horizontalAlignment = Alignment.CenterHorizontally,
+</a><a href="#h2-3-121" id="h2-3-121" class="d">-            verticalArrangement = Arrangement.spacedBy(10.dp)
+</a><a href="#h2-3-122" id="h2-3-122" class="d">-        ) {
+</a><a href="#h2-3-123" id="h2-3-123" class="d">-            Card(
+</a><a href="#h2-3-124" id="h2-3-124" class="i">+            fun triggerInstallation(shouldUninstall: Boolean) {
+</a><a href="#h2-3-125" id="h2-3-125" class="i">+                navigation.navigateTo(InstallPackageTab::class, args = Bundle().apply {
+</a><a href="#h2-3-126" id="h2-3-126" class="i">+                    putString(&quot;downloadPath&quot;, patchedApk.value?.absolutePath)
+</a><a href="#h2-3-127" id="h2-3-127" class="i">+                    putString(&quot;appPackage&quot;, sharedConfig.snapchatPackageName)
+</a><a href="#h2-3-128" id="h2-3-128" class="i">+                    putBoolean(&quot;uninstall&quot;, shouldUninstall)
+</a><a href="#h2-3-129" id="h2-3-129" class="i">+                })
+</a><a href="#h2-3-130" id="h2-3-130" class="i">+            }
+</a><a href="#h2-3-131" id="h2-3-131" class="i">+            BackHandler(isRunning) {}
+</a><a href="#h2-3-132" id="h2-3-132" class="i">+            Column(
+</a>                 modifier = Modifier
+<a href="#h2-3-134" id="h2-3-134" class="d">-                    .weight(1f)
+</a><a href="#h2-3-135" id="h2-3-135" class="d">-                    .padding(10.dp),
+</a><a href="#h2-3-136" id="h2-3-136" class="i">+                    .fillMaxSize()
+</a><a href="#h2-3-137" id="h2-3-137" class="i">+                    .padding(20.dp),
+</a><a href="#h2-3-138" id="h2-3-138" class="i">+                horizontalAlignment = Alignment.CenterHorizontally,
+</a><a href="#h2-3-139" id="h2-3-139" class="i">+                verticalArrangement = Arrangement.spacedBy(10.dp)
+</a>             ) {
+<a href="#h2-3-141" id="h2-3-141" class="d">-                Column(
+</a><a href="#h2-3-142" id="h2-3-142" class="i">+                Card(
+</a>                     modifier = Modifier
+<a href="#h2-3-144" id="h2-3-144" class="d">-                        .fillMaxSize()
+</a><a href="#h2-3-145" id="h2-3-145" class="d">-                        .verticalScroll(scrollState)
+</a><a href="#h2-3-146" id="h2-3-146" class="i">+                        .weight(1f)
+</a><a href="#h2-3-147" id="h2-3-147" class="i">+                        .padding(10.dp),
+</a>                 ) {
+<a href="#h2-3-149" id="h2-3-149" class="d">-                    Text(text = status, overflow = TextOverflow.Visible, modifier = Modifier.padding(10.dp))
+</a><a href="#h2-3-150" id="h2-3-150" class="i">+                    Column(
+</a><a href="#h2-3-151" id="h2-3-151" class="i">+                        modifier = Modifier
+</a><a href="#h2-3-152" id="h2-3-152" class="i">+                            .fillMaxSize()
+</a><a href="#h2-3-153" id="h2-3-153" class="i">+                            .verticalScroll(scrollState)
+</a><a href="#h2-3-154" id="h2-3-154" class="i">+                    ) {
+</a><a href="#h2-3-155" id="h2-3-155" class="i">+                        Text(text = status.value, overflow = TextOverflow.Visible, modifier = Modifier.padding(10.dp))
+</a><a href="#h2-3-156" id="h2-3-156" class="i">+                    }
+</a>                 }
+<a href="#h2-3-158" id="h2-3-158" class="d">-            }
+</a><a href="#h2-3-159" id="h2-3-159" class="d">-            if (progress != -1f) {
+</a><a href="#h2-3-160" id="h2-3-160" class="d">-                LinearProgressIndicator(progress = progress, modifier = Modifier.height(10.dp), strokeCap = StrokeCap.Round)
+</a><a href="#h2-3-161" id="h2-3-161" class="d">-            }
+</a><a href="#h2-3-162" id="h2-3-162" class="d">-
+</a><a href="#h2-3-163" id="h2-3-163" class="d">-            if (patchedApk != null) {
+</a><a href="#h2-3-164" id="h2-3-164" class="d">-                Button(modifier = Modifier.fillMaxWidth(), onClick = {
+</a><a href="#h2-3-165" id="h2-3-165" class="d">-                    triggerInstallation(true)
+</a><a href="#h2-3-166" id="h2-3-166" class="d">-                }) {
+</a><a href="#h2-3-167" id="h2-3-167" class="d">-                    Text(text = &quot;Uninstall &amp; Install&quot;)
+</a><a href="#h2-3-168" id="h2-3-168" class="i">+                if (progress != -1f) {
+</a><a href="#h2-3-169" id="h2-3-169" class="i">+                    LinearProgressIndicator(progress = progress, modifier = Modifier.height(10.dp), strokeCap = StrokeCap.Round)
+</a>                 }
+ 
+<a href="#h2-3-172" id="h2-3-172" class="d">-                Button(modifier = Modifier.fillMaxWidth(), onClick = {
+</a><a href="#h2-3-173" id="h2-3-173" class="d">-                    showDowngradeNoticeDialog = true
+</a><a href="#h2-3-174" id="h2-3-174" class="d">-                }) {
+</a><a href="#h2-3-175" id="h2-3-175" class="d">-                    Text(text = &quot;Update&quot;)
+</a><a href="#h2-3-176" id="h2-3-176" class="i">+                if (patchedApk.value != null) {
+</a><a href="#h2-3-177" id="h2-3-177" class="i">+                    Button(modifier = Modifier.fillMaxWidth(), onClick = {
+</a><a href="#h2-3-178" id="h2-3-178" class="i">+                        triggerInstallation(true)
+</a><a href="#h2-3-179" id="h2-3-179" class="i">+                    }) {
+</a><a href="#h2-3-180" id="h2-3-180" class="i">+                        Text(text = &quot;Uninstall &amp; Install&quot;)
+</a><a href="#h2-3-181" id="h2-3-181" class="i">+                    }
+</a><a href="#h2-3-182" id="h2-3-182" class="i">+
+</a><a href="#h2-3-183" id="h2-3-183" class="i">+                    Button(modifier = Modifier.fillMaxWidth(), onClick = {
+</a><a href="#h2-3-184" id="h2-3-184" class="i">+                        showDowngradeNoticeDialog = true
+</a><a href="#h2-3-185" id="h2-3-185" class="i">+                    }) {
+</a><a href="#h2-3-186" id="h2-3-186" class="i">+                        Text(text = &quot;Update&quot;)
+</a><a href="#h2-3-187" id="h2-3-187" class="i">+                    }
+</a>                 }
+<a href="#h2-3-189" id="h2-3-189" class="d">-            }
+</a> 
+<a href="#h2-3-191" id="h2-3-191" class="d">-            LaunchedEffect(status) {
+</a><a href="#h2-3-192" id="h2-3-192" class="d">-                scrollState.scrollTo(scrollState.maxValue)
+</a><a href="#h2-3-193" id="h2-3-193" class="i">+                LaunchedEffect(status) {
+</a><a href="#h2-3-194" id="h2-3-194" class="i">+                    scrollState.scrollTo(scrollState.maxValue)
+</a><a href="#h2-3-195" id="h2-3-195" class="i">+                }
+</a>             }
+<a href="#h2-3-197" id="h2-3-197" class="d">-        }
+</a> 
+<a href="#h2-3-199" id="h2-3-199" class="d">-        if (showDowngradeNoticeDialog) {
+</a><a href="#h2-3-200" id="h2-3-200" class="d">-            Dialog(onDismissRequest = { showDowngradeNoticeDialog = false }) {
+</a><a href="#h2-3-201" id="h2-3-201" class="d">-                DowngradeNoticeDialog(onDismiss = { showDowngradeNoticeDialog = false }, onSuccess = {
+</a><a href="#h2-3-202" id="h2-3-202" class="d">-                    triggerInstallation(false)
+</a><a href="#h2-3-203" id="h2-3-203" class="d">-                })
+</a><a href="#h2-3-204" id="h2-3-204" class="i">+            if (showDowngradeNoticeDialog) {
+</a><a href="#h2-3-205" id="h2-3-205" class="i">+                Dialog(onDismissRequest = { showDowngradeNoticeDialog = false }) {
+</a><a href="#h2-3-206" id="h2-3-206" class="i">+                    DowngradeNoticeDialog(onDismiss = { showDowngradeNoticeDialog = false }, onSuccess = {
+</a><a href="#h2-3-207" id="h2-3-207" class="i">+                        triggerInstallation(false)
+</a><a href="#h2-3-208" id="h2-3-208" class="i">+                    })
+</a><a href="#h2-3-209" id="h2-3-209" class="i">+                }
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h3" href="../file/manager/src/main/kotlin/me/rhunk/snapenhance/manager/ui/tab/impl/download/SnapchatPatchTab.kt.html">manager/src/main/kotlin/me/rhunk/snapenhance/manager/ui/tab/impl/download/SnapchatPatchTab.kt</a> b/<a href="../file/manager/src/main/kotlin/me/rhunk/snapenhance/manager/ui/tab/impl/download/SnapchatPatchTab.kt.html">manager/src/main/kotlin/me/rhunk/snapenhance/manager/ui/tab/impl/download/SnapchatPatchTab.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -279,7 +279,7 @@ class SnapchatPatchTab : Tab(&quot;snapchat_download&quot;) {
+</a>                         navigation.navigateTo(LSPatchTab::class, args = Bundle().apply {
+                             putParcelable(&quot;downloadItem&quot;, selectedSnapchatVersion)
+                             putString(&quot;modulePath&quot;, installedSnapEnhanceVersion?.applicationInfo?.sourceDir)
+<a href="#h3-0-3" id="h3-0-3" class="d">-                        }, noHistory = true)
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+                        })
+</a>                     }
+                 ) {
+                     Text(&quot;Download &amp; Patch&quot;)
+<a href="#h3-1" id="h3-1" class="h">@@ -292,7 +292,7 @@ class SnapchatPatchTab : Tab(&quot;snapchat_download&quot;) {
+</a>                             navigation.navigateTo(LSPatchTab::class, args = Bundle().apply {
+                                 putString(&quot;localItemFile&quot;, installedSnapchatPackage?.applicationInfo?.sourceDir ?: return@apply)
+                                 putString(&quot;modulePath&quot;, installedSnapEnhanceVersion?.applicationInfo?.sourceDir ?: return@apply)
+<a href="#h3-1-3" id="h3-1-3" class="d">-                            }, noHistory = true)
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+                            })
+</a>                         }
+                     ) {
+                         Text(&quot;Patch from existing installation&quot;)
+<a href="#h3-2" id="h3-2" class="h">@@ -306,7 +306,7 @@ class SnapchatPatchTab : Tab(&quot;snapchat_download&quot;) {
+</a>                     onClick = {
+                         navigation.navigateTo(LSPatchTab::class, args = Bundle().apply {
+                             putParcelable(&quot;downloadItem&quot;, selectedSnapchatVersion)
+<a href="#h3-2-3" id="h3-2-3" class="d">-                        }, noHistory = true)
+</a><a href="#h3-2-4" id="h3-2-4" class="i">+                        })
+</a>                     }
+                 ) {
+                     Text(&quot;Install/Restore Original Snapchat&quot;)
+</pre>
+</div>
+</body>
+</html>

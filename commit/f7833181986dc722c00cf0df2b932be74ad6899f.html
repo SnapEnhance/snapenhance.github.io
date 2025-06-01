@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(app/streaks_reminder): negative time - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/f7833181986dc722c00cf0df2b932be74ad6899f.html">f7833181986dc722c00cf0df2b932be74ad6899f</a>
+<b>parent</b> <a href="../commit/83fd108af9212a75a34ad15094362545ee80b296.html">83fd108af9212a75a34ad15094362545ee80b296</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu,  4 Jan 2024 02:24:49 +0100
+
+fix(app/streaks_reminder): negative time
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/messaging/StreaksReminder.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/data/MessagingCoreObjects.kt</a></td><td> | </td><td class="num">5</td><td><span class="i">++++</span><span class="d">-</span></td></tr>
+</table></pre><pre>2 files changed, 7 insertions(+), 4 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/StreaksReminder.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/StreaksReminder.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/StreaksReminder.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/StreaksReminder.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -44,14 +44,14 @@ class StreaksReminder(
+</a> 
+         if (streaksReminderConfig.globalState != true) return
+ 
+<a href="#h0-0-3" id="h0-0-3" class="d">-        val interval = streaksReminderConfig.interval.get()
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        val interval = streaksReminderConfig.interval.get().hours
+</a>         val remainingHours = streaksReminderConfig.remainingHours.get()
+ 
+<a href="#h0-0-7" id="h0-0-7" class="d">-        if (sharedPreferences.getLong(&quot;lastStreaksReminder&quot;, 0).milliseconds + interval.hours - 10.minutes &gt; System.currentTimeMillis().milliseconds) return
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+        if (sharedPreferences.getLong(&quot;lastStreaksReminder&quot;, 0).milliseconds + interval - 10.minutes &gt; System.currentTimeMillis().milliseconds) return
+</a>         sharedPreferences.edit().putLong(&quot;lastStreaksReminder&quot;, System.currentTimeMillis()).apply()
+ 
+         remoteSideContext.androidContext.getSystemService(AlarmManager::class.java).setRepeating(
+<a href="#h0-0-12" id="h0-0-12" class="d">-            AlarmManager.RTC_WAKEUP, 5000, interval.toLong() * 60 * 60 * 1000,
+</a><a href="#h0-0-13" id="h0-0-13" class="i">+            AlarmManager.RTC_WAKEUP, 5000, interval.inWholeMilliseconds,
+</a>             PendingIntent.getBroadcast(remoteSideContext.androidContext, 0, Intent(remoteSideContext.androidContext, StreaksReminder::class.java),
+                 PendingIntent.FLAG_IMMUTABLE)
+         )
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/MessagingCoreObjects.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/MessagingCoreObjects.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/MessagingCoreObjects.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/MessagingCoreObjects.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -2,6 +2,7 @@ package me.rhunk.snapenhance.common.data
+</a> 
+ import me.rhunk.snapenhance.common.config.FeatureNotice
+ import me.rhunk.snapenhance.common.util.SerializableDataObject
+<a href="#h1-0-3" id="h1-0-3" class="i">+import kotlin.time.Duration.Companion.hours
+</a> 
+ 
+ enum class RuleState(
+<a href="#h1-1" id="h1-1" class="h">@@ -59,7 +60,9 @@ data class FriendStreaks(
+</a> ) : SerializableDataObject() {
+     fun hoursLeft() = (expirationTimestamp - System.currentTimeMillis()) / 1000 / 60 / 60
+ 
+<a href="#h1-1-3" id="h1-1-3" class="d">-    fun isAboutToExpire(expireHours: Int) = expirationTimestamp - System.currentTimeMillis() &lt; expireHours * 60 * 60 * 1000
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+    fun isAboutToExpire(expireHours: Int) = (expirationTimestamp - System.currentTimeMillis()).let {
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+        it &gt; 0 &amp;&amp; it &lt; expireHours.hours.inWholeMilliseconds
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+    }
+</a> }
+ 
+ data class MessagingGroupInfo(
+</pre>
+</div>
+</body>
+</html>

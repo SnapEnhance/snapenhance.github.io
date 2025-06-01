@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>anti auto download - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/c4349dbcd382b08fe43d486957fefc1d050fef23.html">c4349dbcd382b08fe43d486957fefc1d050fef23</a>
+<b>parent</b> <a href="../commit/69158c70fc5acd1a81e789ce7f890ee77ae06399.html">69158c70fc5acd1a81e789ce7f890ee77ae06399</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Mon, 15 May 2023 23:54:29 +0200
+
+anti auto download
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/FileAccessRequest.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/bridge/service/BridgeService.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt</a></td><td> | </td><td class="num">36</td><td><span class="i">++++++++++++++++++++++++</span><span class="d">------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">17</td><td><span class="i">++++++++++++</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/FriendFeedInfoMenu.kt</a></td><td> | </td><td class="num">43</td><td><span class="i">++++++++++++++++</span><span class="d">---------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+</table></pre><pre>6 files changed, 57 insertions(+), 45 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/FileAccessRequest.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/FileAccessRequest.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/FileAccessRequest.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/FileAccessRequest.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -22,7 +22,7 @@ class FileAccessRequest(
+</a>     }
+ 
+     enum class FileType(val value: Int) {
+<a href="#h0-0-3" id="h0-0-3" class="d">-        CONFIG(0), MAPPINGS(1), STEALTH(2);
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        CONFIG(0), MAPPINGS(1), STEALTH(2), ANTI_AUTO_DOWNLOAD(3);
+</a> 
+         companion object {
+             fun fromValue(value: Int): FileType? {
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/service/BridgeService.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/service/BridgeService.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/service/BridgeService.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/service/BridgeService.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -17,6 +17,7 @@ class BridgeService : Service() {
+</a>         const val MAPPINGS_FILE = &quot;mappings.json&quot;
+         const val STEALTH_FILE = &quot;stealth.txt&quot;
+         const val MESSAGE_LOGGER_DATABASE = &quot;message_logger&quot;
+<a href="#h1-0-3" id="h1-0-3" class="i">+        const val ANTI_AUTO_DOWNLOAD_FILE = &quot;anti_auto_download.txt&quot;
+</a>     }
+ 
+     lateinit var messageLoggerDatabase: SQLiteDatabase
+<a href="#h1-1" id="h1-1" class="h">@@ -144,6 +145,7 @@ class BridgeService : Service() {
+</a>             FileAccessRequest.FileType.CONFIG -&gt; CONFIG_FILE
+             FileAccessRequest.FileType.MAPPINGS -&gt; MAPPINGS_FILE
+             FileAccessRequest.FileType.STEALTH -&gt; STEALTH_FILE
+<a href="#h1-1-3" id="h1-1-3" class="i">+            FileAccessRequest.FileType.ANTI_AUTO_DOWNLOAD -&gt; ANTI_AUTO_DOWNLOAD_FILE
+</a>             else -&gt; throw Exception(&quot;Unknown file type: &quot; + msg.fileType)
+         }.let { File(filesDir, it) }
+ 
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -37,27 +37,33 @@ enum class ConfigProperty(
+</a>     ),
+     MESSAGE_LOGGER(&quot;message_logger&quot;, &quot;description.message_logger&quot;, ConfigCategory.SPY, false),
+ 
+<a href="#h2-0-3" id="h2-0-3" class="d">-    MEDIA_DOWNLOADER_FEATURE(
+</a><a href="#h2-0-4" id="h2-0-4" class="d">-        &quot;media_downloader_feature&quot;,
+</a><a href="#h2-0-5" id="h2-0-5" class="d">-        &quot;description.media_downloader_feature&quot;,
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+    MEDIA_DOWNLOADER(
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+        &quot;media_downloader&quot;,
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+        &quot;description.media_downloader&quot;,
+</a>         ConfigCategory.MEDIA_DOWNLOADER,
+         true
+     ),
+<a href="#h2-0-12" id="h2-0-12" class="d">-    DOWNLOAD_STORIES(
+</a><a href="#h2-0-13" id="h2-0-13" class="d">-        &quot;download_stories&quot;,
+</a><a href="#h2-0-14" id="h2-0-14" class="d">-        &quot;description.download_stories&quot;,
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+    AUTO_DOWNLOAD_SNAPS(
+</a><a href="#h2-0-16" id="h2-0-16" class="i">+        &quot;auto_download_snaps&quot;,
+</a><a href="#h2-0-17" id="h2-0-17" class="i">+        &quot;description.auto_download_snaps&quot;,
+</a><a href="#h2-0-18" id="h2-0-18" class="i">+        ConfigCategory.MEDIA_DOWNLOADER,
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+        true
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+    ),
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+    AUTO_DOWNLOAD_STORIES(
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+        &quot;auto_download_stories&quot;,
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+        &quot;description.auto_download_stories&quot;,
+</a>         ConfigCategory.MEDIA_DOWNLOADER,
+         false
+     ),
+<a href="#h2-0-27" id="h2-0-27" class="d">-    DOWNLOAD_PUBLIC_STORIES(
+</a><a href="#h2-0-28" id="h2-0-28" class="d">-        &quot;download_public_stories&quot;,
+</a><a href="#h2-0-29" id="h2-0-29" class="d">-        &quot;description.download_public_stories&quot;,
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+    AUTO_DOWNLOAD_PUBLIC_STORIES(
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+        &quot;auto_download_public_stories&quot;,
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+        &quot;description.auto_download_public_stories&quot;,
+</a>         ConfigCategory.MEDIA_DOWNLOADER,
+         false
+     ),
+<a href="#h2-0-36" id="h2-0-36" class="d">-    DOWNLOAD_SPOTLIGHT(
+</a><a href="#h2-0-37" id="h2-0-37" class="d">-        &quot;download_spotlight&quot;,
+</a><a href="#h2-0-38" id="h2-0-38" class="d">-        &quot;description.download_spotlight&quot;,
+</a><a href="#h2-0-39" id="h2-0-39" class="i">+    AUTO_DOWNLOAD_SPOTLIGHT(
+</a><a href="#h2-0-40" id="h2-0-40" class="i">+        &quot;auto_download_spotlight&quot;,
+</a><a href="#h2-0-41" id="h2-0-41" class="i">+        &quot;description.auto_download_spotlight&quot;,
+</a>         ConfigCategory.MEDIA_DOWNLOADER,
+         false
+     ),
+<a href="#h2-1" id="h2-1" class="h">@@ -73,6 +79,12 @@ enum class ConfigProperty(
+</a>         ConfigCategory.MEDIA_DOWNLOADER,
+         true
+     ),
+<a href="#h2-1-3" id="h2-1-3" class="i">+    ANTI_DOWNLOAD_BUTTON(
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+        &quot;anti_download_button&quot;,
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+        &quot;description.anti_download_button&quot;,
+</a><a href="#h2-1-6" id="h2-1-6" class="i">+        ConfigCategory.MEDIA_DOWNLOADER,
+</a><a href="#h2-1-7" id="h2-1-7" class="i">+        false
+</a><a href="#h2-1-8" id="h2-1-8" class="i">+    ),
+</a> 
+     DISABLE_METRICS(&quot;disable_metrics&quot;, &quot;description.disable_metrics&quot;, ConfigCategory.PRIVACY, true),
+     PREVENT_SCREENSHOTS(
+<b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -241,10 +241,16 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a>         forceDownload: Boolean
+     ) {
+         //messages
+<a href="#h3-0-3" id="h3-0-3" class="d">-        if (paramMap.containsKey(&quot;MESSAGE_ID&quot;)) {
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+        if (paramMap.containsKey(&quot;MESSAGE_ID&quot;) &amp;&amp;
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+            (forceDownload || context.config.bool(ConfigProperty.AUTO_DOWNLOAD_SNAPS))) {
+</a>             val id = paramMap[&quot;MESSAGE_ID&quot;].toString()
+             val messageId = id.substring(id.lastIndexOf(&quot;:&quot;) + 1).toLong()
+             val senderId: String = context.database.getConversationMessageFromId(messageId)!!.sender_id!!
+<a href="#h3-0-9" id="h3-0-9" class="i">+
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+            if (context.feature(AntiAutoDownload::class).isUserIgnored(senderId)) {
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+                return
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+            }
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+
+</a>             val author = context.database.getFriendInfo(senderId)!!.usernameForSorting!!
+             downloadOperaMedia(mediaInfoMap, author)
+             return
+<a href="#h3-1" id="h3-1" class="h">@@ -255,7 +261,7 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a>             if (paramMap.containsKey(&quot;PLAYLIST_V2_GROUP&quot;)) paramMap[&quot;PLAYLIST_V2_GROUP&quot;].toString() else null
+         if (playlistV2Group != null &amp;&amp;
+             playlistV2Group.contains(&quot;storyUserId=&quot;) &amp;&amp;
+<a href="#h3-1-3" id="h3-1-3" class="d">-            (forceDownload || context.config.bool(ConfigProperty.DOWNLOAD_STORIES))
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+            (forceDownload || context.config.bool(ConfigProperty.AUTO_DOWNLOAD_STORIES))
+</a>         ) {
+             val storyIdStartIndex = playlistV2Group.indexOf(&quot;storyUserId=&quot;) + 12
+             val storyUserId = playlistV2Group.substring(storyIdStartIndex, playlistV2Group.indexOf(&quot;,&quot;, storyIdStartIndex))
+<a href="#h3-2" id="h3-2" class="h">@@ -266,7 +272,7 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a>         val snapSource = paramMap[&quot;SNAP_SOURCE&quot;].toString()
+ 
+         //public stories
+<a href="#h3-2-3" id="h3-2-3" class="d">-        if (snapSource == &quot;PUBLIC_USER&quot; &amp;&amp; (forceDownload || context.config.bool(ConfigProperty.DOWNLOAD_PUBLIC_STORIES))) {
+</a><a href="#h3-2-4" id="h3-2-4" class="i">+        if (snapSource == &quot;PUBLIC_USER&quot; &amp;&amp; (forceDownload || context.config.bool(ConfigProperty.AUTO_DOWNLOAD_PUBLIC_STORIES))) {
+</a>             val userDisplayName = (if (paramMap.containsKey(&quot;USER_DISPLAY_NAME&quot;)) paramMap[&quot;USER_DISPLAY_NAME&quot;].toString() else &quot;&quot;).replace(
+                     &quot;[^\\x00-\\x7F]&quot;.toRegex(),
+                     &quot;&quot;)
+<a href="#h3-3" id="h3-3" class="h">@@ -274,7 +280,7 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a>         }
+ 
+         //spotlight
+<a href="#h3-3-3" id="h3-3-3" class="d">-        if (snapSource == &quot;SINGLE_SNAP_STORY&quot; &amp;&amp; (forceDownload || context.config.bool(ConfigProperty.DOWNLOAD_SPOTLIGHT))) {
+</a><a href="#h3-3-4" id="h3-3-4" class="i">+        if (snapSource == &quot;SINGLE_SNAP_STORY&quot; &amp;&amp; (forceDownload || context.config.bool(ConfigProperty.AUTO_DOWNLOAD_SPOTLIGHT))) {
+</a>             downloadOperaMedia(mediaInfoMap, &quot;Spotlight&quot;)
+         }
+     }
+<a href="#h3-4" id="h3-4" class="h">@@ -283,6 +289,8 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a>         val operaViewerControllerClass: Class&lt;*&gt; = context.mappings.getMappedClass(&quot;OperaPageViewController&quot;, &quot;Class&quot;)
+ 
+         val onOperaViewStateCallback: (HookAdapter) -&gt; Unit = onOperaViewStateCallback@{ param -&gt;
+<a href="#h3-4-3" id="h3-4-3" class="i">+            if (!context.config.bool(ConfigProperty.MEDIA_DOWNLOADER)) return@onOperaViewStateCallback
+</a><a href="#h3-4-4" id="h3-4-4" class="i">+
+</a>             val viewState = (param.thisObject() as Any).getObjectField(context.mappings.getMappedValue(&quot;OperaPageViewController&quot;, &quot;viewStateField&quot;)).toString()
+             if (viewState != &quot;FULLY_DISPLAYED&quot;) {
+                 return@onOperaViewStateCallback
+<a href="#h3-5" id="h3-5" class="h">@@ -304,7 +312,6 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a>             }
+             lastSeenMapParams = mediaParamMap
+             lastSeenMediaInfoMap = mediaInfoMap
+<a href="#h3-5-3" id="h3-5-3" class="d">-            if (!context.config.bool(ConfigProperty.MEDIA_DOWNLOADER_FEATURE)) return@onOperaViewStateCallback
+</a> 
+             context.executeAsync {
+                 try {
+<b>diff --git a/<a id="h4" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/FriendFeedInfoMenu.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/FriendFeedInfoMenu.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/FriendFeedInfoMenu.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/FriendFeedInfoMenu.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -20,6 +20,7 @@ import me.rhunk.snapenhance.database.objects.ConversationMessage
+</a> import me.rhunk.snapenhance.database.objects.FriendInfo
+ import me.rhunk.snapenhance.database.objects.UserConversationLink
+ import me.rhunk.snapenhance.features.impl.Messaging
+<a href="#h4-0-3" id="h4-0-3" class="i">+import me.rhunk.snapenhance.features.impl.downloader.AntiAutoDownload
+</a> import me.rhunk.snapenhance.features.impl.spy.StealthMode
+ import me.rhunk.snapenhance.features.impl.ui.menus.AbstractMenu
+ import me.rhunk.snapenhance.features.impl.ui.menus.ViewAppearanceHelper.applyTheme
+<a href="#h4-1" id="h4-1" class="h">@@ -185,16 +186,6 @@ class FriendFeedInfoMenu : AbstractMenu() {
+</a>             )
+         }
+ 
+<a href="#h4-1-3" id="h4-1-3" class="d">-        //export conversation
+</a><a href="#h4-1-4" id="h4-1-4" class="d">-        /*val exportButton = Button(viewModel.context)
+</a><a href="#h4-1-5" id="h4-1-5" class="d">-        exportButton.setText(context.translation.get(&quot;conversation_export&quot;))
+</a><a href="#h4-1-6" id="h4-1-6" class="d">-        applyTheme(viewModel, exportButton)
+</a><a href="#h4-1-7" id="h4-1-7" class="d">-        exportButton.setOnClickListener { event: View? -&gt;
+</a><a href="#h4-1-8" id="h4-1-8" class="d">-            conversationExport.exportConversation(
+</a><a href="#h4-1-9" id="h4-1-9" class="d">-                SnapUUID(conversationId)
+</a><a href="#h4-1-10" id="h4-1-10" class="d">-            )
+</a><a href="#h4-1-11" id="h4-1-11" class="d">-        }*/
+</a><a href="#h4-1-12" id="h4-1-12" class="d">-
+</a>         //stealth switch
+         val stealthSwitch = Switch(viewModel.context)
+         stealthSwitch.text = context.translation.get(&quot;stealth_mode&quot;)
+<a href="#h4-2" id="h4-2" class="h">@@ -207,23 +198,21 @@ class FriendFeedInfoMenu : AbstractMenu() {
+</a>             )
+         }
+ 
+<a href="#h4-2-3" id="h4-2-3" class="d">-        /*//click to delete switch
+</a><a href="#h4-2-4" id="h4-2-4" class="d">-        val clickToDeleteSwitch = Switch(viewModel.context)
+</a><a href="#h4-2-5" id="h4-2-5" class="d">-        clickToDeleteSwitch.setText(context.translation.get(&quot;click_to_delete&quot;))
+</a><a href="#h4-2-6" id="h4-2-6" class="d">-        clickToDeleteSwitch.isChecked = clickToDelete.isClickToDelete(conversationId)
+</a><a href="#h4-2-7" id="h4-2-7" class="d">-        applyTheme(viewModel, clickToDeleteSwitch)
+</a><a href="#h4-2-8" id="h4-2-8" class="d">-        clickToDeleteSwitch.setOnCheckedChangeListener { buttonView: CompoundButton?, isChecked: Boolean -&gt;
+</a><a href="#h4-2-9" id="h4-2-9" class="d">-            clickToDelete.setClickToDelete(
+</a><a href="#h4-2-10" id="h4-2-10" class="d">-                conversationId,
+</a><a href="#h4-2-11" id="h4-2-11" class="d">-                isChecked
+</a><a href="#h4-2-12" id="h4-2-12" class="d">-            )
+</a><a href="#h4-2-13" id="h4-2-13" class="d">-        }*/
+</a><a href="#h4-2-14" id="h4-2-14" class="d">-       /* if (configManager.getBoolean(ConfigCategory.EXTRAS, &quot;conversation_export&quot;)
+</a><a href="#h4-2-15" id="h4-2-15" class="d">-                .isState()
+</a><a href="#h4-2-16" id="h4-2-16" class="d">-        ) viewConsumer.accept(exportButton)
+</a><a href="#h4-2-17" id="h4-2-17" class="d">-        if (configManager.getBoolean(ConfigCategory.PRIVACY, &quot;click_to_delete&quot;)
+</a><a href="#h4-2-18" id="h4-2-18" class="d">-                .isState()
+</a><a href="#h4-2-19" id="h4-2-19" class="d">-        ) viewConsumer.accept(clickToDeleteSwitch)*/
+</a><a href="#h4-2-20" id="h4-2-20" class="i">+        if (context.config.bool(ConfigProperty.ANTI_DOWNLOAD_BUTTON)) {
+</a><a href="#h4-2-21" id="h4-2-21" class="i">+            val userId = context.database.getFriendFeedInfoByConversationId(conversationId)?.friendUserId ?: return
+</a><a href="#h4-2-22" id="h4-2-22" class="i">+
+</a><a href="#h4-2-23" id="h4-2-23" class="i">+            val antiAutoDownload = Switch(viewModel.context)
+</a><a href="#h4-2-24" id="h4-2-24" class="i">+            antiAutoDownload.text = context.translation.get(&quot;anti_auto_download&quot;)
+</a><a href="#h4-2-25" id="h4-2-25" class="i">+            antiAutoDownload.isChecked = context.feature(AntiAutoDownload::class).isUserIgnored(userId)
+</a><a href="#h4-2-26" id="h4-2-26" class="i">+            applyTheme(viewModel, antiAutoDownload)
+</a><a href="#h4-2-27" id="h4-2-27" class="i">+            antiAutoDownload.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean -&gt;
+</a><a href="#h4-2-28" id="h4-2-28" class="i">+                context.feature(AntiAutoDownload::class).setUserIgnored(
+</a><a href="#h4-2-29" id="h4-2-29" class="i">+                    userId,
+</a><a href="#h4-2-30" id="h4-2-30" class="i">+                    isChecked
+</a><a href="#h4-2-31" id="h4-2-31" class="i">+                )
+</a><a href="#h4-2-32" id="h4-2-32" class="i">+            }
+</a><a href="#h4-2-33" id="h4-2-33" class="i">+            viewConsumer(antiAutoDownload)
+</a><a href="#h4-2-34" id="h4-2-34" class="i">+        }
+</a>         viewConsumer(stealthSwitch)
+         viewConsumer(previewButton)
+     }
+<b>diff --git a/<a id="h5" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -6,6 +6,7 @@ import me.rhunk.snapenhance.features.Feature
+</a> import me.rhunk.snapenhance.features.FeatureLoadParams
+ import me.rhunk.snapenhance.features.impl.ConfigEnumKeys
+ import me.rhunk.snapenhance.features.impl.Messaging
+<a href="#h5-0-3" id="h5-0-3" class="i">+import me.rhunk.snapenhance.features.impl.downloader.AntiAutoDownload
+</a> import me.rhunk.snapenhance.features.impl.downloader.MediaDownloader
+ import me.rhunk.snapenhance.features.impl.extras.AutoSave
+ import me.rhunk.snapenhance.features.impl.extras.Notifications
+<a href="#h5-1" id="h5-1" class="h">@@ -56,6 +57,7 @@ class FeatureManager(private val context: ModContext) : Manager {
+</a>         register(AutoSave::class)
+         register(UITweaks::class)
+         register(ConfigEnumKeys::class)
+<a href="#h5-1-3" id="h5-1-3" class="i">+        register(AntiAutoDownload::class)
+</a> 
+         initializeFeatures()
+     }
+</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core/notifications): reply - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/a38e96906dfdedaa334f2e0e0a0278a454797e64.html">a38e96906dfdedaa334f2e0e0a0278a454797e64</a>
+<b>parent</b> <a href="../commit/3e9c97c18c3140daed0c08748d76c20f2dc92d08.html">3e9c97c18c3140daed0c08748d76c20f2dc92d08</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 14 Oct 2023 21:43:48 +0200
+
+fix(core/notifications): reply
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">+++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MappingsWrapper.kt</a></td><td> | </td><td class="num">1</td><td><span class="i"></span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt</a></td><td> | </td><td class="num">60</td><td><span class="i"></span><span class="d">------------------------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/MessageSender.kt</a></td><td> | </td><td class="num">65</td><td><span class="i">++++</span><span class="d">-------------------------------------------------------------</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h4">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/PlatformAnalyticsCreatorMapper.kt</a></td><td> | </td><td class="num">27</td><td><span class="i"></span><span class="d">---------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">mapper/src/test/kotlin/me/rhunk/snapenhance/mapper/tests/TestMappings.kt</a></td><td> | </td><td class="num">1</td><td><span class="i"></span><span class="d">-</span></td></tr>
+</table></pre><pre>6 files changed, 7 insertions(+), 151 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/BridgeService.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -26,7 +26,9 @@ class BridgeService : Service() {
+</a>     var messagingBridge: MessagingBridge? = null
+ 
+     override fun onDestroy() {
+<a href="#h0-0-3" id="h0-0-3" class="d">-        remoteSideContext.bridgeService = null
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        if (::remoteSideContext.isInitialized) {
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+            remoteSideContext.bridgeService = null
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+        }
+</a>     }
+ 
+     override fun onBind(intent: Intent): IBinder? {
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MappingsWrapper.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MappingsWrapper.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MappingsWrapper.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MappingsWrapper.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -21,7 +21,6 @@ class MappingsWrapper : FileLoaderWrapper(BridgeFileType.MAPPINGS, &quot;{}&quot;.toByteAr
+</a>             DefaultMediaItemMapper::class,
+             MediaQualityLevelProviderMapper::class,
+             OperaPageViewControllerMapper::class,
+<a href="#h1-0-3" id="h1-0-3" class="d">-            PlatformAnalyticsCreatorMapper::class,
+</a>             PlusSubscriptionMapper::class,
+             ScCameraSettingsMapper::class,
+             StoryBoostStateMapper::class,
+<b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -90,66 +90,6 @@ enum class PlayableSnapState {
+</a>     NOTDOWNLOADED, DOWNLOADING, DOWNLOADFAILED, PLAYABLE, VIEWEDREPLAYABLE, PLAYING, VIEWEDNOTREPLAYABLE
+ }
+ 
+<a href="#h2-0-3" id="h2-0-3" class="d">-enum class MetricsMessageMediaType {
+</a><a href="#h2-0-4" id="h2-0-4" class="d">-    NO_MEDIA,
+</a><a href="#h2-0-5" id="h2-0-5" class="d">-    IMAGE,
+</a><a href="#h2-0-6" id="h2-0-6" class="d">-    VIDEO,
+</a><a href="#h2-0-7" id="h2-0-7" class="d">-    VIDEO_NO_SOUND,
+</a><a href="#h2-0-8" id="h2-0-8" class="d">-    GIF,
+</a><a href="#h2-0-9" id="h2-0-9" class="d">-    DERIVED_FROM_MESSAGE_TYPE,
+</a><a href="#h2-0-10" id="h2-0-10" class="d">-    REACTION
+</a><a href="#h2-0-11" id="h2-0-11" class="d">-}
+</a><a href="#h2-0-12" id="h2-0-12" class="d">-
+</a><a href="#h2-0-13" id="h2-0-13" class="d">-enum class MetricsMessageType {
+</a><a href="#h2-0-14" id="h2-0-14" class="d">-    TEXT,
+</a><a href="#h2-0-15" id="h2-0-15" class="d">-    STICKER,
+</a><a href="#h2-0-16" id="h2-0-16" class="d">-    CUSTOM_STICKER,
+</a><a href="#h2-0-17" id="h2-0-17" class="d">-    SNAP,
+</a><a href="#h2-0-18" id="h2-0-18" class="d">-    AUDIO_NOTE,
+</a><a href="#h2-0-19" id="h2-0-19" class="d">-    MEDIA,
+</a><a href="#h2-0-20" id="h2-0-20" class="d">-    BATCHED_MEDIA,
+</a><a href="#h2-0-21" id="h2-0-21" class="d">-    MISSED_AUDIO_CALL,
+</a><a href="#h2-0-22" id="h2-0-22" class="d">-    MISSED_VIDEO_CALL,
+</a><a href="#h2-0-23" id="h2-0-23" class="d">-    JOINED_CALL,
+</a><a href="#h2-0-24" id="h2-0-24" class="d">-    LEFT_CALL,
+</a><a href="#h2-0-25" id="h2-0-25" class="d">-    SNAPCHATTER,
+</a><a href="#h2-0-26" id="h2-0-26" class="d">-    LOCATION_SHARE,
+</a><a href="#h2-0-27" id="h2-0-27" class="d">-    LOCATION_REQUEST,
+</a><a href="#h2-0-28" id="h2-0-28" class="d">-    SCREENSHOT,
+</a><a href="#h2-0-29" id="h2-0-29" class="d">-    SCREEN_RECORDING,
+</a><a href="#h2-0-30" id="h2-0-30" class="d">-    GAME_CLOSED,
+</a><a href="#h2-0-31" id="h2-0-31" class="d">-    STORY_SHARE,
+</a><a href="#h2-0-32" id="h2-0-32" class="d">-    MAP_DROP_SHARE,
+</a><a href="#h2-0-33" id="h2-0-33" class="d">-    MAP_STORY_SHARE,
+</a><a href="#h2-0-34" id="h2-0-34" class="d">-    MAP_STORY_SNAP_SHARE,
+</a><a href="#h2-0-35" id="h2-0-35" class="d">-    MAP_HEAT_SNAP_SHARE,
+</a><a href="#h2-0-36" id="h2-0-36" class="d">-    MAP_SCREENSHOT_SHARE,
+</a><a href="#h2-0-37" id="h2-0-37" class="d">-    MEMORIES_STORY,
+</a><a href="#h2-0-38" id="h2-0-38" class="d">-    SEARCH_STORY_SHARE,
+</a><a href="#h2-0-39" id="h2-0-39" class="d">-    SEARCH_STORY_SNAP_SHARE,
+</a><a href="#h2-0-40" id="h2-0-40" class="d">-    DISCOVER_SHARE,
+</a><a href="#h2-0-41" id="h2-0-41" class="d">-    SHAZAM_SHARE,
+</a><a href="#h2-0-42" id="h2-0-42" class="d">-    SAVE_TO_CAMERA_ROLL,
+</a><a href="#h2-0-43" id="h2-0-43" class="d">-    GAME_SCORE_SHARE,
+</a><a href="#h2-0-44" id="h2-0-44" class="d">-    SNAP_PRO_PROFILE_SHARE,
+</a><a href="#h2-0-45" id="h2-0-45" class="d">-    SNAP_PRO_SNAP_SHARE,
+</a><a href="#h2-0-46" id="h2-0-46" class="d">-    CANVAS_APP_SHARE,
+</a><a href="#h2-0-47" id="h2-0-47" class="d">-    AD_SHARE,
+</a><a href="#h2-0-48" id="h2-0-48" class="d">-    STORY_REPLY,
+</a><a href="#h2-0-49" id="h2-0-49" class="d">-    SPOTLIGHT_STORY_SHARE,
+</a><a href="#h2-0-50" id="h2-0-50" class="d">-    CAMEO,
+</a><a href="#h2-0-51" id="h2-0-51" class="d">-    MEMOJI,
+</a><a href="#h2-0-52" id="h2-0-52" class="d">-    BITMOJI_OUTFIT_SHARE,
+</a><a href="#h2-0-53" id="h2-0-53" class="d">-    LIVE_LOCATION_SHARE,
+</a><a href="#h2-0-54" id="h2-0-54" class="d">-    CREATIVE_TOOL_ITEM,
+</a><a href="#h2-0-55" id="h2-0-55" class="d">-    SNAP_KIT_INVITE_SHARE,
+</a><a href="#h2-0-56" id="h2-0-56" class="d">-    QUOTE_REPLY_SHARE,
+</a><a href="#h2-0-57" id="h2-0-57" class="d">-    BLOOPS_STORY_SHARE,
+</a><a href="#h2-0-58" id="h2-0-58" class="d">-    SNAP_PRO_SAVED_STORY_SHARE,
+</a><a href="#h2-0-59" id="h2-0-59" class="d">-    PLACE_PROFILE_SHARE,
+</a><a href="#h2-0-60" id="h2-0-60" class="d">-    PLACE_STORY_SHARE,
+</a><a href="#h2-0-61" id="h2-0-61" class="d">-    SAVED_STORY_SHARE
+</a><a href="#h2-0-62" id="h2-0-62" class="d">-}
+</a> enum class MediaReferenceType {
+     UNASSIGNED, OVERLAY, IMAGE, VIDEO, ASSET_BUNDLE, AUDIO, ANIMATED_IMAGE, FONT, WEB_VIEW_CONTENT, VIDEO_NO_AUDIO
+ }
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/MessageSender.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/MessageSender.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/MessageSender.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/MessageSender.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -1,8 +1,6 @@
+</a> package me.rhunk.snapenhance.core.messaging
+ 
+ import me.rhunk.snapenhance.common.data.ContentType
+<a href="#h3-0-3" id="h3-0-3" class="d">-import me.rhunk.snapenhance.common.data.MetricsMessageMediaType
+</a><a href="#h3-0-4" id="h3-0-4" class="d">-import me.rhunk.snapenhance.common.data.MetricsMessageType
+</a> import me.rhunk.snapenhance.common.util.protobuf.ProtoWriter
+ import me.rhunk.snapenhance.core.ModContext
+ import me.rhunk.snapenhance.core.features.impl.messaging.Messaging
+<a href="#h3-1" id="h3-1" class="h">@@ -59,34 +57,10 @@ class MessageSender(
+</a> 
+     private val sendMessageCallback by lazy { context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;SendMessageCallback&quot;) }
+ 
+<a href="#h3-1-3" id="h3-1-3" class="d">-    private val platformAnalyticsCreatorClass by lazy {
+</a><a href="#h3-1-4" id="h3-1-4" class="d">-        context.mappings.getMappedClass(&quot;PlatformAnalyticsCreator&quot;)
+</a><a href="#h3-1-5" id="h3-1-5" class="d">-    }
+</a><a href="#h3-1-6" id="h3-1-6" class="d">-
+</a><a href="#h3-1-7" id="h3-1-7" class="d">-    private fun defaultPlatformAnalytics(): ByteArray {
+</a><a href="#h3-1-8" id="h3-1-8" class="d">-        val analyticsSource = platformAnalyticsCreatorClass.constructors[0].parameterTypes[0]
+</a><a href="#h3-1-9" id="h3-1-9" class="d">-        val chatAnalyticsSource = analyticsSource.enumConstants.first { it.toString() == &quot;CHAT&quot; }
+</a><a href="#h3-1-10" id="h3-1-10" class="d">-
+</a><a href="#h3-1-11" id="h3-1-11" class="d">-        val platformAnalyticsDefaultArgs = arrayOf(chatAnalyticsSource, null, null, null, null, null, null, null, null, null, 0L, 0L,
+</a><a href="#h3-1-12" id="h3-1-12" class="d">-            null, null, false, null, null, 0L, null, null, false, null, null,
+</a><a href="#h3-1-13" id="h3-1-13" class="d">-            null, null, null, null, null, null, null, null, null, null, null,
+</a><a href="#h3-1-14" id="h3-1-14" class="d">-            null, null, null, null, null, null, false, null, null, false, 0L, -2, 8191)
+</a><a href="#h3-1-15" id="h3-1-15" class="d">-
+</a><a href="#h3-1-16" id="h3-1-16" class="d">-        val platformAnalyticsInstance = platformAnalyticsCreatorClass.constructors[0].newInstance(
+</a><a href="#h3-1-17" id="h3-1-17" class="d">-            *platformAnalyticsDefaultArgs
+</a><a href="#h3-1-18" id="h3-1-18" class="d">-        ) ?: throw Exception(&quot;Failed to create platform analytics instance&quot;)
+</a><a href="#h3-1-19" id="h3-1-19" class="d">-
+</a><a href="#h3-1-20" id="h3-1-20" class="d">-        return platformAnalyticsInstance.javaClass.declaredMethods.first { it.returnType == ByteArray::class.java }
+</a><a href="#h3-1-21" id="h3-1-21" class="d">-            .invoke(platformAnalyticsInstance) as ByteArray?
+</a><a href="#h3-1-22" id="h3-1-22" class="d">-            ?: throw Exception(&quot;Failed to get platform analytics content&quot;)
+</a><a href="#h3-1-23" id="h3-1-23" class="d">-    }
+</a><a href="#h3-1-24" id="h3-1-24" class="d">-
+</a>     private fun createLocalMessageContentTemplate(
+         contentType: ContentType,
+         messageContent: ByteArray,
+         localMediaReference: ByteArray? = null,
+<a href="#h3-1-29" id="h3-1-29" class="d">-        metricMessageMediaType: MetricsMessageMediaType = MetricsMessageMediaType.DERIVED_FROM_MESSAGE_TYPE,
+</a><a href="#h3-1-30" id="h3-1-30" class="d">-        metricsMediaType: MetricsMessageType = MetricsMessageType.TEXT,
+</a>         savePolicy: String = &quot;PROHIBITED&quot;,
+     ): String {
+         return &quot;&quot;&quot;
+<a href="#h3-2" id="h3-2" class="h">@@ -104,12 +78,10 @@ class MessageSender(
+</a>                 }
+             }],
+             &quot;mPlatformAnalytics&quot;: {
+<a href="#h3-2-3" id="h3-2-3" class="d">-                &quot;mAttemptId&quot;: {
+</a><a href="#h3-2-4" id="h3-2-4" class="d">-                  &quot;mId&quot;: [${(1..16).map { (-127 ..127).random() }.joinToString(&quot;,&quot;)}]
+</a><a href="#h3-2-5" id="h3-2-5" class="d">-                },
+</a><a href="#h3-2-6" id="h3-2-6" class="d">-                &quot;mContent&quot;: [${defaultPlatformAnalytics().joinToString(&quot;,&quot;)}],
+</a><a href="#h3-2-7" id="h3-2-7" class="d">-                &quot;mMetricsMessageMediaType&quot;: &quot;${metricMessageMediaType.name}&quot;,
+</a><a href="#h3-2-8" id="h3-2-8" class="d">-                &quot;mMetricsMessageType&quot;: &quot;${metricsMediaType.name}&quot;,
+</a><a href="#h3-2-9" id="h3-2-9" class="i">+                &quot;mAttemptId&quot;: null,
+</a><a href="#h3-2-10" id="h3-2-10" class="i">+                &quot;mContent&quot;: [],
+</a><a href="#h3-2-11" id="h3-2-11" class="i">+                &quot;mMetricsMessageMediaType&quot;: &quot;NO_MEDIA&quot;,
+</a><a href="#h3-2-12" id="h3-2-12" class="i">+                &quot;mMetricsMessageType&quot;: &quot;TEXT&quot;,
+</a>                 &quot;mReactionSource&quot;: &quot;NONE&quot;
+             },
+             &quot;mSavePolicy&quot;: &quot;$savePolicy&quot;
+<a href="#h3-3" id="h3-3" class="h">@@ -130,35 +102,6 @@ class MessageSender(
+</a>         sendMessageWithContentMethod.invoke(context.feature(Messaging::class).conversationManager, messageDestinations.instanceNonNull(), localMessageContent, callback)
+     }
+ 
+<a href="#h3-3-3" id="h3-3-3" class="d">-    //TODO: implement sendSnapMessage
+</a><a href="#h3-3-4" id="h3-3-4" class="d">-    /*
+</a><a href="#h3-3-5" id="h3-3-5" class="d">-    fun sendSnapMessage(conversations: List&lt;SnapUUID&gt;, chatMediaType: ChatMediaType, uri: Uri, onError: (Any) -&gt; Unit = {}, onSuccess: () -&gt; Unit = {}) {
+</a><a href="#h3-3-6" id="h3-3-6" class="d">-        val mediaReferenceBuffer = FlatBufferBuilder(0).apply {
+</a><a href="#h3-3-7" id="h3-3-7" class="d">-            val uriOffset = createString(uri.toString())
+</a><a href="#h3-3-8" id="h3-3-8" class="d">-            forceDefaults(true)
+</a><a href="#h3-3-9" id="h3-3-9" class="d">-            startTable(2)
+</a><a href="#h3-3-10" id="h3-3-10" class="d">-            addOffset(1, uriOffset, 0)
+</a><a href="#h3-3-11" id="h3-3-11" class="d">-            addInt(0, chatMediaType.value, 0)
+</a><a href="#h3-3-12" id="h3-3-12" class="d">-            finish(endTable())
+</a><a href="#h3-3-13" id="h3-3-13" class="d">-            finished()
+</a><a href="#h3-3-14" id="h3-3-14" class="d">-        }.sizedByteArray()
+</a><a href="#h3-3-15" id="h3-3-15" class="d">-
+</a><a href="#h3-3-16" id="h3-3-16" class="d">-        internalSendMessage(conversations, createLocalMessageContentTemplate(
+</a><a href="#h3-3-17" id="h3-3-17" class="d">-            contentType = ContentType.SNAP,
+</a><a href="#h3-3-18" id="h3-3-18" class="d">-            messageContent = redSnapProto(chatMediaType == ChatMediaType.AUDIO || chatMediaType == ChatMediaType.VIDEO),
+</a><a href="#h3-3-19" id="h3-3-19" class="d">-            localMediaReference = mediaReferenceBuffer,
+</a><a href="#h3-3-20" id="h3-3-20" class="d">-            metricMessageMediaType = MetricsMessageMediaType.IMAGE,
+</a><a href="#h3-3-21" id="h3-3-21" class="d">-            metricsMediaType = MetricsMessageType.SNAP
+</a><a href="#h3-3-22" id="h3-3-22" class="d">-        ), CallbackBuilder(sendMessageCallback)
+</a><a href="#h3-3-23" id="h3-3-23" class="d">-            .override(&quot;onSuccess&quot;) {
+</a><a href="#h3-3-24" id="h3-3-24" class="d">-                onSuccess()
+</a><a href="#h3-3-25" id="h3-3-25" class="d">-            }
+</a><a href="#h3-3-26" id="h3-3-26" class="d">-            .override(&quot;onError&quot;) {
+</a><a href="#h3-3-27" id="h3-3-27" class="d">-                onError(it.arg(0))
+</a><a href="#h3-3-28" id="h3-3-28" class="d">-            }
+</a><a href="#h3-3-29" id="h3-3-29" class="d">-            .build())
+</a><a href="#h3-3-30" id="h3-3-30" class="d">-    }*/
+</a><a href="#h3-3-31" id="h3-3-31" class="d">-
+</a>     fun sendChatMessage(conversations: List&lt;SnapUUID&gt;, message: String, onError: (Any) -&gt; Unit = {}, onSuccess: () -&gt; Unit = {}) {
+         internalSendMessage(conversations, createLocalMessageContentTemplate(ContentType.CHAT, ProtoWriter().apply {
+             from(2) {
+<b>diff --git a/<a id="h4" href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/PlatformAnalyticsCreatorMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/PlatformAnalyticsCreatorMapper.kt</a> b/<a href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/PlatformAnalyticsCreatorMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/PlatformAnalyticsCreatorMapper.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -1,26 +0,0 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="d">-package me.rhunk.snapenhance.mapper.impl
+</a><a href="#h4-0-1" id="h4-0-1" class="d">-
+</a><a href="#h4-0-2" id="h4-0-2" class="d">-import me.rhunk.snapenhance.mapper.AbstractClassMapper
+</a><a href="#h4-0-3" id="h4-0-3" class="d">-import me.rhunk.snapenhance.mapper.ext.findConstString
+</a><a href="#h4-0-4" id="h4-0-4" class="d">-import me.rhunk.snapenhance.mapper.ext.getClassName
+</a><a href="#h4-0-5" id="h4-0-5" class="d">-import me.rhunk.snapenhance.mapper.ext.getStaticConstructor
+</a><a href="#h4-0-6" id="h4-0-6" class="d">-import me.rhunk.snapenhance.mapper.ext.isEnum
+</a><a href="#h4-0-7" id="h4-0-7" class="d">-
+</a><a href="#h4-0-8" id="h4-0-8" class="d">-class PlatformAnalyticsCreatorMapper : AbstractClassMapper() {
+</a><a href="#h4-0-9" id="h4-0-9" class="d">-    init {
+</a><a href="#h4-0-10" id="h4-0-10" class="d">-        mapper {
+</a><a href="#h4-0-11" id="h4-0-11" class="d">-            for (clazz in classes) {
+</a><a href="#h4-0-12" id="h4-0-12" class="d">-                val firstConstructor = clazz.directMethods.firstOrNull { it.name == &quot;&lt;init&gt;&quot; } ?: continue
+</a><a href="#h4-0-13" id="h4-0-13" class="d">-                // 47 is the number of parameters of the constructor
+</a><a href="#h4-0-14" id="h4-0-14" class="d">-                // it may change in future versions
+</a><a href="#h4-0-15" id="h4-0-15" class="d">-                if (firstConstructor.parameters.size != 47) continue
+</a><a href="#h4-0-16" id="h4-0-16" class="d">-                val firstParameterClass = getClass(firstConstructor.parameterTypes[0]) ?: continue
+</a><a href="#h4-0-17" id="h4-0-17" class="d">-                if (!firstParameterClass.isEnum()) continue
+</a><a href="#h4-0-18" id="h4-0-18" class="d">-                if (firstParameterClass.getStaticConstructor()?.implementation?.findConstString(&quot;IN_APP_NOTIFICATION&quot;) != true) continue
+</a><a href="#h4-0-19" id="h4-0-19" class="d">-
+</a><a href="#h4-0-20" id="h4-0-20" class="d">-                addMapping(&quot;PlatformAnalyticsCreator&quot;, clazz.getClassName())
+</a><a href="#h4-0-21" id="h4-0-21" class="d">-                return@mapper
+</a><a href="#h4-0-22" id="h4-0-22" class="d">-            }
+</a><a href="#h4-0-23" id="h4-0-23" class="d">-        }
+</a><a href="#h4-0-24" id="h4-0-24" class="d">-    }
+</a><a href="#h4-0-25" id="h4-0-25" class="d">-}</a><a href="#h4-0-26" id="h4-0-26" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h5" href="../file/mapper/src/test/kotlin/me/rhunk/snapenhance/mapper/tests/TestMappings.kt.html">mapper/src/test/kotlin/me/rhunk/snapenhance/mapper/tests/TestMappings.kt</a> b/<a href="../file/mapper/src/test/kotlin/me/rhunk/snapenhance/mapper/tests/TestMappings.kt.html">mapper/src/test/kotlin/me/rhunk/snapenhance/mapper/tests/TestMappings.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -16,7 +16,6 @@ class TestMappings {
+</a>             DefaultMediaItemMapper::class,
+             MediaQualityLevelProviderMapper::class,
+             OperaPageViewControllerMapper::class,
+<a href="#h5-0-3" id="h5-0-3" class="d">-            PlatformAnalyticsCreatorMapper::class,
+</a>             PlusSubscriptionMapper::class,
+             ScCameraSettingsMapper::class,
+             StoryBoostStateMapper::class,
+</pre>
+</div>
+</body>
+</html>

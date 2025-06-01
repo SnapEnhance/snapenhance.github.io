@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(app/scripting): warning dialog - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/8f2940e0a66bc3fb8e6ba2054ea6cafe295d32c1.html">8f2940e0a66bc3fb8e6ba2054ea6cafe295d32c1</a>
+<b>parent</b> <a href="../commit/88425654f343d4c254bd592ea23d3fcdc1071b26.html">88425654f343d4c254bd592ea23d3fcdc1071b26</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 27 Dec 2023 12:38:49 +0100
+
+feat(app/scripting): warning dialog
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a></td><td> | </td><td class="num">42</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+</table></pre><pre>2 files changed, 45 insertions(+), 1 deletion(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -144,7 +144,7 @@ class ScriptsSection : Section() {
+</a> 
+     @Composable
+     fun ScriptSettings(script: ModuleInfo) {
+<a href="#h0-0-3" id="h0-0-3" class="d">-        val settingsInterface = remember {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+       val settingsInterface = remember {
+</a>             val module = context.scriptManager.runtime.getModuleByName(script.name) ?: return@remember null
+             (module.getBinding(InterfaceManager::class))?.buildInterface(EnumScriptInterface.SETTINGS)
+         }
+<a href="#h0-1" id="h0-1" class="h">@@ -247,6 +247,46 @@ class ScriptsSection : Section() {
+</a>                 modifier = Modifier.align(Alignment.TopCenter)
+             )
+         }
+<a href="#h0-1-3" id="h0-1-3" class="i">+
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+        var scriptingWarning by remember {
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+            mutableStateOf(context.sharedPreferences.run {
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+                getBoolean(&quot;scripting_warning&quot;, true).also {
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+                    edit().putBoolean(&quot;scripting_warning&quot;, false).apply()
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+                }
+</a><a href="#h0-1-9" id="h0-1-9" class="i">+            })
+</a><a href="#h0-1-10" id="h0-1-10" class="i">+        }
+</a><a href="#h0-1-11" id="h0-1-11" class="i">+
+</a><a href="#h0-1-12" id="h0-1-12" class="i">+        if (scriptingWarning) {
+</a><a href="#h0-1-13" id="h0-1-13" class="i">+            var timeout by remember {
+</a><a href="#h0-1-14" id="h0-1-14" class="i">+                mutableIntStateOf(10)
+</a><a href="#h0-1-15" id="h0-1-15" class="i">+            }
+</a><a href="#h0-1-16" id="h0-1-16" class="i">+
+</a><a href="#h0-1-17" id="h0-1-17" class="i">+            LaunchedEffect(Unit) {
+</a><a href="#h0-1-18" id="h0-1-18" class="i">+                while (timeout &gt; 0) {
+</a><a href="#h0-1-19" id="h0-1-19" class="i">+                    delay(1000)
+</a><a href="#h0-1-20" id="h0-1-20" class="i">+                    timeout--
+</a><a href="#h0-1-21" id="h0-1-21" class="i">+                }
+</a><a href="#h0-1-22" id="h0-1-22" class="i">+            }
+</a><a href="#h0-1-23" id="h0-1-23" class="i">+
+</a><a href="#h0-1-24" id="h0-1-24" class="i">+            AlertDialog(onDismissRequest = {
+</a><a href="#h0-1-25" id="h0-1-25" class="i">+                if (timeout == 0) {
+</a><a href="#h0-1-26" id="h0-1-26" class="i">+                    scriptingWarning = false
+</a><a href="#h0-1-27" id="h0-1-27" class="i">+                }
+</a><a href="#h0-1-28" id="h0-1-28" class="i">+            }, title = {
+</a><a href="#h0-1-29" id="h0-1-29" class="i">+                Text(text = context.translation[&quot;manager.dialogs.scripting_warning.title&quot;])
+</a><a href="#h0-1-30" id="h0-1-30" class="i">+            }, text = {
+</a><a href="#h0-1-31" id="h0-1-31" class="i">+                Text(text = context.translation[&quot;manager.dialogs.scripting_warning.content&quot;])
+</a><a href="#h0-1-32" id="h0-1-32" class="i">+            }, confirmButton = {
+</a><a href="#h0-1-33" id="h0-1-33" class="i">+                TextButton(
+</a><a href="#h0-1-34" id="h0-1-34" class="i">+                    onClick = {
+</a><a href="#h0-1-35" id="h0-1-35" class="i">+                        scriptingWarning = false
+</a><a href="#h0-1-36" id="h0-1-36" class="i">+                    },
+</a><a href="#h0-1-37" id="h0-1-37" class="i">+                    enabled = timeout == 0
+</a><a href="#h0-1-38" id="h0-1-38" class="i">+                ) {
+</a><a href="#h0-1-39" id="h0-1-39" class="i">+                    Text(text = &quot;OK &quot; + if (timeout &gt; 0) &quot;($timeout)&quot; else &quot;&quot;)
+</a><a href="#h0-1-40" id="h0-1-40" class="i">+                }
+</a><a href="#h0-1-41" id="h0-1-41" class="i">+            })
+</a><a href="#h0-1-42" id="h0-1-42" class="i">+        }
+</a>     }
+ 
+     @Composable
+<b>diff --git a/<a id="h1" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -63,6 +63,10 @@
+</a>                 &quot;fetch_error&quot;: &quot;Failed to fetch data&quot;,
+                 &quot;category_groups&quot;: &quot;Groups&quot;,
+                 &quot;category_friends&quot;: &quot;Friends&quot;
+<a href="#h1-0-3" id="h1-0-3" class="i">+            },
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+            &quot;scripting_warning&quot;: {
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+                &quot;title&quot;: &quot;Warning&quot;,
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+                &quot;content&quot;: &quot;SnapEnhance includes a scripting tool, allowing the execution of user-defined code on your device. Use extreme caution and only install modules from known, reliable sources. Unauthorized or unverified modules may pose security risks to your system.&quot;
+</a>             }
+         }
+     },
+</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: disable video length restriction - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/c070dd5c830f0646d911d3701d5c7085058a8698.html">c070dd5c830f0646d911d3701d5c7085058a8698</a>
+<b>parent</b> <a href="../commit/f95fae197a9fa9c93d9c6ffd34abd1c22b2f9a88.html">f95fae197a9fa9c93d9c6ffd34abd1c22b2f9a88</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 26 May 2023 18:20:01 +0200
+
+feat: disable video length restriction
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/DisableVideoLengthRestriction.kt</a></td><td> | </td><td class="num">26</td><td><span class="i">++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/MappingManager.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h4">app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/GridMediaItemMapper.kt</a></td><td> | </td><td class="num">28</td><td><span class="i">++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>5 files changed, 64 insertions(+), 0 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -173,6 +173,12 @@ enum class ConfigProperty(
+</a>         ConfigCategory.TWEAKS,
+         ConfigStateValue(false)
+     ),
+<a href="#h0-0-3" id="h0-0-3" class="i">+    DISABLE_VIDEO_LENGTH_RESTRICTION(
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        &quot;property.disable_video_length_restriction&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+        &quot;description.disable_video_length_restriction&quot;,
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+        ConfigCategory.TWEAKS,
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+        ConfigStateValue(false)
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+    ),
+</a>     BLOCK_ADS(&quot;property.block_ads&quot;, &quot;description.block_ads&quot;, ConfigCategory.TWEAKS, ConfigStateValue(false)),
+     STREAK_EXPIRATION_INFO(
+         &quot;property.streak_expiration_info&quot;,
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/DisableVideoLengthRestriction.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/DisableVideoLengthRestriction.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/DisableVideoLengthRestriction.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/DisableVideoLengthRestriction.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -0,0 +1,25 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="i">+package me.rhunk.snapenhance.features.impl.extras
+</a><a href="#h1-0-1" id="h1-0-1" class="i">+
+</a><a href="#h1-0-2" id="h1-0-2" class="i">+import me.rhunk.snapenhance.config.ConfigProperty
+</a><a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.features.Feature
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import me.rhunk.snapenhance.features.FeatureLoadParams
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+import me.rhunk.snapenhance.hook.HookStage
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+import me.rhunk.snapenhance.hook.Hooker
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+import me.rhunk.snapenhance.util.getObjectField
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+import me.rhunk.snapenhance.util.setObjectField
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+class DisableVideoLengthRestriction : Feature(&quot;DisableVideoLengthRestriction&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_ASYNC) {
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+    override fun asyncOnActivityCreate() {
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+        val gridMediaItem = context.mappings.getMappedClass(&quot;GridMediaItem&quot;)
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+        val gridMediaItemDurationFieldName = context.mappings.getMappedValue(&quot;GridMediaItemDurationField&quot;)
+</a><a href="#h1-0-14" id="h1-0-14" class="i">+
+</a><a href="#h1-0-15" id="h1-0-15" class="i">+        Hooker.hookConstructor(gridMediaItem, HookStage.AFTER, {
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+            context.config.bool(ConfigProperty.DISABLE_VIDEO_LENGTH_RESTRICTION)
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+        }) {param -&gt;
+</a><a href="#h1-0-18" id="h1-0-18" class="i">+            val durationMs = param.thisObject&lt;Any&gt;().getObjectField(gridMediaItemDurationFieldName) as Double
+</a><a href="#h1-0-19" id="h1-0-19" class="i">+            if (durationMs &gt; 60000) {
+</a><a href="#h1-0-20" id="h1-0-20" class="i">+                param.thisObject&lt;Any&gt;().setObjectField(gridMediaItemDurationFieldName, 60000)
+</a><a href="#h1-0-21" id="h1-0-21" class="i">+            }
+</a><a href="#h1-0-22" id="h1-0-22" class="i">+        }
+</a><a href="#h1-0-23" id="h1-0-23" class="i">+    }
+</a><a href="#h1-0-24" id="h1-0-24" class="i">+}</a><a href="#h1-0-25" id="h1-0-25" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -10,6 +10,7 @@ import me.rhunk.snapenhance.features.impl.downloader.AntiAutoDownload
+</a> import me.rhunk.snapenhance.features.impl.downloader.MediaDownloader
+ import me.rhunk.snapenhance.features.impl.extras.AntiAutoSave
+ import me.rhunk.snapenhance.features.impl.extras.AutoSave
+<a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.features.impl.extras.DisableVideoLengthRestriction
+</a> import me.rhunk.snapenhance.features.impl.extras.ExternalMediaAsSnap
+ import me.rhunk.snapenhance.features.impl.extras.Notifications
+ import me.rhunk.snapenhance.features.impl.extras.SnapchatPlus
+<a href="#h2-1" id="h2-1" class="h">@@ -66,6 +67,7 @@ class FeatureManager(private val context: ModContext) : Manager {
+</a>         register(ExternalMediaAsSnap::class)
+         register(AntiAutoSave::class)
+         register(UnlimitedSnapViewTime::class)
+<a href="#h2-1-3" id="h2-1-3" class="i">+        register(DisableVideoLengthRestriction::class)
+</a> 
+         initializeFeatures()
+     }
+<b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/MappingManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/MappingManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/MappingManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/MappingManager.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -14,6 +14,7 @@ import me.rhunk.snapenhance.manager.Manager
+</a> import me.rhunk.snapenhance.mapping.Mapper
+ import me.rhunk.snapenhance.mapping.impl.CallbackMapper
+ import me.rhunk.snapenhance.mapping.impl.EnumMapper
+<a href="#h3-0-3" id="h3-0-3" class="i">+import me.rhunk.snapenhance.mapping.impl.GridMediaItemMapper
+</a> import me.rhunk.snapenhance.mapping.impl.OperaPageViewControllerMapper
+ import me.rhunk.snapenhance.mapping.impl.PlusSubscriptionMapper
+ import me.rhunk.snapenhance.util.getObjectField
+<a href="#h3-1" id="h3-1" class="h">@@ -27,6 +28,7 @@ class MappingManager(private val context: ModContext) : Manager {
+</a>         add(EnumMapper())
+         add(OperaPageViewControllerMapper())
+         add(PlusSubscriptionMapper())
+<a href="#h3-1-3" id="h3-1-3" class="i">+        add(GridMediaItemMapper())
+</a>     }
+ 
+     private val mappings = ConcurrentHashMap&lt;String, Any&gt;()
+<b>diff --git a/<a id="h4" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/GridMediaItemMapper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/GridMediaItemMapper.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/GridMediaItemMapper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/GridMediaItemMapper.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -0,0 +1,27 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="i">+package me.rhunk.snapenhance.mapping.impl
+</a><a href="#h4-0-1" id="h4-0-1" class="i">+
+</a><a href="#h4-0-2" id="h4-0-2" class="i">+import me.rhunk.snapenhance.Logger
+</a><a href="#h4-0-3" id="h4-0-3" class="i">+import me.rhunk.snapenhance.mapping.Mapper
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+class GridMediaItemMapper : Mapper() {
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+    override fun useClasses(
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+        classLoader: ClassLoader,
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+        classes: List&lt;Class&lt;*&gt;&gt;,
+</a><a href="#h4-0-9" id="h4-0-9" class="i">+        mappings: MutableMap&lt;String, Any&gt;
+</a><a href="#h4-0-10" id="h4-0-10" class="i">+    ) {
+</a><a href="#h4-0-11" id="h4-0-11" class="i">+        for (clazz in classes) {
+</a><a href="#h4-0-12" id="h4-0-12" class="i">+            if (clazz.annotations.isEmpty()) continue
+</a><a href="#h4-0-13" id="h4-0-13" class="i">+            if (!clazz.annotations[0].toString().contains(&quot;typeReferences&quot;)) continue
+</a><a href="#h4-0-14" id="h4-0-14" class="i">+            clazz.declaredFields.firstOrNull {
+</a><a href="#h4-0-15" id="h4-0-15" class="i">+                it.annotations.isNotEmpty() &amp;&amp; it.annotations[0].toString().contains(&quot;cameraRollSource&quot;)
+</a><a href="#h4-0-16" id="h4-0-16" class="i">+            }?.let {
+</a><a href="#h4-0-17" id="h4-0-17" class="i">+                mappings[&quot;GridMediaItem&quot;] = clazz.name
+</a><a href="#h4-0-18" id="h4-0-18" class="i">+                mappings[&quot;GridMediaItemDurationField&quot;] = clazz.declaredFields.first {
+</a><a href="#h4-0-19" id="h4-0-19" class="i">+                    it.annotations.isNotEmpty() &amp;&amp; it.annotations[0].toString().contains(&quot;durationMs&quot;)
+</a><a href="#h4-0-20" id="h4-0-20" class="i">+                }.name
+</a><a href="#h4-0-21" id="h4-0-21" class="i">+
+</a><a href="#h4-0-22" id="h4-0-22" class="i">+                Logger.debug(&quot;Found GridMediaItem: ${clazz.name}, durationMs: ${mappings[&quot;GridMediaItemDurationField&quot;]}&quot;)
+</a><a href="#h4-0-23" id="h4-0-23" class="i">+            }
+</a><a href="#h4-0-24" id="h4-0-24" class="i">+        }
+</a><a href="#h4-0-25" id="h4-0-25" class="i">+    }
+</a><a href="#h4-0-26" id="h4-0-26" class="i">+}</a><a href="#h4-0-27" id="h4-0-27" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

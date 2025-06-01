@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>refactor: conversation manager wrapper - fix auto save in background - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/17f81eb6827e1a966cd6dd19b9d0d6ced095b3e0.html">17f81eb6827e1a966cd6dd19b9d0d6ced095b3e0</a>
+<b>parent</b> <a href="../commit/8d1c9a87ad13dd8d01641cc8d0fad33ab6c6e32e.html">8d1c9a87ad13dd8d01641cc8d0fad33ab6c6e32e</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu,  2 Nov 2023 14:08:02 +0100
+
+refactor: conversation manager wrapper
+- fix auto save in background
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt</a></td><td> | </td><td class="num">5</td><td><span class="i">+++++</span><span class="d"></span></td></tr>
+<tr><td class="D">D</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/HashCode.kt</a></td><td> | </td><td class="num">8</td><td><span class="i"></span><span class="d">--------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/JavaExt.kt</a></td><td> | </td><td class="num">36</td><td><span class="i">++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">+++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt</a></td><td> | </td><td class="num">31</td><td><span class="i">+++++++</span><span class="d">------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/core/data/SnapClassCache.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/AutoSave.kt</a></td><td> | </td><td class="num">40</td><td><span class="i">+++++++++++++++</span><span class="d">-------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">+++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt</a></td><td> | </td><td class="num">52</td><td><span class="i">++++++++++++++++++++</span><span class="d">--------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/CoreMessagingBridge.kt</a></td><td> | </td><td class="num">103</td><td><span class="i">+++++++++++++++++++++++++</span><span class="d">------------------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h11">core/src/main/kotlin/me/rhunk/snapenhance/core/util/CallbackBuilder.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">++++++</span><span class="d">------</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h12">core/src/main/kotlin/me/rhunk/snapenhance/core/util/ReflectionHelper.kt</a></td><td> | </td><td class="num">120</td><td><span class="i"></span><span class="d">-------------------------------------------------------------------------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h13">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt</a></td><td> | </td><td class="num">106</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h14">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/SnapUUID.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h15">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/Layer.kt</a></td><td> | </td><td class="num">18</td><td><span class="i">++++++++</span><span class="d">----------</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h16">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/LayerController.kt</a></td><td> | </td><td class="num">18</td><td><span class="i"></span><span class="d">------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h17">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/ParamMap.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">++++</span><span class="d">-----</span></td></tr>
+</table></pre><pre>18 files changed, 252 insertions(+), 327 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -105,6 +105,11 @@ enum class MediaReferenceType {
+</a>     UNASSIGNED, OVERLAY, IMAGE, VIDEO, ASSET_BUNDLE, AUDIO, ANIMATED_IMAGE, FONT, WEB_VIEW_CONTENT, VIDEO_NO_AUDIO
+ }
+ 
+<a href="#h0-0-3" id="h0-0-3" class="i">+
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+enum class MessageUpdate {
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+    UNKNOWN, READ, RELEASE, SAVE, UNSAVE, ERASE, SCREENSHOT, SCREEN_RECORD, REPLAY, REACTION, REMOVEREACTION, REVOKETRANSCRIPTION, ALLOWTRANSCRIPTION, ERASESAVEDSTORYMEDIA
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+}
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+
+</a> enum class FriendLinkType(val value: Int, val shortName: String) {
+     MUTUAL(0, &quot;mutual&quot;),
+     OUTGOING(1, &quot;outgoing&quot;),
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/HashCode.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/HashCode.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/HashCode.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/HashCode.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,7 +0,0 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="d">-package me.rhunk.snapenhance.common.util.ktx
+</a><a href="#h1-0-1" id="h1-0-1" class="d">-
+</a><a href="#h1-0-2" id="h1-0-2" class="d">-fun String.longHashCode(): Long {
+</a><a href="#h1-0-3" id="h1-0-3" class="d">-    var h = 1125899906842597L
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-    for (element in this) h = 31 * h + element.code.toLong()
+</a><a href="#h1-0-5" id="h1-0-5" class="d">-    return h
+</a><a href="#h1-0-6" id="h1-0-6" class="d">-}</a><a href="#h1-0-7" id="h1-0-7" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/JavaExt.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/JavaExt.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/JavaExt.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/JavaExt.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -0,0 +1,36 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="i">+package me.rhunk.snapenhance.common.util.ktx
+</a><a href="#h2-0-1" id="h2-0-1" class="i">+
+</a><a href="#h2-0-2" id="h2-0-2" class="i">+import java.lang.reflect.Field
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+fun String.longHashCode(): Long {
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+    var h = 1125899906842597L
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+    for (element in this) h = 31 * h + element.code.toLong()
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+    return h
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+}
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+inline fun Class&lt;*&gt;.findFields(once: Boolean, crossinline predicate: (field: Field) -&gt; Boolean): List&lt;Field&gt;{
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+    var clazz: Class&lt;*&gt;? = this
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+    val fields = mutableListOf&lt;Field&gt;()
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+    while (clazz != null) {
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+        if (once) {
+</a><a href="#h2-0-16" id="h2-0-16" class="i">+            clazz.declaredFields.firstOrNull(predicate)?.let { return listOf(it) }
+</a><a href="#h2-0-17" id="h2-0-17" class="i">+        } else {
+</a><a href="#h2-0-18" id="h2-0-18" class="i">+            fields.addAll(clazz.declaredFields.filter(predicate))
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+        }
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+        clazz = clazz.superclass ?: break
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+    }
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+    return fields
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+}
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+inline fun Class&lt;*&gt;.findFieldsToString(instance: Any? = null, once: Boolean = false, crossinline predicate: (field: Field, value: String) -&gt; Boolean): List&lt;Field&gt; {
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+    return this.findFields(once = once) {
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+        try {
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+            it.isAccessible = true
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+            return@findFields it.get(instance)?.let { it1 -&gt; predicate(it, it1.toString()) } == true
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+        } catch (e: Throwable) {
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+            return@findFields false
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+        }
+</a><a href="#h2-0-34" id="h2-0-34" class="i">+    }
+</a><a href="#h2-0-35" id="h2-0-35" class="i">+}
+</a><b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -67,6 +67,8 @@ class ModContext(
+</a> 
+     val isDeveloper by lazy { config.scripting.developerMode.get() }
+ 
+<a href="#h3-0-3" id="h3-0-3" class="i">+    var isMainActivityPaused = false
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+
+</a>     fun &lt;T : Feature&gt; feature(featureClass: KClass&lt;T&gt;): T {
+         return features.get(featureClass)!!
+     }
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -35,7 +35,6 @@ class SnapEnhance {
+</a>     }
+     private lateinit var appContext: ModContext
+     private var isBridgeInitialized = false
+<a href="#h4-0-3" id="h4-0-3" class="d">-    private var isActivityPaused = false
+</a> 
+     private fun hookMainActivity(methodName: String, stage: HookStage = HookStage.AFTER, block: Activity.() -&gt; Unit) {
+         Activity::class.java.hook(methodName, stage, { isBridgeInitialized }) { param -&gt;
+<a href="#h4-1" id="h4-1" class="h">@@ -91,14 +90,14 @@ class SnapEnhance {
+</a> 
+         hookMainActivity(&quot;onPause&quot;) {
+             appContext.bridgeClient.closeSettingsOverlay()
+<a href="#h4-1-3" id="h4-1-3" class="d">-            isActivityPaused = true
+</a><a href="#h4-1-4" id="h4-1-4" class="i">+            appContext.isMainActivityPaused = true
+</a>         }
+ 
+         var activityWasResumed = false
+         //we need to reload the config when the app is resumed
+         //FIXME: called twice at first launch
+         hookMainActivity(&quot;onResume&quot;) {
+<a href="#h4-1-11" id="h4-1-11" class="d">-            isActivityPaused = false
+</a><a href="#h4-1-12" id="h4-1-12" class="i">+            appContext.isMainActivityPaused = false
+</a>             if (!activityWasResumed) {
+                 activityWasResumed = true
+                 return@hookMainActivity
+<a href="#h4-2" id="h4-2" class="h">@@ -175,7 +174,7 @@ class SnapEnhance {
+</a>         }
+ 
+         fun runLater(task: () -&gt; Unit) {
+<a href="#h4-2-3" id="h4-2-3" class="d">-            if (isActivityPaused) {
+</a><a href="#h4-2-4" id="h4-2-4" class="i">+            if (appContext.isMainActivityPaused) {
+</a>                 tasks.add(task)
+             } else {
+                 task()
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -18,18 +18,11 @@ import me.rhunk.snapenhance.core.logger.CoreLogger
+</a> import me.rhunk.snapenhance.core.messaging.ExportFormat
+ import me.rhunk.snapenhance.core.messaging.MessageExporter
+ import me.rhunk.snapenhance.core.ui.ViewAppearanceHelper
+<a href="#h5-0-3" id="h5-0-3" class="d">-import me.rhunk.snapenhance.core.util.CallbackBuilder
+</a> import me.rhunk.snapenhance.core.wrapper.impl.Message
+<a href="#h5-0-5" id="h5-0-5" class="d">-import me.rhunk.snapenhance.core.wrapper.impl.SnapUUID
+</a> import java.io.File
+ import kotlin.math.absoluteValue
+ 
+ class ExportChatMessages : AbstractAction() {
+<a href="#h5-0-10" id="h5-0-10" class="d">-    private val fetchConversationWithMessagesCallbackClass by lazy {  context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;FetchConversationWithMessagesCallback&quot;) }
+</a><a href="#h5-0-11" id="h5-0-11" class="d">-    private val fetchConversationWithMessagesPaginatedMethod by lazy {
+</a><a href="#h5-0-12" id="h5-0-12" class="d">-        context.classCache.conversationManager.methods.first { it.name == &quot;fetchConversationWithMessagesPaginated&quot; }
+</a><a href="#h5-0-13" id="h5-0-13" class="d">-    }
+</a><a href="#h5-0-14" id="h5-0-14" class="d">-
+</a>     private val dialogLogs = mutableListOf&lt;String&gt;()
+     private var currentActionDialog: AlertDialog? = null
+ 
+<a href="#h5-1" id="h5-1" class="h">@@ -149,24 +142,14 @@ class ExportChatMessages : AbstractAction() {
+</a>         }
+     }
+ 
+<a href="#h5-1-3" id="h5-1-3" class="d">-    private suspend fun fetchMessagesPaginated(conversationId: String, lastMessageId: Long, amount: Int) = suspendCancellableCoroutine { continuation -&gt;
+</a><a href="#h5-1-4" id="h5-1-4" class="d">-        val callback = CallbackBuilder(fetchConversationWithMessagesCallbackClass)
+</a><a href="#h5-1-5" id="h5-1-5" class="d">-            .override(&quot;onFetchConversationWithMessagesComplete&quot;) { param -&gt;
+</a><a href="#h5-1-6" id="h5-1-6" class="d">-                val messagesList = param.arg&lt;List&lt;*&gt;&gt;(1).map { Message(it) }
+</a><a href="#h5-1-7" id="h5-1-7" class="d">-                continuation.resumeWith(Result.success(messagesList))
+</a><a href="#h5-1-8" id="h5-1-8" class="d">-            }
+</a><a href="#h5-1-9" id="h5-1-9" class="d">-            .override(&quot;onServerRequest&quot;, shouldUnhook = false) {}
+</a><a href="#h5-1-10" id="h5-1-10" class="d">-            .override(&quot;onError&quot;) {
+</a><a href="#h5-1-11" id="h5-1-11" class="d">-                continuation.resumeWith(Result.failure(Exception(&quot;Failed to fetch messages&quot;)))
+</a><a href="#h5-1-12" id="h5-1-12" class="d">-            }.build()
+</a><a href="#h5-1-13" id="h5-1-13" class="d">-
+</a><a href="#h5-1-14" id="h5-1-14" class="d">-        fetchConversationWithMessagesPaginatedMethod.invoke(
+</a><a href="#h5-1-15" id="h5-1-15" class="d">-            context.feature(Messaging::class).conversationManager,
+</a><a href="#h5-1-16" id="h5-1-16" class="d">-            SnapUUID.fromString(conversationId).instanceNonNull(),
+</a><a href="#h5-1-17" id="h5-1-17" class="i">+    private suspend fun fetchMessagesPaginated(conversationId: String, lastMessageId: Long, amount: Int): List&lt;Message&gt; = suspendCancellableCoroutine { continuation -&gt;
+</a><a href="#h5-1-18" id="h5-1-18" class="i">+        context.feature(Messaging::class).conversationManager?.fetchConversationWithMessagesPaginated(conversationId,
+</a>             lastMessageId,
+<a href="#h5-1-20" id="h5-1-20" class="d">-            amount,
+</a><a href="#h5-1-21" id="h5-1-21" class="d">-            callback
+</a><a href="#h5-1-22" id="h5-1-22" class="d">-        )
+</a><a href="#h5-1-23" id="h5-1-23" class="i">+            amount, onSuccess = { messages -&gt;
+</a><a href="#h5-1-24" id="h5-1-24" class="i">+                continuation.resumeWith(Result.success(messages))
+</a><a href="#h5-1-25" id="h5-1-25" class="i">+            }, onError = {
+</a><a href="#h5-1-26" id="h5-1-26" class="i">+                continuation.resumeWith(Result.success(emptyList()))
+</a><a href="#h5-1-27" id="h5-1-27" class="i">+            }) ?: continuation.resumeWith(Result.success(emptyList()))
+</a>     }
+ 
+     private suspend fun exportFullConversation(friendFeedEntry: FriendFeedEntry) {
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/data/SnapClassCache.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/data/SnapClassCache.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/data/SnapClassCache.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/data/SnapClassCache.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -9,6 +9,7 @@ class SnapClassCache (
+</a>     val presenceSession by lazy { findClass(&quot;com.snapchat.talkcorev3.PresenceSession\$CppProxy&quot;) }
+     val message by lazy { findClass(&quot;com.snapchat.client.messaging.Message&quot;) }
+     val messageUpdateEnum by lazy { findClass(&quot;com.snapchat.client.messaging.MessageUpdate&quot;) }
+<a href="#h6-0-3" id="h6-0-3" class="i">+    val serverMessageIdentifier by lazy { findClass(&quot;com.snapchat.client.messaging.ServerMessageIdentifier&quot;) }
+</a>     val unifiedGrpcService by lazy { findClass(&quot;com.snapchat.client.grpc.UnifiedGrpcService\$CppProxy&quot;) }
+     val networkApi by lazy { findClass(&quot;com.snapchat.client.network_api.NetworkApi\$CppProxy&quot;) }
+     val messageDestinations by lazy { findClass(&quot;com.snapchat.client.messaging.MessageDestinations&quot;) }
+<b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/AutoSave.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/AutoSave.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/AutoSave.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/AutoSave.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -1,13 +1,13 @@
+</a> package me.rhunk.snapenhance.core.features.impl.messaging
+ 
+ import me.rhunk.snapenhance.common.data.MessageState
+<a href="#h7-0-3" id="h7-0-3" class="i">+import me.rhunk.snapenhance.common.data.MessageUpdate
+</a> import me.rhunk.snapenhance.common.data.MessagingRuleType
+ import me.rhunk.snapenhance.core.features.FeatureLoadParams
+ import me.rhunk.snapenhance.core.features.MessagingRuleFeature
+ import me.rhunk.snapenhance.core.features.impl.spying.MessageLogger
+ import me.rhunk.snapenhance.core.features.impl.spying.StealthMode
+ import me.rhunk.snapenhance.core.logger.CoreLogger
+<a href="#h7-0-10" id="h7-0-10" class="d">-import me.rhunk.snapenhance.core.util.CallbackBuilder
+</a> import me.rhunk.snapenhance.core.util.hook.HookStage
+ import me.rhunk.snapenhance.core.util.hook.Hooker
+ import me.rhunk.snapenhance.core.util.ktx.getObjectField
+<a href="#h7-1" id="h7-1" class="h">@@ -21,14 +21,6 @@ class AutoSave : MessagingRuleFeature(&quot;Auto Save&quot;, MessagingRuleType.AUTO_SAVE, 
+</a>     private val messageLogger by lazy { context.feature(MessageLogger::class) }
+     private val messaging by lazy { context.feature(Messaging::class) }
+ 
+<a href="#h7-1-3" id="h7-1-3" class="d">-    private val fetchConversationWithMessagesCallbackClass by lazy {  context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;FetchConversationWithMessagesCallback&quot;) }
+</a><a href="#h7-1-4" id="h7-1-4" class="d">-    private val callbackClass by lazy {  context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;Callback&quot;) }
+</a><a href="#h7-1-5" id="h7-1-5" class="d">-
+</a><a href="#h7-1-6" id="h7-1-6" class="d">-    private val updateMessageMethod by lazy { context.classCache.conversationManager.methods.first { it.name == &quot;updateMessage&quot; } }
+</a><a href="#h7-1-7" id="h7-1-7" class="d">-    private val fetchConversationWithMessagesPaginatedMethod by lazy {
+</a><a href="#h7-1-8" id="h7-1-8" class="d">-        context.classCache.conversationManager.methods.first { it.name == &quot;fetchConversationWithMessagesPaginated&quot; }
+</a><a href="#h7-1-9" id="h7-1-9" class="d">-    }
+</a><a href="#h7-1-10" id="h7-1-10" class="d">-
+</a>     private val autoSaveFilter by lazy {
+         context.config.messaging.autoSaveMessagesInConversations.get()
+     }
+<a href="#h7-2" id="h7-2" class="h">@@ -39,20 +31,17 @@ class AutoSave : MessagingRuleFeature(&quot;Auto Save&quot;, MessagingRuleType.AUTO_SAVE, 
+</a>         if (message.messageState != MessageState.COMMITTED) return
+ 
+         runCatching {
+<a href="#h7-2-3" id="h7-2-3" class="d">-            val callback = CallbackBuilder(callbackClass)
+</a><a href="#h7-2-4" id="h7-2-4" class="d">-                .override(&quot;onError&quot;) {
+</a><a href="#h7-2-5" id="h7-2-5" class="d">-                    context.log.warn(&quot;Error saving message $messageId&quot;)
+</a><a href="#h7-2-6" id="h7-2-6" class="d">-                }.build()
+</a><a href="#h7-2-7" id="h7-2-7" class="d">-
+</a><a href="#h7-2-8" id="h7-2-8" class="d">-            updateMessageMethod.invoke(
+</a><a href="#h7-2-9" id="h7-2-9" class="d">-                context.feature(Messaging::class).conversationManager,
+</a><a href="#h7-2-10" id="h7-2-10" class="d">-                conversationId.instanceNonNull(),
+</a><a href="#h7-2-11" id="h7-2-11" class="i">+            context.feature(Messaging::class).conversationManager?.updateMessage(
+</a><a href="#h7-2-12" id="h7-2-12" class="i">+                conversationId.toString(),
+</a>                 messageId,
+<a href="#h7-2-14" id="h7-2-14" class="d">-                context.classCache.messageUpdateEnum.enumConstants.first { it.toString() == &quot;SAVE&quot; },
+</a><a href="#h7-2-15" id="h7-2-15" class="d">-                callback
+</a><a href="#h7-2-16" id="h7-2-16" class="d">-            )
+</a><a href="#h7-2-17" id="h7-2-17" class="i">+                MessageUpdate.SAVE
+</a><a href="#h7-2-18" id="h7-2-18" class="i">+            ) {
+</a><a href="#h7-2-19" id="h7-2-19" class="i">+                if (it != null) {
+</a><a href="#h7-2-20" id="h7-2-20" class="i">+                    context.log.warn(&quot;Error saving message $messageId: $it&quot;)
+</a><a href="#h7-2-21" id="h7-2-21" class="i">+                }
+</a><a href="#h7-2-22" id="h7-2-22" class="i">+            }
+</a>         }.onFailure {
+<a href="#h7-2-24" id="h7-2-24" class="d">-            CoreLogger.xposedLog(&quot;Error saving message $messageId&quot;, it)
+</a><a href="#h7-2-25" id="h7-2-25" class="i">+            context.log.error(&quot;Error saving message $messageId&quot;, it)
+</a>         }
+ 
+         //delay between saves
+<a href="#h7-3" id="h7-3" class="h">@@ -60,6 +49,7 @@ class AutoSave : MessagingRuleFeature(&quot;Auto Save&quot;, MessagingRuleType.AUTO_SAVE, 
+</a>     }
+ 
+     private fun canSaveMessage(message: Message): Boolean {
+<a href="#h7-3-3" id="h7-3-3" class="i">+        if (context.mainActivity == null || context.isMainActivityPaused) return false
+</a>         if (message.messageMetadata.savedBy.any { uuid -&gt; uuid.toString() == context.database.myUserId }) return false
+         val contentType = message.messageContent.contentType.toString()
+ 
+<a href="#h7-4" id="h7-4" class="h">@@ -121,14 +111,14 @@ class AutoSave : MessagingRuleFeature(&quot;Auto Save&quot;, MessagingRuleType.AUTO_SAVE, 
+</a>             HookStage.BEFORE,
+             { autoSaveFilter.isNotEmpty() }
+         ) {
+<a href="#h7-4-3" id="h7-4-3" class="d">-            val callback = CallbackBuilder(fetchConversationWithMessagesCallbackClass).build()
+</a>             val conversationUUID = messaging.openedConversationUUID ?: return@hook
+             runCatching {
+<a href="#h7-4-6" id="h7-4-6" class="d">-                fetchConversationWithMessagesPaginatedMethod.invoke(
+</a><a href="#h7-4-7" id="h7-4-7" class="d">-                    messaging.conversationManager, conversationUUID.instanceNonNull(),
+</a><a href="#h7-4-8" id="h7-4-8" class="i">+                messaging.conversationManager?.fetchConversationWithMessagesPaginated(
+</a><a href="#h7-4-9" id="h7-4-9" class="i">+                    conversationUUID.toString(),
+</a>                     Long.MAX_VALUE,
+                     10,
+<a href="#h7-4-12" id="h7-4-12" class="d">-                    callback
+</a><a href="#h7-4-13" id="h7-4-13" class="i">+                    onSuccess = {},
+</a><a href="#h7-4-14" id="h7-4-14" class="i">+                    onError = {}
+</a>                 )
+             }.onFailure {
+                 CoreLogger.xposedLog(&quot;failed to save message&quot;, it)
+<b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -9,12 +9,13 @@ import me.rhunk.snapenhance.core.util.hook.HookStage
+</a> import me.rhunk.snapenhance.core.util.hook.Hooker
+ import me.rhunk.snapenhance.core.util.hook.hook
+ import me.rhunk.snapenhance.core.util.ktx.getObjectField
+<a href="#h8-0-3" id="h8-0-3" class="i">+import me.rhunk.snapenhance.core.wrapper.impl.ConversationManager
+</a> import me.rhunk.snapenhance.core.wrapper.impl.SnapUUID
+ 
+ class Messaging : Feature(&quot;Messaging&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC or FeatureLoadParams.INIT_ASYNC or FeatureLoadParams.INIT_SYNC) {
+<a href="#h8-0-7" id="h8-0-7" class="d">-    private var _conversationManager: Any? = null
+</a><a href="#h8-0-8" id="h8-0-8" class="d">-    val conversationManager: Any?
+</a><a href="#h8-0-9" id="h8-0-9" class="d">-        get() = _conversationManager
+</a><a href="#h8-0-10" id="h8-0-10" class="i">+    var conversationManager: ConversationManager? = null
+</a><a href="#h8-0-11" id="h8-0-11" class="i">+        private set
+</a><a href="#h8-0-12" id="h8-0-12" class="i">+
+</a> 
+     var openedConversationUUID: SnapUUID? = null
+         private set
+<a href="#h8-1" id="h8-1" class="h">@@ -28,7 +29,7 @@ class Messaging : Feature(&quot;Messaging&quot;, loadParams = FeatureLoadParams.ACTIVITY_C
+</a> 
+     override fun init() {
+         Hooker.hookConstructor(context.classCache.conversationManager, HookStage.BEFORE) { param -&gt;
+<a href="#h8-1-3" id="h8-1-3" class="d">-            _conversationManager = param.thisObject()
+</a><a href="#h8-1-4" id="h8-1-4" class="i">+            conversationManager = ConversationManager(context, param.thisObject())
+</a>             context.messagingBridge.triggerSessionStart()
+             context.mainActivity?.takeIf { it.intent.getBooleanExtra(ReceiversConfig.MESSAGING_PREVIEW_EXTRA,false) }?.run {
+                 finishAndRemoveTask()
+<b>diff --git a/<a id="h9" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -14,6 +14,7 @@ import de.robv.android.xposed.XposedBridge
+</a> import de.robv.android.xposed.XposedHelpers
+ import me.rhunk.snapenhance.common.data.ContentType
+ import me.rhunk.snapenhance.common.data.MediaReferenceType
+<a href="#h9-0-3" id="h9-0-3" class="i">+import me.rhunk.snapenhance.common.data.MessageUpdate
+</a> import me.rhunk.snapenhance.common.data.NotificationType
+ import me.rhunk.snapenhance.common.data.download.SplitMediaAssetType
+ import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+<a href="#h9-1" id="h9-1" class="h">@@ -191,31 +192,26 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a> 
+                         val conversationManager = context.feature(Messaging::class).conversationManager ?: return@subscribe
+ 
+<a href="#h9-1-3" id="h9-1-3" class="d">-                        context.classCache.conversationManager.methods.first { it.name == &quot;displayedMessages&quot;}?.invoke(
+</a><a href="#h9-1-4" id="h9-1-4" class="d">-                            conversationManager,
+</a><a href="#h9-1-5" id="h9-1-5" class="d">-                            SnapUUID.fromString(conversationId).instanceNonNull(),
+</a><a href="#h9-1-6" id="h9-1-6" class="i">+                        conversationManager.displayedMessages(
+</a><a href="#h9-1-7" id="h9-1-7" class="i">+                            conversationId,
+</a>                             messageId,
+<a href="#h9-1-9" id="h9-1-9" class="d">-                            CallbackBuilder(context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;Callback&quot;))
+</a><a href="#h9-1-10" id="h9-1-10" class="d">-                                .override(&quot;onError&quot;) {
+</a><a href="#h9-1-11" id="h9-1-11" class="d">-                                    context.log.error(&quot;Failed to mark message as read: ${it.arg(0) as Any}&quot;)
+</a><a href="#h9-1-12" id="h9-1-12" class="d">-                                    context.shortToast(&quot;Failed to mark message as read&quot;)
+</a><a href="#h9-1-13" id="h9-1-13" class="d">-                                }.build()
+</a><a href="#h9-1-14" id="h9-1-14" class="i">+                            onResult = {
+</a><a href="#h9-1-15" id="h9-1-15" class="i">+                                if (it != null) {
+</a><a href="#h9-1-16" id="h9-1-16" class="i">+                                    context.log.error(&quot;Failed to mark conversation as read: $it&quot;)
+</a><a href="#h9-1-17" id="h9-1-17" class="i">+                                    context.shortToast(&quot;Failed to mark conversation as read&quot;)
+</a><a href="#h9-1-18" id="h9-1-18" class="i">+                                }
+</a><a href="#h9-1-19" id="h9-1-19" class="i">+                            }
+</a>                         )
+ 
+                         val conversationMessage = context.database.getConversationMessageFromId(messageId) ?: return@subscribe
+ 
+                         if (conversationMessage.contentType == ContentType.SNAP.id) {
+<a href="#h9-1-25" id="h9-1-25" class="d">-                            context.classCache.conversationManager.methods.first { it.name == &quot;updateMessage&quot;}?.invoke(
+</a><a href="#h9-1-26" id="h9-1-26" class="d">-                                conversationManager,
+</a><a href="#h9-1-27" id="h9-1-27" class="d">-                                SnapUUID.fromString(conversationId).instanceNonNull(),
+</a><a href="#h9-1-28" id="h9-1-28" class="d">-                                messageId,
+</a><a href="#h9-1-29" id="h9-1-29" class="d">-                                context.classCache.messageUpdateEnum.enumConstants.first { it.toString() == &quot;READ&quot; },
+</a><a href="#h9-1-30" id="h9-1-30" class="d">-                                CallbackBuilder(context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;Callback&quot;))
+</a><a href="#h9-1-31" id="h9-1-31" class="d">-                                    .override(&quot;onError&quot;) {
+</a><a href="#h9-1-32" id="h9-1-32" class="d">-                                        context.log.error(&quot;Failed to open snap: ${it.arg(0) as Any}&quot;)
+</a><a href="#h9-1-33" id="h9-1-33" class="d">-                                        context.shortToast(&quot;Failed to open snap&quot;)
+</a><a href="#h9-1-34" id="h9-1-34" class="d">-                                    }.build()
+</a><a href="#h9-1-35" id="h9-1-35" class="d">-                            )
+</a><a href="#h9-1-36" id="h9-1-36" class="i">+                            conversationManager.updateMessage(conversationId, messageId, MessageUpdate.READ) {
+</a><a href="#h9-1-37" id="h9-1-37" class="i">+                                if (it != null) {
+</a><a href="#h9-1-38" id="h9-1-38" class="i">+                                    context.log.error(&quot;Failed to open snap: $it&quot;)
+</a><a href="#h9-1-39" id="h9-1-39" class="i">+                                    context.shortToast(&quot;Failed to open snap&quot;)
+</a><a href="#h9-1-40" id="h9-1-40" class="i">+                                }
+</a><a href="#h9-1-41" id="h9-1-41" class="i">+                            }
+</a>                         }
+                     }.onFailure {
+                         context.log.error(&quot;Failed to mark message as read&quot;, it)
+<a href="#h9-2" id="h9-2" class="h">@@ -346,8 +342,6 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>     override fun init() {
+         setupBroadcastReceiverHook()
+ 
+<a href="#h9-2-3" id="h9-2-3" class="d">-        val fetchConversationWithMessagesCallback = context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;FetchConversationWithMessagesCallback&quot;)
+</a><a href="#h9-2-4" id="h9-2-4" class="d">-
+</a>         notifyAsUserMethod.hook(HookStage.BEFORE) { param -&gt;
+             val notificationData = NotificationData(param.argNullable(0), param.arg(1), param.arg(2), param.arg(3))
+ 
+<a href="#h9-3" id="h9-3" class="h">@@ -361,22 +355,16 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>                     notificationType.contains(it)
+                 }) return@hook
+ 
+<a href="#h9-3-3" id="h9-3-3" class="d">-            val conversationManager: Any = context.feature(Messaging::class).conversationManager ?: return@hook
+</a><a href="#h9-3-4" id="h9-3-4" class="d">-
+</a>             synchronized(notificationDataQueue) {
+                 notificationDataQueue[messageId.toLong()] = notificationData
+             }
+ 
+<a href="#h9-3-9" id="h9-3-9" class="d">-            val callback = CallbackBuilder(fetchConversationWithMessagesCallback)
+</a><a href="#h9-3-10" id="h9-3-10" class="d">-                .override(&quot;onFetchConversationWithMessagesComplete&quot;) { callbackParam -&gt;
+</a><a href="#h9-3-11" id="h9-3-11" class="d">-                    val messageList = (callbackParam.arg(1) as List&lt;Any&gt;).map { msg -&gt; Message(msg) }
+</a><a href="#h9-3-12" id="h9-3-12" class="d">-                    fetchMessagesResult(conversationId, messageList)
+</a><a href="#h9-3-13" id="h9-3-13" class="d">-                }
+</a><a href="#h9-3-14" id="h9-3-14" class="d">-                .override(&quot;onError&quot;) {
+</a><a href="#h9-3-15" id="h9-3-15" class="d">-                    context.log.error(&quot;Failed to fetch message ${it.arg(0) as Any}&quot;)
+</a><a href="#h9-3-16" id="h9-3-16" class="d">-                }.build()
+</a><a href="#h9-3-17" id="h9-3-17" class="i">+            context.feature(Messaging::class).conversationManager?.fetchConversationWithMessages(conversationId, onSuccess = { messages -&gt;
+</a><a href="#h9-3-18" id="h9-3-18" class="i">+                fetchMessagesResult(conversationId, messages)
+</a><a href="#h9-3-19" id="h9-3-19" class="i">+            }, onError = {
+</a><a href="#h9-3-20" id="h9-3-20" class="i">+                context.log.error(&quot;Failed to fetch conversation with messages: $it&quot;)
+</a><a href="#h9-3-21" id="h9-3-21" class="i">+            })
+</a> 
+<a href="#h9-3-23" id="h9-3-23" class="d">-            fetchConversationWithMessagesMethod.invoke(conversationManager, SnapUUID.fromString(conversationId).instanceNonNull(), callback)
+</a>             param.setResult(null)
+         }
+ 
+<b>diff --git a/<a id="h10" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/CoreMessagingBridge.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/CoreMessagingBridge.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/CoreMessagingBridge.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/CoreMessagingBridge.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -5,11 +5,10 @@ import kotlinx.coroutines.suspendCancellableCoroutine
+</a> import me.rhunk.snapenhance.bridge.snapclient.MessagingBridge
+ import me.rhunk.snapenhance.bridge.snapclient.SessionStartListener
+ import me.rhunk.snapenhance.bridge.snapclient.types.Message
+<a href="#h10-0-3" id="h10-0-3" class="i">+import me.rhunk.snapenhance.common.data.MessageUpdate
+</a> import me.rhunk.snapenhance.core.ModContext
+ import me.rhunk.snapenhance.core.features.impl.downloader.decoder.MessageDecoder
+ import me.rhunk.snapenhance.core.features.impl.messaging.Messaging
+<a href="#h10-0-7" id="h10-0-7" class="d">-import me.rhunk.snapenhance.core.util.CallbackBuilder
+</a><a href="#h10-0-8" id="h10-0-8" class="d">-import me.rhunk.snapenhance.core.wrapper.impl.SnapUUID
+</a> 
+ 
+ fun me.rhunk.snapenhance.core.wrapper.impl.Message.toBridge(): Message {
+<a href="#h10-1" id="h10-1" class="h">@@ -46,23 +45,14 @@ class CoreMessagingBridge(
+</a>     override fun fetchMessage(conversationId: String, clientMessageId: String): Message? {
+         return runBlocking {
+             suspendCancellableCoroutine { continuation -&gt;
+<a href="#h10-1-3" id="h10-1-3" class="d">-                val callback = CallbackBuilder(
+</a><a href="#h10-1-4" id="h10-1-4" class="d">-                    context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;FetchMessageCallback&quot;)
+</a><a href="#h10-1-5" id="h10-1-5" class="d">-                ).override(&quot;onFetchMessageComplete&quot;) { param -&gt;
+</a><a href="#h10-1-6" id="h10-1-6" class="d">-                    val message = me.rhunk.snapenhance.core.wrapper.impl.Message(param.arg(0)).toBridge()
+</a><a href="#h10-1-7" id="h10-1-7" class="d">-                    continuation.resumeWith(Result.success(message))
+</a><a href="#h10-1-8" id="h10-1-8" class="d">-                }
+</a><a href="#h10-1-9" id="h10-1-9" class="d">-                .override(&quot;onServerRequest&quot;, shouldUnhook = false) {}
+</a><a href="#h10-1-10" id="h10-1-10" class="d">-                .override(&quot;onError&quot;) {
+</a><a href="#h10-1-11" id="h10-1-11" class="d">-                    continuation.resumeWith(Result.success(null))
+</a><a href="#h10-1-12" id="h10-1-12" class="d">-                }.build()
+</a><a href="#h10-1-13" id="h10-1-13" class="d">-
+</a><a href="#h10-1-14" id="h10-1-14" class="d">-                context.classCache.conversationManager.methods.first { it.name == &quot;fetchMessage&quot; }.invoke(
+</a><a href="#h10-1-15" id="h10-1-15" class="d">-                    conversationManager,
+</a><a href="#h10-1-16" id="h10-1-16" class="d">-                    SnapUUID.fromString(conversationId).instanceNonNull(),
+</a><a href="#h10-1-17" id="h10-1-17" class="i">+                conversationManager?.fetchMessage(
+</a><a href="#h10-1-18" id="h10-1-18" class="i">+                    conversationId,
+</a>                     clientMessageId.toLong(),
+<a href="#h10-1-20" id="h10-1-20" class="d">-                    callback
+</a><a href="#h10-1-21" id="h10-1-21" class="d">-                )
+</a><a href="#h10-1-22" id="h10-1-22" class="i">+                    onSuccess = {
+</a><a href="#h10-1-23" id="h10-1-23" class="i">+                        continuation.resumeWith(Result.success(it.toBridge()))
+</a><a href="#h10-1-24" id="h10-1-24" class="i">+                    },
+</a><a href="#h10-1-25" id="h10-1-25" class="i">+                    onError = { continuation.resumeWith(Result.success(null)) }
+</a><a href="#h10-1-26" id="h10-1-26" class="i">+                ) ?: continuation.resumeWith(Result.success(null))
+</a>             }
+         }
+     }
+<a href="#h10-2" id="h10-2" class="h">@@ -73,26 +63,14 @@ class CoreMessagingBridge(
+</a>     ): Message? {
+         return runBlocking {
+             suspendCancellableCoroutine { continuation -&gt;
+<a href="#h10-2-3" id="h10-2-3" class="d">-                val callback = CallbackBuilder(
+</a><a href="#h10-2-4" id="h10-2-4" class="d">-                    context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;FetchMessageCallback&quot;)
+</a><a href="#h10-2-5" id="h10-2-5" class="d">-                ).override(&quot;onFetchMessageComplete&quot;) { param -&gt;
+</a><a href="#h10-2-6" id="h10-2-6" class="d">-                    val message = me.rhunk.snapenhance.core.wrapper.impl.Message(param.arg(1)).toBridge()
+</a><a href="#h10-2-7" id="h10-2-7" class="d">-                    continuation.resumeWith(Result.success(message))
+</a><a href="#h10-2-8" id="h10-2-8" class="d">-                }
+</a><a href="#h10-2-9" id="h10-2-9" class="d">-                .override(&quot;onServerRequest&quot;, shouldUnhook = false) {}
+</a><a href="#h10-2-10" id="h10-2-10" class="d">-                .override(&quot;onError&quot;) {
+</a><a href="#h10-2-11" id="h10-2-11" class="d">-                    continuation.resumeWith(Result.success(null))
+</a><a href="#h10-2-12" id="h10-2-12" class="d">-                }.build()
+</a><a href="#h10-2-13" id="h10-2-13" class="d">-
+</a><a href="#h10-2-14" id="h10-2-14" class="d">-                val serverMessageIdentifier = context.androidContext.classLoader.loadClass(&quot;com.snapchat.client.messaging.ServerMessageIdentifier&quot;)
+</a><a href="#h10-2-15" id="h10-2-15" class="d">-                    .getConstructor(context.classCache.snapUUID, Long::class.javaPrimitiveType)
+</a><a href="#h10-2-16" id="h10-2-16" class="d">-                    .newInstance(SnapUUID.fromString(conversationId).instanceNonNull(), serverMessageId.toLong())
+</a><a href="#h10-2-17" id="h10-2-17" class="d">-
+</a><a href="#h10-2-18" id="h10-2-18" class="d">-                context.classCache.conversationManager.methods.first { it.name == &quot;fetchMessageByServerId&quot; }.invoke(
+</a><a href="#h10-2-19" id="h10-2-19" class="d">-                    conversationManager,
+</a><a href="#h10-2-20" id="h10-2-20" class="d">-                    serverMessageIdentifier,
+</a><a href="#h10-2-21" id="h10-2-21" class="d">-                    callback
+</a><a href="#h10-2-22" id="h10-2-22" class="d">-                )
+</a><a href="#h10-2-23" id="h10-2-23" class="i">+                conversationManager?.fetchMessageByServerId(
+</a><a href="#h10-2-24" id="h10-2-24" class="i">+                    conversationId,
+</a><a href="#h10-2-25" id="h10-2-25" class="i">+                    serverMessageId,
+</a><a href="#h10-2-26" id="h10-2-26" class="i">+                    onSuccess = {
+</a><a href="#h10-2-27" id="h10-2-27" class="i">+                        continuation.resumeWith(Result.success(it.toBridge()))
+</a><a href="#h10-2-28" id="h10-2-28" class="i">+                    },
+</a><a href="#h10-2-29" id="h10-2-29" class="i">+                    onError = { continuation.resumeWith(Result.success(null)) }
+</a><a href="#h10-2-30" id="h10-2-30" class="i">+                ) ?: continuation.resumeWith(Result.success(null))
+</a>             }
+         }
+     }
+<a href="#h10-3" id="h10-3" class="h">@@ -104,26 +82,17 @@ class CoreMessagingBridge(
+</a>     ): List&lt;Message&gt;? {
+         return runBlocking {
+             suspendCancellableCoroutine { continuation -&gt;
+<a href="#h10-3-3" id="h10-3-3" class="d">-                val callback = CallbackBuilder(
+</a><a href="#h10-3-4" id="h10-3-4" class="d">-                    context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;FetchConversationWithMessagesCallback&quot;)
+</a><a href="#h10-3-5" id="h10-3-5" class="d">-                ).override(&quot;onFetchConversationWithMessagesComplete&quot;) { param -&gt;
+</a><a href="#h10-3-6" id="h10-3-6" class="d">-                    val messagesList = param.arg&lt;List&lt;*&gt;&gt;(1).map {
+</a><a href="#h10-3-7" id="h10-3-7" class="d">-                        me.rhunk.snapenhance.core.wrapper.impl.Message(it).toBridge()
+</a><a href="#h10-3-8" id="h10-3-8" class="d">-                    }
+</a><a href="#h10-3-9" id="h10-3-9" class="d">-                    continuation.resumeWith(Result.success(messagesList))
+</a><a href="#h10-3-10" id="h10-3-10" class="d">-                }
+</a><a href="#h10-3-11" id="h10-3-11" class="d">-                .override(&quot;onServerRequest&quot;, shouldUnhook = false) {}
+</a><a href="#h10-3-12" id="h10-3-12" class="d">-                .override(&quot;onError&quot;) {
+</a><a href="#h10-3-13" id="h10-3-13" class="d">-                    continuation.resumeWith(Result.success(null))
+</a><a href="#h10-3-14" id="h10-3-14" class="d">-                }.build()
+</a><a href="#h10-3-15" id="h10-3-15" class="d">-
+</a><a href="#h10-3-16" id="h10-3-16" class="d">-                context.classCache.conversationManager.methods.first { it.name == &quot;fetchConversationWithMessagesPaginated&quot; }.invoke(
+</a><a href="#h10-3-17" id="h10-3-17" class="d">-                    conversationManager,
+</a><a href="#h10-3-18" id="h10-3-18" class="d">-                    SnapUUID.fromString(conversationId).instanceNonNull(),
+</a><a href="#h10-3-19" id="h10-3-19" class="i">+                conversationManager?.fetchConversationWithMessagesPaginated(
+</a><a href="#h10-3-20" id="h10-3-20" class="i">+                    conversationId,
+</a>                     beforeMessageId,
+                     limit,
+<a href="#h10-3-23" id="h10-3-23" class="d">-                    callback
+</a><a href="#h10-3-24" id="h10-3-24" class="d">-                )
+</a><a href="#h10-3-25" id="h10-3-25" class="i">+                    onSuccess = { messages -&gt;
+</a><a href="#h10-3-26" id="h10-3-26" class="i">+                        continuation.resumeWith(Result.success(messages.map { it.toBridge() }))
+</a><a href="#h10-3-27" id="h10-3-27" class="i">+                    },
+</a><a href="#h10-3-28" id="h10-3-28" class="i">+                    onError = {
+</a><a href="#h10-3-29" id="h10-3-29" class="i">+                        continuation.resumeWith(Result.success(null))
+</a><a href="#h10-3-30" id="h10-3-30" class="i">+                    }
+</a><a href="#h10-3-31" id="h10-3-31" class="i">+                ) ?: continuation.resumeWith(Result.success(null))
+</a>             }
+         }
+     }
+<a href="#h10-4" id="h10-4" class="h">@@ -135,22 +104,14 @@ class CoreMessagingBridge(
+</a>     ): String? {
+         return runBlocking {
+             suspendCancellableCoroutine { continuation -&gt;
+<a href="#h10-4-3" id="h10-4-3" class="d">-                val callback = CallbackBuilder(
+</a><a href="#h10-4-4" id="h10-4-4" class="d">-                    context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;Callback&quot;)
+</a><a href="#h10-4-5" id="h10-4-5" class="d">-                ).override(&quot;onSuccess&quot;) {
+</a><a href="#h10-4-6" id="h10-4-6" class="d">-                    continuation.resumeWith(Result.success(null))
+</a><a href="#h10-4-7" id="h10-4-7" class="d">-                }
+</a><a href="#h10-4-8" id="h10-4-8" class="d">-                .override(&quot;onError&quot;) {
+</a><a href="#h10-4-9" id="h10-4-9" class="d">-                    continuation.resumeWith(Result.success(it.arg&lt;Any&gt;(0).toString()))
+</a><a href="#h10-4-10" id="h10-4-10" class="d">-                }.build()
+</a><a href="#h10-4-11" id="h10-4-11" class="d">-
+</a><a href="#h10-4-12" id="h10-4-12" class="d">-                context.classCache.conversationManager.methods.first { it.name == &quot;updateMessage&quot; }.invoke(
+</a><a href="#h10-4-13" id="h10-4-13" class="d">-                    conversationManager,
+</a><a href="#h10-4-14" id="h10-4-14" class="d">-                    SnapUUID.fromString(conversationId).instanceNonNull(),
+</a><a href="#h10-4-15" id="h10-4-15" class="i">+                conversationManager?.updateMessage(
+</a><a href="#h10-4-16" id="h10-4-16" class="i">+                    conversationId,
+</a>                     clientMessageId,
+<a href="#h10-4-18" id="h10-4-18" class="d">-                    context.classCache.messageUpdateEnum.enumConstants.first { it.toString() == messageUpdate },
+</a><a href="#h10-4-19" id="h10-4-19" class="d">-                    callback
+</a><a href="#h10-4-20" id="h10-4-20" class="d">-                )
+</a><a href="#h10-4-21" id="h10-4-21" class="i">+                    MessageUpdate.valueOf(messageUpdate),
+</a><a href="#h10-4-22" id="h10-4-22" class="i">+                    onResult = {
+</a><a href="#h10-4-23" id="h10-4-23" class="i">+                        continuation.resumeWith(Result.success(it))
+</a><a href="#h10-4-24" id="h10-4-24" class="i">+                    }
+</a><a href="#h10-4-25" id="h10-4-25" class="i">+                ) ?: continuation.resumeWith(Result.success(&quot;ConversationManager is null&quot;))
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h11" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/CallbackBuilder.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/CallbackBuilder.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/CallbackBuilder.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/CallbackBuilder.kt</a></b>
+<a href="#h11-0" id="h11-0" class="h">@@ -26,10 +26,10 @@ class CallbackBuilder(
+</a> 
+     fun build(): Any {
+         //get the first param of the first constructor to get the class of the invoker
+<a href="#h11-0-3" id="h11-0-3" class="d">-        val invokerClass: Class&lt;*&gt; = callbackClass.constructors[0].parameterTypes[0]
+</a><a href="#h11-0-4" id="h11-0-4" class="d">-        //get the invoker field based on the invoker class
+</a><a href="#h11-0-5" id="h11-0-5" class="d">-        val invokerField = callbackClass.fields.first { field: Field -&gt;
+</a><a href="#h11-0-6" id="h11-0-6" class="d">-            field.type.isAssignableFrom(invokerClass)
+</a><a href="#h11-0-7" id="h11-0-7" class="i">+        val rxEmitter: Class&lt;*&gt; = callbackClass.constructors[0].parameterTypes[0]
+</a><a href="#h11-0-8" id="h11-0-8" class="i">+        //get the emitter field based on the class
+</a><a href="#h11-0-9" id="h11-0-9" class="i">+        val rxEmitterField = callbackClass.fields.first { field: Field -&gt;
+</a><a href="#h11-0-10" id="h11-0-10" class="i">+            field.type.isAssignableFrom(rxEmitter)
+</a>         }
+         //get the callback field based on the callback class
+         val callbackInstance = createEmptyObject(callbackClass.constructors[0])!!
+<a href="#h11-1" id="h11-1" class="h">@@ -44,8 +44,8 @@ class CallbackBuilder(
+</a> 
+             //default hook that unhooks the callback and returns null
+             val defaultHook: (HookAdapter) -&gt; Boolean = defaultHook@{
+<a href="#h11-1-3" id="h11-1-3" class="d">-                //checking invokerField ensure that&#39;s the callback was created by the CallbackBuilder
+</a><a href="#h11-1-4" id="h11-1-4" class="d">-                if (invokerField.get(it.thisObject()) != null) return@defaultHook false
+</a><a href="#h11-1-5" id="h11-1-5" class="i">+                //ensure that&#39;s the callback was created by the CallbackBuilder
+</a><a href="#h11-1-6" id="h11-1-6" class="i">+                if (rxEmitterField.get(it.thisObject()) != null) return@defaultHook false
+</a>                 if ((it.thisObject() as Any).hashCode() != callbackInstanceHashCode) return@defaultHook false
+                 it.setResult(null)
+                 true
+<b>diff --git a/<a id="h12" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/ReflectionHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/ReflectionHelper.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/ReflectionHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/ReflectionHelper.kt</a></b>
+<a href="#h12-0" id="h12-0" class="h">@@ -1,119 +0,0 @@
+</a><a href="#h12-0-0" id="h12-0-0" class="d">-package me.rhunk.snapenhance.core.util
+</a><a href="#h12-0-1" id="h12-0-1" class="d">-
+</a><a href="#h12-0-2" id="h12-0-2" class="d">-import java.lang.reflect.Field
+</a><a href="#h12-0-3" id="h12-0-3" class="d">-import java.lang.reflect.Method
+</a><a href="#h12-0-4" id="h12-0-4" class="d">-import java.util.Arrays
+</a><a href="#h12-0-5" id="h12-0-5" class="d">-import java.util.Objects
+</a><a href="#h12-0-6" id="h12-0-6" class="d">-
+</a><a href="#h12-0-7" id="h12-0-7" class="d">-object ReflectionHelper {
+</a><a href="#h12-0-8" id="h12-0-8" class="d">-    /**
+</a><a href="#h12-0-9" id="h12-0-9" class="d">-     * Searches for a field with a class that has a method with the specified name
+</a><a href="#h12-0-10" id="h12-0-10" class="d">-     */
+</a><a href="#h12-0-11" id="h12-0-11" class="d">-    fun searchFieldWithClassMethod(clazz: Class&lt;*&gt;, methodName: String): Field? {
+</a><a href="#h12-0-12" id="h12-0-12" class="d">-        return clazz.declaredFields.firstOrNull { f: Field? -&gt;
+</a><a href="#h12-0-13" id="h12-0-13" class="d">-            try {
+</a><a href="#h12-0-14" id="h12-0-14" class="d">-                return@firstOrNull Arrays.stream(
+</a><a href="#h12-0-15" id="h12-0-15" class="d">-                    f!!.type.declaredMethods
+</a><a href="#h12-0-16" id="h12-0-16" class="d">-                ).anyMatch { method: Method -&gt; method.name == methodName }
+</a><a href="#h12-0-17" id="h12-0-17" class="d">-            } catch (e: Exception) {
+</a><a href="#h12-0-18" id="h12-0-18" class="d">-                return@firstOrNull false
+</a><a href="#h12-0-19" id="h12-0-19" class="d">-            }
+</a><a href="#h12-0-20" id="h12-0-20" class="d">-        }
+</a><a href="#h12-0-21" id="h12-0-21" class="d">-    }
+</a><a href="#h12-0-22" id="h12-0-22" class="d">-
+</a><a href="#h12-0-23" id="h12-0-23" class="d">-    fun searchFieldByType(clazz: Class&lt;*&gt;, type: Class&lt;*&gt;): Field? {
+</a><a href="#h12-0-24" id="h12-0-24" class="d">-        return clazz.declaredFields.firstOrNull { f: Field? -&gt; f!!.type == type }
+</a><a href="#h12-0-25" id="h12-0-25" class="d">-    }
+</a><a href="#h12-0-26" id="h12-0-26" class="d">-
+</a><a href="#h12-0-27" id="h12-0-27" class="d">-    fun searchFieldTypeInSuperClasses(clazz: Class&lt;*&gt;, type: Class&lt;*&gt;): Field? {
+</a><a href="#h12-0-28" id="h12-0-28" class="d">-        val field = searchFieldByType(clazz, type)
+</a><a href="#h12-0-29" id="h12-0-29" class="d">-        if (field != null) {
+</a><a href="#h12-0-30" id="h12-0-30" class="d">-            return field
+</a><a href="#h12-0-31" id="h12-0-31" class="d">-        }
+</a><a href="#h12-0-32" id="h12-0-32" class="d">-        val superclass = clazz.superclass
+</a><a href="#h12-0-33" id="h12-0-33" class="d">-        return superclass?.let { searchFieldTypeInSuperClasses(it, type) }
+</a><a href="#h12-0-34" id="h12-0-34" class="d">-    }
+</a><a href="#h12-0-35" id="h12-0-35" class="d">-
+</a><a href="#h12-0-36" id="h12-0-36" class="d">-    fun searchFieldStartsWithToString(
+</a><a href="#h12-0-37" id="h12-0-37" class="d">-        clazz: Class&lt;*&gt;,
+</a><a href="#h12-0-38" id="h12-0-38" class="d">-        instance: Any,
+</a><a href="#h12-0-39" id="h12-0-39" class="d">-        toString: String?
+</a><a href="#h12-0-40" id="h12-0-40" class="d">-    ): Field? {
+</a><a href="#h12-0-41" id="h12-0-41" class="d">-        return clazz.declaredFields.firstOrNull { f: Field -&gt;
+</a><a href="#h12-0-42" id="h12-0-42" class="d">-            try {
+</a><a href="#h12-0-43" id="h12-0-43" class="d">-                f.isAccessible = true
+</a><a href="#h12-0-44" id="h12-0-44" class="d">-                return@firstOrNull Objects.requireNonNull(f[instance]).toString()
+</a><a href="#h12-0-45" id="h12-0-45" class="d">-                    .startsWith(
+</a><a href="#h12-0-46" id="h12-0-46" class="d">-                        toString!!
+</a><a href="#h12-0-47" id="h12-0-47" class="d">-                    )
+</a><a href="#h12-0-48" id="h12-0-48" class="d">-            } catch (e: Throwable) {
+</a><a href="#h12-0-49" id="h12-0-49" class="d">-                return@firstOrNull false
+</a><a href="#h12-0-50" id="h12-0-50" class="d">-            }
+</a><a href="#h12-0-51" id="h12-0-51" class="d">-        }
+</a><a href="#h12-0-52" id="h12-0-52" class="d">-    }
+</a><a href="#h12-0-53" id="h12-0-53" class="d">-
+</a><a href="#h12-0-54" id="h12-0-54" class="d">-
+</a><a href="#h12-0-55" id="h12-0-55" class="d">-    fun searchFieldContainsToString(
+</a><a href="#h12-0-56" id="h12-0-56" class="d">-        clazz: Class&lt;*&gt;,
+</a><a href="#h12-0-57" id="h12-0-57" class="d">-        instance: Any?,
+</a><a href="#h12-0-58" id="h12-0-58" class="d">-        toString: String?
+</a><a href="#h12-0-59" id="h12-0-59" class="d">-    ): Field? {
+</a><a href="#h12-0-60" id="h12-0-60" class="d">-        return clazz.declaredFields.firstOrNull { f: Field -&gt;
+</a><a href="#h12-0-61" id="h12-0-61" class="d">-            try {
+</a><a href="#h12-0-62" id="h12-0-62" class="d">-                f.isAccessible = true
+</a><a href="#h12-0-63" id="h12-0-63" class="d">-                return@firstOrNull Objects.requireNonNull(f[instance]).toString()
+</a><a href="#h12-0-64" id="h12-0-64" class="d">-                    .contains(toString!!)
+</a><a href="#h12-0-65" id="h12-0-65" class="d">-            } catch (e: Throwable) {
+</a><a href="#h12-0-66" id="h12-0-66" class="d">-                return@firstOrNull false
+</a><a href="#h12-0-67" id="h12-0-67" class="d">-            }
+</a><a href="#h12-0-68" id="h12-0-68" class="d">-        }
+</a><a href="#h12-0-69" id="h12-0-69" class="d">-    }
+</a><a href="#h12-0-70" id="h12-0-70" class="d">-
+</a><a href="#h12-0-71" id="h12-0-71" class="d">-    fun searchFirstFieldTypeInClassRecursive(clazz: Class&lt;*&gt;, type: Class&lt;*&gt;): Field? {
+</a><a href="#h12-0-72" id="h12-0-72" class="d">-        return clazz.declaredFields.firstOrNull {
+</a><a href="#h12-0-73" id="h12-0-73" class="d">-            val field = searchFieldByType(it.type, type)
+</a><a href="#h12-0-74" id="h12-0-74" class="d">-            return@firstOrNull field != null
+</a><a href="#h12-0-75" id="h12-0-75" class="d">-        }
+</a><a href="#h12-0-76" id="h12-0-76" class="d">-    }
+</a><a href="#h12-0-77" id="h12-0-77" class="d">-
+</a><a href="#h12-0-78" id="h12-0-78" class="d">-    /**
+</a><a href="#h12-0-79" id="h12-0-79" class="d">-     * Searches for a field with a class that has a method with the specified return type
+</a><a href="#h12-0-80" id="h12-0-80" class="d">-     */
+</a><a href="#h12-0-81" id="h12-0-81" class="d">-    fun searchMethodWithReturnType(clazz: Class&lt;*&gt;, returnType: Class&lt;*&gt;): Method? {
+</a><a href="#h12-0-82" id="h12-0-82" class="d">-        return clazz.declaredMethods.first { m: Method -&gt; m.returnType == returnType }
+</a><a href="#h12-0-83" id="h12-0-83" class="d">-    }
+</a><a href="#h12-0-84" id="h12-0-84" class="d">-
+</a><a href="#h12-0-85" id="h12-0-85" class="d">-    /**
+</a><a href="#h12-0-86" id="h12-0-86" class="d">-     * Searches for a field with a class that has a method with the specified return type and parameter types
+</a><a href="#h12-0-87" id="h12-0-87" class="d">-     */
+</a><a href="#h12-0-88" id="h12-0-88" class="d">-    fun searchMethodWithParameterAndReturnType(
+</a><a href="#h12-0-89" id="h12-0-89" class="d">-        aClass: Class&lt;*&gt;,
+</a><a href="#h12-0-90" id="h12-0-90" class="d">-        returnType: Class&lt;*&gt;,
+</a><a href="#h12-0-91" id="h12-0-91" class="d">-        vararg parameters: Class&lt;*&gt;
+</a><a href="#h12-0-92" id="h12-0-92" class="d">-    ): Method? {
+</a><a href="#h12-0-93" id="h12-0-93" class="d">-        return aClass.declaredMethods.firstOrNull { m: Method -&gt;
+</a><a href="#h12-0-94" id="h12-0-94" class="d">-            if (m.returnType != returnType) {
+</a><a href="#h12-0-95" id="h12-0-95" class="d">-                return@firstOrNull false
+</a><a href="#h12-0-96" id="h12-0-96" class="d">-            }
+</a><a href="#h12-0-97" id="h12-0-97" class="d">-            val parameterTypes = m.parameterTypes
+</a><a href="#h12-0-98" id="h12-0-98" class="d">-            if (parameterTypes.size != parameters.size) {
+</a><a href="#h12-0-99" id="h12-0-99" class="d">-                return@firstOrNull false
+</a><a href="#h12-0-100" id="h12-0-100" class="d">-            }
+</a><a href="#h12-0-101" id="h12-0-101" class="d">-            for (i in parameterTypes.indices) {
+</a><a href="#h12-0-102" id="h12-0-102" class="d">-                if (parameterTypes[i] != parameters[i]) {
+</a><a href="#h12-0-103" id="h12-0-103" class="d">-                    return@firstOrNull false
+</a><a href="#h12-0-104" id="h12-0-104" class="d">-                }
+</a><a href="#h12-0-105" id="h12-0-105" class="d">-            }
+</a><a href="#h12-0-106" id="h12-0-106" class="d">-            true
+</a><a href="#h12-0-107" id="h12-0-107" class="d">-        }
+</a><a href="#h12-0-108" id="h12-0-108" class="d">-    }
+</a><a href="#h12-0-109" id="h12-0-109" class="d">-
+</a><a href="#h12-0-110" id="h12-0-110" class="d">-    fun getDeclaredFieldsRecursively(clazz: Class&lt;*&gt;): List&lt;Field&gt; {
+</a><a href="#h12-0-111" id="h12-0-111" class="d">-        val fields = clazz.declaredFields.toMutableList()
+</a><a href="#h12-0-112" id="h12-0-112" class="d">-        val superclass = clazz.superclass
+</a><a href="#h12-0-113" id="h12-0-113" class="d">-        if (superclass != null) {
+</a><a href="#h12-0-114" id="h12-0-114" class="d">-            fields.addAll(getDeclaredFieldsRecursively(superclass))
+</a><a href="#h12-0-115" id="h12-0-115" class="d">-        }
+</a><a href="#h12-0-116" id="h12-0-116" class="d">-        return fields
+</a><a href="#h12-0-117" id="h12-0-117" class="d">-    }
+</a><a href="#h12-0-118" id="h12-0-118" class="d">-}</a><a href="#h12-0-119" id="h12-0-119" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h13" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt</a></b>
+<a href="#h13-0" id="h13-0" class="h">@@ -0,0 +1,105 @@
+</a><a href="#h13-0-0" id="h13-0-0" class="i">+package me.rhunk.snapenhance.core.wrapper.impl
+</a><a href="#h13-0-1" id="h13-0-1" class="i">+
+</a><a href="#h13-0-2" id="h13-0-2" class="i">+import me.rhunk.snapenhance.common.data.MessageUpdate
+</a><a href="#h13-0-3" id="h13-0-3" class="i">+import me.rhunk.snapenhance.core.ModContext
+</a><a href="#h13-0-4" id="h13-0-4" class="i">+import me.rhunk.snapenhance.core.util.CallbackBuilder
+</a><a href="#h13-0-5" id="h13-0-5" class="i">+import me.rhunk.snapenhance.core.wrapper.AbstractWrapper
+</a><a href="#h13-0-6" id="h13-0-6" class="i">+
+</a><a href="#h13-0-7" id="h13-0-7" class="i">+typealias CallbackResult = (error: String?) -&gt; Unit
+</a><a href="#h13-0-8" id="h13-0-8" class="i">+
+</a><a href="#h13-0-9" id="h13-0-9" class="i">+class ConversationManager(val context: ModContext, obj: Any) : AbstractWrapper(obj) {
+</a><a href="#h13-0-10" id="h13-0-10" class="i">+    private fun findMethodByName(name: String) = context.classCache.conversationManager.declaredMethods.find { it.name == name } ?: throw RuntimeException(&quot;Could not find method $name&quot;)
+</a><a href="#h13-0-11" id="h13-0-11" class="i">+
+</a><a href="#h13-0-12" id="h13-0-12" class="i">+    private val updateMessageMethod by lazy { findMethodByName(&quot;updateMessage&quot;) }
+</a><a href="#h13-0-13" id="h13-0-13" class="i">+    private val fetchConversationWithMessagesPaginatedMethod by lazy { findMethodByName(&quot;fetchConversationWithMessagesPaginated&quot;) }
+</a><a href="#h13-0-14" id="h13-0-14" class="i">+    private val fetchConversationWithMessagesMethod by lazy { findMethodByName(&quot;fetchConversationWithMessages&quot;) }
+</a><a href="#h13-0-15" id="h13-0-15" class="i">+    private val fetchMessageByServerId by lazy { findMethodByName(&quot;fetchMessageByServerId&quot;) }
+</a><a href="#h13-0-16" id="h13-0-16" class="i">+    private val displayedMessagesMethod by lazy { findMethodByName(&quot;displayedMessages&quot;) }
+</a><a href="#h13-0-17" id="h13-0-17" class="i">+    private val fetchMessage by lazy { findMethodByName(&quot;fetchMessage&quot;) }
+</a><a href="#h13-0-18" id="h13-0-18" class="i">+
+</a><a href="#h13-0-19" id="h13-0-19" class="i">+
+</a><a href="#h13-0-20" id="h13-0-20" class="i">+    fun updateMessage(conversationId: String, messageId: Long, action: MessageUpdate, onResult: CallbackResult = {}) {
+</a><a href="#h13-0-21" id="h13-0-21" class="i">+        updateMessageMethod.invoke(
+</a><a href="#h13-0-22" id="h13-0-22" class="i">+            instanceNonNull(),
+</a><a href="#h13-0-23" id="h13-0-23" class="i">+            SnapUUID.fromString(conversationId).instanceNonNull(),
+</a><a href="#h13-0-24" id="h13-0-24" class="i">+            messageId,
+</a><a href="#h13-0-25" id="h13-0-25" class="i">+            context.classCache.messageUpdateEnum.enumConstants.first { it.toString() == action.toString() },
+</a><a href="#h13-0-26" id="h13-0-26" class="i">+            CallbackBuilder(context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;Callback&quot;))
+</a><a href="#h13-0-27" id="h13-0-27" class="i">+                .override(&quot;onSuccess&quot;) { onResult(null) }
+</a><a href="#h13-0-28" id="h13-0-28" class="i">+                .override(&quot;onError&quot;) { onResult(it.arg&lt;Any&gt;(0).toString()) }.build()
+</a><a href="#h13-0-29" id="h13-0-29" class="i">+        )
+</a><a href="#h13-0-30" id="h13-0-30" class="i">+    }
+</a><a href="#h13-0-31" id="h13-0-31" class="i">+
+</a><a href="#h13-0-32" id="h13-0-32" class="i">+    fun fetchConversationWithMessagesPaginated(conversationId: String, lastMessageId: Long, amount: Int, onSuccess: (message: List&lt;Message&gt;) -&gt; Unit, onError: (error: String) -&gt; Unit) {
+</a><a href="#h13-0-33" id="h13-0-33" class="i">+        val callback = CallbackBuilder(context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;FetchConversationWithMessagesCallback&quot;))
+</a><a href="#h13-0-34" id="h13-0-34" class="i">+            .override(&quot;onFetchConversationWithMessagesComplete&quot;) { param -&gt;
+</a><a href="#h13-0-35" id="h13-0-35" class="i">+                onSuccess(param.arg&lt;List&lt;*&gt;&gt;(1).map { Message(it) })
+</a><a href="#h13-0-36" id="h13-0-36" class="i">+            }
+</a><a href="#h13-0-37" id="h13-0-37" class="i">+            .override(&quot;onServerRequest&quot;, shouldUnhook = false) {}
+</a><a href="#h13-0-38" id="h13-0-38" class="i">+            .override(&quot;onError&quot;) {
+</a><a href="#h13-0-39" id="h13-0-39" class="i">+                onError(it.arg&lt;Any&gt;(0).toString())
+</a><a href="#h13-0-40" id="h13-0-40" class="i">+            }.build()
+</a><a href="#h13-0-41" id="h13-0-41" class="i">+        fetchConversationWithMessagesPaginatedMethod.invoke(instanceNonNull(), conversationId.toSnapUUID().instanceNonNull(), lastMessageId, amount, callback)
+</a><a href="#h13-0-42" id="h13-0-42" class="i">+    }
+</a><a href="#h13-0-43" id="h13-0-43" class="i">+
+</a><a href="#h13-0-44" id="h13-0-44" class="i">+    fun fetchConversationWithMessages(conversationId: String, onSuccess: (List&lt;Message&gt;) -&gt; Unit, onError: (error: String) -&gt; Unit) {
+</a><a href="#h13-0-45" id="h13-0-45" class="i">+        fetchConversationWithMessagesMethod.invoke(
+</a><a href="#h13-0-46" id="h13-0-46" class="i">+            instanceNonNull(),
+</a><a href="#h13-0-47" id="h13-0-47" class="i">+            conversationId.toSnapUUID().instanceNonNull(),
+</a><a href="#h13-0-48" id="h13-0-48" class="i">+            CallbackBuilder(context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;FetchConversationWithMessagesCallback&quot;))
+</a><a href="#h13-0-49" id="h13-0-49" class="i">+                .override(&quot;onFetchConversationWithMessagesComplete&quot;) { param -&gt;
+</a><a href="#h13-0-50" id="h13-0-50" class="i">+                    onSuccess(param.arg&lt;List&lt;*&gt;&gt;(1).map { Message(it) })
+</a><a href="#h13-0-51" id="h13-0-51" class="i">+                }
+</a><a href="#h13-0-52" id="h13-0-52" class="i">+                .override(&quot;onServerRequest&quot;, shouldUnhook = false) {}
+</a><a href="#h13-0-53" id="h13-0-53" class="i">+                .override(&quot;onError&quot;) {
+</a><a href="#h13-0-54" id="h13-0-54" class="i">+                    onError(it.arg&lt;Any&gt;(0).toString())
+</a><a href="#h13-0-55" id="h13-0-55" class="i">+                }.build()
+</a><a href="#h13-0-56" id="h13-0-56" class="i">+        )
+</a><a href="#h13-0-57" id="h13-0-57" class="i">+    }
+</a><a href="#h13-0-58" id="h13-0-58" class="i">+
+</a><a href="#h13-0-59" id="h13-0-59" class="i">+    fun displayedMessages(conversationId: String, messageId: Long, onResult: CallbackResult = {}) {
+</a><a href="#h13-0-60" id="h13-0-60" class="i">+        displayedMessagesMethod.invoke(
+</a><a href="#h13-0-61" id="h13-0-61" class="i">+            instanceNonNull(),
+</a><a href="#h13-0-62" id="h13-0-62" class="i">+            conversationId.toSnapUUID(),
+</a><a href="#h13-0-63" id="h13-0-63" class="i">+            messageId,
+</a><a href="#h13-0-64" id="h13-0-64" class="i">+            CallbackBuilder(context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;Callback&quot;))
+</a><a href="#h13-0-65" id="h13-0-65" class="i">+                .override(&quot;onSuccess&quot;) { onResult(null) }
+</a><a href="#h13-0-66" id="h13-0-66" class="i">+                .override(&quot;onError&quot;) { onResult(it.arg&lt;Any&gt;(0).toString()) }.build()
+</a><a href="#h13-0-67" id="h13-0-67" class="i">+        )
+</a><a href="#h13-0-68" id="h13-0-68" class="i">+    }
+</a><a href="#h13-0-69" id="h13-0-69" class="i">+
+</a><a href="#h13-0-70" id="h13-0-70" class="i">+    fun fetchMessage(conversationId: String, messageId: Long, onSuccess: (Message) -&gt; Unit, onError: (error: String) -&gt; Unit = {}) {
+</a><a href="#h13-0-71" id="h13-0-71" class="i">+        fetchMessage.invoke(
+</a><a href="#h13-0-72" id="h13-0-72" class="i">+            instanceNonNull(),
+</a><a href="#h13-0-73" id="h13-0-73" class="i">+            conversationId.toSnapUUID().instanceNonNull(),
+</a><a href="#h13-0-74" id="h13-0-74" class="i">+            messageId,
+</a><a href="#h13-0-75" id="h13-0-75" class="i">+            CallbackBuilder(context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;FetchMessageCallback&quot;))
+</a><a href="#h13-0-76" id="h13-0-76" class="i">+                .override(&quot;onSuccess&quot;) { param -&gt;
+</a><a href="#h13-0-77" id="h13-0-77" class="i">+                    onSuccess(Message(param.arg(0)))
+</a><a href="#h13-0-78" id="h13-0-78" class="i">+                }
+</a><a href="#h13-0-79" id="h13-0-79" class="i">+                .override(&quot;onServerRequest&quot;, shouldUnhook = false) {}
+</a><a href="#h13-0-80" id="h13-0-80" class="i">+                .override(&quot;onError&quot;) {
+</a><a href="#h13-0-81" id="h13-0-81" class="i">+                    onError(it.arg&lt;Any&gt;(0).toString())
+</a><a href="#h13-0-82" id="h13-0-82" class="i">+                }.build()
+</a><a href="#h13-0-83" id="h13-0-83" class="i">+        )
+</a><a href="#h13-0-84" id="h13-0-84" class="i">+    }
+</a><a href="#h13-0-85" id="h13-0-85" class="i">+
+</a><a href="#h13-0-86" id="h13-0-86" class="i">+    fun fetchMessageByServerId(conversationId: String, serverMessageId: String, onSuccess: (Message) -&gt; Unit, onError: (error: String) -&gt; Unit) {
+</a><a href="#h13-0-87" id="h13-0-87" class="i">+        val serverMessageIdentifier = context.classCache.serverMessageIdentifier
+</a><a href="#h13-0-88" id="h13-0-88" class="i">+            .getConstructor(context.classCache.snapUUID, Long::class.javaPrimitiveType)
+</a><a href="#h13-0-89" id="h13-0-89" class="i">+            .newInstance(conversationId.toSnapUUID().instanceNonNull(), serverMessageId.toLong())
+</a><a href="#h13-0-90" id="h13-0-90" class="i">+
+</a><a href="#h13-0-91" id="h13-0-91" class="i">+        fetchMessageByServerId.invoke(
+</a><a href="#h13-0-92" id="h13-0-92" class="i">+            instanceNonNull(),
+</a><a href="#h13-0-93" id="h13-0-93" class="i">+            serverMessageIdentifier,
+</a><a href="#h13-0-94" id="h13-0-94" class="i">+            CallbackBuilder(context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;FetchMessageCallback&quot;))
+</a><a href="#h13-0-95" id="h13-0-95" class="i">+                .override(&quot;onFetchMessageComplete&quot;) { param -&gt;
+</a><a href="#h13-0-96" id="h13-0-96" class="i">+                    onSuccess(Message(param.arg(1)))
+</a><a href="#h13-0-97" id="h13-0-97" class="i">+                }
+</a><a href="#h13-0-98" id="h13-0-98" class="i">+                .override(&quot;onServerRequest&quot;, shouldUnhook = false) {}
+</a><a href="#h13-0-99" id="h13-0-99" class="i">+                .override(&quot;onError&quot;) {
+</a><a href="#h13-0-100" id="h13-0-100" class="i">+                    onError(it.arg&lt;Any&gt;(0).toString())
+</a><a href="#h13-0-101" id="h13-0-101" class="i">+                }.build()
+</a><a href="#h13-0-102" id="h13-0-102" class="i">+        )
+</a><a href="#h13-0-103" id="h13-0-103" class="i">+    }
+</a><a href="#h13-0-104" id="h13-0-104" class="i">+}</a><a href="#h13-0-105" id="h13-0-105" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h14" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/SnapUUID.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/SnapUUID.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/SnapUUID.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/SnapUUID.kt</a></b>
+<a href="#h14-0" id="h14-0" class="h">@@ -6,6 +6,8 @@ import me.rhunk.snapenhance.core.wrapper.AbstractWrapper
+</a> import java.nio.ByteBuffer
+ import java.util.UUID
+ 
+<a href="#h14-0-3" id="h14-0-3" class="i">+fun String.toSnapUUID() = SnapUUID.fromString(this)
+</a><a href="#h14-0-4" id="h14-0-4" class="i">+
+</a> class SnapUUID(obj: Any?) : AbstractWrapper(obj) {
+     private val uuidString by lazy { toUUID().toString() }
+ 
+<b>diff --git a/<a id="h15" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/Layer.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/Layer.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/Layer.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/Layer.kt</a></b>
+<a href="#h15-0" id="h15-0" class="h">@@ -1,21 +1,19 @@
+</a> package me.rhunk.snapenhance.core.wrapper.impl.media.opera
+ 
+<a href="#h15-0-2" id="h15-0-2" class="d">-import me.rhunk.snapenhance.core.util.ReflectionHelper
+</a><a href="#h15-0-3" id="h15-0-3" class="i">+import me.rhunk.snapenhance.common.util.ktx.findFieldsToString
+</a> import me.rhunk.snapenhance.core.wrapper.AbstractWrapper
+ 
+ class Layer(obj: Any?) : AbstractWrapper(obj) {
+     val paramMap: ParamMap
+         get() {
+<a href="#h15-0-9" id="h15-0-9" class="d">-            val layerControllerField = ReflectionHelper.searchFieldContainsToString(
+</a><a href="#h15-0-10" id="h15-0-10" class="d">-                instanceNonNull()::class.java,
+</a><a href="#h15-0-11" id="h15-0-11" class="d">-                instance,
+</a><a href="#h15-0-12" id="h15-0-12" class="d">-                &quot;OperaPageModel&quot;
+</a><a href="#h15-0-13" id="h15-0-13" class="d">-            )!!
+</a><a href="#h15-0-14" id="h15-0-14" class="i">+            val layerControllerField = instanceNonNull()::class.java.findFieldsToString(instance, once = true) { _, value -&gt;
+</a><a href="#h15-0-15" id="h15-0-15" class="i">+                value.contains(&quot;OperaPageModel&quot;)
+</a><a href="#h15-0-16" id="h15-0-16" class="i">+            }.firstOrNull() ?: throw RuntimeException(&quot;Could not find layerController field&quot;)
+</a><a href="#h15-0-17" id="h15-0-17" class="i">+
+</a><a href="#h15-0-18" id="h15-0-18" class="i">+            val paramsMapHashMap = layerControllerField.type.findFieldsToString(layerControllerField[instance], once = true) { _, value -&gt;
+</a><a href="#h15-0-19" id="h15-0-19" class="i">+                value.contains(&quot;OperaPageModel&quot;)
+</a><a href="#h15-0-20" id="h15-0-20" class="i">+            }.firstOrNull() ?: throw RuntimeException(&quot;Could not find paramsMap field&quot;)
+</a> 
+<a href="#h15-0-22" id="h15-0-22" class="d">-            val paramsMapHashMap = ReflectionHelper.searchFieldStartsWithToString(
+</a><a href="#h15-0-23" id="h15-0-23" class="d">-                layerControllerField.type,
+</a><a href="#h15-0-24" id="h15-0-24" class="d">-                layerControllerField[instance] as Any, &quot;OperaPageModel&quot;
+</a><a href="#h15-0-25" id="h15-0-25" class="d">-            )!!
+</a>             return ParamMap(paramsMapHashMap[layerControllerField[instance]]!!)
+         }
+ }
+<b>diff --git a/<a id="h16" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/LayerController.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/LayerController.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/LayerController.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/LayerController.kt</a></b>
+<a href="#h16-0" id="h16-0" class="h">@@ -1,18 +0,0 @@
+</a><a href="#h16-0-0" id="h16-0-0" class="d">-package me.rhunk.snapenhance.core.wrapper.impl.media.opera
+</a><a href="#h16-0-1" id="h16-0-1" class="d">-
+</a><a href="#h16-0-2" id="h16-0-2" class="d">-import de.robv.android.xposed.XposedHelpers
+</a><a href="#h16-0-3" id="h16-0-3" class="d">-import me.rhunk.snapenhance.core.util.ReflectionHelper
+</a><a href="#h16-0-4" id="h16-0-4" class="d">-import me.rhunk.snapenhance.core.wrapper.AbstractWrapper
+</a><a href="#h16-0-5" id="h16-0-5" class="d">-import java.lang.reflect.Field
+</a><a href="#h16-0-6" id="h16-0-6" class="d">-import java.util.concurrent.ConcurrentHashMap
+</a><a href="#h16-0-7" id="h16-0-7" class="d">-
+</a><a href="#h16-0-8" id="h16-0-8" class="d">-class LayerController(obj: Any?) : AbstractWrapper(obj) {
+</a><a href="#h16-0-9" id="h16-0-9" class="d">-    val paramMap: ParamMap
+</a><a href="#h16-0-10" id="h16-0-10" class="d">-        get() {
+</a><a href="#h16-0-11" id="h16-0-11" class="d">-            val paramMapField: Field = ReflectionHelper.searchFieldTypeInSuperClasses(
+</a><a href="#h16-0-12" id="h16-0-12" class="d">-                instanceNonNull()::class.java,
+</a><a href="#h16-0-13" id="h16-0-13" class="d">-                ConcurrentHashMap::class.java
+</a><a href="#h16-0-14" id="h16-0-14" class="d">-            ) ?: throw RuntimeException(&quot;Could not find paramMap field&quot;)
+</a><a href="#h16-0-15" id="h16-0-15" class="d">-            return ParamMap(XposedHelpers.getObjectField(instance, paramMapField.name))
+</a><a href="#h16-0-16" id="h16-0-16" class="d">-        }
+</a><a href="#h16-0-17" id="h16-0-17" class="d">-}
+</a><b>diff --git a/<a id="h17" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/ParamMap.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/ParamMap.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/ParamMap.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/ParamMap.kt</a></b>
+<a href="#h17-0" id="h17-0" class="h">@@ -1,6 +1,6 @@
+</a> package me.rhunk.snapenhance.core.wrapper.impl.media.opera
+ 
+<a href="#h17-0-2" id="h17-0-2" class="d">-import me.rhunk.snapenhance.core.util.ReflectionHelper
+</a><a href="#h17-0-3" id="h17-0-3" class="i">+import me.rhunk.snapenhance.common.util.ktx.findFields
+</a> import me.rhunk.snapenhance.core.util.ktx.getObjectField
+ import me.rhunk.snapenhance.core.wrapper.AbstractWrapper
+ import java.lang.reflect.Field
+<a href="#h17-1" id="h17-1" class="h">@@ -9,10 +9,9 @@ import java.util.concurrent.ConcurrentHashMap
+</a> @Suppress(&quot;UNCHECKED_CAST&quot;)
+ class ParamMap(obj: Any?) : AbstractWrapper(obj) {
+     private val paramMapField: Field by lazy {
+<a href="#h17-1-3" id="h17-1-3" class="d">-        ReflectionHelper.searchFieldTypeInSuperClasses(
+</a><a href="#h17-1-4" id="h17-1-4" class="d">-            instanceNonNull().javaClass,
+</a><a href="#h17-1-5" id="h17-1-5" class="d">-            ConcurrentHashMap::class.java
+</a><a href="#h17-1-6" id="h17-1-6" class="d">-        )!!
+</a><a href="#h17-1-7" id="h17-1-7" class="i">+        instanceNonNull()::class.java.findFields(once = true) {
+</a><a href="#h17-1-8" id="h17-1-8" class="i">+            it.type == ConcurrentHashMap::class.java
+</a><a href="#h17-1-9" id="h17-1-9" class="i">+        }.firstOrNull() ?: throw RuntimeException(&quot;Could not find paramMap field&quot;)
+</a>     }
+ 
+     val concurrentHashMap: ConcurrentHashMap&lt;Any, Any&gt;
+</pre>
+</div>
+</body>
+</html>

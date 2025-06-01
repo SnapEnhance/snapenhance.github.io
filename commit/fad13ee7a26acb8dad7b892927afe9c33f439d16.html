@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: gif, stickers, replies support - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/fad13ee7a26acb8dad7b892927afe9c33f439d16.html">fad13ee7a26acb8dad7b892927afe9c33f439d16</a>
+<b>parent</b> <a href="../commit/75fb4755e2b043bb81ed87cab73b943e942d32df.html">75fb4755e2b043bb81ed87cab73b943e942d32df</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 11 May 2024 13:19:19 +0200
+
+feat: gif, stickers, replies support
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt</a></td><td> | </td><td class="num">13</td><td><span class="i">+++++</span><span class="d">--------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/assets/web/export_template.html</a></td><td> | </td><td class="num">43</td><td><span class="i">+++++++++++++++++++++++++</span><span class="d">------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/DownloadManagerClient.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">51</td><td><span class="i">+++++++++++++++++++++++</span><span class="d">----------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/decoder/AttachmentType.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/decoder/MessageDecoder.kt</a></td><td> | </td><td class="num">182</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/FriendFeedMessagePreview.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/ConversationExporter.kt</a></td><td> | </td><td class="num">81</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/NewChatActionMenu.kt</a></td><td> | </td><td class="num">17</td><td><span class="i">+++++++++++</span><span class="d">------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/AbstractWrapper.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h11">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/Message.kt</a></td><td> | </td><td class="num">31</td><td><span class="i">++++++++++++++++++++++++++++</span><span class="d">---</span></td></tr>
+</table></pre><pre>12 files changed, 291 insertions(+), 145 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -29,7 +29,10 @@ import me.rhunk.snapenhance.bridge.DownloadCallback
+</a> import me.rhunk.snapenhance.common.bridge.wrapper.LoggedMessage
+ import me.rhunk.snapenhance.common.bridge.wrapper.LoggerWrapper
+ import me.rhunk.snapenhance.common.data.ContentType
+<a href="#h0-0-3" id="h0-0-3" class="d">-import me.rhunk.snapenhance.common.data.download.*
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+import me.rhunk.snapenhance.common.data.download.DownloadMetadata
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+import me.rhunk.snapenhance.common.data.download.DownloadRequest
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+import me.rhunk.snapenhance.common.data.download.MediaDownloadSource
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+import me.rhunk.snapenhance.common.data.download.createNewFilePath
+</a> import me.rhunk.snapenhance.common.util.ktx.copyToClipboard
+ import me.rhunk.snapenhance.common.util.ktx.longHashCode
+ import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+<a href="#h0-1" id="h0-1" class="h">@@ -79,13 +82,7 @@ class LoggerHistoryRoot : Routes.Route() {
+</a>             }
+         ).enqueue(
+             DownloadRequest(
+<a href="#h0-1-3" id="h0-1-3" class="d">-                inputMedias = arrayOf(
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-                    InputMedia(
+</a><a href="#h0-1-5" id="h0-1-5" class="d">-                        content = attachment.mediaUrlKey!!,
+</a><a href="#h0-1-6" id="h0-1-6" class="d">-                        type = DownloadMediaType.PROTO_MEDIA,
+</a><a href="#h0-1-7" id="h0-1-7" class="d">-                        encryption = attachment.attachmentInfo?.encryption,
+</a><a href="#h0-1-8" id="h0-1-8" class="d">-                    )
+</a><a href="#h0-1-9" id="h0-1-9" class="d">-                )
+</a><a href="#h0-1-10" id="h0-1-10" class="i">+                inputMedias = arrayOf(attachment.createInputMedia()!!)
+</a>             ),
+             DownloadMetadata(
+                 mediaIdentifier = attachmentHash,
+<b>diff --git a/<a id="h1" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1415,6 +1415,7 @@
+</a>         &quot;attachment_type&quot;: {
+             &quot;snap&quot;: &quot;Snap&quot;,
+             &quot;sticker&quot;: &quot;Sticker&quot;,
+<a href="#h1-0-3" id="h1-0-3" class="i">+            &quot;gif&quot;: &quot;GIF&quot;,
+</a>             &quot;external_media&quot;: &quot;External Media&quot;,
+             &quot;note&quot;: &quot;Note&quot;,
+             &quot;original_story&quot;: &quot;Original Story&quot;
+<b>diff --git a/<a id="h2" href="../file/core/src/main/assets/web/export_template.html.html">core/src/main/assets/web/export_template.html</a> b/<a href="../file/core/src/main/assets/web/export_template.html.html">core/src/main/assets/web/export_template.html</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -286,28 +286,34 @@
+</a> 
+             messageObject.appendChild(((messageContainer) =&gt; {
+                 messageContainer.classList.add(&quot;content&quot;)
+<a href="#h2-0-3" id="h2-0-3" class="d">-                messageContainer.innerHTML = message.serializedContent
+</a> 
+                 const observers = []
+<a href="#h2-0-6" id="h2-0-6" class="d">-                if (!message.serializedContent) {
+</a><a href="#h2-0-7" id="h2-0-7" class="d">-                    messageContainer.innerHTML = &quot;&quot;
+</a><a href="#h2-0-8" id="h2-0-8" class="d">-                    let messageData = &quot;&quot;
+</a><a href="#h2-0-9" id="h2-0-9" class="d">-                    switch (message.type) {
+</a><a href="#h2-0-10" id="h2-0-10" class="d">-                        case &quot;SNAP&quot;:
+</a><a href="#h2-0-11" id="h2-0-11" class="d">-                            messageContainer.appendChild(document.querySelector(&#39;.red_snap_svg&#39;).cloneNode(true))
+</a><a href="#h2-0-12" id="h2-0-12" class="d">-                            messageData = &quot;Snap&quot;
+</a><a href="#h2-0-13" id="h2-0-13" class="d">-                            break
+</a><a href="#h2-0-14" id="h2-0-14" class="d">-                        default:
+</a><a href="#h2-0-15" id="h2-0-15" class="d">-                            messageData = message.type
+</a><a href="#h2-0-16" id="h2-0-16" class="d">-                    }
+</a><a href="#h2-0-17" id="h2-0-17" class="d">-                    messageContainer.innerHTML += messageData
+</a><a href="#h2-0-18" id="h2-0-18" class="d">-                    messageContainer.onclick = () =&gt; {
+</a><a href="#h2-0-19" id="h2-0-19" class="d">-                        observers.forEach(f =&gt; f())
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+                function loadContent() {
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+                    if (!message.serializedContent) {
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+                        let messageData = &quot;&quot;
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+                        switch (message.type) {
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+                            case &quot;SNAP&quot;:
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+                                messageContainer.appendChild(document.querySelector(&#39;.red_snap_svg&#39;).cloneNode(true))
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+                                messageData += &quot;Snap&quot;
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+                                break
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+                            default:
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+                                messageData += message.type
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+                        }
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+                        messageContainer.innerHTML = messageData
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+                        messageContainer.onclick = () =&gt; {
+</a><a href="#h2-0-34" id="h2-0-34" class="i">+                            messageContainer.prepend(document.createElement(&quot;br&quot;))
+</a><a href="#h2-0-35" id="h2-0-35" class="i">+                            observers.forEach(f =&gt; f())
+</a><a href="#h2-0-36" id="h2-0-36" class="i">+                        }
+</a><a href="#h2-0-37" id="h2-0-37" class="i">+                    } else {
+</a><a href="#h2-0-38" id="h2-0-38" class="i">+                        messageContainer.innerHTML = message.serializedContent
+</a>                     }
+                 }
+ 
+<a href="#h2-0-42" id="h2-0-42" class="i">+                loadContent()
+</a><a href="#h2-0-43" id="h2-0-43" class="i">+
+</a>                 if (message.attachments &amp;&amp; message.attachments.length &gt; 0) {
+<a href="#h2-0-45" id="h2-0-45" class="d">-                    message.attachments.forEach((attachment, index) =&gt; {
+</a><a href="#h2-0-46" id="h2-0-46" class="i">+                    message.attachments.reverse().forEach((attachment, index) =&gt; {
+</a>                         const mediaKey = attachment.key.replace(/(=)/g, &quot;&quot;)
+ 
+                         observers.push(() =&gt; {
+<a href="#h2-1" id="h2-1" class="h">@@ -316,12 +322,11 @@
+</a>                             if (!originalMedia) {
+                                 return
+                             }
+<a href="#h2-1-3" id="h2-1-3" class="d">-                            messageContainer.innerHTML = &quot;&quot;
+</a> 
+                             const originalMediaUrl = decodeMedia(originalMedia)
+ 
+                             const mediaContainer = document.createElement(&quot;div&quot;)
+<a href="#h2-1-8" id="h2-1-8" class="d">-                            messageContainer.appendChild(mediaContainer)
+</a><a href="#h2-1-9" id="h2-1-9" class="i">+                            messageContainer.prepend(mediaContainer)
+</a> 
+                             const imageTag = document.createElement(&quot;img&quot;)
+                             imageTag.src = originalMediaUrl
+<a href="#h2-2" id="h2-2" class="h">@@ -356,6 +361,8 @@
+</a>                     new IntersectionObserver(entries =&gt; {
+                         if (!fetched &amp;&amp; entries[0].isIntersecting === true) {
+                             fetched = true
+<a href="#h2-2-3" id="h2-2-3" class="i">+                            loadContent()
+</a><a href="#h2-2-4" id="h2-2-4" class="i">+                            messageContainer.prepend(document.createElement(&quot;br&quot;))
+</a>                             observers.forEach(c =&gt; {
+                                 try {
+                                     c()
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/DownloadManagerClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/DownloadManagerClient.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/DownloadManagerClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/DownloadManagerClient.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -68,6 +68,14 @@ class DownloadManagerClient (
+</a>         )
+     }
+ 
+<a href="#h3-0-3" id="h3-0-3" class="i">+    fun downloadInputMedias(inputMedias: Array&lt;InputMedia&gt;) {
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+        enqueueDownloadRequest(
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+            DownloadRequest(
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+                inputMedias = inputMedias
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+            )
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+        )
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+    }
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+
+</a>     fun downloadStream(
+         streamUrl: String,
+         audioStreamFormat: AudioStreamFormat
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -52,11 +52,9 @@ import me.rhunk.snapenhance.core.wrapper.impl.media.opera.Layer
+</a> import me.rhunk.snapenhance.core.wrapper.impl.media.opera.ParamMap
+ import me.rhunk.snapenhance.core.wrapper.impl.media.toKeyPair
+ import me.rhunk.snapenhance.mapper.impl.OperaPageViewControllerMapper
+<a href="#h4-0-3" id="h4-0-3" class="d">-import java.io.ByteArrayInputStream
+</a> import java.nio.file.Paths
+ import java.util.UUID
+ import kotlin.coroutines.suspendCoroutine
+<a href="#h4-0-7" id="h4-0-7" class="d">-import kotlin.io.encoding.Base64
+</a> import kotlin.io.encoding.ExperimentalEncodingApi
+ import kotlin.math.absoluteValue
+ 
+<a href="#h4-1" id="h4-1" class="h">@@ -544,7 +542,6 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>         attachments: List&lt;DecodedAttachment&gt;,
+         forceAllowDuplicate: Boolean = false
+     ) {
+<a href="#h4-1-3" id="h4-1-3" class="d">-        //TODO: stickers
+</a>         attachments.forEach { attachment -&gt;
+             runCatching {
+                 provideDownloadManagerClient(
+<a href="#h4-2" id="h4-2" class="h">@@ -554,12 +551,11 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>                     friendInfo = friendInfo,
+                     forceAllowDuplicate = forceAllowDuplicate,
+                     creationTimestamp = message.creationTimestamp,
+<a href="#h4-2-3" id="h4-2-3" class="d">-                ).downloadSingleMedia(
+</a><a href="#h4-2-4" id="h4-2-4" class="d">-                    mediaData = attachment.mediaUrlKey!!,
+</a><a href="#h4-2-5" id="h4-2-5" class="d">-                    mediaType = DownloadMediaType.PROTO_MEDIA,
+</a><a href="#h4-2-6" id="h4-2-6" class="d">-                    encryption = attachment.attachmentInfo?.encryption,
+</a><a href="#h4-2-7" id="h4-2-7" class="d">-                    attachmentType = attachment.type
+</a><a href="#h4-2-8" id="h4-2-8" class="d">-                )
+</a><a href="#h4-2-9" id="h4-2-9" class="i">+                ).apply {
+</a><a href="#h4-2-10" id="h4-2-10" class="i">+                    downloadInputMedias(
+</a><a href="#h4-2-11" id="h4-2-11" class="i">+                        arrayOf(attachment.createInputMedia()!!)
+</a><a href="#h4-2-12" id="h4-2-12" class="i">+                    )
+</a><a href="#h4-2-13" id="h4-2-13" class="i">+                }
+</a>             }.onFailure {
+                 context.longToast(translations[&quot;failed_generic_toast&quot;])
+                 context.log.error(&quot;Failed to download&quot;, it)
+<a href="#h4-3" id="h4-3" class="h">@@ -577,32 +573,31 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>     ) {
+         var previewBitmap: Bitmap? = null
+         val previewCoroutine = context.coroutineScope.launch {
+<a href="#h4-3-3" id="h4-3-3" class="d">-            val downloadedMedia = RemoteMediaResolver.downloadBoltMedia(Base64.decode(attachment.mediaUrlKey!!), decryptionCallback = {
+</a><a href="#h4-3-4" id="h4-3-4" class="d">-                attachment.attachmentInfo?.encryption?.decryptInputStream(it) ?: it
+</a><a href="#h4-3-5" id="h4-3-5" class="d">-            }) ?: return@launch
+</a><a href="#h4-3-6" id="h4-3-6" class="i">+            runCatching {
+</a><a href="#h4-3-7" id="h4-3-7" class="i">+                attachment.openStream { attachmentStream -&gt;
+</a><a href="#h4-3-8" id="h4-3-8" class="i">+                    val downloadedMediaList = mutableMapOf&lt;SplitMediaAssetType, ByteArray&gt;()
+</a> 
+<a href="#h4-3-10" id="h4-3-10" class="d">-            val downloadedMediaList = mutableMapOf&lt;SplitMediaAssetType, ByteArray&gt;()
+</a><a href="#h4-3-11" id="h4-3-11" class="i">+                    MediaDownloaderHelper.getSplitElements(attachmentStream!!) {
+</a><a href="#h4-3-12" id="h4-3-12" class="i">+                            type, inputStream -&gt;
+</a><a href="#h4-3-13" id="h4-3-13" class="i">+                        downloadedMediaList[type] = inputStream.readBytes()
+</a><a href="#h4-3-14" id="h4-3-14" class="i">+                    }
+</a> 
+<a href="#h4-3-16" id="h4-3-16" class="d">-            MediaDownloaderHelper.getSplitElements(ByteArrayInputStream(downloadedMedia)) {
+</a><a href="#h4-3-17" id="h4-3-17" class="d">-                    type, inputStream -&gt;
+</a><a href="#h4-3-18" id="h4-3-18" class="d">-                downloadedMediaList[type] = inputStream.readBytes()
+</a><a href="#h4-3-19" id="h4-3-19" class="d">-            }
+</a><a href="#h4-3-20" id="h4-3-20" class="i">+                    val originalMedia = downloadedMediaList[SplitMediaAssetType.ORIGINAL] ?: return@openStream
+</a><a href="#h4-3-21" id="h4-3-21" class="i">+                    val overlay = downloadedMediaList[SplitMediaAssetType.OVERLAY]
+</a> 
+<a href="#h4-3-23" id="h4-3-23" class="d">-            val originalMedia = downloadedMediaList[SplitMediaAssetType.ORIGINAL] ?: return@launch
+</a><a href="#h4-3-24" id="h4-3-24" class="d">-            val overlay = downloadedMediaList[SplitMediaAssetType.OVERLAY]
+</a><a href="#h4-3-25" id="h4-3-25" class="i">+                    var bitmap = PreviewUtils.createPreview(originalMedia, isVideo = FileType.fromByteArray(originalMedia).isVideo)
+</a><a href="#h4-3-26" id="h4-3-26" class="i">+                        ?: throw Exception(&quot;preview is null&quot;)
+</a> 
+<a href="#h4-3-28" id="h4-3-28" class="d">-            var bitmap: Bitmap? = PreviewUtils.createPreview(originalMedia, isVideo = FileType.fromByteArray(originalMedia).isVideo)
+</a><a href="#h4-3-29" id="h4-3-29" class="i">+                    overlay?.also {
+</a><a href="#h4-3-30" id="h4-3-30" class="i">+                        bitmap = PreviewUtils.mergeBitmapOverlay(bitmap, BitmapFactory.decodeByteArray(it, 0, it.size))
+</a><a href="#h4-3-31" id="h4-3-31" class="i">+                    }
+</a> 
+<a href="#h4-3-33" id="h4-3-33" class="d">-            if (bitmap == null) {
+</a><a href="#h4-3-34" id="h4-3-34" class="i">+                    previewBitmap = bitmap
+</a><a href="#h4-3-35" id="h4-3-35" class="i">+                }
+</a><a href="#h4-3-36" id="h4-3-36" class="i">+            }.onFailure {
+</a>                 context.shortToast(translations[&quot;failed_to_create_preview_toast&quot;])
+<a href="#h4-3-38" id="h4-3-38" class="d">-                return@launch
+</a><a href="#h4-3-39" id="h4-3-39" class="i">+                context.log.error(&quot;Failed to create preview&quot;, it)
+</a>             }
+<a href="#h4-3-41" id="h4-3-41" class="d">-
+</a><a href="#h4-3-42" id="h4-3-42" class="d">-            overlay?.also {
+</a><a href="#h4-3-43" id="h4-3-43" class="d">-                bitmap = PreviewUtils.mergeBitmapOverlay(bitmap!!, BitmapFactory.decodeByteArray(it, 0, it.size))
+</a><a href="#h4-3-44" id="h4-3-44" class="d">-            }
+</a><a href="#h4-3-45" id="h4-3-45" class="d">-
+</a><a href="#h4-3-46" id="h4-3-46" class="d">-            previewBitmap = bitmap
+</a>         }
+ 
+         with(ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity)) {
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/decoder/AttachmentType.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/decoder/AttachmentType.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/decoder/AttachmentType.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/decoder/AttachmentType.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -5,6 +5,7 @@ enum class AttachmentType(
+</a> ) {
+     SNAP(&quot;snap&quot;),
+     STICKER(&quot;sticker&quot;),
+<a href="#h5-0-3" id="h5-0-3" class="i">+    GIF(&quot;gif&quot;),
+</a>     EXTERNAL_MEDIA(&quot;external_media&quot;),
+     NOTE(&quot;note&quot;),
+     ORIGINAL_STORY(&quot;original_story&quot;),
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/decoder/MessageDecoder.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/decoder/MessageDecoder.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/decoder/MessageDecoder.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/decoder/MessageDecoder.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -3,20 +3,58 @@ package me.rhunk.snapenhance.core.features.impl.downloader.decoder
+</a> import com.google.gson.GsonBuilder
+ import com.google.gson.JsonElement
+ import com.google.gson.JsonObject
+<a href="#h6-0-3" id="h6-0-3" class="i">+import me.rhunk.snapenhance.common.data.download.DownloadMediaType
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+import me.rhunk.snapenhance.common.data.download.InputMedia
+</a><a href="#h6-0-5" id="h6-0-5" class="i">+import me.rhunk.snapenhance.common.data.download.MediaEncryptionKeyPair
+</a> import me.rhunk.snapenhance.common.data.download.toKeyPair
+ import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+<a href="#h6-0-8" id="h6-0-8" class="i">+import me.rhunk.snapenhance.common.util.snap.RemoteMediaResolver
+</a> import me.rhunk.snapenhance.core.wrapper.impl.MessageContent
+<a href="#h6-0-10" id="h6-0-10" class="i">+import java.io.InputStream
+</a><a href="#h6-0-11" id="h6-0-11" class="i">+import java.net.URL
+</a> import kotlin.io.encoding.Base64
+ import kotlin.io.encoding.ExperimentalEncodingApi
+ 
+ data class DecodedAttachment(
+<a href="#h6-0-16" id="h6-0-16" class="d">-    val mediaUrlKey: String?,
+</a><a href="#h6-0-17" id="h6-0-17" class="i">+    val boltKey: String?,
+</a><a href="#h6-0-18" id="h6-0-18" class="i">+    val directUrl: String? = null,
+</a>     val type: AttachmentType,
+     val attachmentInfo: AttachmentInfo?
+ ) {
+     @OptIn(ExperimentalEncodingApi::class)
+     val mediaUniqueId: String? by lazy {
+<a href="#h6-0-24" id="h6-0-24" class="d">-        runCatching { Base64.UrlSafe.decode(mediaUrlKey.toString()) }.getOrNull()?.let { ProtoReader(it).getString(2, 2)?.substringBefore(&quot;.&quot;) }
+</a><a href="#h6-0-25" id="h6-0-25" class="i">+        runCatching {
+</a><a href="#h6-0-26" id="h6-0-26" class="i">+            Base64.UrlSafe.decode(boltKey.toString())
+</a><a href="#h6-0-27" id="h6-0-27" class="i">+        }.getOrNull()?.let {
+</a><a href="#h6-0-28" id="h6-0-28" class="i">+            ProtoReader(it).getString(2, 2)?.substringBefore(&quot;.&quot;)
+</a><a href="#h6-0-29" id="h6-0-29" class="i">+        } ?: directUrl?.substringAfterLast(&quot;/&quot;)?.substringBeforeLast(&quot;?&quot;)?.substringBeforeLast(&quot;.&quot;)?.let { Base64.UrlSafe.encode(it.toByteArray()) }
+</a><a href="#h6-0-30" id="h6-0-30" class="i">+    }
+</a><a href="#h6-0-31" id="h6-0-31" class="i">+
+</a><a href="#h6-0-32" id="h6-0-32" class="i">+    @OptIn(ExperimentalEncodingApi::class)
+</a><a href="#h6-0-33" id="h6-0-33" class="i">+    inline fun openStream(crossinline callback: (InputStream?) -&gt; Unit) {
+</a><a href="#h6-0-34" id="h6-0-34" class="i">+        boltKey?.let { mediaUrlKey -&gt;
+</a><a href="#h6-0-35" id="h6-0-35" class="i">+            RemoteMediaResolver.downloadBoltMedia(Base64.decode(mediaUrlKey), decryptionCallback = {
+</a><a href="#h6-0-36" id="h6-0-36" class="i">+                attachmentInfo?.encryption?.decryptInputStream(it) ?: it
+</a><a href="#h6-0-37" id="h6-0-37" class="i">+            }, resultCallback = { inputStream, _ -&gt;
+</a><a href="#h6-0-38" id="h6-0-38" class="i">+                callback(inputStream)
+</a><a href="#h6-0-39" id="h6-0-39" class="i">+            })
+</a><a href="#h6-0-40" id="h6-0-40" class="i">+        } ?: directUrl?.let { rawMediaUrl -&gt;
+</a><a href="#h6-0-41" id="h6-0-41" class="i">+            URL(rawMediaUrl).openStream().let { inputStream -&gt;
+</a><a href="#h6-0-42" id="h6-0-42" class="i">+                attachmentInfo?.encryption?.decryptInputStream(inputStream) ?: inputStream
+</a><a href="#h6-0-43" id="h6-0-43" class="i">+            }.use(callback)
+</a><a href="#h6-0-44" id="h6-0-44" class="i">+        } ?: callback(null)
+</a><a href="#h6-0-45" id="h6-0-45" class="i">+    }
+</a><a href="#h6-0-46" id="h6-0-46" class="i">+
+</a><a href="#h6-0-47" id="h6-0-47" class="i">+    fun createInputMedia(
+</a><a href="#h6-0-48" id="h6-0-48" class="i">+        isOverlay: Boolean = false
+</a><a href="#h6-0-49" id="h6-0-49" class="i">+    ): InputMedia? {
+</a><a href="#h6-0-50" id="h6-0-50" class="i">+        return InputMedia(
+</a><a href="#h6-0-51" id="h6-0-51" class="i">+            content = boltKey ?: directUrl ?: return null,
+</a><a href="#h6-0-52" id="h6-0-52" class="i">+            type = if (boltKey != null) DownloadMediaType.PROTO_MEDIA else DownloadMediaType.REMOTE_MEDIA,
+</a><a href="#h6-0-53" id="h6-0-53" class="i">+            encryption = attachmentInfo?.encryption,
+</a><a href="#h6-0-54" id="h6-0-54" class="i">+            attachmentType = type.key,
+</a><a href="#h6-0-55" id="h6-0-55" class="i">+            isOverlay = isOverlay
+</a><a href="#h6-0-56" id="h6-0-56" class="i">+        )
+</a>     }
+ }
+ 
+<a href="#h6-1" id="h6-1" class="h">@@ -24,32 +62,41 @@ data class DecodedAttachment(
+</a> object MessageDecoder {
+     private val gson = GsonBuilder().create()
+ 
+<a href="#h6-1-3" id="h6-1-3" class="d">-    private fun decodeAttachment(protoReader: ProtoReader): AttachmentInfo? {
+</a><a href="#h6-1-4" id="h6-1-4" class="d">-        val mediaInfo = protoReader.followPath(1, 1) ?: return null
+</a><a href="#h6-1-5" id="h6-1-5" class="i">+    private fun ProtoReader.decodeClearTextEncryption(encoded: Boolean = true): MediaEncryptionKeyPair? {
+</a><a href="#h6-1-6" id="h6-1-6" class="i">+        val key = if (encoded) Base64.decode(getString(1)?.trim() ?: return null) else getByteArray(1) ?: return null
+</a><a href="#h6-1-7" id="h6-1-7" class="i">+        val iv = if (encoded) Base64.decode(getString(2)?.trim() ?: return null) else getByteArray(2) ?: return null
+</a><a href="#h6-1-8" id="h6-1-8" class="i">+
+</a><a href="#h6-1-9" id="h6-1-9" class="i">+        return Pair(key, iv).toKeyPair()
+</a><a href="#h6-1-10" id="h6-1-10" class="i">+    }
+</a> 
+<a href="#h6-1-12" id="h6-1-12" class="i">+    private fun ProtoReader.decodeMediaMetadata(): AttachmentInfo {
+</a>         return AttachmentInfo(
+             encryption = run {
+<a href="#h6-1-15" id="h6-1-15" class="d">-                val encryptionProtoIndex = if (mediaInfo.contains(19)) 19 else 4
+</a><a href="#h6-1-16" id="h6-1-16" class="d">-                val encryptionProto = mediaInfo.followPath(encryptionProtoIndex) ?: return@run null
+</a><a href="#h6-1-17" id="h6-1-17" class="d">-
+</a><a href="#h6-1-18" id="h6-1-18" class="d">-                var key = encryptionProto.getByteArray(1) ?: return@run null
+</a><a href="#h6-1-19" id="h6-1-19" class="d">-                var iv = encryptionProto.getByteArray(2) ?: return@run null
+</a><a href="#h6-1-20" id="h6-1-20" class="d">-
+</a><a href="#h6-1-21" id="h6-1-21" class="d">-                if (encryptionProtoIndex == 4) {
+</a><a href="#h6-1-22" id="h6-1-22" class="d">-                    key = Base64.decode(encryptionProto.getString(1)?.replace(&quot;\n&quot;,&quot;&quot;) ?: return@run null)
+</a><a href="#h6-1-23" id="h6-1-23" class="d">-                    iv = Base64.decode(encryptionProto.getString(2)?.replace(&quot;\n&quot;,&quot;&quot;) ?: return@run null)
+</a><a href="#h6-1-24" id="h6-1-24" class="i">+                followPath(4)?.apply {
+</a><a href="#h6-1-25" id="h6-1-25" class="i">+                    decodeClearTextEncryption(encoded = true)?.let {
+</a><a href="#h6-1-26" id="h6-1-26" class="i">+                        return@run it
+</a><a href="#h6-1-27" id="h6-1-27" class="i">+                    }
+</a>                 }
+ 
+<a href="#h6-1-30" id="h6-1-30" class="d">-                Pair(key, iv).toKeyPair()
+</a><a href="#h6-1-31" id="h6-1-31" class="i">+                followPath(19)?.apply {
+</a><a href="#h6-1-32" id="h6-1-32" class="i">+                    decodeClearTextEncryption( encoded = false)?.let { encryption -&gt;
+</a><a href="#h6-1-33" id="h6-1-33" class="i">+                        return@run encryption
+</a><a href="#h6-1-34" id="h6-1-34" class="i">+                    }
+</a><a href="#h6-1-35" id="h6-1-35" class="i">+                }
+</a><a href="#h6-1-36" id="h6-1-36" class="i">+                null
+</a>             },
+<a href="#h6-1-38" id="h6-1-38" class="d">-            resolution = mediaInfo.followPath(5)?.let {
+</a><a href="#h6-1-39" id="h6-1-39" class="i">+            resolution = followPath(5)?.let {
+</a>                 (it.getVarInt(1)?.toInt() ?: 0) to (it.getVarInt(2)?.toInt() ?: 0)
+             },
+<a href="#h6-1-42" id="h6-1-42" class="d">-            duration = mediaInfo.getVarInt(15)   // external medias
+</a><a href="#h6-1-43" id="h6-1-43" class="d">-                ?: mediaInfo.getVarInt(13) // audio notes
+</a><a href="#h6-1-44" id="h6-1-44" class="i">+            duration = getVarInt(15)   // external medias
+</a><a href="#h6-1-45" id="h6-1-45" class="i">+                ?: getVarInt(13) // audio notes
+</a>         )
+     }
+ 
+<a href="#h6-1-49" id="h6-1-49" class="i">+    private fun ProtoReader.decodeAttachment(): AttachmentInfo? {
+</a><a href="#h6-1-50" id="h6-1-50" class="i">+        return followPath(1, 1)?.decodeMediaMetadata()
+</a><a href="#h6-1-51" id="h6-1-51" class="i">+    }
+</a><a href="#h6-1-52" id="h6-1-52" class="i">+
+</a>     @OptIn(ExperimentalEncodingApi::class)
+     fun getEncodedMediaReferences(messageContent: JsonElement): List&lt;String&gt; {
+         return getMediaReferences(messageContent).map { reference -&gt;
+<a href="#h6-2" id="h6-2" class="h">@@ -80,7 +127,7 @@ object MessageDecoder {
+</a>             ProtoReader(messageContent.content!!),
+             customMediaReferences = getEncodedMediaReferences(gson.toJsonTree(messageContent.instanceNonNull()))
+         ).toMutableList().apply {
+<a href="#h6-2-3" id="h6-2-3" class="d">-            if (messageContent.quotedMessage != null &amp;&amp; messageContent.quotedMessage!!.content != null) {
+</a><a href="#h6-2-4" id="h6-2-4" class="i">+            if (messageContent.quotedMessage?.takeIf { it.isPresent() } != null &amp;&amp; messageContent.quotedMessage!!.content?.takeIf { it.isPresent() } != null) {
+</a>                 addAll(0, decode(
+                     MessageContent(messageContent.quotedMessage!!.content!!.instanceNonNull())
+                 ))
+<a href="#h6-3" id="h6-3" class="h">@@ -110,43 +157,64 @@ object MessageDecoder {
+</a>         customMediaReferences?.let { mediaReferences.addAll(it) }
+         var mediaKeyIndex = 0
+ 
+<a href="#h6-3-3" id="h6-3-3" class="d">-        fun decodeSnapDocMediaPlayback(type: AttachmentType, protoReader: ProtoReader) {
+</a><a href="#h6-3-4" id="h6-3-4" class="i">+        fun ProtoReader.decodeSnapDocMediaPlayback(type: AttachmentType) {
+</a>             decodedAttachment.add(
+                 DecodedAttachment(
+<a href="#h6-3-7" id="h6-3-7" class="d">-                    mediaUrlKey = mediaReferences.getOrNull(mediaKeyIndex++),
+</a><a href="#h6-3-8" id="h6-3-8" class="i">+                    boltKey = mediaReferences.getOrNull(mediaKeyIndex++),
+</a>                     type = type,
+<a href="#h6-3-10" id="h6-3-10" class="d">-                    attachmentInfo = decodeAttachment(protoReader) ?: return
+</a><a href="#h6-3-11" id="h6-3-11" class="i">+                    attachmentInfo = decodeAttachment() ?: return
+</a>                 )
+             )
+         }
+ 
+<a href="#h6-3-16" id="h6-3-16" class="d">-        fun decodeSnapDocMedia(type: AttachmentType, protoReader: ProtoReader) {
+</a><a href="#h6-3-17" id="h6-3-17" class="d">-            protoReader.followPath(5) { decodeSnapDocMediaPlayback(type,this) }
+</a><a href="#h6-3-18" id="h6-3-18" class="i">+        fun ProtoReader.decodeSnapDocMedia(type: AttachmentType) {
+</a><a href="#h6-3-19" id="h6-3-19" class="i">+            followPath(5) { decodeSnapDocMediaPlayback(type) }
+</a>         }
+ 
+<a href="#h6-3-22" id="h6-3-22" class="d">-        fun decodeSticker(protoReader: ProtoReader) {
+</a><a href="#h6-3-23" id="h6-3-23" class="d">-            protoReader.followPath(1) {
+</a><a href="#h6-3-24" id="h6-3-24" class="i">+        fun ProtoReader.decodeStickers() {
+</a><a href="#h6-3-25" id="h6-3-25" class="i">+            followPath(1) {
+</a><a href="#h6-3-26" id="h6-3-26" class="i">+                val packId = getString(1)
+</a><a href="#h6-3-27" id="h6-3-27" class="i">+                val reference = getString(2) ?: return@followPath
+</a><a href="#h6-3-28" id="h6-3-28" class="i">+                val stickerUrl = when (packId) {
+</a><a href="#h6-3-29" id="h6-3-29" class="i">+                    &quot;snap&quot; -&gt; &quot;https://gcs.sc-cdn.net/sticker-packs-sc/stickers/$reference&quot;
+</a><a href="#h6-3-30" id="h6-3-30" class="i">+                    &quot;bitmoji&quot; -&gt; reference.split(&quot;:&quot;).let {
+</a><a href="#h6-3-31" id="h6-3-31" class="i">+                        &quot;https://cf-st.sc-cdn.net/3d/render/${
+</a><a href="#h6-3-32" id="h6-3-32" class="i">+                            it.getOrNull(0) ?: return@followPath
+</a><a href="#h6-3-33" id="h6-3-33" class="i">+                        }-${it.drop(2).joinToString(&quot;-&quot;)}-v${it.getOrNull(1) ?: return@followPath}.webp?ua=2&quot;
+</a><a href="#h6-3-34" id="h6-3-34" class="i">+                    }
+</a><a href="#h6-3-35" id="h6-3-35" class="i">+                    else -&gt; return@followPath
+</a><a href="#h6-3-36" id="h6-3-36" class="i">+                }
+</a>                 decodedAttachment.add(
+                     DecodedAttachment(
+<a href="#h6-3-39" id="h6-3-39" class="d">-                        mediaUrlKey = null,
+</a><a href="#h6-3-40" id="h6-3-40" class="i">+                        boltKey = null,
+</a><a href="#h6-3-41" id="h6-3-41" class="i">+                        directUrl = stickerUrl,
+</a>                         type = AttachmentType.STICKER,
+                         attachmentInfo = BitmojiSticker(
+<a href="#h6-3-44" id="h6-3-44" class="d">-                            reference = getString(2) ?: return@followPath
+</a><a href="#h6-3-45" id="h6-3-45" class="i">+                            reference = reference
+</a>                         )
+                     )
+                 )
+             }
+<a href="#h6-3-50" id="h6-3-50" class="i">+            followPath(2, 1) {
+</a><a href="#h6-3-51" id="h6-3-51" class="i">+                decodedAttachment.add(
+</a><a href="#h6-3-52" id="h6-3-52" class="i">+                    DecodedAttachment(
+</a><a href="#h6-3-53" id="h6-3-53" class="i">+                        boltKey = mediaReferences.getOrNull(mediaKeyIndex++),
+</a><a href="#h6-3-54" id="h6-3-54" class="i">+                        type = AttachmentType.STICKER,
+</a><a href="#h6-3-55" id="h6-3-55" class="i">+                        attachmentInfo = decodeMediaMetadata()
+</a><a href="#h6-3-56" id="h6-3-56" class="i">+                    )
+</a><a href="#h6-3-57" id="h6-3-57" class="i">+                )
+</a><a href="#h6-3-58" id="h6-3-58" class="i">+            }
+</a>         }
+ 
+         fun ProtoReader.decodeShares() {
+             // saved story
+             followPath(24, 2) {
+<a href="#h6-3-64" id="h6-3-64" class="d">-                decodeSnapDocMedia(AttachmentType.EXTERNAL_MEDIA, this)
+</a><a href="#h6-3-65" id="h6-3-65" class="i">+                decodeSnapDocMedia(AttachmentType.EXTERNAL_MEDIA)
+</a>             }
+             // memories story
+             followPath(11) {
+                 eachBuffer(3) {
+<a href="#h6-3-70" id="h6-3-70" class="d">-                    decodeSnapDocMedia(AttachmentType.EXTERNAL_MEDIA, this)
+</a><a href="#h6-3-71" id="h6-3-71" class="i">+                    decodeSnapDocMedia(AttachmentType.EXTERNAL_MEDIA)
+</a>                 }
+             }
+         }
+<a href="#h6-4" id="h6-4" class="h">@@ -163,11 +231,11 @@ object MessageDecoder {
+</a>         mediaReader.apply {
+             // external media
+             eachBuffer(3, 3) {
+<a href="#h6-4-3" id="h6-4-3" class="d">-                decodeSnapDocMedia(AttachmentType.EXTERNAL_MEDIA, this)
+</a><a href="#h6-4-4" id="h6-4-4" class="i">+                decodeSnapDocMedia(AttachmentType.EXTERNAL_MEDIA)
+</a>             }
+ 
+             // stickers
+<a href="#h6-4-8" id="h6-4-8" class="d">-            followPath(4) { decodeSticker(this) }
+</a><a href="#h6-4-9" id="h6-4-9" class="i">+            followPath(4) { decodeStickers() }
+</a> 
+             // shares
+             followPath(5) {
+<a href="#h6-5" id="h6-5" class="h">@@ -176,11 +244,11 @@ object MessageDecoder {
+</a> 
+             // audio notes
+             followPath(6) note@{
+<a href="#h6-5-3" id="h6-5-3" class="d">-                val audioNote = decodeAttachment(this) ?: return@note
+</a><a href="#h6-5-4" id="h6-5-4" class="i">+                val audioNote = decodeAttachment() ?: return@note
+</a> 
+                 decodedAttachment.add(
+                     DecodedAttachment(
+<a href="#h6-5-8" id="h6-5-8" class="d">-                        mediaUrlKey = mediaReferences.getOrNull(mediaKeyIndex++),
+</a><a href="#h6-5-9" id="h6-5-9" class="i">+                        boltKey = mediaReferences.getOrNull(mediaKeyIndex++),
+</a>                         type = AttachmentType.NOTE,
+                         attachmentInfo = audioNote
+                     )
+<a href="#h6-6" id="h6-6" class="h">@@ -191,37 +259,71 @@ object MessageDecoder {
+</a>             followPath(7) {
+                 // original story reply
+                 followPath(3) {
+<a href="#h6-6-3" id="h6-6-3" class="d">-                    decodeSnapDocMedia(AttachmentType.ORIGINAL_STORY, this)
+</a><a href="#h6-6-4" id="h6-6-4" class="i">+                    decodeSnapDocMedia(AttachmentType.ORIGINAL_STORY)
+</a>                 }
+ 
+                 // external medias
+                 followPath(12) {
+<a href="#h6-6-9" id="h6-6-9" class="d">-                    eachBuffer(3) { decodeSnapDocMedia(AttachmentType.EXTERNAL_MEDIA, this) }
+</a><a href="#h6-6-10" id="h6-6-10" class="i">+                    eachBuffer(3) { decodeSnapDocMedia(AttachmentType.EXTERNAL_MEDIA) }
+</a>                 }
+ 
+                 // attached sticker
+<a href="#h6-6-14" id="h6-6-14" class="d">-                followPath(13) { decodeSticker(this) }
+</a><a href="#h6-6-15" id="h6-6-15" class="i">+                followPath(13) { decodeStickers()  }
+</a> 
+                 // reply shares
+                 followPath(14) { decodeShares() }
+ 
+                 // attached audio note
+<a href="#h6-6-21" id="h6-6-21" class="d">-                followPath(15) { decodeSnapDocMediaPlayback(AttachmentType.NOTE, this) }
+</a><a href="#h6-6-22" id="h6-6-22" class="i">+                followPath(15) { decodeSnapDocMediaPlayback(AttachmentType.NOTE) }
+</a> 
+                 // reply snap
+                 followPath(17) {
+<a href="#h6-6-26" id="h6-6-26" class="d">-                    decodeSnapDocMedia(AttachmentType.SNAP, this)
+</a><a href="#h6-6-27" id="h6-6-27" class="i">+                    decodeSnapDocMedia(AttachmentType.SNAP)
+</a>                 }
+             }
+ 
+             // snaps
+             followPath(11) {
+<a href="#h6-6-33" id="h6-6-33" class="d">-                decodeSnapDocMedia(AttachmentType.SNAP, this)
+</a><a href="#h6-6-34" id="h6-6-34" class="i">+                decodeSnapDocMedia(AttachmentType.SNAP)
+</a><a href="#h6-6-35" id="h6-6-35" class="i">+            }
+</a><a href="#h6-6-36" id="h6-6-36" class="i">+
+</a><a href="#h6-6-37" id="h6-6-37" class="i">+            // creative tools items
+</a><a href="#h6-6-38" id="h6-6-38" class="i">+            followPath(14, 2, 2) {
+</a><a href="#h6-6-39" id="h6-6-39" class="i">+                // custom sticker
+</a><a href="#h6-6-40" id="h6-6-40" class="i">+                followPath(3) sticker@{
+</a><a href="#h6-6-41" id="h6-6-41" class="i">+                    decodedAttachment.add(
+</a><a href="#h6-6-42" id="h6-6-42" class="i">+                        DecodedAttachment(
+</a><a href="#h6-6-43" id="h6-6-43" class="i">+                            boltKey = if (contains(4)) {
+</a><a href="#h6-6-44" id="h6-6-44" class="i">+                                Base64.UrlSafe.encode(getByteArray(4, 4) ?: return@sticker)
+</a><a href="#h6-6-45" id="h6-6-45" class="i">+                            } else mediaReferences.getOrNull(mediaKeyIndex++),
+</a><a href="#h6-6-46" id="h6-6-46" class="i">+                            type = AttachmentType.STICKER,
+</a><a href="#h6-6-47" id="h6-6-47" class="i">+                            attachmentInfo = AttachmentInfo(
+</a><a href="#h6-6-48" id="h6-6-48" class="i">+                                encryption = decodeClearTextEncryption(encoded = true) ?: followPath(5)
+</a><a href="#h6-6-49" id="h6-6-49" class="i">+                                    ?.decodeClearTextEncryption(encoded = false)
+</a><a href="#h6-6-50" id="h6-6-50" class="i">+                            )
+</a><a href="#h6-6-51" id="h6-6-51" class="i">+                        )
+</a><a href="#h6-6-52" id="h6-6-52" class="i">+                    )
+</a><a href="#h6-6-53" id="h6-6-53" class="i">+                }
+</a><a href="#h6-6-54" id="h6-6-54" class="i">+
+</a><a href="#h6-6-55" id="h6-6-55" class="i">+                // gifs
+</a><a href="#h6-6-56" id="h6-6-56" class="i">+                followPath(13) {
+</a><a href="#h6-6-57" id="h6-6-57" class="i">+                    eachBuffer(4) {
+</a><a href="#h6-6-58" id="h6-6-58" class="i">+                        followPath(2) {
+</a><a href="#h6-6-59" id="h6-6-59" class="i">+                            decodedAttachment.add(
+</a><a href="#h6-6-60" id="h6-6-60" class="i">+                                DecodedAttachment(
+</a><a href="#h6-6-61" id="h6-6-61" class="i">+                                    boltKey = getByteArray(4)?.let { Base64.UrlSafe.encode(it) },
+</a><a href="#h6-6-62" id="h6-6-62" class="i">+                                    type = AttachmentType.GIF,
+</a><a href="#h6-6-63" id="h6-6-63" class="i">+                                    attachmentInfo = null
+</a><a href="#h6-6-64" id="h6-6-64" class="i">+                                )
+</a><a href="#h6-6-65" id="h6-6-65" class="i">+                            )
+</a><a href="#h6-6-66" id="h6-6-66" class="i">+                        }
+</a><a href="#h6-6-67" id="h6-6-67" class="i">+                    }
+</a><a href="#h6-6-68" id="h6-6-68" class="i">+                }
+</a>             }
+ 
+             // map reaction
+             followPath(20, 2) {
+<a href="#h6-6-73" id="h6-6-73" class="d">-                decodeSnapDocMedia(AttachmentType.EXTERNAL_MEDIA, this)
+</a><a href="#h6-6-74" id="h6-6-74" class="i">+                decodeSnapDocMedia(AttachmentType.EXTERNAL_MEDIA)
+</a>             }
+         }
+ 
+<b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/FriendFeedMessagePreview.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/FriendFeedMessagePreview.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/FriendFeedMessagePreview.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/FriendFeedMessagePreview.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -25,6 +25,7 @@ import me.rhunk.snapenhance.core.util.EvictingMap
+</a> import me.rhunk.snapenhance.core.util.ktx.getDimens
+ import me.rhunk.snapenhance.core.util.ktx.getId
+ import me.rhunk.snapenhance.core.util.ktx.getIdentifier
+<a href="#h7-0-3" id="h7-0-3" class="i">+import me.rhunk.snapenhance.core.wrapper.impl.getMessageText
+</a> import java.util.WeakHashMap
+ import kotlin.math.absoluteValue
+ 
+<a href="#h7-1" id="h7-1" class="h">@@ -55,9 +56,8 @@ class FriendFeedMessagePreview : Feature(&quot;FriendFeedMessagePreview&quot;, loadParams 
+</a>                     }
+                     ?: return@mapNotNull null
+ 
+<a href="#h7-1-3" id="h7-1-3" class="d">-            val messageString = messageContainer.getString(2, 1)
+</a><a href="#h7-1-4" id="h7-1-4" class="d">-                ?: ContentType.fromMessageContainer(messageContainer)?.name
+</a><a href="#h7-1-5" id="h7-1-5" class="d">-                ?: ContentType.fromId(message.contentType)
+</a><a href="#h7-1-6" id="h7-1-6" class="i">+            val contentType = ContentType.fromMessageContainer(messageContainer) ?: ContentType.fromId(message.contentType)
+</a><a href="#h7-1-7" id="h7-1-7" class="i">+            val messageString = messageContainer.getBuffer().getMessageText(contentType) ?: contentType.name
+</a> 
+             val friendName = friendNameCache.getOrPut(message.senderId ?: return@mapNotNull null) {
+                 context.database.getFriendInfo(message.senderId ?: return@mapNotNull null)?.let { it.displayName?: it.mutableUsername } ?: &quot;Unknown&quot;
+<b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/ConversationExporter.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/ConversationExporter.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/ConversationExporter.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/ConversationExporter.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -9,9 +9,7 @@ import me.rhunk.snapenhance.common.data.ContentType
+</a> import me.rhunk.snapenhance.common.database.impl.FriendFeedEntry
+ import me.rhunk.snapenhance.common.database.impl.FriendInfo
+ import me.rhunk.snapenhance.common.util.snap.MediaDownloaderHelper
+<a href="#h8-0-3" id="h8-0-3" class="d">-import me.rhunk.snapenhance.common.util.snap.RemoteMediaResolver
+</a> import me.rhunk.snapenhance.core.ModContext
+<a href="#h8-0-5" id="h8-0-5" class="d">-import me.rhunk.snapenhance.core.features.impl.downloader.decoder.AttachmentType
+</a> import me.rhunk.snapenhance.core.features.impl.downloader.decoder.MessageDecoder
+ import me.rhunk.snapenhance.core.wrapper.impl.Message
+ import me.rhunk.snapenhance.core.wrapper.impl.SnapUUID
+<a href="#h8-1" id="h8-1" class="h">@@ -21,6 +19,7 @@ import java.io.InputStream
+</a> import java.io.OutputStream
+ import java.text.DateFormat
+ import java.util.Date
+<a href="#h8-1-3" id="h8-1-3" class="i">+import java.util.concurrent.CopyOnWriteArraySet
+</a> import java.util.concurrent.Executors
+ import java.util.zip.Deflater
+ import java.util.zip.DeflaterInputStream
+<a href="#h8-2" id="h8-2" class="h">@@ -104,54 +103,55 @@ class ConversationExporter(
+</a>         }
+     }
+ 
+<a href="#h8-2-3" id="h8-2-3" class="i">+    private val downloadedMediaIdCache = CopyOnWriteArraySet&lt;String&gt;()
+</a><a href="#h8-2-4" id="h8-2-4" class="i">+    private val pendingDownloadMediaIdCache = CopyOnWriteArraySet&lt;String&gt;()
+</a> 
+<a href="#h8-2-6" id="h8-2-6" class="d">-    @OptIn(ExperimentalEncodingApi::class)
+</a>     private fun downloadMedia(message: Message) {
+         downloadThreadExecutor.execute {
+             MessageDecoder.decode(message.messageContent!!).forEach decode@{ attachment -&gt;
+<a href="#h8-2-10" id="h8-2-10" class="d">-                if (attachment.mediaUrlKey?.isEmpty() == true) return@decode
+</a><a href="#h8-2-11" id="h8-2-11" class="d">-                val protoMediaReference = Base64.UrlSafe.decode(attachment.mediaUrlKey ?: return@decode)
+</a><a href="#h8-2-12" id="h8-2-12" class="d">-
+</a><a href="#h8-2-13" id="h8-2-13" class="i">+                if (attachment.mediaUniqueId in downloadedMediaIdCache || attachment.mediaUniqueId in pendingDownloadMediaIdCache) return@decode
+</a><a href="#h8-2-14" id="h8-2-14" class="i">+                pendingDownloadMediaIdCache.add(attachment.mediaUniqueId!!)
+</a>                 for (i in 0..5) {
+<a href="#h8-2-16" id="h8-2-16" class="d">-                    printLog(&quot;downloading ${attachment.mediaUrlKey}... (attempt ${i + 1}/5)&quot;)
+</a><a href="#h8-2-17" id="h8-2-17" class="i">+                    printLog(&quot;downloading ${attachment.boltKey ?: attachment.directUrl}... (attempt ${i + 1}/5)&quot;)
+</a>                     runCatching {
+<a href="#h8-2-19" id="h8-2-19" class="d">-                        RemoteMediaResolver.downloadBoltMedia(protoMediaReference, decryptionCallback = {
+</a><a href="#h8-2-20" id="h8-2-20" class="d">-                            (attachment.attachmentInfo?.encryption?.decryptInputStream(it) ?: it)
+</a><a href="#h8-2-21" id="h8-2-21" class="d">-                        }) { downloadedInputStream, _ -&gt;
+</a><a href="#h8-2-22" id="h8-2-22" class="d">-                            downloadedInputStream.use { inputStream -&gt;
+</a><a href="#h8-2-23" id="h8-2-23" class="d">-                                MediaDownloaderHelper.getSplitElements(inputStream) { type, splitInputStream -&gt;
+</a><a href="#h8-2-24" id="h8-2-24" class="d">-                                    val mediaKey = &quot;${type}_${Base64.UrlSafe.encode(protoMediaReference).replace(&quot;=&quot;, &quot;&quot;)}&quot;
+</a><a href="#h8-2-25" id="h8-2-25" class="d">-                                    val bufferedInputStream = BufferedInputStream(splitInputStream)
+</a><a href="#h8-2-26" id="h8-2-26" class="d">-                                    val fileType = MediaDownloaderHelper.getFileType(bufferedInputStream)
+</a><a href="#h8-2-27" id="h8-2-27" class="d">-                                    val mediaFile = cacheFolder.resolve(&quot;$mediaKey.${fileType.fileExtension}&quot;)
+</a><a href="#h8-2-28" id="h8-2-28" class="d">-
+</a><a href="#h8-2-29" id="h8-2-29" class="d">-                                    mediaFile.outputStream().use { fos -&gt;
+</a><a href="#h8-2-30" id="h8-2-30" class="d">-                                        bufferedInputStream.copyTo(fos)
+</a><a href="#h8-2-31" id="h8-2-31" class="d">-                                    }
+</a><a href="#h8-2-32" id="h8-2-32" class="i">+                        attachment.openStream { downloadedInputStream -&gt;
+</a><a href="#h8-2-33" id="h8-2-33" class="i">+                            MediaDownloaderHelper.getSplitElements(downloadedInputStream!!) { type, splitInputStream -&gt;
+</a><a href="#h8-2-34" id="h8-2-34" class="i">+                                val mediaKey = &quot;${type}_${attachment.mediaUniqueId}&quot;
+</a><a href="#h8-2-35" id="h8-2-35" class="i">+                                val bufferedInputStream = BufferedInputStream(splitInputStream)
+</a><a href="#h8-2-36" id="h8-2-36" class="i">+                                val fileType = MediaDownloaderHelper.getFileType(bufferedInputStream)
+</a><a href="#h8-2-37" id="h8-2-37" class="i">+                                val mediaFile = cacheFolder.resolve(&quot;$mediaKey.${fileType.fileExtension}&quot;)
+</a><a href="#h8-2-38" id="h8-2-38" class="i">+
+</a><a href="#h8-2-39" id="h8-2-39" class="i">+                                mediaFile.outputStream().use { fos -&gt;
+</a><a href="#h8-2-40" id="h8-2-40" class="i">+                                    bufferedInputStream.copyTo(fos)
+</a><a href="#h8-2-41" id="h8-2-41" class="i">+                                }
+</a> 
+<a href="#h8-2-43" id="h8-2-43" class="d">-                                    writeThreadExecutor.execute {
+</a><a href="#h8-2-44" id="h8-2-44" class="d">-                                        outputFileStream.write(&quot;&lt;div class=\&quot;media-$mediaKey\&quot;&gt;&lt;!-- &quot;.toByteArray())
+</a><a href="#h8-2-45" id="h8-2-45" class="d">-                                        mediaFile.inputStream().use {
+</a><a href="#h8-2-46" id="h8-2-46" class="d">-                                            val deflateInputStream = DeflaterInputStream(it, Deflater(Deflater.BEST_SPEED, true))
+</a><a href="#h8-2-47" id="h8-2-47" class="d">-                                            (XposedHelpers.newInstance(
+</a><a href="#h8-2-48" id="h8-2-48" class="d">-                                                Base64InputStream::class.java,
+</a><a href="#h8-2-49" id="h8-2-49" class="d">-                                                deflateInputStream,
+</a><a href="#h8-2-50" id="h8-2-50" class="d">-                                                android.util.Base64.DEFAULT or android.util.Base64.NO_WRAP,
+</a><a href="#h8-2-51" id="h8-2-51" class="d">-                                                true
+</a><a href="#h8-2-52" id="h8-2-52" class="d">-                                            ) as InputStream).copyTo(outputFileStream)
+</a><a href="#h8-2-53" id="h8-2-53" class="d">-                                            outputFileStream.write(&quot; --&gt;&lt;/div&gt;\n&quot;.toByteArray())
+</a><a href="#h8-2-54" id="h8-2-54" class="d">-                                            outputFileStream.flush()
+</a><a href="#h8-2-55" id="h8-2-55" class="d">-                                        }
+</a><a href="#h8-2-56" id="h8-2-56" class="i">+                                writeThreadExecutor.execute {
+</a><a href="#h8-2-57" id="h8-2-57" class="i">+                                    outputFileStream.write(&quot;&lt;div class=\&quot;media-$mediaKey\&quot;&gt;&lt;!-- &quot;.toByteArray())
+</a><a href="#h8-2-58" id="h8-2-58" class="i">+                                    mediaFile.inputStream().use {
+</a><a href="#h8-2-59" id="h8-2-59" class="i">+                                        val deflateInputStream = DeflaterInputStream(it, Deflater(Deflater.BEST_SPEED, true))
+</a><a href="#h8-2-60" id="h8-2-60" class="i">+                                        (XposedHelpers.newInstance(
+</a><a href="#h8-2-61" id="h8-2-61" class="i">+                                            Base64InputStream::class.java,
+</a><a href="#h8-2-62" id="h8-2-62" class="i">+                                            deflateInputStream,
+</a><a href="#h8-2-63" id="h8-2-63" class="i">+                                            android.util.Base64.DEFAULT or android.util.Base64.NO_WRAP,
+</a><a href="#h8-2-64" id="h8-2-64" class="i">+                                            true
+</a><a href="#h8-2-65" id="h8-2-65" class="i">+                                        ) as InputStream).copyTo(outputFileStream)
+</a><a href="#h8-2-66" id="h8-2-66" class="i">+                                        outputFileStream.write(&quot; --&gt;&lt;/div&gt;\n&quot;.toByteArray())
+</a><a href="#h8-2-67" id="h8-2-67" class="i">+                                        outputFileStream.flush()
+</a>                                     }
+                                 }
+                             }
+<a href="#h8-2-71" id="h8-2-71" class="i">+                            writeThreadExecutor.execute {
+</a><a href="#h8-2-72" id="h8-2-72" class="i">+                                downloadedMediaIdCache.add(attachment.mediaUniqueId!!)
+</a><a href="#h8-2-73" id="h8-2-73" class="i">+                            }
+</a>                         }
+                         return@decode
+                     }.onFailure {
+<a href="#h8-2-77" id="h8-2-77" class="d">-                        printLog(&quot;failed to download media ${attachment.mediaUrlKey}. retrying...&quot;)
+</a><a href="#h8-2-78" id="h8-2-78" class="i">+                        downloadedMediaIdCache.remove(attachment.mediaUniqueId!!)
+</a><a href="#h8-2-79" id="h8-2-79" class="i">+                        printLog(&quot;failed to download media ${attachment.boltKey}. retrying...&quot;)
+</a>                         it.printStackTrace()
+                     }
+                 }
+<a href="#h8-2-83" id="h8-2-83" class="i">+                pendingDownloadMediaIdCache.remove(attachment.mediaUniqueId!!)
+</a>             }
+         }
+     }
+<a href="#h8-3" id="h8-3" class="h">@@ -168,7 +168,13 @@ class ConversationExporter(
+</a>         }
+         val contentType = message.messageContent?.contentType ?: return
+ 
+<a href="#h8-3-3" id="h8-3-3" class="d">-        if (exportParams.downloadMedias &amp;&amp; (contentType == ContentType.NOTE || contentType == ContentType.SNAP || contentType == ContentType.EXTERNAL_MEDIA)) {
+</a><a href="#h8-3-4" id="h8-3-4" class="i">+        if (exportParams.downloadMedias &amp;&amp; (contentType == ContentType.NOTE ||
+</a><a href="#h8-3-5" id="h8-3-5" class="i">+                    contentType == ContentType.SNAP ||
+</a><a href="#h8-3-6" id="h8-3-6" class="i">+                    contentType == ContentType.EXTERNAL_MEDIA ||
+</a><a href="#h8-3-7" id="h8-3-7" class="i">+                    contentType == ContentType.STICKER ||
+</a><a href="#h8-3-8" id="h8-3-8" class="i">+                    contentType == ContentType.SHARE ||
+</a><a href="#h8-3-9" id="h8-3-9" class="i">+                    contentType == ContentType.MAP_REACTION)
+</a><a href="#h8-3-10" id="h8-3-10" class="i">+            ) {
+</a>             downloadMedia(message)
+         }
+ 
+<a href="#h8-4" id="h8-4" class="h">@@ -201,10 +207,9 @@ class ConversationExporter(
+</a>             name(&quot;attachments&quot;).beginArray()
+             MessageDecoder.decode(message.messageContent!!)
+                 .forEach attachments@{ attachments -&gt;
+<a href="#h8-4-3" id="h8-4-3" class="d">-                    if (attachments.type == AttachmentType.STICKER) //TODO: implement stickers
+</a><a href="#h8-4-4" id="h8-4-4" class="d">-                        return@attachments
+</a>                     beginObject()
+<a href="#h8-4-6" id="h8-4-6" class="d">-                    name(&quot;key&quot;).value(attachments.mediaUrlKey?.replace(&quot;=&quot;, &quot;&quot;))
+</a><a href="#h8-4-7" id="h8-4-7" class="i">+                    name(&quot;url&quot;).value(attachments.boltKey ?: attachments.directUrl)
+</a><a href="#h8-4-8" id="h8-4-8" class="i">+                    name(&quot;key&quot;).value(attachments.mediaUniqueId)
+</a>                     name(&quot;type&quot;).value(attachments.type.toString())
+                     name(&quot;encryption&quot;).apply {
+                         attachments.attachmentInfo?.encryption?.let { encryption -&gt;
+<b>diff --git a/<a id="h9" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/NewChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/NewChatActionMenu.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/NewChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/NewChatActionMenu.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -193,7 +193,7 @@ class NewChatActionMenu : AbstractMenu() {
+</a>                                 decodedAttachments.mapIndexed { index, attachment -&gt;
+                                     StringBuilder().apply {
+                                         append(&quot;---- media $index ----\n&quot;)
+<a href="#h9-0-3" id="h9-0-3" class="d">-                                        append(&quot;resolveProto: ${attachment.mediaUrlKey}\n&quot;)
+</a><a href="#h9-0-4" id="h9-0-4" class="i">+                                        append(&quot;resolveProto: ${attachment.boltKey}\n&quot;)
+</a>                                         append(&quot;type: ${attachment.type}\n&quot;)
+                                         attachment.attachmentInfo?.apply {
+                                             encryption?.let {
+<a href="#h9-1" id="h9-1" class="h">@@ -207,11 +207,16 @@ class NewChatActionMenu : AbstractMenu() {
+</a>                                             }
+                                         }
+                                         runCatching {
+<a href="#h9-1-3" id="h9-1-3" class="d">-                                            val mediaHeaders = RemoteMediaResolver.getMediaHeaders(
+</a><a href="#h9-1-4" id="h9-1-4" class="d">-                                                Base64.UrlSafe.decode(attachment.mediaUrlKey ?: return@runCatching))
+</a><a href="#h9-1-5" id="h9-1-5" class="d">-                                            append(&quot;content-type: ${mediaHeaders[&quot;content-type&quot;]}\n&quot;)
+</a><a href="#h9-1-6" id="h9-1-6" class="d">-                                            append(&quot;content-length: ${Formatter.formatShortFileSize(context, mediaHeaders[&quot;content-length&quot;]?.toLongOrNull() ?: 0)}\n&quot;)
+</a><a href="#h9-1-7" id="h9-1-7" class="d">-                                            append(&quot;creation-date: ${mediaHeaders[&quot;last-modified&quot;]}\n&quot;)
+</a><a href="#h9-1-8" id="h9-1-8" class="i">+                                            attachment.boltKey?.let {
+</a><a href="#h9-1-9" id="h9-1-9" class="i">+                                                val mediaHeaders = RemoteMediaResolver.getMediaHeaders(
+</a><a href="#h9-1-10" id="h9-1-10" class="i">+                                                    Base64.UrlSafe.decode(it))
+</a><a href="#h9-1-11" id="h9-1-11" class="i">+                                                append(&quot;content-type: ${mediaHeaders[&quot;content-type&quot;]}\n&quot;)
+</a><a href="#h9-1-12" id="h9-1-12" class="i">+                                                append(&quot;content-length: ${Formatter.formatShortFileSize(context, mediaHeaders[&quot;content-length&quot;]?.toLongOrNull() ?: 0)}\n&quot;)
+</a><a href="#h9-1-13" id="h9-1-13" class="i">+                                                append(&quot;creation-date: ${mediaHeaders[&quot;last-modified&quot;]}\n&quot;)
+</a><a href="#h9-1-14" id="h9-1-14" class="i">+                                            }
+</a><a href="#h9-1-15" id="h9-1-15" class="i">+                                            attachment.directUrl?.let {
+</a><a href="#h9-1-16" id="h9-1-16" class="i">+                                                append(&quot;url: $it\n&quot;)
+</a><a href="#h9-1-17" id="h9-1-17" class="i">+                                            }
+</a>                                         }
+                                     }.toString()
+                                 }.joinToString(&quot;\n\n&quot;)
+<b>diff --git a/<a id="h10" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/AbstractWrapper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/AbstractWrapper.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/AbstractWrapper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/AbstractWrapper.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -19,7 +19,7 @@ abstract class AbstractWrapper(
+</a>     inner class FieldAccessor&lt;T&gt;(private val fieldName: String, private val mapper: ((Any?) -&gt; T?)? = null) {
+         @Suppress(&quot;UNCHECKED_CAST&quot;)
+         operator fun getValue(obj: Any, property: KProperty&lt;*&gt;): T? {
+<a href="#h10-0-3" id="h10-0-3" class="d">-            val value = XposedHelpers.getObjectField(instance, fieldName)
+</a><a href="#h10-0-4" id="h10-0-4" class="i">+            val value = runCatching { XposedHelpers.getObjectField(instance, fieldName) }.getOrNull()
+</a>             return if (mapper != null) {
+                 mapper.invoke(value)
+             } else {
+<b>diff --git a/<a id="h11" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/Message.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/Message.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/Message.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/Message.kt</a></b>
+<a href="#h11-0" id="h11-0" class="h">@@ -7,6 +7,31 @@ import me.rhunk.snapenhance.core.wrapper.AbstractWrapper
+</a> import org.mozilla.javascript.annotations.JSGetter
+ import org.mozilla.javascript.annotations.JSSetter
+ 
+<a href="#h11-0-3" id="h11-0-3" class="i">+
+</a><a href="#h11-0-4" id="h11-0-4" class="i">+fun ByteArray.getMessageText(contentType: ContentType): String? {
+</a><a href="#h11-0-5" id="h11-0-5" class="i">+    val protoReader by lazy { ProtoReader(this) }
+</a><a href="#h11-0-6" id="h11-0-6" class="i">+    return when (contentType) {
+</a><a href="#h11-0-7" id="h11-0-7" class="i">+        ContentType.CHAT -&gt; protoReader.getString(2, 1) ?: &quot;Failed to parse message&quot;
+</a><a href="#h11-0-8" id="h11-0-8" class="i">+        ContentType.TINY_SNAP -&gt; protoReader.getString(19, 1, 1)
+</a><a href="#h11-0-9" id="h11-0-9" class="i">+        ContentType.EXTERNAL_MEDIA -&gt; protoReader.getString(7, 11, 1)
+</a><a href="#h11-0-10" id="h11-0-10" class="i">+        ContentType.SNAP -&gt; protoReader.followPath(11, 5)?.run {
+</a><a href="#h11-0-11" id="h11-0-11" class="i">+            val captions = mutableListOf&lt;String&gt;()
+</a><a href="#h11-0-12" id="h11-0-12" class="i">+
+</a><a href="#h11-0-13" id="h11-0-13" class="i">+            eachBuffer(1) {
+</a><a href="#h11-0-14" id="h11-0-14" class="i">+                followPath(4) {
+</a><a href="#h11-0-15" id="h11-0-15" class="i">+                    val caption = getString(3, 2, 1)
+</a><a href="#h11-0-16" id="h11-0-16" class="i">+                    if (caption != null) {
+</a><a href="#h11-0-17" id="h11-0-17" class="i">+                        captions.add(caption)
+</a><a href="#h11-0-18" id="h11-0-18" class="i">+                    }
+</a><a href="#h11-0-19" id="h11-0-19" class="i">+                }
+</a><a href="#h11-0-20" id="h11-0-20" class="i">+            }
+</a><a href="#h11-0-21" id="h11-0-21" class="i">+
+</a><a href="#h11-0-22" id="h11-0-22" class="i">+            captions.takeIf { it.isNotEmpty() }?.joinToString(&quot;\n&quot;)
+</a><a href="#h11-0-23" id="h11-0-23" class="i">+        }
+</a><a href="#h11-0-24" id="h11-0-24" class="i">+        else -&gt; null
+</a><a href="#h11-0-25" id="h11-0-25" class="i">+    }
+</a><a href="#h11-0-26" id="h11-0-26" class="i">+}
+</a><a href="#h11-0-27" id="h11-0-27" class="i">+
+</a> class Message(obj: Any?) : AbstractWrapper(obj) {
+     @get:JSGetter @set:JSSetter
+     var orderKey by field&lt;Long&gt;(&quot;mOrderKey&quot;)
+<a href="#h11-1" id="h11-1" class="h">@@ -21,7 +46,7 @@ class Message(obj: Any?) : AbstractWrapper(obj) {
+</a>     @get:JSGetter @set:JSSetter
+     var messageState by enum(&quot;mState&quot;, MessageState.COMMITTED)
+ 
+<a href="#h11-1-3" id="h11-1-3" class="d">-    fun serialize() = if (messageContent!!.contentType == ContentType.CHAT) {
+</a><a href="#h11-1-4" id="h11-1-4" class="d">-        ProtoReader(messageContent!!.content!!).getString(2, 1) ?: &quot;Failed to parse message&quot;
+</a><a href="#h11-1-5" id="h11-1-5" class="d">-    } else null
+</a><a href="#h11-1-6" id="h11-1-6" class="i">+    fun serialize(): String?{
+</a><a href="#h11-1-7" id="h11-1-7" class="i">+        return  messageContent?.content?.getMessageText(messageContent?.contentType ?: return null)
+</a><a href="#h11-1-8" id="h11-1-8" class="i">+    }
+</a> } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

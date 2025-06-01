@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(bridge): supports SDK &lt;30 - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/19ec7463b0257c8bb624cfabf868f0d7d5f3f4b4.html">19ec7463b0257c8bb624cfabf868f0d7d5f3f4b4</a>
+<b>parent</b> <a href="../commit/ee80ab9a3e0ac3d1c5be88a9d975dccfad7e0e60.html">ee80ab9a3e0ac3d1c5be88a9d975dccfad7e0e60</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 28 Jun 2023 00:02:42 +0200
+
+fix(bridge): supports SDK &lt;30
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a></td><td> | </td><td class="num">5</td><td><span class="i">++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/ServiceBridgeClient.kt</a></td><td> | </td><td class="num">29</td><td><span class="i">+++++++++++++++++++</span><span class="d">----------</span></td></tr>
+</table></pre><pre>2 files changed, 21 insertions(+), 13 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -80,10 +80,9 @@ class SnapEnhance {
+</a> 
+     @SuppressLint(&quot;ObsoleteSdkInt&quot;)
+     private fun provideBridgeClient(): AbstractBridgeClient {
+<a href="#h0-0-3" id="h0-0-3" class="d">-        //unsafe way for Android 9 devices
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-        if (Build.VERSION.SDK_INT &lt;= Build.VERSION_CODES.P) {
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+        /*if (Build.VERSION.SDK_INT &lt;= Build.VERSION_CODES.P) {
+</a>             return RootBridgeClient()
+<a href="#h0-0-7" id="h0-0-7" class="d">-        }
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+        }*/
+</a>         return ServiceBridgeClient()
+     }
+ 
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/ServiceBridgeClient.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/ServiceBridgeClient.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/ServiceBridgeClient.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/client/ServiceBridgeClient.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,7 +1,6 @@
+</a> package me.rhunk.snapenhance.bridge.client
+ 
+ 
+<a href="#h1-0-3" id="h1-0-3" class="d">-import android.annotation.TargetApi
+</a> import android.content.ComponentName
+ import android.content.Context
+ import android.content.Intent
+<a href="#h1-1" id="h1-1" class="h">@@ -13,6 +12,7 @@ import android.os.HandlerThread
+</a> import android.os.IBinder
+ import android.os.Message
+ import android.os.Messenger
+<a href="#h1-1-3" id="h1-1-3" class="i">+import de.robv.android.xposed.XposedHelpers
+</a> import kotlinx.coroutines.runBlocking
+ import kotlinx.coroutines.suspendCancellableCoroutine
+ import me.rhunk.snapenhance.BuildConfig
+<a href="#h1-2" id="h1-2" class="h">@@ -33,19 +33,16 @@ import me.rhunk.snapenhance.bridge.common.impl.messagelogger.MessageLoggerResult
+</a> import me.rhunk.snapenhance.bridge.service.BridgeService
+ import java.util.concurrent.CompletableFuture
+ import java.util.concurrent.Executors
+<a href="#h1-2-3" id="h1-2-3" class="d">-import java.util.concurrent.locks.ReentrantLock
+</a> import kotlin.reflect.KClass
+ import kotlin.system.exitProcess
+ 
+ 
+ class ServiceBridgeClient: AbstractBridgeClient(), ServiceConnection {
+     private val handlerThread = HandlerThread(&quot;BridgeClient&quot;)
+<a href="#h1-2-10" id="h1-2-10" class="d">-    private val lock = ReentrantLock()
+</a> 
+     private lateinit var messenger: Messenger
+     private lateinit var future: CompletableFuture&lt;Boolean&gt;
+ 
+<a href="#h1-2-15" id="h1-2-15" class="d">-    @TargetApi(Build.VERSION_CODES.Q)
+</a>     override fun start(callback: (Boolean) -&gt; Unit) {
+         this.future = CompletableFuture()
+         this.handlerThread.start()
+<a href="#h1-3" id="h1-3" class="h">@@ -53,12 +50,24 @@ class ServiceBridgeClient: AbstractBridgeClient(), ServiceConnection {
+</a>         with(context.androidContext) {
+             val intent = Intent()
+                 .setClassName(BuildConfig.APPLICATION_ID, BridgeService::class.java.name)
+<a href="#h1-3-3" id="h1-3-3" class="d">-            bindService(
+</a><a href="#h1-3-4" id="h1-3-4" class="d">-                intent,
+</a><a href="#h1-3-5" id="h1-3-5" class="d">-                Context.BIND_AUTO_CREATE,
+</a><a href="#h1-3-6" id="h1-3-6" class="d">-                Executors.newSingleThreadExecutor(),
+</a><a href="#h1-3-7" id="h1-3-7" class="d">-                this@ServiceBridgeClient
+</a><a href="#h1-3-8" id="h1-3-8" class="d">-            )
+</a><a href="#h1-3-9" id="h1-3-9" class="i">+            if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.Q) {
+</a><a href="#h1-3-10" id="h1-3-10" class="i">+                bindService(
+</a><a href="#h1-3-11" id="h1-3-11" class="i">+                    intent,
+</a><a href="#h1-3-12" id="h1-3-12" class="i">+                    Context.BIND_AUTO_CREATE,
+</a><a href="#h1-3-13" id="h1-3-13" class="i">+                    Executors.newSingleThreadExecutor(),
+</a><a href="#h1-3-14" id="h1-3-14" class="i">+                    this@ServiceBridgeClient
+</a><a href="#h1-3-15" id="h1-3-15" class="i">+                )
+</a><a href="#h1-3-16" id="h1-3-16" class="i">+            } else {
+</a><a href="#h1-3-17" id="h1-3-17" class="i">+                XposedHelpers.callMethod(
+</a><a href="#h1-3-18" id="h1-3-18" class="i">+                    this,
+</a><a href="#h1-3-19" id="h1-3-19" class="i">+                    &quot;bindServiceAsUser&quot;,
+</a><a href="#h1-3-20" id="h1-3-20" class="i">+                    intent,
+</a><a href="#h1-3-21" id="h1-3-21" class="i">+                    this@ServiceBridgeClient,
+</a><a href="#h1-3-22" id="h1-3-22" class="i">+                    Context.BIND_AUTO_CREATE,
+</a><a href="#h1-3-23" id="h1-3-23" class="i">+                    Handler(handlerThread.looper),
+</a><a href="#h1-3-24" id="h1-3-24" class="i">+                    android.os.Process.myUserHandle()
+</a><a href="#h1-3-25" id="h1-3-25" class="i">+                )
+</a><a href="#h1-3-26" id="h1-3-26" class="i">+            }
+</a>         }
+         callback(future.get())
+     }
+</pre>
+</div>
+</body>
+</html>

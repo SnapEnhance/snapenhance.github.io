@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(bulk_messaging_action): search bar - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/4fd52c0c3c566b88260766eb7e44c012d055b359.html">4fd52c0c3c566b88260766eb7e44c012d055b359</a>
+<b>parent</b> <a href="../commit/a373c8fceb559147ca0fd5c9941bef7b7d00017b.html">a373c8fceb559147ca0fd5c9941bef7b7d00017b</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 30 Mar 2024 10:57:54 +0100
+
+feat(bulk_messaging_action): search bar
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/kotlin/me/rhunk/snapenhance/common/ui/ComposeViewFactory.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a></td><td> | </td><td class="num">147</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-------------------------</span></td></tr>
+</table></pre><pre>2 files changed, 106 insertions(+), 49 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/ui/ComposeViewFactory.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/ui/ComposeViewFactory.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/ui/ComposeViewFactory.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/ui/ComposeViewFactory.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -3,6 +3,8 @@ package me.rhunk.snapenhance.common.ui
+</a> import android.app.AlertDialog
+ import android.content.Context
+ import android.os.Bundle
+<a href="#h0-0-3" id="h0-0-3" class="i">+import android.os.Handler
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+import android.os.Looper
+</a> import android.view.WindowManager
+ import androidx.activity.OnBackPressedDispatcher
+ import androidx.activity.OnBackPressedDispatcherOwner
+<a href="#h0-1" id="h0-1" class="h">@@ -79,8 +81,10 @@ fun createComposeAlertDialog(context: Context, builder: AlertDialog.Builder.() -
+</a>         })
+         .create().apply {
+             alertDialog = this
+<a href="#h0-1-3" id="h0-1-3" class="d">-            window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-            window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+            Handler(Looper.getMainLooper()).post {
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+                window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+                window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+            }
+</a>         }
+ }
+ 
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -4,7 +4,9 @@ import android.content.Context
+</a> import android.graphics.Bitmap
+ import android.graphics.BitmapFactory
+ import android.widget.ProgressBar
+<a href="#h1-0-3" id="h1-0-3" class="i">+import androidx.compose.foundation.ExperimentalFoundationApi
+</a> import androidx.compose.foundation.Image
+<a href="#h1-0-5" id="h1-0-5" class="i">+import androidx.compose.foundation.background
+</a> import androidx.compose.foundation.clickable
+ import androidx.compose.foundation.gestures.detectTapGestures
+ import androidx.compose.foundation.layout.*
+<a href="#h1-1" id="h1-1" class="h">@@ -14,9 +16,11 @@ import androidx.compose.material3.*
+</a> import androidx.compose.runtime.*
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+<a href="#h1-1-3" id="h1-1-3" class="i">+import androidx.compose.ui.graphics.Color
+</a> import androidx.compose.ui.graphics.asImageBitmap
+ import androidx.compose.ui.input.pointer.pointerInput
+ import androidx.compose.ui.platform.LocalContext
+<a href="#h1-1-7" id="h1-1-7" class="i">+import androidx.compose.ui.platform.LocalFocusManager
+</a> import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.text.style.TextAlign
+ import androidx.compose.ui.text.style.TextOverflow
+<a href="#h1-2" id="h1-2" class="h">@@ -85,7 +89,7 @@ class BulkMessagingAction : AbstractAction() {
+</a>                         translation.format(&quot;progress_status&quot;, &quot;index&quot; to index.toString(), &quot;total&quot; to ids.size.toString())
+                     )
+                 }
+<a href="#h1-2-3" id="h1-2-3" class="d">-                delay(500)
+</a><a href="#h1-2-4" id="h1-2-4" class="i">+                delay(100)
+</a>             }
+             withContext(Dispatchers.Main) {
+                 dialog.dismiss()
+<a href="#h1-3" id="h1-3" class="h">@@ -115,10 +119,34 @@ class BulkMessagingAction : AbstractAction() {
+</a>         )
+     }
+ 
+<a href="#h1-3-3" id="h1-3-3" class="i">+    private fun filterFriends(friends: List&lt;FriendInfo&gt;, filter: Filter, nameFilter: String): List&lt;FriendInfo&gt; {
+</a><a href="#h1-3-4" id="h1-3-4" class="i">+        val userIdBlacklist = arrayOf(
+</a><a href="#h1-3-5" id="h1-3-5" class="i">+            context.database.myUserId,
+</a><a href="#h1-3-6" id="h1-3-6" class="i">+            &quot;b42f1f70-5a8b-4c53-8c25-34e7ec9e6781&quot;, // myai
+</a><a href="#h1-3-7" id="h1-3-7" class="i">+            &quot;84ee8839-3911-492d-8b94-72dd80f3713a&quot;, // teamsnapchat
+</a><a href="#h1-3-8" id="h1-3-8" class="i">+        )
+</a><a href="#h1-3-9" id="h1-3-9" class="i">+        return friends.filter { friend -&gt;
+</a><a href="#h1-3-10" id="h1-3-10" class="i">+            friend.userId !in userIdBlacklist &amp;&amp; when (filter) {
+</a><a href="#h1-3-11" id="h1-3-11" class="i">+                Filter.ALL -&gt; true
+</a><a href="#h1-3-12" id="h1-3-12" class="i">+                Filter.MY_FRIENDS -&gt; friend.friendLinkType == FriendLinkType.MUTUAL.value &amp;&amp; friend.addedTimestamp &gt; 0
+</a><a href="#h1-3-13" id="h1-3-13" class="i">+                Filter.BLOCKED -&gt; friend.friendLinkType == FriendLinkType.BLOCKED.value
+</a><a href="#h1-3-14" id="h1-3-14" class="i">+                Filter.REMOVED_ME -&gt; friend.friendLinkType == FriendLinkType.OUTGOING.value &amp;&amp; friend.addedTimestamp &gt; 0 &amp;&amp; friend.businessCategory == 0 // ignore followed accounts
+</a><a href="#h1-3-15" id="h1-3-15" class="i">+                Filter.SUGGESTED -&gt; friend.friendLinkType == FriendLinkType.SUGGESTED.value
+</a><a href="#h1-3-16" id="h1-3-16" class="i">+                Filter.DELETED -&gt; friend.friendLinkType == FriendLinkType.DELETED.value
+</a><a href="#h1-3-17" id="h1-3-17" class="i">+                Filter.BUSINESS_ACCOUNTS -&gt; friend.businessCategory &gt; 0
+</a><a href="#h1-3-18" id="h1-3-18" class="i">+            } &amp;&amp; nameFilter.takeIf { it.isNotBlank() }?.let { name -&gt;
+</a><a href="#h1-3-19" id="h1-3-19" class="i">+                friend.mutableUsername?.contains(
+</a><a href="#h1-3-20" id="h1-3-20" class="i">+                    name,
+</a><a href="#h1-3-21" id="h1-3-21" class="i">+                    ignoreCase = true
+</a><a href="#h1-3-22" id="h1-3-22" class="i">+                ) == true || friend.displayName?.contains(name, ignoreCase = true) == true
+</a><a href="#h1-3-23" id="h1-3-23" class="i">+            } ?: true
+</a><a href="#h1-3-24" id="h1-3-24" class="i">+        }
+</a><a href="#h1-3-25" id="h1-3-25" class="i">+    }
+</a> 
+<a href="#h1-3-27" id="h1-3-27" class="d">-    @OptIn(ExperimentalMaterial3Api::class)
+</a><a href="#h1-3-28" id="h1-3-28" class="i">+    @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+</a>     @Composable
+     private fun BulkMessagingDialog() {
+<a href="#h1-3-31" id="h1-3-31" class="i">+        val coroutineScope = rememberCoroutineScope { Dispatchers.IO }
+</a>         var sortBy by remember { mutableStateOf(SortBy.USERNAME) }
+         var filter by remember { mutableStateOf(Filter.REMOVED_ME) }
+         var sortReverseOrder by remember { mutableStateOf(false) }
+<a href="#h1-4" id="h1-4" class="h">@@ -127,27 +155,13 @@ class BulkMessagingAction : AbstractAction() {
+</a>         val bitmojiCache = remember { EvictingMap&lt;String, Bitmap&gt;(50) }
+         val noBitmojiBitmap = remember { BitmapFactory.decodeResource(context.resources, android.R.drawable.ic_menu_report_image).asImageBitmap() }
+ 
+<a href="#h1-4-3" id="h1-4-3" class="d">-        suspend fun refreshList() {
+</a><a href="#h1-4-4" id="h1-4-4" class="d">-            withContext(Dispatchers.Main) {
+</a><a href="#h1-4-5" id="h1-4-5" class="d">-                selectedFriends.clear()
+</a><a href="#h1-4-6" id="h1-4-6" class="d">-                friends.clear()
+</a><a href="#h1-4-7" id="h1-4-7" class="d">-            }
+</a><a href="#h1-4-8" id="h1-4-8" class="i">+        val focusManager = LocalFocusManager.current
+</a><a href="#h1-4-9" id="h1-4-9" class="i">+        var nameFilter by remember { mutableStateOf(&quot;&quot;) }
+</a><a href="#h1-4-10" id="h1-4-10" class="i">+
+</a><a href="#h1-4-11" id="h1-4-11" class="i">+        suspend fun refreshList(clearSelected: Boolean = true) {
+</a>             withContext(Dispatchers.IO) {
+<a href="#h1-4-13" id="h1-4-13" class="d">-                val userIdBlacklist = arrayOf(
+</a><a href="#h1-4-14" id="h1-4-14" class="d">-                    context.database.myUserId,
+</a><a href="#h1-4-15" id="h1-4-15" class="d">-                    &quot;b42f1f70-5a8b-4c53-8c25-34e7ec9e6781&quot;, // myai
+</a><a href="#h1-4-16" id="h1-4-16" class="d">-                    &quot;84ee8839-3911-492d-8b94-72dd80f3713a&quot;, // teamsnapchat
+</a><a href="#h1-4-17" id="h1-4-17" class="d">-                )
+</a><a href="#h1-4-18" id="h1-4-18" class="d">-                val newFriends = context.database.getAllFriends().filter {
+</a><a href="#h1-4-19" id="h1-4-19" class="d">-                    it.userId !in userIdBlacklist &amp;&amp; when (filter) {
+</a><a href="#h1-4-20" id="h1-4-20" class="d">-                        Filter.ALL -&gt; true
+</a><a href="#h1-4-21" id="h1-4-21" class="d">-                        Filter.MY_FRIENDS -&gt; it.friendLinkType == FriendLinkType.MUTUAL.value &amp;&amp; it.addedTimestamp &gt; 0
+</a><a href="#h1-4-22" id="h1-4-22" class="d">-                        Filter.BLOCKED -&gt; it.friendLinkType == FriendLinkType.BLOCKED.value
+</a><a href="#h1-4-23" id="h1-4-23" class="d">-                        Filter.REMOVED_ME -&gt; it.friendLinkType == FriendLinkType.OUTGOING.value &amp;&amp; it.addedTimestamp &gt; 0 &amp;&amp; it.businessCategory == 0 // ignore followed accounts
+</a><a href="#h1-4-24" id="h1-4-24" class="d">-                        Filter.SUGGESTED -&gt; it.friendLinkType == FriendLinkType.SUGGESTED.value
+</a><a href="#h1-4-25" id="h1-4-25" class="d">-                        Filter.DELETED -&gt; it.friendLinkType == FriendLinkType.DELETED.value
+</a><a href="#h1-4-26" id="h1-4-26" class="d">-                        Filter.BUSINESS_ACCOUNTS -&gt; it.businessCategory &gt; 0
+</a><a href="#h1-4-27" id="h1-4-27" class="d">-                    }
+</a><a href="#h1-4-28" id="h1-4-28" class="i">+                val newFriends = context.database.getAllFriends().let { friends -&gt;
+</a><a href="#h1-4-29" id="h1-4-29" class="i">+                    filterFriends(friends, filter, nameFilter)
+</a>                 }.toMutableList()
+                 when (sortBy) {
+                     SortBy.NONE -&gt; {}
+<a href="#h1-5" id="h1-5" class="h">@@ -158,6 +172,8 @@ class BulkMessagingAction : AbstractAction() {
+</a>                 }
+                 if (sortReverseOrder) newFriends.reverse()
+                 withContext(Dispatchers.Main) {
+<a href="#h1-5-3" id="h1-5-3" class="i">+                    if (clearSelected) selectedFriends.clear()
+</a><a href="#h1-5-4" id="h1-5-4" class="i">+                    friends.clear()
+</a>                     friends.addAll(newFriends)
+                 }
+             }
+<a href="#h1-6" id="h1-6" class="h">@@ -245,32 +261,59 @@ class BulkMessagingAction : AbstractAction() {
+</a>                     .weight(1f),
+                 verticalArrangement = Arrangement.spacedBy(2.dp)
+             ) {
+<a href="#h1-6-3" id="h1-6-3" class="d">-                item {
+</a><a href="#h1-6-4" id="h1-6-4" class="d">-                    if (friends.isNotEmpty()) {
+</a><a href="#h1-6-5" id="h1-6-5" class="d">-                        Row(
+</a><a href="#h1-6-6" id="h1-6-6" class="d">-                            modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
+</a><a href="#h1-6-7" id="h1-6-7" class="d">-                            horizontalArrangement = Arrangement.End,
+</a><a href="#h1-6-8" id="h1-6-8" class="d">-                            verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h1-6-9" id="h1-6-9" class="d">-                        ) {
+</a><a href="#h1-6-10" id="h1-6-10" class="d">-                            Text(text = &quot;Selected &quot; + selectedFriends.size + &quot; friends&quot;, fontSize = 12.sp, fontWeight = FontWeight.Light)
+</a><a href="#h1-6-11" id="h1-6-11" class="d">-                            Checkbox(
+</a><a href="#h1-6-12" id="h1-6-12" class="d">-                                checked = selectedFriends.size == friends.size,
+</a><a href="#h1-6-13" id="h1-6-13" class="d">-                                onCheckedChange = { state -&gt;
+</a><a href="#h1-6-14" id="h1-6-14" class="d">-                                    if (state) {
+</a><a href="#h1-6-15" id="h1-6-15" class="d">-                                        friends.mapNotNull { it.userId }.forEach { userId -&gt;
+</a><a href="#h1-6-16" id="h1-6-16" class="d">-                                            if (!selectedFriends.contains(userId)) {
+</a><a href="#h1-6-17" id="h1-6-17" class="d">-                                                selectedFriends.add(userId)
+</a><a href="#h1-6-18" id="h1-6-18" class="d">-                                            }
+</a><a href="#h1-6-19" id="h1-6-19" class="i">+                stickyHeader {
+</a><a href="#h1-6-20" id="h1-6-20" class="i">+                    Row(
+</a><a href="#h1-6-21" id="h1-6-21" class="i">+                        modifier = Modifier
+</a><a href="#h1-6-22" id="h1-6-22" class="i">+                            .fillMaxWidth()
+</a><a href="#h1-6-23" id="h1-6-23" class="i">+                            .background(MaterialTheme.colorScheme.surface)
+</a><a href="#h1-6-24" id="h1-6-24" class="i">+                            .padding(bottom = 2.dp),
+</a><a href="#h1-6-25" id="h1-6-25" class="i">+                        horizontalArrangement = Arrangement.End,
+</a><a href="#h1-6-26" id="h1-6-26" class="i">+                        verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h1-6-27" id="h1-6-27" class="i">+                    ) {
+</a><a href="#h1-6-28" id="h1-6-28" class="i">+                        TextField(
+</a><a href="#h1-6-29" id="h1-6-29" class="i">+                            value = nameFilter,
+</a><a href="#h1-6-30" id="h1-6-30" class="i">+                            onValueChange = {
+</a><a href="#h1-6-31" id="h1-6-31" class="i">+                                nameFilter = it
+</a><a href="#h1-6-32" id="h1-6-32" class="i">+                                coroutineScope.launch { refreshList(clearSelected = false) }
+</a><a href="#h1-6-33" id="h1-6-33" class="i">+                            },
+</a><a href="#h1-6-34" id="h1-6-34" class="i">+                            placeholder = { Text(text = &quot;Search by name&quot;) },
+</a><a href="#h1-6-35" id="h1-6-35" class="i">+                            singleLine = true,
+</a><a href="#h1-6-36" id="h1-6-36" class="i">+                            modifier = Modifier
+</a><a href="#h1-6-37" id="h1-6-37" class="i">+                                .padding(end = 5.dp),
+</a><a href="#h1-6-38" id="h1-6-38" class="i">+                            colors = TextFieldDefaults.colors(
+</a><a href="#h1-6-39" id="h1-6-39" class="i">+                                focusedContainerColor = Color.Transparent,
+</a><a href="#h1-6-40" id="h1-6-40" class="i">+                                unfocusedContainerColor = Color.Transparent
+</a><a href="#h1-6-41" id="h1-6-41" class="i">+                            ),
+</a><a href="#h1-6-42" id="h1-6-42" class="i">+                        )
+</a><a href="#h1-6-43" id="h1-6-43" class="i">+
+</a><a href="#h1-6-44" id="h1-6-44" class="i">+                        Checkbox(
+</a><a href="#h1-6-45" id="h1-6-45" class="i">+                            checked = if (friends.isEmpty() || selectedFriends.size &lt; friends.size) false else friends.all { friend -&gt; selectedFriends.contains(friend.userId) },
+</a><a href="#h1-6-46" id="h1-6-46" class="i">+                            onCheckedChange = { state -&gt;
+</a><a href="#h1-6-47" id="h1-6-47" class="i">+                                if (state) {
+</a><a href="#h1-6-48" id="h1-6-48" class="i">+                                    friends.mapNotNull { it.userId }.forEach { userId -&gt;
+</a><a href="#h1-6-49" id="h1-6-49" class="i">+                                        if (!selectedFriends.contains(userId)) {
+</a><a href="#h1-6-50" id="h1-6-50" class="i">+                                            selectedFriends.add(userId)
+</a><a href="#h1-6-51" id="h1-6-51" class="i">+                                        }
+</a><a href="#h1-6-52" id="h1-6-52" class="i">+                                    }
+</a><a href="#h1-6-53" id="h1-6-53" class="i">+                                } else {
+</a><a href="#h1-6-54" id="h1-6-54" class="i">+                                    if (nameFilter.isNotBlank()) {
+</a><a href="#h1-6-55" id="h1-6-55" class="i">+                                        filterFriends(friends, filter, nameFilter).mapNotNull { it.userId }.forEach { userId -&gt;
+</a><a href="#h1-6-56" id="h1-6-56" class="i">+                                            selectedFriends.remove(userId)
+</a>                                         }
+<a href="#h1-6-58" id="h1-6-58" class="d">-                                    } else selectedFriends.clear()
+</a><a href="#h1-6-59" id="h1-6-59" class="i">+                                    } else {
+</a><a href="#h1-6-60" id="h1-6-60" class="i">+                                        selectedFriends.clear()
+</a><a href="#h1-6-61" id="h1-6-61" class="i">+                                    }
+</a>                                 }
+<a href="#h1-6-63" id="h1-6-63" class="d">-                            )
+</a><a href="#h1-6-64" id="h1-6-64" class="d">-                        }
+</a><a href="#h1-6-65" id="h1-6-65" class="d">-                    } else {
+</a><a href="#h1-6-66" id="h1-6-66" class="i">+                            }
+</a><a href="#h1-6-67" id="h1-6-67" class="i">+                        )
+</a><a href="#h1-6-68" id="h1-6-68" class="i">+                    }
+</a><a href="#h1-6-69" id="h1-6-69" class="i">+                }
+</a><a href="#h1-6-70" id="h1-6-70" class="i">+                item {
+</a><a href="#h1-6-71" id="h1-6-71" class="i">+                    if (friends.isEmpty()) {
+</a>                         Text(text = &quot;No friends found&quot;, fontSize = 12.sp, fontWeight = FontWeight.Light, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                     }
+                 }
+<a href="#h1-6-75" id="h1-6-75" class="d">-                items(friends) { friendInfo -&gt;
+</a><a href="#h1-6-76" id="h1-6-76" class="i">+                items(friends, key = { it.userId!! }) { friendInfo -&gt;
+</a>                     var bitmojiBitmap by remember(friendInfo) { mutableStateOf(bitmojiCache[friendInfo.bitmojiAvatarId]) }
+ 
+                     fun selectFriend(state: Boolean) {
+<a href="#h1-7" id="h1-7" class="h">@@ -393,7 +436,7 @@ class BulkMessagingAction : AbstractAction() {
+</a>                                                 context.shortToast(&quot;Failed to clear conversation: $error&quot;)
+                                             })
+                                         }.invokeOnCompletion {
+<a href="#h1-7-3" id="h1-7-3" class="d">-                                            context.coroutineScope.launch { refreshList() }
+</a><a href="#h1-7-4" id="h1-7-4" class="i">+                                            coroutineScope.launch { refreshList() }
+</a>                                         }
+                                     }
+                                 })
+<a href="#h1-8" id="h1-8" class="h">@@ -415,7 +458,7 @@ class BulkMessagingAction : AbstractAction() {
+</a>                             removeAction(ctx, selectedFriends.toList().also {
+                                 selectedFriends.clear()
+                             }) { removeFriend(it) }.invokeOnCompletion {
+<a href="#h1-8-3" id="h1-8-3" class="d">-                                context.coroutineScope.launch { refreshList() }
+</a><a href="#h1-8-4" id="h1-8-4" class="i">+                                coroutineScope.launch { refreshList() }
+</a>                             }
+                         }
+                     },
+<a href="#h1-9" id="h1-9" class="h">@@ -426,8 +469,18 @@ class BulkMessagingAction : AbstractAction() {
+</a>             }
+         }
+ 
+<a href="#h1-9-3" id="h1-9-3" class="d">-        LaunchedEffect(filter, sortBy, sortReverseOrder) {
+</a><a href="#h1-9-4" id="h1-9-4" class="d">-            refreshList()
+</a><a href="#h1-9-5" id="h1-9-5" class="i">+        LaunchedEffect(sortBy, sortReverseOrder) {
+</a><a href="#h1-9-6" id="h1-9-6" class="i">+            coroutineScope.launch {
+</a><a href="#h1-9-7" id="h1-9-7" class="i">+                refreshList(clearSelected = false)
+</a><a href="#h1-9-8" id="h1-9-8" class="i">+            }
+</a><a href="#h1-9-9" id="h1-9-9" class="i">+            focusManager.clearFocus()
+</a><a href="#h1-9-10" id="h1-9-10" class="i">+        }
+</a><a href="#h1-9-11" id="h1-9-11" class="i">+
+</a><a href="#h1-9-12" id="h1-9-12" class="i">+        LaunchedEffect(filter) {
+</a><a href="#h1-9-13" id="h1-9-13" class="i">+            coroutineScope.launch {
+</a><a href="#h1-9-14" id="h1-9-14" class="i">+                refreshList()
+</a><a href="#h1-9-15" id="h1-9-15" class="i">+            }
+</a><a href="#h1-9-16" id="h1-9-16" class="i">+            focusManager.clearFocus()
+</a>         }
+     }
+ 
+</pre>
+</div>
+</body>
+</html>

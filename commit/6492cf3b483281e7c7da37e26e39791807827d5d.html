@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: group chat menu - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/6492cf3b483281e7c7da37e26e39791807827d5d.html">6492cf3b483281e7c7da37e26e39791807827d5d</a>
+<b>parent</b> <a href="../commit/d18dff61d3f394e9c18c92eadcacdc0b54bc02c6.html">d18dff61d3f394e9c18c92eadcacdc0b54bc02c6</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 11 Jun 2023 12:25:45 +0200
+
+feat: group chat menu
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/MenuViewInjector.kt</a></td><td> | </td><td class="num">59</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">---------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/FriendFeedInfoMenu.kt</a></td><td> | </td><td class="num">30</td><td><span class="i">+++++++++++++++++</span><span class="d">-------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/hook/Hooker.kt</a></td><td> | </td><td class="num">13</td><td><span class="i">+++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>3 files changed, 74 insertions(+), 28 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/MenuViewInjector.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/MenuViewInjector.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/MenuViewInjector.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/MenuViewInjector.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,11 +1,11 @@
+</a> package me.rhunk.snapenhance.features.impl.ui.menus
+ 
+ import android.annotation.SuppressLint
+<a href="#h0-0-3" id="h0-0-3" class="i">+import android.view.Gravity
+</a> import android.view.View
+ import android.view.ViewGroup
+ import android.widget.FrameLayout
+ import android.widget.LinearLayout
+<a href="#h0-0-8" id="h0-0-8" class="d">-import de.robv.android.xposed.XposedBridge
+</a> import me.rhunk.snapenhance.Constants
+ import me.rhunk.snapenhance.config.ConfigProperty
+ import me.rhunk.snapenhance.features.Feature
+<a href="#h0-1" id="h0-1" class="h">@@ -30,6 +30,12 @@ class MenuViewInjector : Feature(&quot;MenuViewInjector&quot;, loadParams = FeatureLoadPar
+</a>         context.resources.getString(context.resources.getIdentifier(&quot;new_chat&quot;, &quot;string&quot;, Constants.SNAPCHAT_PACKAGE_NAME))
+     }
+ 
+<a href="#h0-1-3" id="h0-1-3" class="i">+    private fun wasInjectedView(view: View): Boolean {
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+        if (view.getTag(Constants.VIEW_INJECTED_CODE) != null) return true
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+        view.setTag(Constants.VIEW_INJECTED_CODE, true)
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+        return false
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+    }
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+
+</a>     @SuppressLint(&quot;ResourceType&quot;)
+     override fun asyncOnActivityCreate() {
+         friendFeedInfoMenu.context = context
+<a href="#h0-2" id="h0-2" class="h">@@ -38,6 +44,9 @@ class MenuViewInjector : Feature(&quot;MenuViewInjector&quot;, loadParams = FeatureLoadPar
+</a>         settingMenu.context = context
+ 
+         val actionSheetItemsContainerLayoutId = context.resources.getIdentifier(&quot;action_sheet_items_container&quot;, &quot;id&quot;, Constants.SNAPCHAT_PACKAGE_NAME)
+<a href="#h0-2-3" id="h0-2-3" class="i">+        val actionSheetContainer = context.resources.getIdentifier(&quot;action_sheet_container&quot;, &quot;id&quot;, Constants.SNAPCHAT_PACKAGE_NAME)
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+        val actionMenu = context.resources.getIdentifier(&quot;action_menu&quot;, &quot;id&quot;, Constants.SNAPCHAT_PACKAGE_NAME)
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+
+</a>         val addViewMethod = ViewGroup::class.java.getMethod(
+             &quot;addView&quot;,
+             View::class.java,
+<a href="#h0-3" id="h0-3" class="h">@@ -47,18 +56,12 @@ class MenuViewInjector : Feature(&quot;MenuViewInjector&quot;, loadParams = FeatureLoadPar
+</a> 
+         Hooker.hook(addViewMethod, HookStage.BEFORE) { param -&gt;
+             val viewGroup: ViewGroup = param.thisObject()
+<a href="#h0-3-3" id="h0-3-3" class="d">-            val originalAddView: (View) -&gt; Unit = { view: View -&gt;
+</a><a href="#h0-3-4" id="h0-3-4" class="d">-                XposedBridge.invokeOriginalMethod(
+</a><a href="#h0-3-5" id="h0-3-5" class="d">-                    addViewMethod,
+</a><a href="#h0-3-6" id="h0-3-6" class="d">-                    viewGroup,
+</a><a href="#h0-3-7" id="h0-3-7" class="d">-                    arrayOf(
+</a><a href="#h0-3-8" id="h0-3-8" class="d">-                        view,
+</a><a href="#h0-3-9" id="h0-3-9" class="d">-                        -1,
+</a><a href="#h0-3-10" id="h0-3-10" class="d">-                        FrameLayout.LayoutParams(
+</a><a href="#h0-3-11" id="h0-3-11" class="d">-                            ViewGroup.LayoutParams.MATCH_PARENT,
+</a><a href="#h0-3-12" id="h0-3-12" class="d">-                            ViewGroup.LayoutParams.MATCH_PARENT
+</a><a href="#h0-3-13" id="h0-3-13" class="d">-                        )
+</a><a href="#h0-3-14" id="h0-3-14" class="d">-                    )
+</a><a href="#h0-3-15" id="h0-3-15" class="i">+            val originalAddView: (View) -&gt; Unit = {
+</a><a href="#h0-3-16" id="h0-3-16" class="i">+                param.invokeOriginal(arrayOf(it, -1,
+</a><a href="#h0-3-17" id="h0-3-17" class="i">+                    FrameLayout.LayoutParams(
+</a><a href="#h0-3-18" id="h0-3-18" class="i">+                        ViewGroup.LayoutParams.MATCH_PARENT,
+</a><a href="#h0-3-19" id="h0-3-19" class="i">+                        ViewGroup.LayoutParams.MATCH_PARENT
+</a><a href="#h0-3-20" id="h0-3-20" class="i">+                    ))
+</a>                 )
+             }
+ 
+<a href="#h0-4" id="h0-4" class="h">@@ -72,7 +75,34 @@ class MenuViewInjector : Feature(&quot;MenuViewInjector&quot;, loadParams = FeatureLoadPar
+</a>                 return@hook
+             }
+ 
+<a href="#h0-4-3" id="h0-4-3" class="d">-            //TODO : preview group chats
+</a><a href="#h0-4-4" id="h0-4-4" class="i">+            //inject in group chat menus
+</a><a href="#h0-4-5" id="h0-4-5" class="i">+            if (viewGroup.id == actionSheetContainer &amp;&amp; childView.id == actionMenu) {
+</a><a href="#h0-4-6" id="h0-4-6" class="i">+                val injectedLayout = LinearLayout(childView.context).apply {
+</a><a href="#h0-4-7" id="h0-4-7" class="i">+                    orientation = LinearLayout.VERTICAL
+</a><a href="#h0-4-8" id="h0-4-8" class="i">+                    gravity = Gravity.BOTTOM
+</a><a href="#h0-4-9" id="h0-4-9" class="i">+                    layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+</a><a href="#h0-4-10" id="h0-4-10" class="i">+                    addView(childView)
+</a><a href="#h0-4-11" id="h0-4-11" class="i">+                }
+</a><a href="#h0-4-12" id="h0-4-12" class="i">+
+</a><a href="#h0-4-13" id="h0-4-13" class="i">+                Hooker.ephemeralHook(context.classCache.conversationManager, &quot;fetchConversation&quot;, HookStage.AFTER) {
+</a><a href="#h0-4-14" id="h0-4-14" class="i">+                    if (wasInjectedView(injectedLayout)) return@ephemeralHook
+</a><a href="#h0-4-15" id="h0-4-15" class="i">+                    context.feature(Messaging::class).lastFetchConversationUserUUID = null
+</a><a href="#h0-4-16" id="h0-4-16" class="i">+
+</a><a href="#h0-4-17" id="h0-4-17" class="i">+                    context.runOnUiThread {
+</a><a href="#h0-4-18" id="h0-4-18" class="i">+                        val viewList = mutableListOf&lt;View&gt;()
+</a><a href="#h0-4-19" id="h0-4-19" class="i">+                        friendFeedInfoMenu.inject(injectedLayout) { view -&gt;
+</a><a href="#h0-4-20" id="h0-4-20" class="i">+                            view.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+</a><a href="#h0-4-21" id="h0-4-21" class="i">+                                setMargins(0, 10, 0, 10)
+</a><a href="#h0-4-22" id="h0-4-22" class="i">+                            }
+</a><a href="#h0-4-23" id="h0-4-23" class="i">+                            viewList.add(view)
+</a><a href="#h0-4-24" id="h0-4-24" class="i">+                        }
+</a><a href="#h0-4-25" id="h0-4-25" class="i">+                        viewList.reversed().forEach { injectedLayout.addView(it, 0) }
+</a><a href="#h0-4-26" id="h0-4-26" class="i">+                    }
+</a><a href="#h0-4-27" id="h0-4-27" class="i">+                }
+</a><a href="#h0-4-28" id="h0-4-28" class="i">+
+</a><a href="#h0-4-29" id="h0-4-29" class="i">+                param.setArg(0, injectedLayout)
+</a><a href="#h0-4-30" id="h0-4-30" class="i">+            }
+</a><a href="#h0-4-31" id="h0-4-31" class="i">+
+</a>             if (viewGroup is LinearLayout &amp;&amp; viewGroup.id == actionSheetItemsContainerLayoutId) {
+                 val itemStringInterface by lazy {
+                     childView.javaClass.declaredFields.filter {
+<a href="#h0-5" id="h0-5" class="h">@@ -87,7 +117,6 @@ class MenuViewInjector : Feature(&quot;MenuViewInjector&quot;, loadParams = FeatureLoadPar
+</a> 
+                 //the 3 dot button shows a menu which contains the first item as a Plain object
+                 if (viewGroup.getChildCount() == 0 &amp;&amp; itemStringInterface != null &amp;&amp; itemStringInterface.toString().startsWith(&quot;Plain(primaryText=$newChatString&quot;)) {
+<a href="#h0-5-3" id="h0-5-3" class="d">-
+</a>                     settingMenu.inject(viewGroup, originalAddView)
+                     viewGroup.addOnAttachStateChangeListener(object: View.OnAttachStateChangeListener {
+                         override fun onViewAttachedToWindow(v: View) {}
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/FriendFeedInfoMenu.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/FriendFeedInfoMenu.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/FriendFeedInfoMenu.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/FriendFeedInfoMenu.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -223,7 +223,7 @@ class FriendFeedInfoMenu : AbstractMenu() {
+</a>         val friendFeedMenuOptions = context.config.options(ConfigProperty.FRIEND_FEED_MENU_BUTTONS)
+         if (friendFeedMenuOptions.none { it.value }) return
+ 
+<a href="#h1-0-3" id="h1-0-3" class="d">-        val (conversationId, focusedConversationTargetUser) = getCurrentConversationId()
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+        val (conversationId, targetUser) = getCurrentConversationId()
+</a> 
+         if (!context.config.bool(ConfigProperty.ENABLE_FRIEND_FEED_MENU_BAR)) {
+             //preview button
+<a href="#h1-1" id="h1-1" class="h">@@ -232,7 +232,7 @@ class FriendFeedInfoMenu : AbstractMenu() {
+</a>                 ViewAppearanceHelper.applyTheme(this, viewModel.width)
+                 setOnClickListener {
+                     showPreview(
+<a href="#h1-1-3" id="h1-1-3" class="d">-                        focusedConversationTargetUser,
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+                        targetUser,
+</a>                         conversationId,
+                         context
+                     )
+<a href="#h1-2" id="h1-2" class="h">@@ -252,6 +252,14 @@ class FriendFeedInfoMenu : AbstractMenu() {
+</a>                 }
+             }
+ 
+<a href="#h1-2-3" id="h1-2-3" class="i">+            if (friendFeedMenuOptions[&quot;anti_auto_save&quot;] == true) {
+</a><a href="#h1-2-4" id="h1-2-4" class="i">+                createToggleFeature(viewConsumer,
+</a><a href="#h1-2-5" id="h1-2-5" class="i">+                    &quot;friend_menu_option.anti_auto_save&quot;,
+</a><a href="#h1-2-6" id="h1-2-6" class="i">+                    { context.feature(AntiAutoSave::class).isConversationIgnored(conversationId) },
+</a><a href="#h1-2-7" id="h1-2-7" class="i">+                    { context.feature(AntiAutoSave::class).setConversationIgnored(conversationId, it) }
+</a><a href="#h1-2-8" id="h1-2-8" class="i">+                )
+</a><a href="#h1-2-9" id="h1-2-9" class="i">+            }
+</a><a href="#h1-2-10" id="h1-2-10" class="i">+
+</a>             run {
+                 val userId = context.database.getFriendFeedInfoByConversationId(conversationId)?.friendUserId ?: return@run
+                 if (friendFeedMenuOptions[&quot;auto_download_blacklist&quot;] == true) {
+<a href="#h1-3" id="h1-3" class="h">@@ -261,18 +269,14 @@ class FriendFeedInfoMenu : AbstractMenu() {
+</a>                         { context.feature(AntiAutoDownload::class).setUserIgnored(userId, it) }
+                     )
+                 }
+<a href="#h1-3-3" id="h1-3-3" class="d">-
+</a><a href="#h1-3-4" id="h1-3-4" class="d">-                if (friendFeedMenuOptions[&quot;anti_auto_save&quot;] == true) {
+</a><a href="#h1-3-5" id="h1-3-5" class="d">-                    createToggleFeature(viewConsumer,
+</a><a href="#h1-3-6" id="h1-3-6" class="d">-                        &quot;friend_menu_option.anti_auto_save&quot;,
+</a><a href="#h1-3-7" id="h1-3-7" class="d">-                        { context.feature(AntiAutoSave::class).isConversationIgnored(conversationId) },
+</a><a href="#h1-3-8" id="h1-3-8" class="d">-                        { context.feature(AntiAutoSave::class).setConversationIgnored(conversationId, it) }
+</a><a href="#h1-3-9" id="h1-3-9" class="d">-                    )
+</a><a href="#h1-3-10" id="h1-3-10" class="d">-                }
+</a>             }
+ 
+<a href="#h1-3-13" id="h1-3-13" class="d">-            viewConsumer(stealthSwitch)
+</a><a href="#h1-3-14" id="h1-3-14" class="d">-            viewConsumer(previewButton)
+</a><a href="#h1-3-15" id="h1-3-15" class="i">+            if (friendFeedMenuOptions[&quot;stealth_mode&quot;] == true) {
+</a><a href="#h1-3-16" id="h1-3-16" class="i">+                viewConsumer(stealthSwitch)
+</a><a href="#h1-3-17" id="h1-3-17" class="i">+            }
+</a><a href="#h1-3-18" id="h1-3-18" class="i">+            if (friendFeedMenuOptions[&quot;conversation_info&quot;] == true) {
+</a><a href="#h1-3-19" id="h1-3-19" class="i">+                viewConsumer(previewButton)
+</a><a href="#h1-3-20" id="h1-3-20" class="i">+            }
+</a>             return
+         }
+ 
+<a href="#h1-4" id="h1-4" class="h">@@ -356,7 +360,7 @@ class FriendFeedInfoMenu : AbstractMenu() {
+</a>             //user
+             createActionButton(&quot;\uD83D\uDC64&quot;) {
+                 showPreview(
+<a href="#h1-4-3" id="h1-4-3" class="d">-                    focusedConversationTargetUser,
+</a><a href="#h1-4-4" id="h1-4-4" class="i">+                    targetUser,
+</a>                     conversationId,
+                     viewModel.context
+                 )
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/hook/Hooker.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/hook/Hooker.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/hook/Hooker.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/hook/Hooker.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -92,6 +92,19 @@ object Hooker {
+</a>         }.also { unhooks.addAll(it) }
+     }
+ 
+<a href="#h2-0-3" id="h2-0-3" class="i">+    fun ephemeralHook(
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+        clazz: Class&lt;*&gt;,
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+        methodName: String,
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+        stage: HookStage,
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+        hookConsumer: (HookAdapter) -&gt; Unit
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+    ) {
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+        val unhooks: MutableSet&lt;XC_MethodHook.Unhook&gt; = HashSet()
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+        hook(clazz, methodName, stage) { param-&gt;
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+            hookConsumer(param)
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+            unhooks.forEach{ it.unhook() }
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+        }.also { unhooks.addAll(it) }
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+    }
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+
+</a>     fun ephemeralHookObjectMethod(
+         clazz: Class&lt;*&gt;,
+         instance: Any,
+</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: message logger history viewer - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/fe777ff1d8a1e0fcb9662c14d988ed321627382e.html">fe777ff1d8a1e0fcb9662c14d988ed321627382e</a>
+<b>parent</b> <a href="../commit/53204a2b4275a56d2d38e25a80bebffdd9bde65f.html">53204a2b4275a56d2d38e25a80bebffdd9bde65f</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 11 Feb 2024 23:10:10 +0100
+
+feat: message logger history viewer
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Routes.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt</a></td><td> | </td><td class="num">355</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">3</td><td><span class="i">+++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MessageLoggerWrapper.kt</a></td><td> | </td><td class="num">91</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/MediaDownloadSource.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/AndroidCompatExtensions.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></td><td> | </td><td class="num">4</td><td><span class="i"></span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+</table></pre><pre>10 files changed, 444 insertions(+), 34 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Routes.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Routes.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Routes.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Routes.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -15,6 +15,7 @@ import androidx.navigation.NavDestination.Companion.hierarchy
+</a> import androidx.navigation.NavGraph.Companion.findStartDestination
+ import androidx.navigation.NavGraphBuilder
+ import me.rhunk.snapenhance.RemoteSideContext
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.ui.manager.pages.LoggerHistoryRoot
+</a> import me.rhunk.snapenhance.ui.manager.pages.TasksRoot
+ import me.rhunk.snapenhance.ui.manager.pages.features.FeaturesRoot
+ import me.rhunk.snapenhance.ui.manager.pages.home.HomeLogs
+<a href="#h0-1" id="h0-1" class="h">@@ -51,6 +52,7 @@ class Routes(
+</a>     val home = route(RouteInfo(&quot;home&quot;, icon = Icons.Default.Home, primary = true), HomeRoot())
+     val settings = route(RouteInfo(&quot;home_settings&quot;), HomeSettings()).parent(home)
+     val homeLogs = route(RouteInfo(&quot;home_logs&quot;), HomeLogs()).parent(home)
+<a href="#h0-1-3" id="h0-1-3" class="i">+    val loggerHistory = route(RouteInfo(&quot;logger_history&quot;), LoggerHistoryRoot()).parent(home)
+</a> 
+     val social = route(RouteInfo(&quot;social&quot;, icon = Icons.Default.Group, primary = true), SocialRoot())
+     val manageScope = route(RouteInfo(&quot;manage_scope/?scope={scope}&amp;id={id}&quot;), ManageScope()).parent(social)
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -0,0 +1,354 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="i">+package me.rhunk.snapenhance.ui.manager.pages
+</a><a href="#h1-0-1" id="h1-0-1" class="i">+
+</a><a href="#h1-0-2" id="h1-0-2" class="i">+import androidx.compose.foundation.gestures.detectTapGestures
+</a><a href="#h1-0-3" id="h1-0-3" class="i">+import androidx.compose.foundation.layout.*
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import androidx.compose.foundation.lazy.LazyColumn
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+import androidx.compose.foundation.lazy.items
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+import androidx.compose.foundation.text.KeyboardActions
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+import androidx.compose.material.icons.Icons
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+import androidx.compose.material.icons.filled.Close
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+import androidx.compose.material.icons.filled.Download
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+import androidx.compose.material.icons.filled.Search
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+import androidx.compose.material3.*
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+import androidx.compose.runtime.*
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+import androidx.compose.ui.Alignment
+</a><a href="#h1-0-14" id="h1-0-14" class="i">+import androidx.compose.ui.Modifier
+</a><a href="#h1-0-15" id="h1-0-15" class="i">+import androidx.compose.ui.focus.FocusRequester
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+import androidx.compose.ui.focus.focusRequester
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+import androidx.compose.ui.graphics.Color
+</a><a href="#h1-0-18" id="h1-0-18" class="i">+import androidx.compose.ui.input.pointer.pointerInput
+</a><a href="#h1-0-19" id="h1-0-19" class="i">+import androidx.compose.ui.text.style.TextAlign
+</a><a href="#h1-0-20" id="h1-0-20" class="i">+import androidx.compose.ui.unit.dp
+</a><a href="#h1-0-21" id="h1-0-21" class="i">+import androidx.navigation.NavBackStackEntry
+</a><a href="#h1-0-22" id="h1-0-22" class="i">+import com.google.gson.JsonParser
+</a><a href="#h1-0-23" id="h1-0-23" class="i">+import kotlinx.coroutines.Dispatchers
+</a><a href="#h1-0-24" id="h1-0-24" class="i">+import kotlinx.coroutines.launch
+</a><a href="#h1-0-25" id="h1-0-25" class="i">+import kotlinx.coroutines.withContext
+</a><a href="#h1-0-26" id="h1-0-26" class="i">+import me.rhunk.snapenhance.bridge.DownloadCallback
+</a><a href="#h1-0-27" id="h1-0-27" class="i">+import me.rhunk.snapenhance.common.bridge.wrapper.LoggedMessage
+</a><a href="#h1-0-28" id="h1-0-28" class="i">+import me.rhunk.snapenhance.common.bridge.wrapper.MessageLoggerWrapper
+</a><a href="#h1-0-29" id="h1-0-29" class="i">+import me.rhunk.snapenhance.common.data.ContentType
+</a><a href="#h1-0-30" id="h1-0-30" class="i">+import me.rhunk.snapenhance.common.data.download.*
+</a><a href="#h1-0-31" id="h1-0-31" class="i">+import me.rhunk.snapenhance.common.util.ktx.copyToClipboard
+</a><a href="#h1-0-32" id="h1-0-32" class="i">+import me.rhunk.snapenhance.common.util.ktx.longHashCode
+</a><a href="#h1-0-33" id="h1-0-33" class="i">+import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+</a><a href="#h1-0-34" id="h1-0-34" class="i">+import me.rhunk.snapenhance.core.features.impl.downloader.decoder.DecodedAttachment
+</a><a href="#h1-0-35" id="h1-0-35" class="i">+import me.rhunk.snapenhance.core.features.impl.downloader.decoder.MessageDecoder
+</a><a href="#h1-0-36" id="h1-0-36" class="i">+import me.rhunk.snapenhance.download.DownloadProcessor
+</a><a href="#h1-0-37" id="h1-0-37" class="i">+import me.rhunk.snapenhance.ui.manager.Routes
+</a><a href="#h1-0-38" id="h1-0-38" class="i">+import kotlin.math.absoluteValue
+</a><a href="#h1-0-39" id="h1-0-39" class="i">+
+</a><a href="#h1-0-40" id="h1-0-40" class="i">+
+</a><a href="#h1-0-41" id="h1-0-41" class="i">+class LoggerHistoryRoot : Routes.Route() {
+</a><a href="#h1-0-42" id="h1-0-42" class="i">+    private lateinit var messageLoggerWrapper: MessageLoggerWrapper
+</a><a href="#h1-0-43" id="h1-0-43" class="i">+    private var selectedConversation by mutableStateOf&lt;String?&gt;(null)
+</a><a href="#h1-0-44" id="h1-0-44" class="i">+    private var stringFilter by mutableStateOf(&quot;&quot;)
+</a><a href="#h1-0-45" id="h1-0-45" class="i">+    private var reverseOrder by mutableStateOf(true)
+</a><a href="#h1-0-46" id="h1-0-46" class="i">+
+</a><a href="#h1-0-47" id="h1-0-47" class="i">+    private inline fun decodeMessage(message: LoggedMessage, result: (contentType: ContentType, messageReader: ProtoReader, attachments: List&lt;DecodedAttachment&gt;) -&gt; Unit) {
+</a><a href="#h1-0-48" id="h1-0-48" class="i">+        runCatching {
+</a><a href="#h1-0-49" id="h1-0-49" class="i">+            val messageObject = JsonParser.parseString(String(message.messageData, Charsets.UTF_8)).asJsonObject
+</a><a href="#h1-0-50" id="h1-0-50" class="i">+            val messageContent = messageObject.getAsJsonObject(&quot;mMessageContent&quot;)
+</a><a href="#h1-0-51" id="h1-0-51" class="i">+            val messageReader = messageContent.getAsJsonArray(&quot;mContent&quot;).map { it.asByte }.toByteArray().let { ProtoReader(it) }
+</a><a href="#h1-0-52" id="h1-0-52" class="i">+            result(ContentType.fromMessageContainer(messageReader) ?: ContentType.UNKNOWN, messageReader, MessageDecoder.decode(messageContent))
+</a><a href="#h1-0-53" id="h1-0-53" class="i">+        }.onFailure {
+</a><a href="#h1-0-54" id="h1-0-54" class="i">+            context.log.error(&quot;Failed to decode message&quot;, it)
+</a><a href="#h1-0-55" id="h1-0-55" class="i">+        }
+</a><a href="#h1-0-56" id="h1-0-56" class="i">+    }
+</a><a href="#h1-0-57" id="h1-0-57" class="i">+
+</a><a href="#h1-0-58" id="h1-0-58" class="i">+    private fun downloadAttachment(creationTimestamp: Long, attachment: DecodedAttachment) {
+</a><a href="#h1-0-59" id="h1-0-59" class="i">+        context.shortToast(&quot;Download started!&quot;)
+</a><a href="#h1-0-60" id="h1-0-60" class="i">+        val attachmentHash = attachment.mediaUniqueId!!.longHashCode().absoluteValue.toString()
+</a><a href="#h1-0-61" id="h1-0-61" class="i">+
+</a><a href="#h1-0-62" id="h1-0-62" class="i">+        DownloadProcessor(
+</a><a href="#h1-0-63" id="h1-0-63" class="i">+            remoteSideContext = context,
+</a><a href="#h1-0-64" id="h1-0-64" class="i">+            callback = object: DownloadCallback.Default() {
+</a><a href="#h1-0-65" id="h1-0-65" class="i">+                override fun onSuccess(outputPath: String?) {
+</a><a href="#h1-0-66" id="h1-0-66" class="i">+                    context.shortToast(&quot;Downloaded to $outputPath&quot;)
+</a><a href="#h1-0-67" id="h1-0-67" class="i">+                }
+</a><a href="#h1-0-68" id="h1-0-68" class="i">+
+</a><a href="#h1-0-69" id="h1-0-69" class="i">+                override fun onFailure(message: String?, throwable: String?) {
+</a><a href="#h1-0-70" id="h1-0-70" class="i">+                    context.shortToast(&quot;Failed to download $message&quot;)
+</a><a href="#h1-0-71" id="h1-0-71" class="i">+                }
+</a><a href="#h1-0-72" id="h1-0-72" class="i">+            }
+</a><a href="#h1-0-73" id="h1-0-73" class="i">+        ).enqueue(
+</a><a href="#h1-0-74" id="h1-0-74" class="i">+            DownloadRequest(
+</a><a href="#h1-0-75" id="h1-0-75" class="i">+                inputMedias = arrayOf(
+</a><a href="#h1-0-76" id="h1-0-76" class="i">+                    InputMedia(
+</a><a href="#h1-0-77" id="h1-0-77" class="i">+                        content = attachment.mediaUrlKey!!,
+</a><a href="#h1-0-78" id="h1-0-78" class="i">+                        type = DownloadMediaType.PROTO_MEDIA,
+</a><a href="#h1-0-79" id="h1-0-79" class="i">+                        encryption = attachment.attachmentInfo?.encryption,
+</a><a href="#h1-0-80" id="h1-0-80" class="i">+                    )
+</a><a href="#h1-0-81" id="h1-0-81" class="i">+                )
+</a><a href="#h1-0-82" id="h1-0-82" class="i">+            ),
+</a><a href="#h1-0-83" id="h1-0-83" class="i">+            DownloadMetadata(
+</a><a href="#h1-0-84" id="h1-0-84" class="i">+                mediaIdentifier = attachmentHash,
+</a><a href="#h1-0-85" id="h1-0-85" class="i">+                outputPath = createNewFilePath(
+</a><a href="#h1-0-86" id="h1-0-86" class="i">+                    context.config.root,
+</a><a href="#h1-0-87" id="h1-0-87" class="i">+                    attachment.mediaUniqueId!!,
+</a><a href="#h1-0-88" id="h1-0-88" class="i">+                    MediaDownloadSource.MESSAGE_LOGGER,
+</a><a href="#h1-0-89" id="h1-0-89" class="i">+                    attachmentHash,
+</a><a href="#h1-0-90" id="h1-0-90" class="i">+                    creationTimestamp
+</a><a href="#h1-0-91" id="h1-0-91" class="i">+                ),
+</a><a href="#h1-0-92" id="h1-0-92" class="i">+                iconUrl = null,
+</a><a href="#h1-0-93" id="h1-0-93" class="i">+                mediaAuthor = null,
+</a><a href="#h1-0-94" id="h1-0-94" class="i">+                downloadSource = MediaDownloadSource.MESSAGE_LOGGER.translate(context.translation),
+</a><a href="#h1-0-95" id="h1-0-95" class="i">+            )
+</a><a href="#h1-0-96" id="h1-0-96" class="i">+        )
+</a><a href="#h1-0-97" id="h1-0-97" class="i">+    }
+</a><a href="#h1-0-98" id="h1-0-98" class="i">+
+</a><a href="#h1-0-99" id="h1-0-99" class="i">+    @OptIn(ExperimentalLayoutApi::class)
+</a><a href="#h1-0-100" id="h1-0-100" class="i">+    @Composable
+</a><a href="#h1-0-101" id="h1-0-101" class="i">+    private fun MessageView(message: LoggedMessage) {
+</a><a href="#h1-0-102" id="h1-0-102" class="i">+        var contentView by remember { mutableStateOf&lt;@Composable () -&gt; Unit&gt;({
+</a><a href="#h1-0-103" id="h1-0-103" class="i">+            Spacer(modifier = Modifier.height(30.dp))
+</a><a href="#h1-0-104" id="h1-0-104" class="i">+        }) }
+</a><a href="#h1-0-105" id="h1-0-105" class="i">+
+</a><a href="#h1-0-106" id="h1-0-106" class="i">+        OutlinedCard(
+</a><a href="#h1-0-107" id="h1-0-107" class="i">+            modifier = Modifier
+</a><a href="#h1-0-108" id="h1-0-108" class="i">+                .padding(2.dp)
+</a><a href="#h1-0-109" id="h1-0-109" class="i">+                .fillMaxWidth()
+</a><a href="#h1-0-110" id="h1-0-110" class="i">+        ) {
+</a><a href="#h1-0-111" id="h1-0-111" class="i">+            Row(
+</a><a href="#h1-0-112" id="h1-0-112" class="i">+                modifier = Modifier
+</a><a href="#h1-0-113" id="h1-0-113" class="i">+                    .padding(4.dp)
+</a><a href="#h1-0-114" id="h1-0-114" class="i">+                    .fillMaxWidth(),
+</a><a href="#h1-0-115" id="h1-0-115" class="i">+                verticalAlignment = Alignment.CenterVertically
+</a><a href="#h1-0-116" id="h1-0-116" class="i">+            ) {
+</a><a href="#h1-0-117" id="h1-0-117" class="i">+                contentView()
+</a><a href="#h1-0-118" id="h1-0-118" class="i">+
+</a><a href="#h1-0-119" id="h1-0-119" class="i">+                LaunchedEffect(Unit, message) {
+</a><a href="#h1-0-120" id="h1-0-120" class="i">+                    runCatching {
+</a><a href="#h1-0-121" id="h1-0-121" class="i">+                        decodeMessage(message) { contentType, messageReader, attachments -&gt;
+</a><a href="#h1-0-122" id="h1-0-122" class="i">+                            if (contentType == ContentType.CHAT) {
+</a><a href="#h1-0-123" id="h1-0-123" class="i">+                                val content = messageReader.getString(2, 1) ?: &quot;[empty chat message]&quot;
+</a><a href="#h1-0-124" id="h1-0-124" class="i">+                                contentView = {
+</a><a href="#h1-0-125" id="h1-0-125" class="i">+                                    Text(content, modifier = Modifier
+</a><a href="#h1-0-126" id="h1-0-126" class="i">+                                        .fillMaxWidth()
+</a><a href="#h1-0-127" id="h1-0-127" class="i">+                                        .pointerInput(Unit) {
+</a><a href="#h1-0-128" id="h1-0-128" class="i">+                                            detectTapGestures(onLongPress = {
+</a><a href="#h1-0-129" id="h1-0-129" class="i">+                                                context.androidContext.copyToClipboard(content)
+</a><a href="#h1-0-130" id="h1-0-130" class="i">+                                            })
+</a><a href="#h1-0-131" id="h1-0-131" class="i">+                                        })
+</a><a href="#h1-0-132" id="h1-0-132" class="i">+                                }
+</a><a href="#h1-0-133" id="h1-0-133" class="i">+                                return@runCatching
+</a><a href="#h1-0-134" id="h1-0-134" class="i">+                            }
+</a><a href="#h1-0-135" id="h1-0-135" class="i">+                            contentView = {
+</a><a href="#h1-0-136" id="h1-0-136" class="i">+                                Column column@{
+</a><a href="#h1-0-137" id="h1-0-137" class="i">+                                    Text(&quot;[$contentType]&quot;)
+</a><a href="#h1-0-138" id="h1-0-138" class="i">+                                    if (attachments.isEmpty()) return@column
+</a><a href="#h1-0-139" id="h1-0-139" class="i">+
+</a><a href="#h1-0-140" id="h1-0-140" class="i">+                                    FlowRow(
+</a><a href="#h1-0-141" id="h1-0-141" class="i">+                                        modifier = Modifier
+</a><a href="#h1-0-142" id="h1-0-142" class="i">+                                            .fillMaxWidth()
+</a><a href="#h1-0-143" id="h1-0-143" class="i">+                                            .padding(2.dp),
+</a><a href="#h1-0-144" id="h1-0-144" class="i">+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+</a><a href="#h1-0-145" id="h1-0-145" class="i">+                                    ) {
+</a><a href="#h1-0-146" id="h1-0-146" class="i">+                                        attachments.forEachIndexed { index, attachment -&gt;
+</a><a href="#h1-0-147" id="h1-0-147" class="i">+                                            ElevatedButton(onClick = {
+</a><a href="#h1-0-148" id="h1-0-148" class="i">+                                                context.coroutineScope.launch {
+</a><a href="#h1-0-149" id="h1-0-149" class="i">+                                                    runCatching {
+</a><a href="#h1-0-150" id="h1-0-150" class="i">+                                                        downloadAttachment(message.timestamp, attachment)
+</a><a href="#h1-0-151" id="h1-0-151" class="i">+                                                    }.onFailure {
+</a><a href="#h1-0-152" id="h1-0-152" class="i">+                                                        context.log.error(&quot;Failed to download attachment&quot;, it)
+</a><a href="#h1-0-153" id="h1-0-153" class="i">+                                                        context.shortToast(&quot;Failed to download attachment&quot;)
+</a><a href="#h1-0-154" id="h1-0-154" class="i">+                                                    }
+</a><a href="#h1-0-155" id="h1-0-155" class="i">+                                                }
+</a><a href="#h1-0-156" id="h1-0-156" class="i">+                                            }) {
+</a><a href="#h1-0-157" id="h1-0-157" class="i">+                                                Icon(
+</a><a href="#h1-0-158" id="h1-0-158" class="i">+                                                    imageVector = Icons.Default.Download,
+</a><a href="#h1-0-159" id="h1-0-159" class="i">+                                                    contentDescription = &quot;Download&quot;,
+</a><a href="#h1-0-160" id="h1-0-160" class="i">+                                                    modifier = Modifier.padding(end = 4.dp)
+</a><a href="#h1-0-161" id="h1-0-161" class="i">+                                                )
+</a><a href="#h1-0-162" id="h1-0-162" class="i">+                                                Text(&quot;Attachment ${index + 1}&quot;)
+</a><a href="#h1-0-163" id="h1-0-163" class="i">+                                            }
+</a><a href="#h1-0-164" id="h1-0-164" class="i">+                                        }
+</a><a href="#h1-0-165" id="h1-0-165" class="i">+                                    }
+</a><a href="#h1-0-166" id="h1-0-166" class="i">+                                }
+</a><a href="#h1-0-167" id="h1-0-167" class="i">+                            }
+</a><a href="#h1-0-168" id="h1-0-168" class="i">+                        }
+</a><a href="#h1-0-169" id="h1-0-169" class="i">+                    }.onFailure {
+</a><a href="#h1-0-170" id="h1-0-170" class="i">+                        context.log.error(&quot;Failed to parse message&quot;, it)
+</a><a href="#h1-0-171" id="h1-0-171" class="i">+                        contentView = {
+</a><a href="#h1-0-172" id="h1-0-172" class="i">+                            Text(&quot;[Failed to parse message]&quot;)
+</a><a href="#h1-0-173" id="h1-0-173" class="i">+                        }
+</a><a href="#h1-0-174" id="h1-0-174" class="i">+                    }
+</a><a href="#h1-0-175" id="h1-0-175" class="i">+                }
+</a><a href="#h1-0-176" id="h1-0-176" class="i">+            }
+</a><a href="#h1-0-177" id="h1-0-177" class="i">+        }
+</a><a href="#h1-0-178" id="h1-0-178" class="i">+    }
+</a><a href="#h1-0-179" id="h1-0-179" class="i">+
+</a><a href="#h1-0-180" id="h1-0-180" class="i">+
+</a><a href="#h1-0-181" id="h1-0-181" class="i">+    @OptIn(ExperimentalMaterial3Api::class)
+</a><a href="#h1-0-182" id="h1-0-182" class="i">+    override val content: @Composable (NavBackStackEntry) -&gt; Unit = {
+</a><a href="#h1-0-183" id="h1-0-183" class="i">+        LaunchedEffect(Unit) {
+</a><a href="#h1-0-184" id="h1-0-184" class="i">+            messageLoggerWrapper = MessageLoggerWrapper(
+</a><a href="#h1-0-185" id="h1-0-185" class="i">+                context.androidContext.getDatabasePath(&quot;message_logger.db&quot;)
+</a><a href="#h1-0-186" id="h1-0-186" class="i">+            )
+</a><a href="#h1-0-187" id="h1-0-187" class="i">+        }
+</a><a href="#h1-0-188" id="h1-0-188" class="i">+
+</a><a href="#h1-0-189" id="h1-0-189" class="i">+        Column {
+</a><a href="#h1-0-190" id="h1-0-190" class="i">+            var expanded by remember { mutableStateOf(false) }
+</a><a href="#h1-0-191" id="h1-0-191" class="i">+
+</a><a href="#h1-0-192" id="h1-0-192" class="i">+            ExposedDropdownMenuBox(
+</a><a href="#h1-0-193" id="h1-0-193" class="i">+                expanded = expanded,
+</a><a href="#h1-0-194" id="h1-0-194" class="i">+                onExpandedChange = { expanded = it },
+</a><a href="#h1-0-195" id="h1-0-195" class="i">+            ) {
+</a><a href="#h1-0-196" id="h1-0-196" class="i">+                OutlinedTextField(
+</a><a href="#h1-0-197" id="h1-0-197" class="i">+                    value = selectedConversation ?: &quot;Select a conversation&quot;,
+</a><a href="#h1-0-198" id="h1-0-198" class="i">+                    onValueChange = {},
+</a><a href="#h1-0-199" id="h1-0-199" class="i">+                    readOnly = true,
+</a><a href="#h1-0-200" id="h1-0-200" class="i">+                    modifier = Modifier
+</a><a href="#h1-0-201" id="h1-0-201" class="i">+                        .menuAnchor()
+</a><a href="#h1-0-202" id="h1-0-202" class="i">+                        .fillMaxWidth()
+</a><a href="#h1-0-203" id="h1-0-203" class="i">+                )
+</a><a href="#h1-0-204" id="h1-0-204" class="i">+
+</a><a href="#h1-0-205" id="h1-0-205" class="i">+                val conversations = remember { mutableStateListOf&lt;String&gt;() }
+</a><a href="#h1-0-206" id="h1-0-206" class="i">+
+</a><a href="#h1-0-207" id="h1-0-207" class="i">+                LaunchedEffect(Unit) {
+</a><a href="#h1-0-208" id="h1-0-208" class="i">+                    conversations.clear()
+</a><a href="#h1-0-209" id="h1-0-209" class="i">+                    withContext(Dispatchers.IO) {
+</a><a href="#h1-0-210" id="h1-0-210" class="i">+                        conversations.addAll(messageLoggerWrapper.getAllConversations())
+</a><a href="#h1-0-211" id="h1-0-211" class="i">+                    }
+</a><a href="#h1-0-212" id="h1-0-212" class="i">+                }
+</a><a href="#h1-0-213" id="h1-0-213" class="i">+
+</a><a href="#h1-0-214" id="h1-0-214" class="i">+                ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+</a><a href="#h1-0-215" id="h1-0-215" class="i">+                    conversations.forEach { conversation -&gt;
+</a><a href="#h1-0-216" id="h1-0-216" class="i">+                        DropdownMenuItem(onClick = {
+</a><a href="#h1-0-217" id="h1-0-217" class="i">+                            selectedConversation = conversation
+</a><a href="#h1-0-218" id="h1-0-218" class="i">+                            expanded = false
+</a><a href="#h1-0-219" id="h1-0-219" class="i">+                        }, text = {
+</a><a href="#h1-0-220" id="h1-0-220" class="i">+                            Text(conversation)
+</a><a href="#h1-0-221" id="h1-0-221" class="i">+                        })
+</a><a href="#h1-0-222" id="h1-0-222" class="i">+                    }
+</a><a href="#h1-0-223" id="h1-0-223" class="i">+                }
+</a><a href="#h1-0-224" id="h1-0-224" class="i">+            }
+</a><a href="#h1-0-225" id="h1-0-225" class="i">+
+</a><a href="#h1-0-226" id="h1-0-226" class="i">+            Row(
+</a><a href="#h1-0-227" id="h1-0-227" class="i">+                modifier = Modifier
+</a><a href="#h1-0-228" id="h1-0-228" class="i">+                    .fillMaxWidth()
+</a><a href="#h1-0-229" id="h1-0-229" class="i">+                    .padding(2.dp),
+</a><a href="#h1-0-230" id="h1-0-230" class="i">+                horizontalArrangement = Arrangement.End
+</a><a href="#h1-0-231" id="h1-0-231" class="i">+            ) {
+</a><a href="#h1-0-232" id="h1-0-232" class="i">+                Row(
+</a><a href="#h1-0-233" id="h1-0-233" class="i">+                    verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h1-0-234" id="h1-0-234" class="i">+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+</a><a href="#h1-0-235" id="h1-0-235" class="i">+                ) {
+</a><a href="#h1-0-236" id="h1-0-236" class="i">+                    Text(&quot;Reverse order&quot;)
+</a><a href="#h1-0-237" id="h1-0-237" class="i">+                    Checkbox(checked = reverseOrder, onCheckedChange = {
+</a><a href="#h1-0-238" id="h1-0-238" class="i">+                        reverseOrder = it
+</a><a href="#h1-0-239" id="h1-0-239" class="i">+                    })
+</a><a href="#h1-0-240" id="h1-0-240" class="i">+                }
+</a><a href="#h1-0-241" id="h1-0-241" class="i">+            }
+</a><a href="#h1-0-242" id="h1-0-242" class="i">+
+</a><a href="#h1-0-243" id="h1-0-243" class="i">+            var hasReachedEnd by remember(selectedConversation, stringFilter, reverseOrder) { mutableStateOf(false) }
+</a><a href="#h1-0-244" id="h1-0-244" class="i">+            var lastFetchMessageTimestamp by remember(selectedConversation, stringFilter, reverseOrder) { mutableLongStateOf(if (reverseOrder) Long.MAX_VALUE else Long.MIN_VALUE) }
+</a><a href="#h1-0-245" id="h1-0-245" class="i">+            val messages = remember(selectedConversation, stringFilter, reverseOrder) { mutableStateListOf&lt;LoggedMessage&gt;() }
+</a><a href="#h1-0-246" id="h1-0-246" class="i">+
+</a><a href="#h1-0-247" id="h1-0-247" class="i">+            LazyColumn {
+</a><a href="#h1-0-248" id="h1-0-248" class="i">+                items(messages) { message -&gt;
+</a><a href="#h1-0-249" id="h1-0-249" class="i">+                    MessageView(message)
+</a><a href="#h1-0-250" id="h1-0-250" class="i">+                }
+</a><a href="#h1-0-251" id="h1-0-251" class="i">+                item {
+</a><a href="#h1-0-252" id="h1-0-252" class="i">+                    if (selectedConversation != null) {
+</a><a href="#h1-0-253" id="h1-0-253" class="i">+                        if (hasReachedEnd) {
+</a><a href="#h1-0-254" id="h1-0-254" class="i">+                            Text(&quot;No more messages&quot;, modifier = Modifier
+</a><a href="#h1-0-255" id="h1-0-255" class="i">+                                .padding(8.dp)
+</a><a href="#h1-0-256" id="h1-0-256" class="i">+                                .fillMaxWidth(), textAlign = TextAlign.Center)
+</a><a href="#h1-0-257" id="h1-0-257" class="i">+                        } else {
+</a><a href="#h1-0-258" id="h1-0-258" class="i">+                            Row(
+</a><a href="#h1-0-259" id="h1-0-259" class="i">+                                horizontalArrangement = Arrangement.Center,
+</a><a href="#h1-0-260" id="h1-0-260" class="i">+                                modifier = Modifier.fillMaxWidth()
+</a><a href="#h1-0-261" id="h1-0-261" class="i">+                            ) {
+</a><a href="#h1-0-262" id="h1-0-262" class="i">+                                CircularProgressIndicator(
+</a><a href="#h1-0-263" id="h1-0-263" class="i">+                                    modifier = Modifier
+</a><a href="#h1-0-264" id="h1-0-264" class="i">+                                        .height(20.dp)
+</a><a href="#h1-0-265" id="h1-0-265" class="i">+                                        .padding(8.dp)
+</a><a href="#h1-0-266" id="h1-0-266" class="i">+                                )
+</a><a href="#h1-0-267" id="h1-0-267" class="i">+                            }
+</a><a href="#h1-0-268" id="h1-0-268" class="i">+                        }
+</a><a href="#h1-0-269" id="h1-0-269" class="i">+                    }
+</a><a href="#h1-0-270" id="h1-0-270" class="i">+                    LaunchedEffect(Unit, selectedConversation, stringFilter, reverseOrder) {
+</a><a href="#h1-0-271" id="h1-0-271" class="i">+                        withContext(Dispatchers.IO) {
+</a><a href="#h1-0-272" id="h1-0-272" class="i">+                            val newMessages = messageLoggerWrapper.fetchMessages(
+</a><a href="#h1-0-273" id="h1-0-273" class="i">+                                selectedConversation ?: return@withContext,
+</a><a href="#h1-0-274" id="h1-0-274" class="i">+                                lastFetchMessageTimestamp,
+</a><a href="#h1-0-275" id="h1-0-275" class="i">+                                30,
+</a><a href="#h1-0-276" id="h1-0-276" class="i">+                                reverseOrder
+</a><a href="#h1-0-277" id="h1-0-277" class="i">+                            ) { messageData -&gt;
+</a><a href="#h1-0-278" id="h1-0-278" class="i">+                                if (stringFilter.isEmpty()) return@fetchMessages true
+</a><a href="#h1-0-279" id="h1-0-279" class="i">+                                var isMatch = false
+</a><a href="#h1-0-280" id="h1-0-280" class="i">+                                decodeMessage(messageData) { contentType, messageReader, _ -&gt;
+</a><a href="#h1-0-281" id="h1-0-281" class="i">+                                    if (contentType == ContentType.CHAT) {
+</a><a href="#h1-0-282" id="h1-0-282" class="i">+                                        val content = messageReader.getString(2, 1) ?: return@decodeMessage
+</a><a href="#h1-0-283" id="h1-0-283" class="i">+                                        isMatch = content.contains(stringFilter, ignoreCase = true)
+</a><a href="#h1-0-284" id="h1-0-284" class="i">+                                    }
+</a><a href="#h1-0-285" id="h1-0-285" class="i">+                                }
+</a><a href="#h1-0-286" id="h1-0-286" class="i">+                                isMatch
+</a><a href="#h1-0-287" id="h1-0-287" class="i">+                            }
+</a><a href="#h1-0-288" id="h1-0-288" class="i">+                            if (newMessages.isEmpty()) {
+</a><a href="#h1-0-289" id="h1-0-289" class="i">+                                hasReachedEnd = true
+</a><a href="#h1-0-290" id="h1-0-290" class="i">+                                return@withContext
+</a><a href="#h1-0-291" id="h1-0-291" class="i">+                            }
+</a><a href="#h1-0-292" id="h1-0-292" class="i">+                            lastFetchMessageTimestamp = newMessages.lastOrNull()?.timestamp ?: return@withContext
+</a><a href="#h1-0-293" id="h1-0-293" class="i">+                            withContext(Dispatchers.Main) {
+</a><a href="#h1-0-294" id="h1-0-294" class="i">+                                messages.addAll(newMessages)
+</a><a href="#h1-0-295" id="h1-0-295" class="i">+                            }
+</a><a href="#h1-0-296" id="h1-0-296" class="i">+                        }
+</a><a href="#h1-0-297" id="h1-0-297" class="i">+                    }
+</a><a href="#h1-0-298" id="h1-0-298" class="i">+                }
+</a><a href="#h1-0-299" id="h1-0-299" class="i">+            }
+</a><a href="#h1-0-300" id="h1-0-300" class="i">+        }
+</a><a href="#h1-0-301" id="h1-0-301" class="i">+    }
+</a><a href="#h1-0-302" id="h1-0-302" class="i">+
+</a><a href="#h1-0-303" id="h1-0-303" class="i">+    override val topBarActions: @Composable (RowScope.() -&gt; Unit) = {
+</a><a href="#h1-0-304" id="h1-0-304" class="i">+        val focusRequester = remember { FocusRequester() }
+</a><a href="#h1-0-305" id="h1-0-305" class="i">+        var showSearchTextField by remember { mutableStateOf(false) }
+</a><a href="#h1-0-306" id="h1-0-306" class="i">+
+</a><a href="#h1-0-307" id="h1-0-307" class="i">+        if (showSearchTextField) {
+</a><a href="#h1-0-308" id="h1-0-308" class="i">+            var searchValue by remember { mutableStateOf(&quot;&quot;) }
+</a><a href="#h1-0-309" id="h1-0-309" class="i">+
+</a><a href="#h1-0-310" id="h1-0-310" class="i">+            TextField(
+</a><a href="#h1-0-311" id="h1-0-311" class="i">+                value = searchValue,
+</a><a href="#h1-0-312" id="h1-0-312" class="i">+                onValueChange = { keyword -&gt;
+</a><a href="#h1-0-313" id="h1-0-313" class="i">+                    searchValue = keyword
+</a><a href="#h1-0-314" id="h1-0-314" class="i">+                },
+</a><a href="#h1-0-315" id="h1-0-315" class="i">+                keyboardActions = KeyboardActions(onDone = { focusRequester.freeFocus() }),
+</a><a href="#h1-0-316" id="h1-0-316" class="i">+                modifier = Modifier
+</a><a href="#h1-0-317" id="h1-0-317" class="i">+                    .focusRequester(focusRequester)
+</a><a href="#h1-0-318" id="h1-0-318" class="i">+                    .weight(1f, fill = true)
+</a><a href="#h1-0-319" id="h1-0-319" class="i">+                    .padding(end = 10.dp)
+</a><a href="#h1-0-320" id="h1-0-320" class="i">+                    .height(70.dp),
+</a><a href="#h1-0-321" id="h1-0-321" class="i">+                singleLine = true,
+</a><a href="#h1-0-322" id="h1-0-322" class="i">+                colors = TextFieldDefaults.colors(
+</a><a href="#h1-0-323" id="h1-0-323" class="i">+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+</a><a href="#h1-0-324" id="h1-0-324" class="i">+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+</a><a href="#h1-0-325" id="h1-0-325" class="i">+                    focusedIndicatorColor = Color.Transparent,
+</a><a href="#h1-0-326" id="h1-0-326" class="i">+                    unfocusedIndicatorColor = Color.Transparent,
+</a><a href="#h1-0-327" id="h1-0-327" class="i">+                    disabledIndicatorColor = Color.Transparent,
+</a><a href="#h1-0-328" id="h1-0-328" class="i">+                    cursorColor = MaterialTheme.colorScheme.primary
+</a><a href="#h1-0-329" id="h1-0-329" class="i">+                )
+</a><a href="#h1-0-330" id="h1-0-330" class="i">+            )
+</a><a href="#h1-0-331" id="h1-0-331" class="i">+            ElevatedButton(onClick = {
+</a><a href="#h1-0-332" id="h1-0-332" class="i">+                stringFilter = searchValue
+</a><a href="#h1-0-333" id="h1-0-333" class="i">+            }) {
+</a><a href="#h1-0-334" id="h1-0-334" class="i">+                Text(&quot;Search&quot;)
+</a><a href="#h1-0-335" id="h1-0-335" class="i">+            }
+</a><a href="#h1-0-336" id="h1-0-336" class="i">+
+</a><a href="#h1-0-337" id="h1-0-337" class="i">+            LaunchedEffect(Unit) {
+</a><a href="#h1-0-338" id="h1-0-338" class="i">+                focusRequester.requestFocus()
+</a><a href="#h1-0-339" id="h1-0-339" class="i">+            }
+</a><a href="#h1-0-340" id="h1-0-340" class="i">+        }
+</a><a href="#h1-0-341" id="h1-0-341" class="i">+
+</a><a href="#h1-0-342" id="h1-0-342" class="i">+        IconButton(onClick = {
+</a><a href="#h1-0-343" id="h1-0-343" class="i">+            showSearchTextField = !showSearchTextField
+</a><a href="#h1-0-344" id="h1-0-344" class="i">+            stringFilter = &quot;&quot;
+</a><a href="#h1-0-345" id="h1-0-345" class="i">+        }) {
+</a><a href="#h1-0-346" id="h1-0-346" class="i">+            Icon(
+</a><a href="#h1-0-347" id="h1-0-347" class="i">+                imageVector = if (showSearchTextField) Icons.Filled.Close
+</a><a href="#h1-0-348" id="h1-0-348" class="i">+                else Icons.Filled.Search,
+</a><a href="#h1-0-349" id="h1-0-349" class="i">+                contentDescription = null
+</a><a href="#h1-0-350" id="h1-0-350" class="i">+            )
+</a><a href="#h1-0-351" id="h1-0-351" class="i">+        }
+</a><a href="#h1-0-352" id="h1-0-352" class="i">+    }
+</a><a href="#h1-0-353" id="h1-0-353" class="i">+}</a><a href="#h1-0-354" id="h1-0-354" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -183,6 +183,14 @@ class HomeSettings : Routes.Route() {
+</a>                             Text(text = &quot;Clear&quot;)
+                         }
+                     }
+<a href="#h2-0-3" id="h2-0-3" class="i">+                    OutlinedButton(
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+                        modifier = Modifier.fillMaxWidth().padding(5.dp),
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+                        onClick = {
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+                            routes.loggerHistory.navigate()
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+                        }
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+                    ) {
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+                        Text(text = &quot;View Message History&quot;)
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+                    }
+</a>                 }
+             }
+ 
+<b>diff --git a/<a id="h3" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -28,6 +28,8 @@
+</a>             &quot;home&quot;: &quot;Home&quot;,
+             &quot;home_settings&quot;: &quot;Settings&quot;,
+             &quot;home_logs&quot;: &quot;Logs&quot;,
+<a href="#h3-0-3" id="h3-0-3" class="i">+            &quot;logger_history&quot;: &quot;Logger History&quot;,
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+            &quot;logged_stories&quot;: &quot;Logged Stories&quot;,
+</a>             &quot;social&quot;: &quot;Social&quot;,
+             &quot;manage_scope&quot;: &quot;Manage Scope&quot;,
+             &quot;messaging_preview&quot;: &quot;Preview&quot;,
+<a href="#h3-1" id="h3-1" class="h">@@ -940,6 +942,7 @@
+</a>         &quot;spotlight&quot;: &quot;Spotlight&quot;,
+         &quot;profile_picture&quot;: &quot;Profile Picture&quot;,
+         &quot;story_logger&quot;: &quot;Story Logger&quot;,
+<a href="#h3-1-3" id="h3-1-3" class="i">+        &quot;message_logger&quot;: &quot;Message Logger&quot;,
+</a>         &quot;merged&quot;: &quot;Merged&quot;
+     },
+ 
+<b>diff --git a/<a id="h4" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MessageLoggerWrapper.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MessageLoggerWrapper.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MessageLoggerWrapper.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MessageLoggerWrapper.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -12,6 +12,13 @@ import me.rhunk.snapenhance.common.util.ktx.getStringOrNull
+</a> import java.io.File
+ import java.util.UUID
+ 
+<a href="#h4-0-3" id="h4-0-3" class="i">+
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+class LoggedMessage(
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+    val messageId: Long,
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+    val timestamp: Long,
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+    val messageData: ByteArray
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+)
+</a><a href="#h4-0-9" id="h4-0-9" class="i">+
+</a> class MessageLoggerWrapper(
+     val databaseFile: File
+ ): MessageLoggerInterface.Stub() {
+<a href="#h4-1" id="h4-1" class="h">@@ -60,29 +67,24 @@ class MessageLoggerWrapper(
+</a>             runCatching { UUID.fromString(it) }.isFailure
+         }) return longArrayOf()
+ 
+<a href="#h4-1-3" id="h4-1-3" class="d">-        val cursor = database.rawQuery(&quot;SELECT message_id FROM messages WHERE conversation_id IN (${
+</a><a href="#h4-1-4" id="h4-1-4" class="d">-            conversationId.joinToString(
+</a><a href="#h4-1-5" id="h4-1-5" class="d">-                &quot;,&quot;
+</a><a href="#h4-1-6" id="h4-1-6" class="d">-            ) { &quot;&#39;$it&#39;&quot; }
+</a><a href="#h4-1-7" id="h4-1-7" class="d">-        }) ORDER BY message_id DESC LIMIT $limit&quot;, null)
+</a><a href="#h4-1-8" id="h4-1-8" class="d">-
+</a><a href="#h4-1-9" id="h4-1-9" class="d">-        val ids = mutableListOf&lt;Long&gt;()
+</a><a href="#h4-1-10" id="h4-1-10" class="d">-        while (cursor.moveToNext()) {
+</a><a href="#h4-1-11" id="h4-1-11" class="d">-            ids.add(cursor.getLong(0))
+</a><a href="#h4-1-12" id="h4-1-12" class="i">+        return database.rawQuery(&quot;SELECT message_id FROM messages WHERE conversation_id IN (${
+</a><a href="#h4-1-13" id="h4-1-13" class="i">+            conversationId.joinToString(&quot;,&quot;) { &quot;&#39;$it&#39;&quot; }
+</a><a href="#h4-1-14" id="h4-1-14" class="i">+        }) ORDER BY message_id DESC LIMIT $limit&quot;, null).use {
+</a><a href="#h4-1-15" id="h4-1-15" class="i">+            val ids = mutableListOf&lt;Long&gt;()
+</a><a href="#h4-1-16" id="h4-1-16" class="i">+            while (it.moveToNext()) {
+</a><a href="#h4-1-17" id="h4-1-17" class="i">+                ids.add(it.getLong(0))
+</a><a href="#h4-1-18" id="h4-1-18" class="i">+            }
+</a><a href="#h4-1-19" id="h4-1-19" class="i">+            ids.toLongArray()
+</a>         }
+<a href="#h4-1-21" id="h4-1-21" class="d">-        cursor.close()
+</a><a href="#h4-1-22" id="h4-1-22" class="d">-        return ids.toLongArray()
+</a>     }
+ 
+     override fun getMessage(conversationId: String?, id: Long): ByteArray? {
+<a href="#h4-1-26" id="h4-1-26" class="d">-        val cursor = database.rawQuery(&quot;SELECT message_data FROM messages WHERE conversation_id = ? AND message_id = ?&quot;, arrayOf(conversationId, id.toString()))
+</a><a href="#h4-1-27" id="h4-1-27" class="d">-        val message: ByteArray? = if (cursor.moveToFirst()) {
+</a><a href="#h4-1-28" id="h4-1-28" class="d">-            cursor.getBlob(0)
+</a><a href="#h4-1-29" id="h4-1-29" class="d">-        } else {
+</a><a href="#h4-1-30" id="h4-1-30" class="d">-            null
+</a><a href="#h4-1-31" id="h4-1-31" class="i">+        return database.rawQuery(
+</a><a href="#h4-1-32" id="h4-1-32" class="i">+            &quot;SELECT message_data FROM messages WHERE conversation_id = ? AND message_id = ?&quot;,
+</a><a href="#h4-1-33" id="h4-1-33" class="i">+            arrayOf(conversationId, id.toString())
+</a><a href="#h4-1-34" id="h4-1-34" class="i">+        ).use {
+</a><a href="#h4-1-35" id="h4-1-35" class="i">+            if (it.moveToFirst()) it.getBlob(0) else null
+</a>         }
+<a href="#h4-1-37" id="h4-1-37" class="d">-        cursor.close()
+</a><a href="#h4-1-38" id="h4-1-38" class="d">-        return message
+</a>     }
+ 
+     override fun addMessage(conversationId: String, messageId: Long, serializedMessage: ByteArray) {
+<a href="#h4-2" id="h4-2" class="h">@@ -116,19 +118,17 @@ class MessageLoggerWrapper(
+</a>     }
+ 
+     fun getStoredMessageCount(): Int {
+<a href="#h4-2-3" id="h4-2-3" class="d">-        val cursor = database.rawQuery(&quot;SELECT COUNT(*) FROM messages&quot;, null)
+</a><a href="#h4-2-4" id="h4-2-4" class="d">-        cursor.moveToFirst()
+</a><a href="#h4-2-5" id="h4-2-5" class="d">-        val count = cursor.getInt(0)
+</a><a href="#h4-2-6" id="h4-2-6" class="d">-        cursor.close()
+</a><a href="#h4-2-7" id="h4-2-7" class="d">-        return count
+</a><a href="#h4-2-8" id="h4-2-8" class="i">+        return database.rawQuery(&quot;SELECT COUNT(*) FROM messages&quot;, null).use {
+</a><a href="#h4-2-9" id="h4-2-9" class="i">+            it.moveToFirst()
+</a><a href="#h4-2-10" id="h4-2-10" class="i">+            it.getInt(0)
+</a><a href="#h4-2-11" id="h4-2-11" class="i">+        }
+</a>     }
+ 
+     fun getStoredStoriesCount(): Int {
+<a href="#h4-2-15" id="h4-2-15" class="d">-        val cursor = database.rawQuery(&quot;SELECT COUNT(*) FROM stories&quot;, null)
+</a><a href="#h4-2-16" id="h4-2-16" class="d">-        cursor.moveToFirst()
+</a><a href="#h4-2-17" id="h4-2-17" class="d">-        val count = cursor.getInt(0)
+</a><a href="#h4-2-18" id="h4-2-18" class="d">-        cursor.close()
+</a><a href="#h4-2-19" id="h4-2-19" class="d">-        return count
+</a><a href="#h4-2-20" id="h4-2-20" class="i">+        return database.rawQuery(&quot;SELECT COUNT(*) FROM stories&quot;, null).use {
+</a><a href="#h4-2-21" id="h4-2-21" class="i">+            it.moveToFirst()
+</a><a href="#h4-2-22" id="h4-2-22" class="i">+            it.getInt(0)
+</a><a href="#h4-2-23" id="h4-2-23" class="i">+        }
+</a>     }
+ 
+     override fun deleteMessage(conversationId: String, messageId: Long) {
+<a href="#h4-3" id="h4-3" class="h">@@ -174,4 +174,39 @@ class MessageLoggerWrapper(
+</a>         }
+         return stories
+     }
+<a href="#h4-3-3" id="h4-3-3" class="i">+
+</a><a href="#h4-3-4" id="h4-3-4" class="i">+    fun getAllConversations(): List&lt;String&gt; {
+</a><a href="#h4-3-5" id="h4-3-5" class="i">+        return database.rawQuery(&quot;SELECT DISTINCT conversation_id FROM messages&quot;, null).use {
+</a><a href="#h4-3-6" id="h4-3-6" class="i">+            val conversations = mutableListOf&lt;String&gt;()
+</a><a href="#h4-3-7" id="h4-3-7" class="i">+            while (it.moveToNext()) {
+</a><a href="#h4-3-8" id="h4-3-8" class="i">+                conversations.add(it.getString(0))
+</a><a href="#h4-3-9" id="h4-3-9" class="i">+            }
+</a><a href="#h4-3-10" id="h4-3-10" class="i">+            conversations
+</a><a href="#h4-3-11" id="h4-3-11" class="i">+        }
+</a><a href="#h4-3-12" id="h4-3-12" class="i">+    }
+</a><a href="#h4-3-13" id="h4-3-13" class="i">+
+</a><a href="#h4-3-14" id="h4-3-14" class="i">+    fun fetchMessages(
+</a><a href="#h4-3-15" id="h4-3-15" class="i">+        conversationId: String,
+</a><a href="#h4-3-16" id="h4-3-16" class="i">+        fromTimestamp: Long,
+</a><a href="#h4-3-17" id="h4-3-17" class="i">+        limit: Int,
+</a><a href="#h4-3-18" id="h4-3-18" class="i">+        reverseOrder: Boolean = true,
+</a><a href="#h4-3-19" id="h4-3-19" class="i">+        filter: ((LoggedMessage) -&gt; Boolean)? = null
+</a><a href="#h4-3-20" id="h4-3-20" class="i">+    ): List&lt;LoggedMessage&gt; {
+</a><a href="#h4-3-21" id="h4-3-21" class="i">+        val messages = mutableListOf&lt;LoggedMessage&gt;()
+</a><a href="#h4-3-22" id="h4-3-22" class="i">+        database.rawQuery(
+</a><a href="#h4-3-23" id="h4-3-23" class="i">+            &quot;SELECT * FROM messages WHERE conversation_id = ? AND added_timestamp ${if (reverseOrder) &quot;&lt;&quot; else &quot;&gt;&quot;} ? ORDER BY added_timestamp ${if (reverseOrder) &quot;DESC&quot; else &quot;ASC&quot;}&quot;,
+</a><a href="#h4-3-24" id="h4-3-24" class="i">+            arrayOf(conversationId, fromTimestamp.toString())
+</a><a href="#h4-3-25" id="h4-3-25" class="i">+        ).use {
+</a><a href="#h4-3-26" id="h4-3-26" class="i">+            while (it.moveToNext() &amp;&amp; messages.size &lt; limit) {
+</a><a href="#h4-3-27" id="h4-3-27" class="i">+                val message = LoggedMessage(
+</a><a href="#h4-3-28" id="h4-3-28" class="i">+                    messageId = it.getLongOrNull(&quot;message_id&quot;) ?: continue,
+</a><a href="#h4-3-29" id="h4-3-29" class="i">+                    timestamp = it.getLongOrNull(&quot;added_timestamp&quot;) ?: continue,
+</a><a href="#h4-3-30" id="h4-3-30" class="i">+                    messageData = it.getBlobOrNull(&quot;message_data&quot;) ?: continue
+</a><a href="#h4-3-31" id="h4-3-31" class="i">+                )
+</a><a href="#h4-3-32" id="h4-3-32" class="i">+                if (filter != null &amp;&amp; !filter(message)) continue
+</a><a href="#h4-3-33" id="h4-3-33" class="i">+                messages.add(message)
+</a><a href="#h4-3-34" id="h4-3-34" class="i">+            }
+</a><a href="#h4-3-35" id="h4-3-35" class="i">+        }
+</a><a href="#h4-3-36" id="h4-3-36" class="i">+        return messages
+</a><a href="#h4-3-37" id="h4-3-37" class="i">+    }
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h5" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/MediaDownloadSource.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/MediaDownloadSource.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/MediaDownloadSource.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/MediaDownloadSource.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -15,6 +15,7 @@ enum class MediaDownloadSource(
+</a>     SPOTLIGHT(&quot;spotlight&quot;,  &quot;spotlight&quot;),
+     PROFILE_PICTURE(&quot;profile_picture&quot;, &quot;profile_picture&quot;),
+     STORY_LOGGER(&quot;story_logger&quot;, &quot;story_logger&quot;),
+<a href="#h5-0-3" id="h5-0-3" class="i">+    MESSAGE_LOGGER(&quot;message_logger&quot;, &quot;message_logger&quot;),
+</a>     MERGED(&quot;merged&quot;, &quot;merged&quot;);
+ 
+     fun matches(source: String?): Boolean {
+<b>diff --git a/<a id="h6" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/AndroidCompatExtensions.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/AndroidCompatExtensions.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/AndroidCompatExtensions.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/ktx/AndroidCompatExtensions.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -1,5 +1,7 @@
+</a> package me.rhunk.snapenhance.common.util.ktx
+ 
+<a href="#h6-0-2" id="h6-0-2" class="i">+import android.content.ClipData
+</a><a href="#h6-0-3" id="h6-0-3" class="i">+import android.content.Context
+</a> import android.content.pm.PackageManager
+ import android.content.pm.PackageManager.ApplicationInfoFlags
+ import android.os.Build
+<a href="#h6-1" id="h6-1" class="h">@@ -11,3 +13,8 @@ fun PackageManager.getApplicationInfoCompat(packageName: String, flags: Int) =
+</a>         @Suppress(&quot;DEPRECATION&quot;)
+         getApplicationInfo(packageName, flags)
+     }
+<a href="#h6-1-3" id="h6-1-3" class="i">+
+</a><a href="#h6-1-4" id="h6-1-4" class="i">+fun Context.copyToClipboard(data: String, label: String = &quot;Copied Text&quot;) {
+</a><a href="#h6-1-5" id="h6-1-5" class="i">+    getSystemService(android.content.ClipboardManager::class.java).setPrimaryClip(
+</a><a href="#h6-1-6" id="h6-1-6" class="i">+        ClipData.newPlainText(label, data))
+</a><a href="#h6-1-7" id="h6-1-7" class="i">+}</a><a href="#h6-1-8" id="h6-1-8" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -158,8 +158,4 @@ class ModContext(
+</a>     fun getConfigLocale(): String {
+         return _config.locale
+     }
+<a href="#h7-0-3" id="h7-0-3" class="d">-
+</a><a href="#h7-0-4" id="h7-0-4" class="d">-    fun copyToClipboard(data: String, label: String = &quot;Copied Text&quot;) {
+</a><a href="#h7-0-5" id="h7-0-5" class="d">-        androidContext.getSystemService(android.content.ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText(label, data))
+</a><a href="#h7-0-6" id="h7-0-6" class="d">-    }
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -19,6 +19,7 @@ import me.rhunk.snapenhance.common.data.MessagingRuleType
+</a> import me.rhunk.snapenhance.common.data.download.*
+ import me.rhunk.snapenhance.common.database.impl.ConversationMessage
+ import me.rhunk.snapenhance.common.database.impl.FriendInfo
+<a href="#h8-0-3" id="h8-0-3" class="i">+import me.rhunk.snapenhance.common.util.ktx.copyToClipboard
+</a> import me.rhunk.snapenhance.common.util.ktx.longHashCode
+ import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.common.util.snap.BitmojiSelfie
+<a href="#h8-1" id="h8-1" class="h">@@ -161,7 +162,7 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>                 setTitle(&quot;Debug Media Info&quot;)
+                 setView(debugEditText(context, mediaInfoText))
+                 setNeutralButton(&quot;Copy&quot;) { _, _ -&gt;
+<a href="#h8-1-3" id="h8-1-3" class="d">-                    this@MediaDownloader.context.copyToClipboard(mediaInfoText)
+</a><a href="#h8-1-4" id="h8-1-4" class="i">+                    context.copyToClipboard(mediaInfoText)
+</a>                 }
+                 setNegativeButton(&quot;Cancel&quot;) { dialog, _ -&gt; dialog.dismiss() }
+             }.show()
+<b>diff --git a/<a id="h9" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
+</a> import androidx.compose.ui.unit.dp
+ import me.rhunk.snapenhance.common.data.ContentType
+ import me.rhunk.snapenhance.common.ui.createComposeView
+<a href="#h9-0-3" id="h9-0-3" class="i">+import me.rhunk.snapenhance.common.util.ktx.copyToClipboard
+</a> import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.common.util.snap.RemoteMediaResolver
+ import me.rhunk.snapenhance.core.features.impl.downloader.MediaDownloader
+<a href="#h9-1" id="h9-1" class="h">@@ -74,7 +75,7 @@ class ChatActionMenu : AbstractMenu() {
+</a>                 setView(debugEditText(context, text))
+                 setPositiveButton(&quot;OK&quot;) { dialog, _ -&gt; dialog.dismiss() }
+                 setNegativeButton(&quot;Copy&quot;) { _, _ -&gt;
+<a href="#h9-1-3" id="h9-1-3" class="d">-                    this@ChatActionMenu.context.copyToClipboard(text, title)
+</a><a href="#h9-1-4" id="h9-1-4" class="i">+                    context.copyToClipboard(text, title)
+</a>                 }
+             }.show()
+         }
+</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>refactor(manager/social): messaging task - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/9f098834cfa61d80bc3c5fcac98e416c6f4b2be3.html">9f098834cfa61d80bc3c5fcac98e416c6f4b2be3</a>
+<b>parent</b> <a href="../commit/50a43ee6ad81cd41cb6f70f96c9e990932856b32.html">50a43ee6ad81cd41cb6f70f96c9e990932856b32</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 15 Oct 2023 13:32:39 +0200
+
+refactor(manager/social): messaging task
+
+<b>Diffstat:</b>
+<table><tr><td class="A">A</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/messaging/MessagingTask.kt</a></td><td> | </td><td class="num">126</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/MessagingPreview.kt</a></td><td> | </td><td class="num">247</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/SocialSection.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">++</span><span class="d">-------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">++++++++++</span><span class="d">--</span></td></tr>
+</table></pre><pre>4 files changed, 269 insertions(+), 125 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/MessagingTask.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/MessagingTask.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/MessagingTask.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/MessagingTask.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -0,0 +1,125 @@
+</a><a href="#h0-0-0" id="h0-0-0" class="i">+package me.rhunk.snapenhance.messaging
+</a><a href="#h0-0-1" id="h0-0-1" class="i">+
+</a><a href="#h0-0-2" id="h0-0-2" class="i">+import androidx.compose.runtime.MutableIntState
+</a><a href="#h0-0-3" id="h0-0-3" class="i">+import kotlinx.coroutines.delay
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+import me.rhunk.snapenhance.bridge.snapclient.MessagingBridge
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+import me.rhunk.snapenhance.bridge.snapclient.types.Message
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+import me.rhunk.snapenhance.common.data.ContentType
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+import kotlin.random.Random
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+enum class MessagingTaskType(
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+    val key: String
+</a><a href="#h0-0-12" id="h0-0-12" class="i">+) {
+</a><a href="#h0-0-13" id="h0-0-13" class="i">+    SAVE(&quot;SAVE&quot;),
+</a><a href="#h0-0-14" id="h0-0-14" class="i">+    UNSAVE(&quot;UNSAVE&quot;),
+</a><a href="#h0-0-15" id="h0-0-15" class="i">+    DELETE(&quot;ERASE&quot;),
+</a><a href="#h0-0-16" id="h0-0-16" class="i">+    READ(&quot;READ&quot;),
+</a><a href="#h0-0-17" id="h0-0-17" class="i">+}
+</a><a href="#h0-0-18" id="h0-0-18" class="i">+
+</a><a href="#h0-0-19" id="h0-0-19" class="i">+typealias MessagingTaskConstraint = Message.() -&gt; Boolean
+</a><a href="#h0-0-20" id="h0-0-20" class="i">+
+</a><a href="#h0-0-21" id="h0-0-21" class="i">+object MessagingConstraints {
+</a><a href="#h0-0-22" id="h0-0-22" class="i">+    val USER_ID: (String) -&gt; MessagingTaskConstraint = { userId: String -&gt;
+</a><a href="#h0-0-23" id="h0-0-23" class="i">+        {
+</a><a href="#h0-0-24" id="h0-0-24" class="i">+            this.senderId == userId
+</a><a href="#h0-0-25" id="h0-0-25" class="i">+        }
+</a><a href="#h0-0-26" id="h0-0-26" class="i">+    }
+</a><a href="#h0-0-27" id="h0-0-27" class="i">+    val NO_USER_ID: (String) -&gt; MessagingTaskConstraint = { userId: String -&gt;
+</a><a href="#h0-0-28" id="h0-0-28" class="i">+        {
+</a><a href="#h0-0-29" id="h0-0-29" class="i">+            this.senderId != userId
+</a><a href="#h0-0-30" id="h0-0-30" class="i">+        }
+</a><a href="#h0-0-31" id="h0-0-31" class="i">+    }
+</a><a href="#h0-0-32" id="h0-0-32" class="i">+    val MY_USER_ID: (messagingBridge: MessagingBridge) -&gt; MessagingTaskConstraint = {
+</a><a href="#h0-0-33" id="h0-0-33" class="i">+        val myUserId = it.myUserId
+</a><a href="#h0-0-34" id="h0-0-34" class="i">+        {
+</a><a href="#h0-0-35" id="h0-0-35" class="i">+            this.senderId == myUserId
+</a><a href="#h0-0-36" id="h0-0-36" class="i">+        }
+</a><a href="#h0-0-37" id="h0-0-37" class="i">+    }
+</a><a href="#h0-0-38" id="h0-0-38" class="i">+    val CONTENT_TYPE: (ContentType) -&gt; MessagingTaskConstraint = { contentType: ContentType -&gt;
+</a><a href="#h0-0-39" id="h0-0-39" class="i">+        {
+</a><a href="#h0-0-40" id="h0-0-40" class="i">+            this.contentType == contentType.id
+</a><a href="#h0-0-41" id="h0-0-41" class="i">+        }
+</a><a href="#h0-0-42" id="h0-0-42" class="i">+    }
+</a><a href="#h0-0-43" id="h0-0-43" class="i">+}
+</a><a href="#h0-0-44" id="h0-0-44" class="i">+
+</a><a href="#h0-0-45" id="h0-0-45" class="i">+class MessagingTask(
+</a><a href="#h0-0-46" id="h0-0-46" class="i">+    private val messagingBridge: MessagingBridge,
+</a><a href="#h0-0-47" id="h0-0-47" class="i">+    private val conversationId: String,
+</a><a href="#h0-0-48" id="h0-0-48" class="i">+    private val taskType: MessagingTaskType,
+</a><a href="#h0-0-49" id="h0-0-49" class="i">+    private val constraints: List&lt;MessagingTaskConstraint&gt;,
+</a><a href="#h0-0-50" id="h0-0-50" class="i">+    private val processedMessageCount: MutableIntState,
+</a><a href="#h0-0-51" id="h0-0-51" class="i">+    private val onSuccess: (message: Message) -&gt; Unit = {},
+</a><a href="#h0-0-52" id="h0-0-52" class="i">+    private val onFailure: (message: Message, reason: String) -&gt; Unit = { _, _ -&gt; },
+</a><a href="#h0-0-53" id="h0-0-53" class="i">+    private val overrideClientMessageIds: List&lt;Long&gt;? = null,
+</a><a href="#h0-0-54" id="h0-0-54" class="i">+    private val amountToProcess: Int? = null,
+</a><a href="#h0-0-55" id="h0-0-55" class="i">+) {
+</a><a href="#h0-0-56" id="h0-0-56" class="i">+    private suspend fun processMessages(
+</a><a href="#h0-0-57" id="h0-0-57" class="i">+        messages: List&lt;Message&gt;
+</a><a href="#h0-0-58" id="h0-0-58" class="i">+    ) {
+</a><a href="#h0-0-59" id="h0-0-59" class="i">+        messages.forEach { message -&gt;
+</a><a href="#h0-0-60" id="h0-0-60" class="i">+            if (constraints.any { !it(message) }) {
+</a><a href="#h0-0-61" id="h0-0-61" class="i">+                return@forEach
+</a><a href="#h0-0-62" id="h0-0-62" class="i">+            }
+</a><a href="#h0-0-63" id="h0-0-63" class="i">+
+</a><a href="#h0-0-64" id="h0-0-64" class="i">+            val error = messagingBridge.updateMessage(conversationId, message.clientMessageId, taskType.key)
+</a><a href="#h0-0-65" id="h0-0-65" class="i">+            error?.takeIf { error != &quot;DUPLICATE_REQUEST&quot; }?.let {
+</a><a href="#h0-0-66" id="h0-0-66" class="i">+                onFailure(message, error)
+</a><a href="#h0-0-67" id="h0-0-67" class="i">+            }
+</a><a href="#h0-0-68" id="h0-0-68" class="i">+            onSuccess(message)
+</a><a href="#h0-0-69" id="h0-0-69" class="i">+            processedMessageCount.intValue++
+</a><a href="#h0-0-70" id="h0-0-70" class="i">+            delay(Random.nextLong(50, 170))
+</a><a href="#h0-0-71" id="h0-0-71" class="i">+        }
+</a><a href="#h0-0-72" id="h0-0-72" class="i">+    }
+</a><a href="#h0-0-73" id="h0-0-73" class="i">+
+</a><a href="#h0-0-74" id="h0-0-74" class="i">+    fun hasFixedGoal() = overrideClientMessageIds?.takeIf { it.isNotEmpty() } != null || amountToProcess?.takeIf { it &gt; 0 } != null
+</a><a href="#h0-0-75" id="h0-0-75" class="i">+
+</a><a href="#h0-0-76" id="h0-0-76" class="i">+    suspend fun run() {
+</a><a href="#h0-0-77" id="h0-0-77" class="i">+        var processedOverrideMessages = 0
+</a><a href="#h0-0-78" id="h0-0-78" class="i">+        var lastMessageId = Long.MAX_VALUE
+</a><a href="#h0-0-79" id="h0-0-79" class="i">+
+</a><a href="#h0-0-80" id="h0-0-80" class="i">+        do {
+</a><a href="#h0-0-81" id="h0-0-81" class="i">+            val fetchedMessages = messagingBridge.fetchConversationWithMessagesPaginated(
+</a><a href="#h0-0-82" id="h0-0-82" class="i">+                conversationId,
+</a><a href="#h0-0-83" id="h0-0-83" class="i">+                100,
+</a><a href="#h0-0-84" id="h0-0-84" class="i">+                lastMessageId
+</a><a href="#h0-0-85" id="h0-0-85" class="i">+            ) ?: return
+</a><a href="#h0-0-86" id="h0-0-86" class="i">+
+</a><a href="#h0-0-87" id="h0-0-87" class="i">+            if (fetchedMessages.isEmpty()) {
+</a><a href="#h0-0-88" id="h0-0-88" class="i">+                break
+</a><a href="#h0-0-89" id="h0-0-89" class="i">+            }
+</a><a href="#h0-0-90" id="h0-0-90" class="i">+
+</a><a href="#h0-0-91" id="h0-0-91" class="i">+            lastMessageId = fetchedMessages.first().clientMessageId
+</a><a href="#h0-0-92" id="h0-0-92" class="i">+
+</a><a href="#h0-0-93" id="h0-0-93" class="i">+            overrideClientMessageIds?.let { ids -&gt;
+</a><a href="#h0-0-94" id="h0-0-94" class="i">+                fetchedMessages.retainAll { message -&gt;
+</a><a href="#h0-0-95" id="h0-0-95" class="i">+                    ids.contains(message.clientMessageId)
+</a><a href="#h0-0-96" id="h0-0-96" class="i">+                }
+</a><a href="#h0-0-97" id="h0-0-97" class="i">+            }
+</a><a href="#h0-0-98" id="h0-0-98" class="i">+
+</a><a href="#h0-0-99" id="h0-0-99" class="i">+            amountToProcess?.let { amount -&gt;
+</a><a href="#h0-0-100" id="h0-0-100" class="i">+                while (processedMessageCount.intValue + fetchedMessages.size &gt; amount) {
+</a><a href="#h0-0-101" id="h0-0-101" class="i">+                    fetchedMessages.removeLastOrNull()
+</a><a href="#h0-0-102" id="h0-0-102" class="i">+                }
+</a><a href="#h0-0-103" id="h0-0-103" class="i">+            }
+</a><a href="#h0-0-104" id="h0-0-104" class="i">+
+</a><a href="#h0-0-105" id="h0-0-105" class="i">+            processMessages(fetchedMessages.reversed())
+</a><a href="#h0-0-106" id="h0-0-106" class="i">+
+</a><a href="#h0-0-107" id="h0-0-107" class="i">+            overrideClientMessageIds?.let { ids -&gt;
+</a><a href="#h0-0-108" id="h0-0-108" class="i">+                processedOverrideMessages += fetchedMessages.count { message -&gt;
+</a><a href="#h0-0-109" id="h0-0-109" class="i">+                    ids.contains(message.clientMessageId)
+</a><a href="#h0-0-110" id="h0-0-110" class="i">+                }
+</a><a href="#h0-0-111" id="h0-0-111" class="i">+
+</a><a href="#h0-0-112" id="h0-0-112" class="i">+                if (processedOverrideMessages &gt;= ids.size) {
+</a><a href="#h0-0-113" id="h0-0-113" class="i">+                    return
+</a><a href="#h0-0-114" id="h0-0-114" class="i">+                }
+</a><a href="#h0-0-115" id="h0-0-115" class="i">+            }
+</a><a href="#h0-0-116" id="h0-0-116" class="i">+
+</a><a href="#h0-0-117" id="h0-0-117" class="i">+            amountToProcess?.let { amount -&gt;
+</a><a href="#h0-0-118" id="h0-0-118" class="i">+                if (processedMessageCount.intValue &gt;= amount) {
+</a><a href="#h0-0-119" id="h0-0-119" class="i">+                    return
+</a><a href="#h0-0-120" id="h0-0-120" class="i">+                }
+</a><a href="#h0-0-121" id="h0-0-121" class="i">+            }
+</a><a href="#h0-0-122" id="h0-0-122" class="i">+        } while (true)
+</a><a href="#h0-0-123" id="h0-0-123" class="i">+    }
+</a><a href="#h0-0-124" id="h0-0-124" class="i">+}</a><a href="#h0-0-125" id="h0-0-125" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/MessagingPreview.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/MessagingPreview.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/MessagingPreview.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/MessagingPreview.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,18 +1,25 @@
+</a> package me.rhunk.snapenhance.ui.manager.sections.social
+ 
+<a href="#h1-0-2" id="h1-0-2" class="i">+import androidx.compose.foundation.background
+</a><a href="#h1-0-3" id="h1-0-3" class="i">+import androidx.compose.foundation.border
+</a> import androidx.compose.foundation.gestures.detectTapGestures
+ import androidx.compose.foundation.layout.*
+ import androidx.compose.foundation.lazy.LazyColumn
+ import androidx.compose.foundation.lazy.LazyListState
+ import androidx.compose.foundation.lazy.rememberLazyListState
+<a href="#h1-0-9" id="h1-0-9" class="i">+import androidx.compose.foundation.shape.RoundedCornerShape
+</a> import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.filled.Close
+<a href="#h1-0-12" id="h1-0-12" class="d">-import androidx.compose.material.icons.filled.Delete
+</a><a href="#h1-0-13" id="h1-0-13" class="d">-import androidx.compose.material.icons.filled.DeleteForever
+</a><a href="#h1-0-14" id="h1-0-14" class="i">+import androidx.compose.material.icons.filled.MoreVert
+</a><a href="#h1-0-15" id="h1-0-15" class="i">+import androidx.compose.material.icons.rounded.BookmarkAdded
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+import androidx.compose.material.icons.rounded.BookmarkBorder
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+import androidx.compose.material.icons.rounded.DeleteForever
+</a><a href="#h1-0-18" id="h1-0-18" class="i">+import androidx.compose.material.icons.rounded.RemoveRedEye
+</a> import androidx.compose.material3.*
+ import androidx.compose.runtime.*
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+<a href="#h1-0-23" id="h1-0-23" class="i">+import androidx.compose.ui.graphics.vector.ImageVector
+</a> import androidx.compose.ui.input.pointer.pointerInput
+ import androidx.compose.ui.unit.dp
+ import kotlinx.coroutines.*
+<a href="#h1-1" id="h1-1" class="h">@@ -23,71 +30,121 @@ import me.rhunk.snapenhance.common.data.ContentType
+</a> import me.rhunk.snapenhance.common.data.SocialScope
+ import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.common.util.snap.SnapWidgetBroadcastReceiverHelper
+<a href="#h1-1-3" id="h1-1-3" class="d">-import me.rhunk.snapenhance.ui.util.AlertDialogs
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+import me.rhunk.snapenhance.messaging.MessagingConstraints
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+import me.rhunk.snapenhance.messaging.MessagingTask
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+import me.rhunk.snapenhance.messaging.MessagingTaskConstraint
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+import me.rhunk.snapenhance.messaging.MessagingTaskType
+</a> import me.rhunk.snapenhance.ui.util.Dialog
+<a href="#h1-1-9" id="h1-1-9" class="d">-import kotlin.random.Random
+</a> 
+ class MessagingPreview(
+     private val context: RemoteSideContext,
+     private val scope: SocialScope,
+     private val scopeId: String
+ ) {
+<a href="#h1-1-16" id="h1-1-16" class="d">-    private val alertDialogs by lazy { AlertDialogs(context.translation) }
+</a><a href="#h1-1-17" id="h1-1-17" class="d">-
+</a>     private lateinit var coroutineScope: CoroutineScope
+     private lateinit var messagingBridge: MessagingBridge
+     private lateinit var previewScrollState: LazyListState
+     private val myUserId by lazy { messagingBridge.myUserId }
+ 
+     private var conversationId: String? = null
+<a href="#h1-1-24" id="h1-1-24" class="d">-    private val messages = sortedMapOf&lt;Long, Message&gt;()
+</a><a href="#h1-1-25" id="h1-1-25" class="i">+    private val messages = sortedMapOf&lt;Long, Message&gt;() // server message id =&gt; message
+</a>     private var messageSize by mutableIntStateOf(0)
+     private var lastMessageId = Long.MAX_VALUE
+<a href="#h1-1-28" id="h1-1-28" class="d">-    private val selectedMessages = mutableStateListOf&lt;Long&gt;()
+</a><a href="#h1-1-29" id="h1-1-29" class="i">+    private val selectedMessages = mutableStateListOf&lt;Long&gt;() // client message id
+</a> 
+     private fun toggleSelectedMessage(messageId: Long) {
+         if (selectedMessages.contains(messageId)) selectedMessages.remove(messageId)
+         else selectedMessages.add(messageId)
+     }
+ 
+<a href="#h1-1-36" id="h1-1-36" class="i">+    @Composable
+</a><a href="#h1-1-37" id="h1-1-37" class="i">+    private fun ActionButton(
+</a><a href="#h1-1-38" id="h1-1-38" class="i">+        text: String,
+</a><a href="#h1-1-39" id="h1-1-39" class="i">+        icon: ImageVector,
+</a><a href="#h1-1-40" id="h1-1-40" class="i">+        onClick: () -&gt; Unit,
+</a><a href="#h1-1-41" id="h1-1-41" class="i">+    ) {
+</a><a href="#h1-1-42" id="h1-1-42" class="i">+        DropdownMenuItem(
+</a><a href="#h1-1-43" id="h1-1-43" class="i">+            onClick = onClick,
+</a><a href="#h1-1-44" id="h1-1-44" class="i">+            text = {
+</a><a href="#h1-1-45" id="h1-1-45" class="i">+                Row(
+</a><a href="#h1-1-46" id="h1-1-46" class="i">+                    modifier = Modifier.padding(5.dp),
+</a><a href="#h1-1-47" id="h1-1-47" class="i">+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+</a><a href="#h1-1-48" id="h1-1-48" class="i">+                    verticalAlignment = Alignment.CenterVertically
+</a><a href="#h1-1-49" id="h1-1-49" class="i">+                ) {
+</a><a href="#h1-1-50" id="h1-1-50" class="i">+                    Icon(
+</a><a href="#h1-1-51" id="h1-1-51" class="i">+                        imageVector = icon,
+</a><a href="#h1-1-52" id="h1-1-52" class="i">+                        contentDescription = null
+</a><a href="#h1-1-53" id="h1-1-53" class="i">+                    )
+</a><a href="#h1-1-54" id="h1-1-54" class="i">+                    Text(text = text)
+</a><a href="#h1-1-55" id="h1-1-55" class="i">+                }
+</a><a href="#h1-1-56" id="h1-1-56" class="i">+            }
+</a><a href="#h1-1-57" id="h1-1-57" class="i">+        )
+</a><a href="#h1-1-58" id="h1-1-58" class="i">+    }
+</a> 
+     @Composable
+     fun TopBarAction() {
+<a href="#h1-1-62" id="h1-1-62" class="d">-        var deletedMessageCount by remember { mutableIntStateOf(0) }
+</a><a href="#h1-1-63" id="h1-1-63" class="d">-        var messageDeleteJob by remember { mutableStateOf(null as Job?) }
+</a><a href="#h1-1-64" id="h1-1-64" class="d">-
+</a><a href="#h1-1-65" id="h1-1-65" class="d">-        fun deleteIndividualMessage(serverMessageId: Long) {
+</a><a href="#h1-1-66" id="h1-1-66" class="d">-            val message = messages[serverMessageId] ?: return
+</a><a href="#h1-1-67" id="h1-1-67" class="d">-            if (message.senderId != myUserId) return
+</a><a href="#h1-1-68" id="h1-1-68" class="d">-
+</a><a href="#h1-1-69" id="h1-1-69" class="d">-            val error = messagingBridge.updateMessage(conversationId, message.clientMessageId, &quot;ERASE&quot;)
+</a><a href="#h1-1-70" id="h1-1-70" class="d">-
+</a><a href="#h1-1-71" id="h1-1-71" class="d">-            if (error != null) {
+</a><a href="#h1-1-72" id="h1-1-72" class="d">-                context.shortToast(&quot;Failed to delete message: $error&quot;)
+</a><a href="#h1-1-73" id="h1-1-73" class="d">-            } else {
+</a><a href="#h1-1-74" id="h1-1-74" class="d">-                coroutineScope.launch {
+</a><a href="#h1-1-75" id="h1-1-75" class="d">-                    deletedMessageCount++
+</a><a href="#h1-1-76" id="h1-1-76" class="d">-                    messages.remove(serverMessageId)
+</a><a href="#h1-1-77" id="h1-1-77" class="d">-                    messageSize = messages.size
+</a><a href="#h1-1-78" id="h1-1-78" class="i">+        var showDropDown by remember { mutableStateOf(false) }
+</a><a href="#h1-1-79" id="h1-1-79" class="i">+        var activeTask by remember { mutableStateOf(null as MessagingTask?) }
+</a><a href="#h1-1-80" id="h1-1-80" class="i">+        var activeJob by remember { mutableStateOf(null as Job?) }
+</a><a href="#h1-1-81" id="h1-1-81" class="i">+        val processMessageCount = remember { mutableIntStateOf(0) }
+</a><a href="#h1-1-82" id="h1-1-82" class="i">+
+</a><a href="#h1-1-83" id="h1-1-83" class="i">+        fun triggerMessagingTask(taskType: MessagingTaskType, constraints: List&lt;MessagingTaskConstraint&gt; = listOf(), onSuccess: (Message) -&gt; Unit = {}) {
+</a><a href="#h1-1-84" id="h1-1-84" class="i">+            showDropDown = false
+</a><a href="#h1-1-85" id="h1-1-85" class="i">+            processMessageCount.intValue = 0
+</a><a href="#h1-1-86" id="h1-1-86" class="i">+            activeTask = MessagingTask(
+</a><a href="#h1-1-87" id="h1-1-87" class="i">+                messagingBridge = messagingBridge,
+</a><a href="#h1-1-88" id="h1-1-88" class="i">+                conversationId = conversationId!!,
+</a><a href="#h1-1-89" id="h1-1-89" class="i">+                taskType = taskType,
+</a><a href="#h1-1-90" id="h1-1-90" class="i">+                constraints = constraints,
+</a><a href="#h1-1-91" id="h1-1-91" class="i">+                overrideClientMessageIds = selectedMessages.takeIf { it.isNotEmpty() }?.toList(),
+</a><a href="#h1-1-92" id="h1-1-92" class="i">+                processedMessageCount = processMessageCount,
+</a><a href="#h1-1-93" id="h1-1-93" class="i">+                onFailure = { message, reason -&gt;
+</a><a href="#h1-1-94" id="h1-1-94" class="i">+                    context.log.verbose(&quot;Failed to process message ${message.clientMessageId}: $reason&quot;)
+</a><a href="#h1-1-95" id="h1-1-95" class="i">+                }
+</a><a href="#h1-1-96" id="h1-1-96" class="i">+            )
+</a><a href="#h1-1-97" id="h1-1-97" class="i">+            selectedMessages.clear()
+</a><a href="#h1-1-98" id="h1-1-98" class="i">+            activeJob = coroutineScope.launch(Dispatchers.IO) {
+</a><a href="#h1-1-99" id="h1-1-99" class="i">+                activeTask?.run()
+</a><a href="#h1-1-100" id="h1-1-100" class="i">+                withContext(Dispatchers.Main) {
+</a><a href="#h1-1-101" id="h1-1-101" class="i">+                    activeTask = null
+</a><a href="#h1-1-102" id="h1-1-102" class="i">+                    activeJob = null
+</a><a href="#h1-1-103" id="h1-1-103" class="i">+                }
+</a><a href="#h1-1-104" id="h1-1-104" class="i">+            }.also { job -&gt;
+</a><a href="#h1-1-105" id="h1-1-105" class="i">+                job.invokeOnCompletion {
+</a><a href="#h1-1-106" id="h1-1-106" class="i">+                    if (it != null) {
+</a><a href="#h1-1-107" id="h1-1-107" class="i">+                        context.log.verbose(&quot;Failed to process messages: ${it.message}&quot;)
+</a><a href="#h1-1-108" id="h1-1-108" class="i">+                        return@invokeOnCompletion
+</a><a href="#h1-1-109" id="h1-1-109" class="i">+                    }
+</a><a href="#h1-1-110" id="h1-1-110" class="i">+                    context.longToast(&quot;Processed ${processMessageCount.intValue} messages&quot;)
+</a>                 }
+             }
+         }
+ 
+<a href="#h1-1-115" id="h1-1-115" class="d">-        if (messageDeleteJob != null) {
+</a><a href="#h1-1-116" id="h1-1-116" class="i">+        if (activeJob != null) {
+</a>             Dialog(onDismissRequest = {
+<a href="#h1-1-118" id="h1-1-118" class="d">-                messageDeleteJob?.cancel()
+</a><a href="#h1-1-119" id="h1-1-119" class="d">-                messageDeleteJob = null
+</a><a href="#h1-1-120" id="h1-1-120" class="i">+                activeJob?.cancel()
+</a><a href="#h1-1-121" id="h1-1-121" class="i">+                activeJob = null
+</a><a href="#h1-1-122" id="h1-1-122" class="i">+                activeTask = null
+</a>             }) {
+<a href="#h1-1-124" id="h1-1-124" class="d">-                Card {
+</a><a href="#h1-1-125" id="h1-1-125" class="d">-                    Column(
+</a><a href="#h1-1-126" id="h1-1-126" class="d">-                        modifier = Modifier
+</a><a href="#h1-1-127" id="h1-1-127" class="d">-                            .padding(20.dp)
+</a><a href="#h1-1-128" id="h1-1-128" class="d">-                            .fillMaxWidth(),
+</a><a href="#h1-1-129" id="h1-1-129" class="d">-                        verticalArrangement = Arrangement.Center,
+</a><a href="#h1-1-130" id="h1-1-130" class="d">-                        horizontalAlignment = Alignment.CenterHorizontally
+</a><a href="#h1-1-131" id="h1-1-131" class="d">-                    ) {
+</a><a href="#h1-1-132" id="h1-1-132" class="d">-                        Text(&quot;Deleting messages ($deletedMessageCount)&quot;)
+</a><a href="#h1-1-133" id="h1-1-133" class="d">-                        Spacer(modifier = Modifier.height(10.dp))
+</a><a href="#h1-1-134" id="h1-1-134" class="i">+                Column(
+</a><a href="#h1-1-135" id="h1-1-135" class="i">+                    modifier = Modifier
+</a><a href="#h1-1-136" id="h1-1-136" class="i">+                        .fillMaxWidth()
+</a><a href="#h1-1-137" id="h1-1-137" class="i">+                        .background(MaterialTheme.colorScheme.surface)
+</a><a href="#h1-1-138" id="h1-1-138" class="i">+                        .border(1.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(20.dp))
+</a><a href="#h1-1-139" id="h1-1-139" class="i">+                        .padding(15.dp),
+</a><a href="#h1-1-140" id="h1-1-140" class="i">+                    horizontalAlignment = Alignment.CenterHorizontally,
+</a><a href="#h1-1-141" id="h1-1-141" class="i">+                    verticalArrangement = Arrangement.spacedBy(5.dp)
+</a><a href="#h1-1-142" id="h1-1-142" class="i">+                ) {
+</a><a href="#h1-1-143" id="h1-1-143" class="i">+                    Text(&quot;Processed ${processMessageCount.intValue} messages&quot;)
+</a><a href="#h1-1-144" id="h1-1-144" class="i">+                    if (activeTask?.hasFixedGoal() == true) {
+</a><a href="#h1-1-145" id="h1-1-145" class="i">+                        LinearProgressIndicator(
+</a><a href="#h1-1-146" id="h1-1-146" class="i">+                            modifier = Modifier
+</a><a href="#h1-1-147" id="h1-1-147" class="i">+                                .fillMaxWidth()
+</a><a href="#h1-1-148" id="h1-1-148" class="i">+                                .padding(5.dp),
+</a><a href="#h1-1-149" id="h1-1-149" class="i">+                            progress = processMessageCount.intValue.toFloat() / selectedMessages.size.toFloat(),
+</a><a href="#h1-1-150" id="h1-1-150" class="i">+                            color = MaterialTheme.colorScheme.primary
+</a><a href="#h1-1-151" id="h1-1-151" class="i">+                        )
+</a><a href="#h1-1-152" id="h1-1-152" class="i">+                    } else {
+</a>                         CircularProgressIndicator(
+                             modifier = Modifier
+                                 .padding()
+<a href="#h1-2" id="h1-2" class="h">@@ -100,94 +157,52 @@ class MessagingPreview(
+</a>             }
+         }
+ 
+<a href="#h1-2-3" id="h1-2-3" class="i">+        IconButton(onClick = { showDropDown = !showDropDown }) {
+</a><a href="#h1-2-4" id="h1-2-4" class="i">+            Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
+</a><a href="#h1-2-5" id="h1-2-5" class="i">+        }
+</a> 
+         if (selectedMessages.isNotEmpty()) {
+             IconButton(onClick = {
+<a href="#h1-2-9" id="h1-2-9" class="d">-                deletedMessageCount = 0
+</a><a href="#h1-2-10" id="h1-2-10" class="d">-                messageDeleteJob = coroutineScope.launch(Dispatchers.IO) {
+</a><a href="#h1-2-11" id="h1-2-11" class="d">-                    selectedMessages.toList().also {
+</a><a href="#h1-2-12" id="h1-2-12" class="d">-                        selectedMessages.clear()
+</a><a href="#h1-2-13" id="h1-2-13" class="d">-                    }.forEach { messageId -&gt;
+</a><a href="#h1-2-14" id="h1-2-14" class="d">-                        deleteIndividualMessage(messageId)
+</a><a href="#h1-2-15" id="h1-2-15" class="d">-                    }
+</a><a href="#h1-2-16" id="h1-2-16" class="d">-                }.apply {
+</a><a href="#h1-2-17" id="h1-2-17" class="d">-                    invokeOnCompletion {
+</a><a href="#h1-2-18" id="h1-2-18" class="d">-                        context.shortToast(&quot;Successfully deleted $deletedMessageCount messages&quot;)
+</a><a href="#h1-2-19" id="h1-2-19" class="d">-                        messageDeleteJob = null
+</a><a href="#h1-2-20" id="h1-2-20" class="d">-                    }
+</a><a href="#h1-2-21" id="h1-2-21" class="d">-                }
+</a><a href="#h1-2-22" id="h1-2-22" class="d">-            }) {
+</a><a href="#h1-2-23" id="h1-2-23" class="d">-                Icon(
+</a><a href="#h1-2-24" id="h1-2-24" class="d">-                    imageVector = Icons.Filled.Delete,
+</a><a href="#h1-2-25" id="h1-2-25" class="d">-                    contentDescription = &quot;Delete&quot;
+</a><a href="#h1-2-26" id="h1-2-26" class="d">-                )
+</a><a href="#h1-2-27" id="h1-2-27" class="d">-            }
+</a><a href="#h1-2-28" id="h1-2-28" class="d">-
+</a><a href="#h1-2-29" id="h1-2-29" class="d">-            IconButton(onClick = {
+</a>                 selectedMessages.clear()
+             }) {
+<a href="#h1-2-32" id="h1-2-32" class="d">-                Icon(
+</a><a href="#h1-2-33" id="h1-2-33" class="d">-                    imageVector = Icons.Filled.Close,
+</a><a href="#h1-2-34" id="h1-2-34" class="d">-                    contentDescription = &quot;Close&quot;
+</a><a href="#h1-2-35" id="h1-2-35" class="d">-                )
+</a><a href="#h1-2-36" id="h1-2-36" class="i">+                Icon(imageVector = Icons.Filled.Close, contentDescription = &quot;Close&quot;)
+</a>             }
+<a href="#h1-2-38" id="h1-2-38" class="d">-        } else {
+</a><a href="#h1-2-39" id="h1-2-39" class="d">-            var deleteAllConfirmationDialog by remember { mutableStateOf(false) }
+</a><a href="#h1-2-40" id="h1-2-40" class="d">-
+</a><a href="#h1-2-41" id="h1-2-41" class="d">-            if (deleteAllConfirmationDialog) {
+</a><a href="#h1-2-42" id="h1-2-42" class="d">-                Dialog(onDismissRequest = { deleteAllConfirmationDialog = false }) {
+</a><a href="#h1-2-43" id="h1-2-43" class="d">-                    alertDialogs.ConfirmDialog(
+</a><a href="#h1-2-44" id="h1-2-44" class="d">-                        title = &quot;Are you sure you want to delete all your messages?&quot;,
+</a><a href="#h1-2-45" id="h1-2-45" class="d">-                        message = &quot;Warning: This action may flag your account for spam if used excessively.&quot;,
+</a><a href="#h1-2-46" id="h1-2-46" class="d">-                        onDismiss = {
+</a><a href="#h1-2-47" id="h1-2-47" class="d">-                        deleteAllConfirmationDialog = false
+</a><a href="#h1-2-48" id="h1-2-48" class="d">-                    }, onConfirm = {
+</a><a href="#h1-2-49" id="h1-2-49" class="d">-                        deletedMessageCount = 0
+</a><a href="#h1-2-50" id="h1-2-50" class="d">-                        deleteAllConfirmationDialog = false
+</a><a href="#h1-2-51" id="h1-2-51" class="d">-                        messageDeleteJob = coroutineScope.launch(Dispatchers.IO) {
+</a><a href="#h1-2-52" id="h1-2-52" class="d">-                            var lastMessageId = Long.MAX_VALUE
+</a><a href="#h1-2-53" id="h1-2-53" class="d">-
+</a><a href="#h1-2-54" id="h1-2-54" class="d">-                            do {
+</a><a href="#h1-2-55" id="h1-2-55" class="d">-                                val fetchedMessages = messagingBridge.fetchConversationWithMessagesPaginated(
+</a><a href="#h1-2-56" id="h1-2-56" class="d">-                                    conversationId!!,
+</a><a href="#h1-2-57" id="h1-2-57" class="d">-                                    100,
+</a><a href="#h1-2-58" id="h1-2-58" class="d">-                                    lastMessageId
+</a><a href="#h1-2-59" id="h1-2-59" class="d">-                                )
+</a><a href="#h1-2-60" id="h1-2-60" class="d">-
+</a><a href="#h1-2-61" id="h1-2-61" class="d">-                                if (fetchedMessages == null) {
+</a><a href="#h1-2-62" id="h1-2-62" class="d">-                                    context.shortToast(&quot;Failed to fetch messages&quot;)
+</a><a href="#h1-2-63" id="h1-2-63" class="d">-                                    return@launch
+</a><a href="#h1-2-64" id="h1-2-64" class="d">-                                }
+</a><a href="#h1-2-65" id="h1-2-65" class="d">-
+</a><a href="#h1-2-66" id="h1-2-66" class="d">-                                if (fetchedMessages.isEmpty()) {
+</a><a href="#h1-2-67" id="h1-2-67" class="d">-                                    break
+</a><a href="#h1-2-68" id="h1-2-68" class="d">-                                }
+</a><a href="#h1-2-69" id="h1-2-69" class="d">-
+</a><a href="#h1-2-70" id="h1-2-70" class="d">-                                fetchedMessages.forEach {
+</a><a href="#h1-2-71" id="h1-2-71" class="d">-                                    deleteIndividualMessage(it.serverMessageId)
+</a><a href="#h1-2-72" id="h1-2-72" class="d">-                                    delay(Random.nextLong(50, 170))
+</a><a href="#h1-2-73" id="h1-2-73" class="d">-                                }
+</a><a href="#h1-2-74" id="h1-2-74" class="i">+        }
+</a> 
+<a href="#h1-2-76" id="h1-2-76" class="d">-                                lastMessageId = fetchedMessages.first().clientMessageId
+</a><a href="#h1-2-77" id="h1-2-77" class="d">-                            } while (true)
+</a><a href="#h1-2-78" id="h1-2-78" class="d">-                        }.apply {
+</a><a href="#h1-2-79" id="h1-2-79" class="d">-                            invokeOnCompletion {
+</a><a href="#h1-2-80" id="h1-2-80" class="d">-                                messageDeleteJob = null
+</a><a href="#h1-2-81" id="h1-2-81" class="d">-                                context.shortToast(&quot;Successfully deleted $deletedMessageCount messages&quot;)
+</a><a href="#h1-2-82" id="h1-2-82" class="d">-                            }
+</a><a href="#h1-2-83" id="h1-2-83" class="i">+        MaterialTheme(
+</a><a href="#h1-2-84" id="h1-2-84" class="i">+            colorScheme = MaterialTheme.colorScheme.copy(
+</a><a href="#h1-2-85" id="h1-2-85" class="i">+                surface = MaterialTheme.colorScheme.inverseSurface,
+</a><a href="#h1-2-86" id="h1-2-86" class="i">+                onSurface = MaterialTheme.colorScheme.inverseOnSurface
+</a><a href="#h1-2-87" id="h1-2-87" class="i">+            ),
+</a><a href="#h1-2-88" id="h1-2-88" class="i">+            shapes = MaterialTheme.shapes.copy(medium = RoundedCornerShape(50.dp))
+</a><a href="#h1-2-89" id="h1-2-89" class="i">+        ) {
+</a><a href="#h1-2-90" id="h1-2-90" class="i">+            DropdownMenu(
+</a><a href="#h1-2-91" id="h1-2-91" class="i">+                expanded = showDropDown, onDismissRequest = {
+</a><a href="#h1-2-92" id="h1-2-92" class="i">+                    showDropDown = false
+</a><a href="#h1-2-93" id="h1-2-93" class="i">+                }
+</a><a href="#h1-2-94" id="h1-2-94" class="i">+            ) {
+</a><a href="#h1-2-95" id="h1-2-95" class="i">+                val hasSelection = selectedMessages.isNotEmpty()
+</a><a href="#h1-2-96" id="h1-2-96" class="i">+                ActionButton(text = if (hasSelection) &quot;Save selection&quot; else &quot;Save all&quot;, icon = Icons.Rounded.BookmarkAdded) {
+</a><a href="#h1-2-97" id="h1-2-97" class="i">+                    triggerMessagingTask(MessagingTaskType.SAVE)
+</a><a href="#h1-2-98" id="h1-2-98" class="i">+                }
+</a><a href="#h1-2-99" id="h1-2-99" class="i">+                ActionButton(text = if (hasSelection) &quot;Unsave selection&quot; else &quot;Unsave all&quot;, icon = Icons.Rounded.BookmarkBorder) {
+</a><a href="#h1-2-100" id="h1-2-100" class="i">+                    triggerMessagingTask(MessagingTaskType.UNSAVE)
+</a><a href="#h1-2-101" id="h1-2-101" class="i">+                }
+</a><a href="#h1-2-102" id="h1-2-102" class="i">+                ActionButton(text = if (hasSelection) &quot;Mark selected Snap as seen&quot; else &quot;Mark all Snaps as seen&quot;, icon = Icons.Rounded.RemoveRedEye) {
+</a><a href="#h1-2-103" id="h1-2-103" class="i">+                    triggerMessagingTask(MessagingTaskType.READ, listOf(
+</a><a href="#h1-2-104" id="h1-2-104" class="i">+                        MessagingConstraints.NO_USER_ID(myUserId),
+</a><a href="#h1-2-105" id="h1-2-105" class="i">+                        MessagingConstraints.CONTENT_TYPE(ContentType.SNAP)
+</a><a href="#h1-2-106" id="h1-2-106" class="i">+                    ))
+</a><a href="#h1-2-107" id="h1-2-107" class="i">+                }
+</a><a href="#h1-2-108" id="h1-2-108" class="i">+                ActionButton(text = if (hasSelection) &quot;Delete selected&quot; else &quot;Delete all&quot;, icon = Icons.Rounded.DeleteForever) {
+</a><a href="#h1-2-109" id="h1-2-109" class="i">+                    triggerMessagingTask(MessagingTaskType.DELETE, listOf(MessagingConstraints.USER_ID(myUserId))) { message -&gt;
+</a><a href="#h1-2-110" id="h1-2-110" class="i">+                        coroutineScope.launch {
+</a><a href="#h1-2-111" id="h1-2-111" class="i">+                            messages.remove(message.serverMessageId)
+</a><a href="#h1-2-112" id="h1-2-112" class="i">+                            messageSize = messages.size
+</a>                         }
+<a href="#h1-2-114" id="h1-2-114" class="d">-                    })
+</a><a href="#h1-2-115" id="h1-2-115" class="i">+                    }
+</a>                 }
+             }
+<a href="#h1-2-118" id="h1-2-118" class="d">-
+</a><a href="#h1-2-119" id="h1-2-119" class="d">-            IconButton(onClick = {
+</a><a href="#h1-2-120" id="h1-2-120" class="d">-                deleteAllConfirmationDialog = true
+</a><a href="#h1-2-121" id="h1-2-121" class="d">-            }) {
+</a><a href="#h1-2-122" id="h1-2-122" class="d">-                Icon(
+</a><a href="#h1-2-123" id="h1-2-123" class="d">-                    imageVector = Icons.Filled.DeleteForever,
+</a><a href="#h1-2-124" id="h1-2-124" class="d">-                    contentDescription = &quot;Delete&quot;
+</a><a href="#h1-2-125" id="h1-2-125" class="d">-                )
+</a><a href="#h1-2-126" id="h1-2-126" class="d">-            }
+</a>         }
+     }
+ 
+<a href="#h1-3" id="h1-3" class="h">@@ -224,7 +239,7 @@ class MessagingPreview(
+</a>                 }
+             }
+             items(messageSize) {index -&gt;
+<a href="#h1-3-3" id="h1-3-3" class="d">-                val elementKey = remember(index) { messages.entries.elementAt(index).key }
+</a><a href="#h1-3-4" id="h1-3-4" class="i">+                val elementKey = remember(index) { messages.entries.elementAt(index).value.clientMessageId }
+</a>                 val messageReader = ProtoReader(messages.entries.elementAt(index).value.content)
+                 val contentType = ContentType.fromMessageContainer(messageReader)
+ 
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/SocialSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/SocialSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/SocialSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/SocialSection.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -237,9 +237,7 @@ class SocialSection : Section() {
+</a>                                         fontWeight = FontWeight.Light
+                                     )
+                                 }
+<a href="#h2-0-3" id="h2-0-3" class="d">-                                Row(
+</a><a href="#h2-0-4" id="h2-0-4" class="d">-                                    verticalAlignment = Alignment.CenterVertically
+</a><a href="#h2-0-5" id="h2-0-5" class="d">-                                ) {
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+                                Row(verticalAlignment = Alignment.CenterVertically) {
+</a>                                     if (streaks != null &amp;&amp; streaks.notify) {
+                                         Icon(
+                                             imageVector = ImageVector.vectorResource(id = R.drawable.streak_icon),
+<a href="#h2-1" id="h2-1" class="h">@@ -268,10 +266,7 @@ class SocialSection : Section() {
+</a>                                 MESSAGING_PREVIEW_ROUTE.replace(&quot;{id}&quot;, id).replace(&quot;{scope}&quot;, scope.key)
+                             )
+                         }) {
+<a href="#h2-1-3" id="h2-1-3" class="d">-                            Icon(
+</a><a href="#h2-1-4" id="h2-1-4" class="d">-                                imageVector = Icons.Filled.RemoveRedEye,
+</a><a href="#h2-1-5" id="h2-1-5" class="d">-                                contentDescription = null
+</a><a href="#h2-1-6" id="h2-1-6" class="d">-                            )
+</a><a href="#h2-1-7" id="h2-1-7" class="i">+                            Icon(imageVector = Icons.Filled.RemoveRedEye, contentDescription = null)
+</a>                         }
+                     }
+                 }
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -11,17 +11,25 @@ import me.rhunk.snapenhance.core.util.ktx.getObjectField
+</a> import me.rhunk.snapenhance.core.wrapper.impl.SnapUUID
+ 
+ class Messaging : Feature(&quot;Messaging&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC or FeatureLoadParams.INIT_ASYNC or FeatureLoadParams.INIT_SYNC) {
+<a href="#h3-0-3" id="h3-0-3" class="d">-    lateinit var conversationManager: Any
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+    private var _conversationManager: Any? = null
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+    val conversationManager: Any
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+        get() = _conversationManager ?: throw IllegalStateException(&quot;ConversationManager is not initialized&quot;).also {
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+            context.longToast(&quot;Failed to get conversation manager. Please restart Snapchat&quot;)
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+        }
+</a> 
+     var openedConversationUUID: SnapUUID? = null
+<a href="#h3-0-11" id="h3-0-11" class="i">+        private set
+</a>     var lastFetchConversationUserUUID: SnapUUID? = null
+<a href="#h3-0-13" id="h3-0-13" class="i">+        private set
+</a>     var lastFetchConversationUUID: SnapUUID? = null
+<a href="#h3-0-15" id="h3-0-15" class="i">+        private set
+</a>     var lastFetchGroupConversationUUID: SnapUUID? = null
+     var lastFocusedMessageId: Long = -1
+<a href="#h3-0-18" id="h3-0-18" class="i">+        private set
+</a> 
+     override fun init() {
+         Hooker.hookConstructor(context.classCache.conversationManager, HookStage.BEFORE) {
+<a href="#h3-0-22" id="h3-0-22" class="d">-            conversationManager = it.thisObject()
+</a><a href="#h3-0-23" id="h3-0-23" class="i">+            _conversationManager = it.thisObject()
+</a>         }
+     }
+ 
+</pre>
+</div>
+</body>
+</html>

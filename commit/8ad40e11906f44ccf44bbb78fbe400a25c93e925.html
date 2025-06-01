@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(native): custom emoji font - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/8ad40e11906f44ccf44bbb78fbe400a25c93e925.html">8ad40e11906f44ccf44bbb78fbe400a25c93e925</a>
+<b>parent</b> <a href="../commit/c635994e50362395ae42c032a7566260dc31a5e5.html">c635994e50362395ae42c032a7566260dc31a5e5</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Tue, 28 May 2024 19:03:24 +0200
+
+feat(native): custom emoji font
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">native/jni/src/common.h</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h1">native/jni/src/hooks/custom_emoji_font.h</a></td><td> | </td><td class="num">15</td><td><span class="i">+++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">native/jni/src/library.cpp</a></td><td> | </td><td class="num">12</td><td><span class="i">++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeConfig.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+</table></pre><pre>4 files changed, 29 insertions(+), 0 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/native/jni/src/common.h.html">native/jni/src/common.h</a> b/<a href="../file/native/jni/src/common.h.html">native/jni/src/common.h</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -13,6 +13,7 @@ typedef struct {
+</a>     bool disable_bitmoji;
+     bool disable_metrics;
+     bool composer_hooks;
+<a href="#h0-0-3" id="h0-0-3" class="i">+    char custom_emoji_font_path[256];
+</a> } native_config_t;
+ 
+ namespace common {
+<b>diff --git a/<a id="h1" href="../file/native/jni/src/hooks/custom_emoji_font.h.html">native/jni/src/hooks/custom_emoji_font.h</a> b/<a href="../file/native/jni/src/hooks/custom_emoji_font.h.html">native/jni/src/hooks/custom_emoji_font.h</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -0,0 +1,14 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="i">+#pragma once
+</a><a href="#h1-0-1" id="h1-0-1" class="i">+
+</a><a href="#h1-0-2" id="h1-0-2" class="i">+namespace CustomEmojiFont {
+</a><a href="#h1-0-3" id="h1-0-3" class="i">+    HOOK_DEF(int, open_hook, const char *pathname, int flags, mode_t mode) {
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+        if (strstr(pathname, &quot;/system/fonts/NotoColorEmoji.ttf&quot;) != 0 &amp;&amp; common::native_config-&gt;custom_emoji_font_path[0] != 0) {
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+            pathname = common::native_config-&gt;custom_emoji_font_path;
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+        }
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+        return open_hook_original(pathname, flags, mode);
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+    }
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+    void init() {
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+        DobbyHook((void *) DobbySymbolResolver(&quot;libc.so&quot;, &quot;open&quot;), (void *)open_hook, (void **)&amp;open_hook_original);
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+    }
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+}</a><a href="#h1-0-14" id="h1-0-14" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h2" href="../file/native/jni/src/library.cpp.html">native/jni/src/library.cpp</a> b/<a href="../file/native/jni/src/library.cpp.html">native/jni/src/library.cpp</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -11,6 +11,7 @@
+</a> #include &quot;hooks/sqlite_mutex.h&quot;
+ #include &quot;hooks/duplex_hook.h&quot;
+ #include &quot;hooks/composer_hook.h&quot;
+<a href="#h2-0-3" id="h2-0-3" class="i">+#include &quot;hooks/custom_emoji_font.h&quot;
+</a> 
+ bool JNICALL init(JNIEnv *env, jobject clazz) {
+     LOGD(&quot;Initializing native&quot;);
+<a href="#h2-1" id="h2-1" class="h">@@ -38,6 +39,9 @@ bool JNICALL init(JNIEnv *env, jobject clazz) {
+</a>     RUN(FstatHook::init());
+     RUN(SqliteMutexHook::init());
+     RUN(DuplexHook::init(env));
+<a href="#h2-1-3" id="h2-1-3" class="i">+    if (common::native_config-&gt;custom_emoji_font_path[0] != 0) {
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+        RUN(CustomEmojiFont::init());
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+    }
+</a>     if (common::native_config-&gt;composer_hooks) {
+         RUN(ComposerHook::init());
+     }
+<a href="#h2-2" id="h2-2" class="h">@@ -58,6 +62,14 @@ void JNICALL load_config(JNIEnv *env, jobject, jobject config_object) {
+</a>     native_config-&gt;disable_bitmoji = GET_CONFIG_BOOL(&quot;disableBitmoji&quot;);
+     native_config-&gt;disable_metrics = GET_CONFIG_BOOL(&quot;disableMetrics&quot;);
+     native_config-&gt;composer_hooks = GET_CONFIG_BOOL(&quot;composerHooks&quot;);
+<a href="#h2-2-3" id="h2-2-3" class="i">+
+</a><a href="#h2-2-4" id="h2-2-4" class="i">+    memset(native_config-&gt;custom_emoji_font_path, 0, sizeof(native_config-&gt;custom_emoji_font_path));
+</a><a href="#h2-2-5" id="h2-2-5" class="i">+    auto custom_emoji_font_path = env-&gt;GetObjectField(config_object, env-&gt;GetFieldID(native_config_clazz, &quot;customEmojiFontPath&quot;, &quot;Ljava/lang/String;&quot;));
+</a><a href="#h2-2-6" id="h2-2-6" class="i">+    if (custom_emoji_font_path != nullptr) {
+</a><a href="#h2-2-7" id="h2-2-7" class="i">+        auto custom_emoji_font_path_str = env-&gt;GetStringUTFChars((jstring) custom_emoji_font_path, nullptr);
+</a><a href="#h2-2-8" id="h2-2-8" class="i">+        strncpy(native_config-&gt;custom_emoji_font_path, custom_emoji_font_path_str, sizeof(native_config-&gt;custom_emoji_font_path));
+</a><a href="#h2-2-9" id="h2-2-9" class="i">+        env-&gt;ReleaseStringUTFChars((jstring) custom_emoji_font_path, custom_emoji_font_path_str);
+</a><a href="#h2-2-10" id="h2-2-10" class="i">+    }
+</a> }
+ 
+ void JNICALL lock_database(JNIEnv *env, jobject, jstring database_name, jobject runnable) {
+<b>diff --git a/<a id="h3" href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeConfig.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeConfig.kt</a> b/<a href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeConfig.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeConfig.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -4,4 +4,5 @@ data class NativeConfig(
+</a>     val disableBitmoji: Boolean = false,
+     val disableMetrics: Boolean = false,
+     val composerHooks: Boolean = false,
+<a href="#h3-0-3" id="h3-0-3" class="i">+    val customEmojiFontPath: String? = null,
+</a> ) 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

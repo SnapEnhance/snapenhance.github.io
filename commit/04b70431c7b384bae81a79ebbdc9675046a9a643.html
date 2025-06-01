@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(app/tasks): merge videos - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/04b70431c7b384bae81a79ebbdc9675046a9a643.html">04b70431c7b384bae81a79ebbdc9675046a9a643</a>
+<b>parent</b> <a href="../commit/a7f4f1cdafc07f7a49f0d2aba56343dfc5f13455.html">a7f4f1cdafc07f7a49f0d2aba56343dfc5f13455</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 30 Dec 2023 16:30:05 +0100
+
+feat(app/tasks): merge videos
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a></td><td> | </td><td class="num">32</td><td><span class="i">++++++++++</span><span class="d">----------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt</a></td><td> | </td><td class="num">103</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">----------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/task/PendingTask.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/task/TaskManager.kt</a></td><td> | </td><td class="num">25</td><td><span class="i">++++++++++++++++++++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/TasksSection.kt</a></td><td> | </td><td class="num">282</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">----------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/LoggedStories.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">16</td><td><span class="i">++++++++++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">common/src/main/kotlin/me/rhunk/snapenhance/common/data/FileType.kt</a></td><td> | </td><td class="num">5</td><td><span class="i">+++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/DownloadRequest.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/MediaDownloadSource.kt</a></td><td> | </td><td class="num">24</td><td><span class="i">+++++++++++++++</span><span class="d">---------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+</table></pre><pre>11 files changed, 406 insertions(+), 94 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -87,27 +87,15 @@ class DownloadProcessor (
+</a>         fallbackToast(it)
+     }
+ 
+<a href="#h0-0-3" id="h0-0-3" class="d">-    private fun newFFMpegProcessor(pendingTask: PendingTask) = FFMpegProcessor(
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-        logManager = remoteSideContext.log,
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-        ffmpegOptions = remoteSideContext.config.root.downloader.ffmpegOptions,
+</a><a href="#h0-0-6" id="h0-0-6" class="d">-        onStatistics = {
+</a><a href="#h0-0-7" id="h0-0-7" class="d">-            pendingTask.updateProgress(&quot;Processing (frames=${it.videoFrameNumber}, fps=${it.videoFps}, time=${it.time}, bitrate=${it.bitrate}, speed=${it.speed})&quot;)
+</a><a href="#h0-0-8" id="h0-0-8" class="d">-        }
+</a><a href="#h0-0-9" id="h0-0-9" class="d">-    )
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+    private fun newFFMpegProcessor(pendingTask: PendingTask) = FFMpegProcessor.newFFMpegProcessor(remoteSideContext, pendingTask)
+</a> 
+     @SuppressLint(&quot;UnspecifiedRegisterReceiverFlag&quot;)
+<a href="#h0-0-13" id="h0-0-13" class="d">-    private suspend fun saveMediaToGallery(pendingTask: PendingTask, inputFile: File, metadata: DownloadMetadata) {
+</a><a href="#h0-0-14" id="h0-0-14" class="i">+    suspend fun saveMediaToGallery(pendingTask: PendingTask, inputFile: File, metadata: DownloadMetadata) {
+</a>         if (coroutineContext.job.isCancelled) return
+ 
+         runCatching {
+             var fileType = FileType.fromFile(inputFile)
+ 
+<a href="#h0-0-20" id="h0-0-20" class="d">-            if (fileType == FileType.UNKNOWN) {
+</a><a href="#h0-0-21" id="h0-0-21" class="d">-                callbackOnFailure(translation.format(&quot;failed_gallery_toast&quot;, &quot;error&quot; to &quot;Unknown media type&quot;), null)
+</a><a href="#h0-0-22" id="h0-0-22" class="d">-                pendingTask.fail(&quot;Unknown media type&quot;)
+</a><a href="#h0-0-23" id="h0-0-23" class="d">-                return
+</a><a href="#h0-0-24" id="h0-0-24" class="d">-            }
+</a><a href="#h0-0-25" id="h0-0-25" class="d">-
+</a>             if (fileType.isImage) {
+                 remoteSideContext.config.root.downloader.forceImageFormat.getNullable()?.let { format -&gt;
+                     val bitmap = BitmapFactory.decodeFile(inputFile.absolutePath) ?: throw Exception(&quot;Failed to decode bitmap&quot;)
+<a href="#h0-1" id="h0-1" class="h">@@ -154,9 +142,9 @@ class DownloadProcessor (
+</a>             pendingTask.success()
+ 
+             runCatching {
+<a href="#h0-1-3" id="h0-1-3" class="d">-                val mediaScanIntent = Intent(&quot;android.intent.action.MEDIA_SCANNER_SCAN_FILE&quot;)
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-                mediaScanIntent.setData(outputFile.uri)
+</a><a href="#h0-1-5" id="h0-1-5" class="d">-                remoteSideContext.androidContext.sendBroadcast(mediaScanIntent)
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+                remoteSideContext.androidContext.sendBroadcast(Intent(&quot;android.intent.action.MEDIA_SCANNER_SCAN_FILE&quot;).apply {
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+                    data = outputFile.uri
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+                })
+</a>             }.onFailure {
+                 remoteSideContext.log.error(&quot;Failed to scan media file&quot;, it)
+                 callbackOnFailure(translation.format(&quot;failed_gallery_toast&quot;, &quot;error&quot; to it.toString()), it.message)
+<a href="#h0-2" id="h0-2" class="h">@@ -266,7 +254,7 @@ class DownloadProcessor (
+</a>                         val outputFile = File.createTempFile(&quot;voice_note&quot;, &quot;.$format&quot;)
+                         newFFMpegProcessor(pendingTask).execute(FFMpegProcessor.Request(
+                             action = FFMpegProcessor.Action.AUDIO_CONVERSION,
+<a href="#h0-2-3" id="h0-2-3" class="d">-                            input = media.file,
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+                            inputs = listOf(media.file),
+</a>                             output = outputFile
+                         ))
+                         media.file.delete()
+<a href="#h0-3" id="h0-3" class="h">@@ -303,7 +291,7 @@ class DownloadProcessor (
+</a>             runCatching {
+                 newFFMpegProcessor(pendingTask).execute(FFMpegProcessor.Request(
+                     action = FFMpegProcessor.Action.DOWNLOAD_DASH,
+<a href="#h0-3-3" id="h0-3-3" class="d">-                    input = dashPlaylistFile,
+</a><a href="#h0-3-4" id="h0-3-4" class="i">+                    inputs = listOf(dashPlaylistFile),
+</a>                     output = outputFile,
+                     startTime = dashOptions.offsetTime,
+                     duration = dashOptions.duration
+<a href="#h0-4" id="h0-4" class="h">@@ -356,7 +344,8 @@ class DownloadProcessor (
+</a>             val pendingTask = remoteSideContext.taskManager.createPendingTask(
+                 Task(
+                     type = TaskType.DOWNLOAD,
+<a href="#h0-4-3" id="h0-4-3" class="d">-                    title = downloadMetadata.downloadSource + &quot; (&quot; + downloadMetadata.mediaAuthor + &quot;)&quot;,
+</a><a href="#h0-4-4" id="h0-4-4" class="i">+                    title = downloadMetadata.downloadSource,
+</a><a href="#h0-4-5" id="h0-4-5" class="i">+                    author = downloadMetadata.mediaAuthor,
+</a>                     hash = downloadMetadata.mediaIdentifier
+                 )
+             ).apply {
+<a href="#h0-5" id="h0-5" class="h">@@ -406,7 +395,6 @@ class DownloadProcessor (
+</a> 
+                 if (shouldMergeOverlay) {
+                     assert(downloadedMedias.size == 2)
+<a href="#h0-5-3" id="h0-5-3" class="d">-                    //TODO: convert &quot;mp4 images&quot; into real images
+</a>                     val media = downloadedMedias.entries.first { !it.key.isOverlay }.value
+                     val overlayMedia = downloadedMedias.entries.first { it.key.isOverlay }.value
+ 
+<a href="#h0-6" id="h0-6" class="h">@@ -418,7 +406,7 @@ class DownloadProcessor (
+</a> 
+                         newFFMpegProcessor(pendingTask).execute(FFMpegProcessor.Request(
+                             action = FFMpegProcessor.Action.MERGE_OVERLAY,
+<a href="#h0-6-3" id="h0-6-3" class="d">-                            input = renamedMedia,
+</a><a href="#h0-6-4" id="h0-6-4" class="i">+                            inputs = listOf(renamedMedia),
+</a>                             output = mergedOverlay,
+                             overlay = renamedOverlayMedia
+                         ))
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,35 +1,43 @@
+</a> package me.rhunk.snapenhance.download
+ 
+<a href="#h1-0-2" id="h1-0-2" class="i">+import android.media.MediaMetadataRetriever
+</a> import com.arthenica.ffmpegkit.FFmpegKit
+ import com.arthenica.ffmpegkit.FFmpegSession
+ import com.arthenica.ffmpegkit.Level
+ import com.arthenica.ffmpegkit.Statistics
+ import kotlinx.coroutines.suspendCancellableCoroutine
+ import me.rhunk.snapenhance.LogManager
+<a href="#h1-0-9" id="h1-0-9" class="i">+import me.rhunk.snapenhance.RemoteSideContext
+</a> import me.rhunk.snapenhance.common.config.impl.DownloaderConfig
+ import me.rhunk.snapenhance.common.logger.LogLevel
+<a href="#h1-0-12" id="h1-0-12" class="i">+import me.rhunk.snapenhance.task.PendingTask
+</a> import java.io.File
+ import java.util.concurrent.Executors
+ 
+ 
+<a href="#h1-0-17" id="h1-0-17" class="d">-class ArgumentList : LinkedHashMap&lt;String, MutableList&lt;String&gt;&gt;() {
+</a><a href="#h1-0-18" id="h1-0-18" class="i">+class ArgumentList  {
+</a><a href="#h1-0-19" id="h1-0-19" class="i">+    private val arguments = mutableListOf&lt;Pair&lt;String, String&gt;&gt;()
+</a><a href="#h1-0-20" id="h1-0-20" class="i">+
+</a>     operator fun plusAssign(stringPair: Pair&lt;String, String&gt;) {
+<a href="#h1-0-22" id="h1-0-22" class="d">-        val (key, value) = stringPair
+</a><a href="#h1-0-23" id="h1-0-23" class="d">-        if (this.containsKey(key)) {
+</a><a href="#h1-0-24" id="h1-0-24" class="d">-            this[key]!!.add(value)
+</a><a href="#h1-0-25" id="h1-0-25" class="d">-        } else {
+</a><a href="#h1-0-26" id="h1-0-26" class="d">-            this[key] = mutableListOf(value)
+</a><a href="#h1-0-27" id="h1-0-27" class="d">-        }
+</a><a href="#h1-0-28" id="h1-0-28" class="i">+        arguments += stringPair
+</a>     }
+ 
+     operator fun plusAssign(key: String) {
+<a href="#h1-0-32" id="h1-0-32" class="d">-        this[key] = mutableListOf&lt;String&gt;().apply {
+</a><a href="#h1-0-33" id="h1-0-33" class="d">-            this += &quot;&quot;
+</a><a href="#h1-0-34" id="h1-0-34" class="d">-        }
+</a><a href="#h1-0-35" id="h1-0-35" class="i">+        arguments += key to &quot;&quot;
+</a>     }
+ 
+     operator fun minusAssign(key: String) {
+<a href="#h1-0-39" id="h1-0-39" class="d">-        this.remove(key)
+</a><a href="#h1-0-40" id="h1-0-40" class="i">+        arguments.removeIf { it.first == key }
+</a><a href="#h1-0-41" id="h1-0-41" class="i">+    }
+</a><a href="#h1-0-42" id="h1-0-42" class="i">+
+</a><a href="#h1-0-43" id="h1-0-43" class="i">+    operator fun get(key: String) = arguments.find { it.first == key }?.second
+</a><a href="#h1-0-44" id="h1-0-44" class="i">+
+</a><a href="#h1-0-45" id="h1-0-45" class="i">+    fun forEach(action: (Pair&lt;String, String&gt;) -&gt; Unit) {
+</a><a href="#h1-0-46" id="h1-0-46" class="i">+        arguments.forEach(action)
+</a><a href="#h1-0-47" id="h1-0-47" class="i">+    }
+</a><a href="#h1-0-48" id="h1-0-48" class="i">+
+</a><a href="#h1-0-49" id="h1-0-49" class="i">+    fun clear() {
+</a><a href="#h1-0-50" id="h1-0-50" class="i">+        arguments.clear()
+</a>     }
+ }
+ 
+<a href="#h1-1" id="h1-1" class="h">@@ -41,16 +49,25 @@ class FFMpegProcessor(
+</a> ) {
+     companion object {
+         private const val TAG = &quot;ffmpeg-processor&quot;
+<a href="#h1-1-3" id="h1-1-3" class="i">+
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+        fun newFFMpegProcessor(context: RemoteSideContext, pendingTask: PendingTask) = FFMpegProcessor(
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+            logManager = context.log,
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+            ffmpegOptions = context.config.root.downloader.ffmpegOptions,
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+            onStatistics = {
+</a><a href="#h1-1-8" id="h1-1-8" class="i">+                pendingTask.updateProgress(&quot;Processing (frames=${it.videoFrameNumber}, fps=${it.videoFps}, time=${it.time}, bitrate=${it.bitrate}, speed=${it.speed})&quot;)
+</a><a href="#h1-1-9" id="h1-1-9" class="i">+            }
+</a><a href="#h1-1-10" id="h1-1-10" class="i">+        )
+</a>     }
+     enum class Action {
+         DOWNLOAD_DASH,
+         MERGE_OVERLAY,
+         AUDIO_CONVERSION,
+<a href="#h1-1-16" id="h1-1-16" class="i">+        MERGE_MEDIA
+</a>     }
+ 
+     data class Request(
+         val action: Action,
+<a href="#h1-1-21" id="h1-1-21" class="d">-        val input: File,
+</a><a href="#h1-1-22" id="h1-1-22" class="i">+        val inputs: List&lt;File&gt;,
+</a>         val output: File,
+         val overlay: File? = null, //only for MERGE_OVERLAY
+         val startTime: Long? = null, //only for DOWNLOAD_DASH
+<a href="#h1-2" id="h1-2" class="h">@@ -61,14 +78,8 @@ class FFMpegProcessor(
+</a>     private suspend fun newFFMpegTask(globalArguments: ArgumentList, inputArguments: ArgumentList, outputArguments: ArgumentList) = suspendCancellableCoroutine&lt;FFmpegSession&gt; {
+         val stringBuilder = StringBuilder()
+         arrayOf(globalArguments, inputArguments, outputArguments).forEach { argumentList -&gt;
+<a href="#h1-2-3" id="h1-2-3" class="d">-            argumentList.forEach { (key, values) -&gt;
+</a><a href="#h1-2-4" id="h1-2-4" class="d">-                values.forEach valueForEach@{ value -&gt;
+</a><a href="#h1-2-5" id="h1-2-5" class="d">-                    if (value.isEmpty()) {
+</a><a href="#h1-2-6" id="h1-2-6" class="d">-                        stringBuilder.append(&quot;$key &quot;)
+</a><a href="#h1-2-7" id="h1-2-7" class="d">-                        return@valueForEach
+</a><a href="#h1-2-8" id="h1-2-8" class="d">-                    }
+</a><a href="#h1-2-9" id="h1-2-9" class="d">-                    stringBuilder.append(&quot;$key $value &quot;)
+</a><a href="#h1-2-10" id="h1-2-10" class="d">-                }
+</a><a href="#h1-2-11" id="h1-2-11" class="i">+            argumentList.forEach { (key, value) -&gt;
+</a><a href="#h1-2-12" id="h1-2-12" class="i">+                stringBuilder.append(&quot;$key ${value.takeIf { it.isNotEmpty() }?.plus(&quot; &quot;) ?: &quot;&quot;}&quot;)
+</a>             }
+         }
+ 
+<a href="#h1-3" id="h1-3" class="h">@@ -102,7 +113,9 @@ class FFMpegProcessor(
+</a>         }
+ 
+         val inputArguments = ArgumentList().apply {
+<a href="#h1-3-3" id="h1-3-3" class="d">-            this += &quot;-i&quot; to args.input.absolutePath
+</a><a href="#h1-3-4" id="h1-3-4" class="i">+            args.inputs.forEach { file -&gt;
+</a><a href="#h1-3-5" id="h1-3-5" class="i">+                this += &quot;-i&quot; to file.absolutePath
+</a><a href="#h1-3-6" id="h1-3-6" class="i">+            }
+</a>         }
+ 
+         val outputArguments = ArgumentList().apply {
+<a href="#h1-4" id="h1-4" class="h">@@ -133,6 +146,54 @@ class FFMpegProcessor(
+</a>                     outputArguments -= &quot;-c:v&quot;
+                 }
+             }
+<a href="#h1-4-3" id="h1-4-3" class="i">+            Action.MERGE_MEDIA -&gt; {
+</a><a href="#h1-4-4" id="h1-4-4" class="i">+                inputArguments.clear()
+</a><a href="#h1-4-5" id="h1-4-5" class="i">+                val filesInfo = args.inputs.mapNotNull { file -&gt;
+</a><a href="#h1-4-6" id="h1-4-6" class="i">+                    runCatching {
+</a><a href="#h1-4-7" id="h1-4-7" class="i">+                        MediaMetadataRetriever().apply { setDataSource(file.absolutePath) }
+</a><a href="#h1-4-8" id="h1-4-8" class="i">+                    }.getOrNull()?.let { file to it }
+</a><a href="#h1-4-9" id="h1-4-9" class="i">+                }
+</a><a href="#h1-4-10" id="h1-4-10" class="i">+
+</a><a href="#h1-4-11" id="h1-4-11" class="i">+                val (maxWidth, maxHeight) = filesInfo.maxByOrNull { (_, r) -&gt;
+</a><a href="#h1-4-12" id="h1-4-12" class="i">+                    r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
+</a><a href="#h1-4-13" id="h1-4-13" class="i">+                }?.let { (_, r) -&gt;
+</a><a href="#h1-4-14" id="h1-4-14" class="i">+                    r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() to
+</a><a href="#h1-4-15" id="h1-4-15" class="i">+                    r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull()
+</a><a href="#h1-4-16" id="h1-4-16" class="i">+                } ?: throw Exception(&quot;Failed to get video size&quot;)
+</a><a href="#h1-4-17" id="h1-4-17" class="i">+
+</a><a href="#h1-4-18" id="h1-4-18" class="i">+                val filterFirstPart = StringBuilder()
+</a><a href="#h1-4-19" id="h1-4-19" class="i">+                val filterSecondPart = StringBuilder()
+</a><a href="#h1-4-20" id="h1-4-20" class="i">+                var containsNoSound = false
+</a><a href="#h1-4-21" id="h1-4-21" class="i">+
+</a><a href="#h1-4-22" id="h1-4-22" class="i">+                filesInfo.forEachIndexed { index, (file, retriever) -&gt;
+</a><a href="#h1-4-23" id="h1-4-23" class="i">+                    filterFirstPart.append(&quot;[$index:v]scale=$maxWidth:$maxHeight,setsar=1[v$index];&quot;)
+</a><a href="#h1-4-24" id="h1-4-24" class="i">+                    if (retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) == &quot;yes&quot;) {
+</a><a href="#h1-4-25" id="h1-4-25" class="i">+                        filterSecondPart.append(&quot;[v$index][$index:a]&quot;)
+</a><a href="#h1-4-26" id="h1-4-26" class="i">+                    } else {
+</a><a href="#h1-4-27" id="h1-4-27" class="i">+                        containsNoSound = true
+</a><a href="#h1-4-28" id="h1-4-28" class="i">+                        filterSecondPart.append(&quot;[v$index][${filesInfo.size}]&quot;)
+</a><a href="#h1-4-29" id="h1-4-29" class="i">+                    }
+</a><a href="#h1-4-30" id="h1-4-30" class="i">+                    inputArguments += &quot;-i&quot; to file.absolutePath
+</a><a href="#h1-4-31" id="h1-4-31" class="i">+                }
+</a><a href="#h1-4-32" id="h1-4-32" class="i">+
+</a><a href="#h1-4-33" id="h1-4-33" class="i">+                if (containsNoSound) {
+</a><a href="#h1-4-34" id="h1-4-34" class="i">+                    inputArguments += &quot;-f&quot; to &quot;lavfi&quot;
+</a><a href="#h1-4-35" id="h1-4-35" class="i">+                    inputArguments += &quot;-t&quot; to &quot;0.1&quot;
+</a><a href="#h1-4-36" id="h1-4-36" class="i">+                    inputArguments += &quot;-i&quot; to &quot;anullsrc=channel_layout=stereo:sample_rate=44100&quot;
+</a><a href="#h1-4-37" id="h1-4-37" class="i">+                }
+</a><a href="#h1-4-38" id="h1-4-38" class="i">+
+</a><a href="#h1-4-39" id="h1-4-39" class="i">+                if (outputArguments[&quot;-c:a&quot;] == &quot;copy&quot;) {
+</a><a href="#h1-4-40" id="h1-4-40" class="i">+                    outputArguments -= &quot;-c:a&quot;
+</a><a href="#h1-4-41" id="h1-4-41" class="i">+                }
+</a><a href="#h1-4-42" id="h1-4-42" class="i">+
+</a><a href="#h1-4-43" id="h1-4-43" class="i">+                outputArguments += &quot;-fps_mode&quot; to &quot;vfr&quot;
+</a><a href="#h1-4-44" id="h1-4-44" class="i">+
+</a><a href="#h1-4-45" id="h1-4-45" class="i">+                outputArguments += &quot;-filter_complex&quot; to &quot;\&quot;$filterFirstPart ${filterSecondPart}concat=n=${args.inputs.size}:v=1:a=1[vout][aout]\&quot;&quot;
+</a><a href="#h1-4-46" id="h1-4-46" class="i">+                outputArguments += &quot;-map&quot; to &quot;\&quot;[aout]\&quot;&quot;
+</a><a href="#h1-4-47" id="h1-4-47" class="i">+                outputArguments += &quot;-map&quot; to &quot;\&quot;[vout]\&quot;&quot;
+</a><a href="#h1-4-48" id="h1-4-48" class="i">+
+</a><a href="#h1-4-49" id="h1-4-49" class="i">+                filesInfo.forEach { it.second.close() }
+</a><a href="#h1-4-50" id="h1-4-50" class="i">+            }
+</a>         }
+         outputArguments += args.output.absolutePath
+         newFFMpegTask(globalArguments, inputArguments, outputArguments)
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/task/PendingTask.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/task/PendingTask.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/task/PendingTask.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/task/PendingTask.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -44,6 +44,7 @@ data class PendingTaskListener(
+</a> data class Task(
+     val type: TaskType,
+     val title: String,
+<a href="#h2-0-3" id="h2-0-3" class="i">+    val author: String?,
+</a>     val hash: String
+ ) {
+     var changeListener: () -&gt; Unit = {}
+<a href="#h2-1" id="h2-1" class="h">@@ -106,7 +107,7 @@ class PendingTask(
+</a>         }
+ 
+     fun updateProgress(label: String, progress: Int = -1) {
+<a href="#h2-1-3" id="h2-1-3" class="d">-        _progress = progress
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+        _progress = progress.coerceIn(-1, 100)
+</a>         progressLabel = label
+     }
+ 
+<b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/task/TaskManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/task/TaskManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/task/TaskManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/task/TaskManager.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -26,6 +26,7 @@ class TaskManager(
+</a>                     &quot;id INTEGER PRIMARY KEY AUTOINCREMENT&quot;,
+                     &quot;hash VARCHAR UNIQUE&quot;,
+                     &quot;title VARCHAR(255) NOT NULL&quot;,
+<a href="#h3-0-3" id="h3-0-3" class="i">+                    &quot;author VARCHAR(255)&quot;,
+</a>                     &quot;type VARCHAR(255) NOT NULL&quot;,
+                     &quot;status VARCHAR(255) NOT NULL&quot;,
+                     &quot;extra TEXT&quot;
+<a href="#h3-1" id="h3-1" class="h">@@ -37,7 +38,12 @@ class TaskManager(
+</a>     private val activeTasks = mutableMapOf&lt;Long, PendingTask&gt;()
+ 
+     private fun readTaskFromCursor(cursor: android.database.Cursor): Task {
+<a href="#h3-1-3" id="h3-1-3" class="d">-        val task = Task(TaskType.fromKey(cursor.getStringOrNull(&quot;type&quot;)!!), cursor.getStringOrNull(&quot;title&quot;)!!, cursor.getStringOrNull(&quot;hash&quot;)!!)
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+        val task = Task(
+</a><a href="#h3-1-5" id="h3-1-5" class="i">+            type = TaskType.fromKey(cursor.getStringOrNull(&quot;type&quot;)!!),
+</a><a href="#h3-1-6" id="h3-1-6" class="i">+            title = cursor.getStringOrNull(&quot;title&quot;)!!,
+</a><a href="#h3-1-7" id="h3-1-7" class="i">+            author = cursor.getStringOrNull(&quot;author&quot;),
+</a><a href="#h3-1-8" id="h3-1-8" class="i">+            hash = cursor.getStringOrNull(&quot;hash&quot;)!!
+</a><a href="#h3-1-9" id="h3-1-9" class="i">+        )
+</a>         task.status = TaskStatus.fromKey(cursor.getStringOrNull(&quot;status&quot;)!!)
+         task.extra = cursor.getStringOrNull(&quot;extra&quot;)
+         task.changeListener = {
+<a href="#h3-2" id="h3-2" class="h">@@ -60,6 +66,7 @@ class TaskManager(
+</a>                     val result = taskDatabase.insert(&quot;tasks&quot;, null, ContentValues().apply {
+                         put(&quot;type&quot;, task.type.key)
+                         put(&quot;hash&quot;, task.hash)
+<a href="#h3-2-3" id="h3-2-3" class="i">+                        put(&quot;author&quot;, task.author)
+</a>                         put(&quot;title&quot;, task.title)
+                         put(&quot;status&quot;, task.status.key)
+                         put(&quot;extra&quot;, task.extra)
+<a href="#h3-3" id="h3-3" class="h">@@ -91,6 +98,22 @@ class TaskManager(
+</a>         }
+     }
+ 
+<a href="#h3-3-3" id="h3-3-3" class="i">+    fun removeTask(task: Task) {
+</a><a href="#h3-3-4" id="h3-3-4" class="i">+        runBlocking {
+</a><a href="#h3-3-5" id="h3-3-5" class="i">+            activeTasks.entries.find { it.value.task == task }?.let {
+</a><a href="#h3-3-6" id="h3-3-6" class="i">+                activeTasks.remove(it.key)
+</a><a href="#h3-3-7" id="h3-3-7" class="i">+                runCatching {
+</a><a href="#h3-3-8" id="h3-3-8" class="i">+                    it.value.cancel()
+</a><a href="#h3-3-9" id="h3-3-9" class="i">+                }.onFailure {
+</a><a href="#h3-3-10" id="h3-3-10" class="i">+                    remoteSideContext.log.warn(&quot;Failed to cancel task ${task.hash}&quot;)
+</a><a href="#h3-3-11" id="h3-3-11" class="i">+                }
+</a><a href="#h3-3-12" id="h3-3-12" class="i">+            }
+</a><a href="#h3-3-13" id="h3-3-13" class="i">+            launch(queueExecutor.asCoroutineDispatcher()) {
+</a><a href="#h3-3-14" id="h3-3-14" class="i">+                taskDatabase.execSQL(&quot;DELETE FROM tasks WHERE hash = ?&quot;, arrayOf(task.hash))
+</a><a href="#h3-3-15" id="h3-3-15" class="i">+            }
+</a><a href="#h3-3-16" id="h3-3-16" class="i">+        }
+</a><a href="#h3-3-17" id="h3-3-17" class="i">+    }
+</a><a href="#h3-3-18" id="h3-3-18" class="i">+
+</a>     fun createPendingTask(task: Task): PendingTask {
+         val taskId = putNewTask(task)
+         task.changeListener = {
+<b>diff --git a/<a id="h4" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/TasksSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/TasksSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/TasksSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/TasksSection.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -1,5 +1,8 @@
+</a> package me.rhunk.snapenhance.ui.manager.sections
+ 
+<a href="#h4-0-2" id="h4-0-2" class="i">+ import android.content.Intent
+</a><a href="#h4-0-3" id="h4-0-3" class="i">+import androidx.compose.foundation.border
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+import androidx.compose.foundation.clickable
+</a> import androidx.compose.foundation.layout.*
+ import androidx.compose.foundation.lazy.LazyColumn
+ import androidx.compose.foundation.lazy.items
+<a href="#h4-1" id="h4-1" class="h">@@ -10,12 +13,23 @@ import androidx.compose.material3.*
+</a> import androidx.compose.runtime.*
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+<a href="#h4-1-3" id="h4-1-3" class="i">+import androidx.compose.ui.draw.clip
+</a> import androidx.compose.ui.graphics.StrokeCap
+ import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.unit.dp
+<a href="#h4-1-7" id="h4-1-7" class="i">+import androidx.core.net.toUri
+</a><a href="#h4-1-8" id="h4-1-8" class="i">+import androidx.documentfile.provider.DocumentFile
+</a> import androidx.lifecycle.Lifecycle
+<a href="#h4-1-10" id="h4-1-10" class="i">+import kotlinx.coroutines.CoroutineScope
+</a> import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.launch
+<a href="#h4-1-13" id="h4-1-13" class="i">+import me.rhunk.snapenhance.bridge.DownloadCallback
+</a><a href="#h4-1-14" id="h4-1-14" class="i">+import me.rhunk.snapenhance.common.data.download.DownloadMetadata
+</a><a href="#h4-1-15" id="h4-1-15" class="i">+import me.rhunk.snapenhance.common.data.download.MediaDownloadSource
+</a><a href="#h4-1-16" id="h4-1-16" class="i">+import me.rhunk.snapenhance.common.data.download.createNewFilePath
+</a><a href="#h4-1-17" id="h4-1-17" class="i">+import me.rhunk.snapenhance.common.util.ktx.longHashCode
+</a><a href="#h4-1-18" id="h4-1-18" class="i">+import me.rhunk.snapenhance.download.DownloadProcessor
+</a><a href="#h4-1-19" id="h4-1-19" class="i">+import me.rhunk.snapenhance.download.FFMpegProcessor
+</a> import me.rhunk.snapenhance.task.PendingTask
+ import me.rhunk.snapenhance.task.PendingTaskListener
+ import me.rhunk.snapenhance.task.Task
+<a href="#h4-2" id="h4-2" class="h">@@ -23,41 +37,201 @@ import me.rhunk.snapenhance.task.TaskStatus
+</a> import me.rhunk.snapenhance.task.TaskType
+ import me.rhunk.snapenhance.ui.manager.Section
+ import me.rhunk.snapenhance.ui.util.OnLifecycleEvent
+<a href="#h4-2-3" id="h4-2-3" class="i">+import java.io.File
+</a><a href="#h4-2-4" id="h4-2-4" class="i">+import java.util.UUID
+</a><a href="#h4-2-5" id="h4-2-5" class="i">+import kotlin.math.absoluteValue
+</a> 
+ class TasksSection : Section() {
+     private var activeTasks by mutableStateOf(listOf&lt;PendingTask&gt;())
+     private lateinit var recentTasks: MutableList&lt;Task&gt;
+<a href="#h4-2-10" id="h4-2-10" class="i">+    private val taskSelection = mutableStateListOf&lt;Pair&lt;Task, DocumentFile?&gt;&gt;()
+</a><a href="#h4-2-11" id="h4-2-11" class="i">+
+</a><a href="#h4-2-12" id="h4-2-12" class="i">+    private fun fetchActiveTasks(scope: CoroutineScope = context.coroutineScope) {
+</a><a href="#h4-2-13" id="h4-2-13" class="i">+        scope.launch(Dispatchers.IO) {
+</a><a href="#h4-2-14" id="h4-2-14" class="i">+            activeTasks = context.taskManager.getActiveTasks().values.sortedByDescending { it.taskId }.toMutableList()
+</a><a href="#h4-2-15" id="h4-2-15" class="i">+        }
+</a><a href="#h4-2-16" id="h4-2-16" class="i">+    }
+</a><a href="#h4-2-17" id="h4-2-17" class="i">+
+</a><a href="#h4-2-18" id="h4-2-18" class="i">+    private fun mergeSelection(selection: List&lt;Pair&lt;Task, DocumentFile&gt;&gt;) {
+</a><a href="#h4-2-19" id="h4-2-19" class="i">+        val firstTask = selection.first().first
+</a><a href="#h4-2-20" id="h4-2-20" class="i">+
+</a><a href="#h4-2-21" id="h4-2-21" class="i">+        val taskHash = UUID.randomUUID().toString().longHashCode().absoluteValue.toString(16)
+</a><a href="#h4-2-22" id="h4-2-22" class="i">+        val pendingTask = context.taskManager.createPendingTask(
+</a><a href="#h4-2-23" id="h4-2-23" class="i">+            Task(TaskType.DOWNLOAD, &quot;Merge ${selection.size} files&quot;, firstTask.author, taskHash)
+</a><a href="#h4-2-24" id="h4-2-24" class="i">+        )
+</a><a href="#h4-2-25" id="h4-2-25" class="i">+        pendingTask.status = TaskStatus.RUNNING
+</a><a href="#h4-2-26" id="h4-2-26" class="i">+        fetchActiveTasks()
+</a><a href="#h4-2-27" id="h4-2-27" class="i">+
+</a><a href="#h4-2-28" id="h4-2-28" class="i">+        context.coroutineScope.launch {
+</a><a href="#h4-2-29" id="h4-2-29" class="i">+            val filesToMerge = mutableListOf&lt;File&gt;()
+</a><a href="#h4-2-30" id="h4-2-30" class="i">+
+</a><a href="#h4-2-31" id="h4-2-31" class="i">+            selection.forEach { (task, documentFile) -&gt;
+</a><a href="#h4-2-32" id="h4-2-32" class="i">+                val tempFile = File.createTempFile(task.hash, &quot;.&quot; + documentFile.name?.substringAfterLast(&quot;.&quot;), context.androidContext.cacheDir).also {
+</a><a href="#h4-2-33" id="h4-2-33" class="i">+                    it.deleteOnExit()
+</a><a href="#h4-2-34" id="h4-2-34" class="i">+                }
+</a><a href="#h4-2-35" id="h4-2-35" class="i">+
+</a><a href="#h4-2-36" id="h4-2-36" class="i">+                runCatching {
+</a><a href="#h4-2-37" id="h4-2-37" class="i">+                    pendingTask.updateProgress(&quot;Copying ${documentFile.name}&quot;)
+</a><a href="#h4-2-38" id="h4-2-38" class="i">+                    context.androidContext.contentResolver.openInputStream(documentFile.uri)?.use { inputStream -&gt;
+</a><a href="#h4-2-39" id="h4-2-39" class="i">+                        //copy with progress
+</a><a href="#h4-2-40" id="h4-2-40" class="i">+                        val length = documentFile.length().toFloat()
+</a><a href="#h4-2-41" id="h4-2-41" class="i">+                        tempFile.outputStream().use { outputStream -&gt;
+</a><a href="#h4-2-42" id="h4-2-42" class="i">+                            val buffer = ByteArray(16 * 1024)
+</a><a href="#h4-2-43" id="h4-2-43" class="i">+                            var read: Int
+</a><a href="#h4-2-44" id="h4-2-44" class="i">+                            while (inputStream.read(buffer).also { read = it } != -1) {
+</a><a href="#h4-2-45" id="h4-2-45" class="i">+                                outputStream.write(buffer, 0, read)
+</a><a href="#h4-2-46" id="h4-2-46" class="i">+                                pendingTask.updateProgress(&quot;Copying ${documentFile.name}&quot;, (outputStream.channel.position().toFloat() / length * 100f).toInt())
+</a><a href="#h4-2-47" id="h4-2-47" class="i">+                            }
+</a><a href="#h4-2-48" id="h4-2-48" class="i">+                            outputStream.flush()
+</a><a href="#h4-2-49" id="h4-2-49" class="i">+                            filesToMerge.add(tempFile)
+</a><a href="#h4-2-50" id="h4-2-50" class="i">+                        }
+</a><a href="#h4-2-51" id="h4-2-51" class="i">+                    }
+</a><a href="#h4-2-52" id="h4-2-52" class="i">+                }.onFailure {
+</a><a href="#h4-2-53" id="h4-2-53" class="i">+                    pendingTask.fail(&quot;Failed to copy file $documentFile to $tempFile&quot;)
+</a><a href="#h4-2-54" id="h4-2-54" class="i">+                    filesToMerge.forEach { it.delete() }
+</a><a href="#h4-2-55" id="h4-2-55" class="i">+                    return@launch
+</a><a href="#h4-2-56" id="h4-2-56" class="i">+                }
+</a><a href="#h4-2-57" id="h4-2-57" class="i">+            }
+</a><a href="#h4-2-58" id="h4-2-58" class="i">+
+</a><a href="#h4-2-59" id="h4-2-59" class="i">+            val mergedFile = File.createTempFile(&quot;merged&quot;, &quot;.mp4&quot;, context.androidContext.cacheDir).also {
+</a><a href="#h4-2-60" id="h4-2-60" class="i">+                it.deleteOnExit()
+</a><a href="#h4-2-61" id="h4-2-61" class="i">+            }
+</a><a href="#h4-2-62" id="h4-2-62" class="i">+
+</a><a href="#h4-2-63" id="h4-2-63" class="i">+            runCatching {
+</a><a href="#h4-2-64" id="h4-2-64" class="i">+                context.shortToast(&quot;Merging ${filesToMerge.size} files&quot;)
+</a><a href="#h4-2-65" id="h4-2-65" class="i">+                FFMpegProcessor.newFFMpegProcessor(context, pendingTask).execute(
+</a><a href="#h4-2-66" id="h4-2-66" class="i">+                    FFMpegProcessor.Request(FFMpegProcessor.Action.MERGE_MEDIA, filesToMerge, mergedFile)
+</a><a href="#h4-2-67" id="h4-2-67" class="i">+                )
+</a><a href="#h4-2-68" id="h4-2-68" class="i">+                DownloadProcessor(context, object: DownloadCallback.Default() {
+</a><a href="#h4-2-69" id="h4-2-69" class="i">+                    override fun onSuccess(outputPath: String) {
+</a><a href="#h4-2-70" id="h4-2-70" class="i">+                        context.log.verbose(&quot;Merged files to $outputPath&quot;)
+</a><a href="#h4-2-71" id="h4-2-71" class="i">+                    }
+</a><a href="#h4-2-72" id="h4-2-72" class="i">+                }).saveMediaToGallery(pendingTask, mergedFile, DownloadMetadata(
+</a><a href="#h4-2-73" id="h4-2-73" class="i">+                    mediaIdentifier = taskHash,
+</a><a href="#h4-2-74" id="h4-2-74" class="i">+                    outputPath = createNewFilePath(
+</a><a href="#h4-2-75" id="h4-2-75" class="i">+                        context.config.root,
+</a><a href="#h4-2-76" id="h4-2-76" class="i">+                        taskHash,
+</a><a href="#h4-2-77" id="h4-2-77" class="i">+                        downloadSource = MediaDownloadSource.MERGED,
+</a><a href="#h4-2-78" id="h4-2-78" class="i">+                        mediaAuthor = firstTask.author,
+</a><a href="#h4-2-79" id="h4-2-79" class="i">+                        creationTimestamp = System.currentTimeMillis()
+</a><a href="#h4-2-80" id="h4-2-80" class="i">+                    ),
+</a><a href="#h4-2-81" id="h4-2-81" class="i">+                    mediaAuthor = firstTask.author,
+</a><a href="#h4-2-82" id="h4-2-82" class="i">+                    downloadSource = MediaDownloadSource.MERGED.translate(context.translation),
+</a><a href="#h4-2-83" id="h4-2-83" class="i">+                    iconUrl = null
+</a><a href="#h4-2-84" id="h4-2-84" class="i">+                ))
+</a><a href="#h4-2-85" id="h4-2-85" class="i">+            }.onFailure {
+</a><a href="#h4-2-86" id="h4-2-86" class="i">+                context.log.error(&quot;Failed to merge files&quot;, it)
+</a><a href="#h4-2-87" id="h4-2-87" class="i">+                pendingTask.fail(it.message ?: &quot;Failed to merge files&quot;)
+</a><a href="#h4-2-88" id="h4-2-88" class="i">+            }.onSuccess {
+</a><a href="#h4-2-89" id="h4-2-89" class="i">+                pendingTask.success()
+</a><a href="#h4-2-90" id="h4-2-90" class="i">+            }
+</a><a href="#h4-2-91" id="h4-2-91" class="i">+            filesToMerge.forEach { it.delete() }
+</a><a href="#h4-2-92" id="h4-2-92" class="i">+            mergedFile.delete()
+</a><a href="#h4-2-93" id="h4-2-93" class="i">+        }.also {
+</a><a href="#h4-2-94" id="h4-2-94" class="i">+            pendingTask.addListener(PendingTaskListener(onCancel = { it.cancel() }))
+</a><a href="#h4-2-95" id="h4-2-95" class="i">+        }
+</a><a href="#h4-2-96" id="h4-2-96" class="i">+    }
+</a><a href="#h4-2-97" id="h4-2-97" class="i">+
+</a> 
+     @Composable
+     override fun TopBarActions(rowScope: RowScope) {
+         var showConfirmDialog by remember { mutableStateOf(false) }
+ 
+<a href="#h4-2-103" id="h4-2-103" class="i">+        if (taskSelection.size == 1 &amp;&amp; taskSelection.firstOrNull()?.second?.exists() == true) {
+</a><a href="#h4-2-104" id="h4-2-104" class="i">+            taskSelection.firstOrNull()?.second?.takeIf { it.exists() }?.let { documentFile -&gt;
+</a><a href="#h4-2-105" id="h4-2-105" class="i">+                IconButton(onClick = {
+</a><a href="#h4-2-106" id="h4-2-106" class="i">+                    runCatching {
+</a><a href="#h4-2-107" id="h4-2-107" class="i">+                        context.androidContext.startActivity(Intent(Intent.ACTION_VIEW).apply {
+</a><a href="#h4-2-108" id="h4-2-108" class="i">+                            setDataAndType(documentFile.uri, documentFile.type)
+</a><a href="#h4-2-109" id="h4-2-109" class="i">+                            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+</a><a href="#h4-2-110" id="h4-2-110" class="i">+                        })
+</a><a href="#h4-2-111" id="h4-2-111" class="i">+                        taskSelection.clear()
+</a><a href="#h4-2-112" id="h4-2-112" class="i">+                    }.onFailure {
+</a><a href="#h4-2-113" id="h4-2-113" class="i">+                        context.log.error(&quot;Failed to open file ${taskSelection.first().second}&quot;, it)
+</a><a href="#h4-2-114" id="h4-2-114" class="i">+                    }
+</a><a href="#h4-2-115" id="h4-2-115" class="i">+                }) {
+</a><a href="#h4-2-116" id="h4-2-116" class="i">+                    Icon(Icons.Filled.OpenInNew, contentDescription = &quot;Open&quot;)
+</a><a href="#h4-2-117" id="h4-2-117" class="i">+                }
+</a><a href="#h4-2-118" id="h4-2-118" class="i">+            }
+</a><a href="#h4-2-119" id="h4-2-119" class="i">+        }
+</a><a href="#h4-2-120" id="h4-2-120" class="i">+
+</a><a href="#h4-2-121" id="h4-2-121" class="i">+        if (taskSelection.size &gt; 1 &amp;&amp; taskSelection.all { it.second?.type?.contains(&quot;video&quot;) == true }) {
+</a><a href="#h4-2-122" id="h4-2-122" class="i">+            IconButton(onClick = {
+</a><a href="#h4-2-123" id="h4-2-123" class="i">+                mergeSelection(taskSelection.toList().also {
+</a><a href="#h4-2-124" id="h4-2-124" class="i">+                    taskSelection.clear()
+</a><a href="#h4-2-125" id="h4-2-125" class="i">+                }.map { it.first to it.second!! })
+</a><a href="#h4-2-126" id="h4-2-126" class="i">+            }) {
+</a><a href="#h4-2-127" id="h4-2-127" class="i">+                Icon(Icons.Filled.Merge, contentDescription = &quot;Merge&quot;)
+</a><a href="#h4-2-128" id="h4-2-128" class="i">+            }
+</a><a href="#h4-2-129" id="h4-2-129" class="i">+        }
+</a><a href="#h4-2-130" id="h4-2-130" class="i">+
+</a>         IconButton(onClick = {
+             showConfirmDialog = true
+         }) {
+<a href="#h4-2-134" id="h4-2-134" class="d">-            Icon(Icons.Filled.Delete, contentDescription = &quot;Clear all tasks&quot;)
+</a><a href="#h4-2-135" id="h4-2-135" class="i">+            Icon(Icons.Filled.Delete, contentDescription = &quot;Clear tasks&quot;)
+</a>         }
+ 
+         if (showConfirmDialog) {
+<a href="#h4-2-139" id="h4-2-139" class="i">+            var alsoDeleteFiles by remember { mutableStateOf(false) }
+</a><a href="#h4-2-140" id="h4-2-140" class="i">+
+</a>             AlertDialog(
+                 onDismissRequest = { showConfirmDialog = false },
+<a href="#h4-2-143" id="h4-2-143" class="d">-                title = { Text(&quot;Clear all tasks&quot;) },
+</a><a href="#h4-2-144" id="h4-2-144" class="d">-                text = { Text(&quot;Are you sure you want to clear all tasks?&quot;) },
+</a><a href="#h4-2-145" id="h4-2-145" class="i">+                title = {
+</a><a href="#h4-2-146" id="h4-2-146" class="i">+                    if (taskSelection.isNotEmpty()) {
+</a><a href="#h4-2-147" id="h4-2-147" class="i">+                        Text(&quot;Remove ${taskSelection.size} tasks?&quot;)
+</a><a href="#h4-2-148" id="h4-2-148" class="i">+                    } else {
+</a><a href="#h4-2-149" id="h4-2-149" class="i">+                        Text(&quot;Remove all tasks?&quot;)
+</a><a href="#h4-2-150" id="h4-2-150" class="i">+                    }
+</a><a href="#h4-2-151" id="h4-2-151" class="i">+                },
+</a><a href="#h4-2-152" id="h4-2-152" class="i">+                text = {
+</a><a href="#h4-2-153" id="h4-2-153" class="i">+                    Column {
+</a><a href="#h4-2-154" id="h4-2-154" class="i">+                        if (taskSelection.isNotEmpty()) {
+</a><a href="#h4-2-155" id="h4-2-155" class="i">+                            Text(&quot;Are you sure you want to remove selected tasks?&quot;)
+</a><a href="#h4-2-156" id="h4-2-156" class="i">+                            Row (
+</a><a href="#h4-2-157" id="h4-2-157" class="i">+                                modifier = Modifier.padding(top = 10.dp).fillMaxWidth().clickable {
+</a><a href="#h4-2-158" id="h4-2-158" class="i">+                                    alsoDeleteFiles = !alsoDeleteFiles
+</a><a href="#h4-2-159" id="h4-2-159" class="i">+                                },
+</a><a href="#h4-2-160" id="h4-2-160" class="i">+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+</a><a href="#h4-2-161" id="h4-2-161" class="i">+                                verticalAlignment = Alignment.CenterVertically
+</a><a href="#h4-2-162" id="h4-2-162" class="i">+                            ) {
+</a><a href="#h4-2-163" id="h4-2-163" class="i">+                                Checkbox(checked = alsoDeleteFiles, onCheckedChange = {
+</a><a href="#h4-2-164" id="h4-2-164" class="i">+                                    alsoDeleteFiles = it
+</a><a href="#h4-2-165" id="h4-2-165" class="i">+                                })
+</a><a href="#h4-2-166" id="h4-2-166" class="i">+                                Text(&quot;Also delete files&quot;)
+</a><a href="#h4-2-167" id="h4-2-167" class="i">+                            }
+</a><a href="#h4-2-168" id="h4-2-168" class="i">+                        } else {
+</a><a href="#h4-2-169" id="h4-2-169" class="i">+                            Text(&quot;Are you sure you want to remove all tasks?&quot;)
+</a><a href="#h4-2-170" id="h4-2-170" class="i">+                        }
+</a><a href="#h4-2-171" id="h4-2-171" class="i">+                    }
+</a><a href="#h4-2-172" id="h4-2-172" class="i">+                },
+</a>                 confirmButton = {
+                     Button(
+                         onClick = {
+<a href="#h4-2-176" id="h4-2-176" class="d">-                            context.taskManager.clearAllTasks()
+</a><a href="#h4-2-177" id="h4-2-177" class="d">-                            recentTasks.clear()
+</a><a href="#h4-2-178" id="h4-2-178" class="d">-                            activeTasks.forEach {
+</a><a href="#h4-2-179" id="h4-2-179" class="d">-                                runCatching {
+</a><a href="#h4-2-180" id="h4-2-180" class="d">-                                    it.cancel()
+</a><a href="#h4-2-181" id="h4-2-181" class="d">-                                }.onFailure { throwable -&gt;
+</a><a href="#h4-2-182" id="h4-2-182" class="d">-                                    context.log.error(&quot;Failed to cancel task $it&quot;, throwable)
+</a><a href="#h4-2-183" id="h4-2-183" class="i">+                            showConfirmDialog = false
+</a><a href="#h4-2-184" id="h4-2-184" class="i">+
+</a><a href="#h4-2-185" id="h4-2-185" class="i">+                            if (taskSelection.isNotEmpty()) {
+</a><a href="#h4-2-186" id="h4-2-186" class="i">+                                taskSelection.forEach { (task, documentFile) -&gt;
+</a><a href="#h4-2-187" id="h4-2-187" class="i">+                                    context.taskManager.removeTask(task)
+</a><a href="#h4-2-188" id="h4-2-188" class="i">+                                    recentTasks.remove(task)
+</a><a href="#h4-2-189" id="h4-2-189" class="i">+                                    if (alsoDeleteFiles) {
+</a><a href="#h4-2-190" id="h4-2-190" class="i">+                                        documentFile?.delete()
+</a><a href="#h4-2-191" id="h4-2-191" class="i">+                                    }
+</a><a href="#h4-2-192" id="h4-2-192" class="i">+                                }
+</a><a href="#h4-2-193" id="h4-2-193" class="i">+                                activeTasks = activeTasks.filter { task -&gt; !taskSelection.map { it.first }.contains(task.task) }
+</a><a href="#h4-2-194" id="h4-2-194" class="i">+                                taskSelection.clear()
+</a><a href="#h4-2-195" id="h4-2-195" class="i">+                            } else {
+</a><a href="#h4-2-196" id="h4-2-196" class="i">+                                context.taskManager.clearAllTasks()
+</a><a href="#h4-2-197" id="h4-2-197" class="i">+                                recentTasks.clear()
+</a><a href="#h4-2-198" id="h4-2-198" class="i">+                                activeTasks.forEach {
+</a><a href="#h4-2-199" id="h4-2-199" class="i">+                                    runCatching {
+</a><a href="#h4-2-200" id="h4-2-200" class="i">+                                        it.cancel()
+</a><a href="#h4-2-201" id="h4-2-201" class="i">+                                    }.onFailure { throwable -&gt;
+</a><a href="#h4-2-202" id="h4-2-202" class="i">+                                        context.log.error(&quot;Failed to cancel task $it&quot;, throwable)
+</a><a href="#h4-2-203" id="h4-2-203" class="i">+                                    }
+</a>                                 }
+<a href="#h4-2-205" id="h4-2-205" class="i">+                                activeTasks = listOf()
+</a><a href="#h4-2-206" id="h4-2-206" class="i">+                                context.taskManager.getActiveTasks().clear()
+</a>                             }
+<a href="#h4-2-208" id="h4-2-208" class="d">-                            activeTasks = listOf()
+</a><a href="#h4-2-209" id="h4-2-209" class="d">-                            context.taskManager.getActiveTasks().clear()
+</a><a href="#h4-2-210" id="h4-2-210" class="d">-                            showConfirmDialog = false
+</a>                         }
+                     ) {
+                         Text(&quot;Yes&quot;)
+<a href="#h4-3" id="h4-3" class="h">@@ -81,6 +255,16 @@ class TasksSection : Section() {
+</a>         var taskStatus by remember { mutableStateOf(task.status) }
+         var taskProgressLabel by remember { mutableStateOf&lt;String?&gt;(null) }
+         var taskProgress by remember { mutableIntStateOf(-1) }
+<a href="#h4-3-3" id="h4-3-3" class="i">+        val isSelected by remember { derivedStateOf { taskSelection.any { it.first == task } } }
+</a><a href="#h4-3-4" id="h4-3-4" class="i">+        var documentFile by remember { mutableStateOf&lt;DocumentFile?&gt;(null) }
+</a><a href="#h4-3-5" id="h4-3-5" class="i">+        var isDocumentFileReadable by remember { mutableStateOf(true) }
+</a><a href="#h4-3-6" id="h4-3-6" class="i">+
+</a><a href="#h4-3-7" id="h4-3-7" class="i">+        LaunchedEffect(taskStatus.key) {
+</a><a href="#h4-3-8" id="h4-3-8" class="i">+            launch(Dispatchers.IO) {
+</a><a href="#h4-3-9" id="h4-3-9" class="i">+                documentFile = DocumentFile.fromSingleUri(context.androidContext, task.extra?.toUri() ?: return@launch)
+</a><a href="#h4-3-10" id="h4-3-10" class="i">+                isDocumentFileReadable = documentFile?.canRead() ?: false
+</a><a href="#h4-3-11" id="h4-3-11" class="i">+            }
+</a><a href="#h4-3-12" id="h4-3-12" class="i">+        }
+</a> 
+         val listener = remember { PendingTaskListener(
+             onStateChange = {
+<a href="#h4-4" id="h4-4" class="h">@@ -102,7 +286,19 @@ class TasksSection : Section() {
+</a>             }
+         }
+ 
+<a href="#h4-4-3" id="h4-4-3" class="d">-        OutlinedCard(modifier = modifier) {
+</a><a href="#h4-4-4" id="h4-4-4" class="i">+        OutlinedCard(modifier = modifier.clickable {
+</a><a href="#h4-4-5" id="h4-4-5" class="i">+            if (isSelected) {
+</a><a href="#h4-4-6" id="h4-4-6" class="i">+                taskSelection.removeIf { it.first == task }
+</a><a href="#h4-4-7" id="h4-4-7" class="i">+                return@clickable
+</a><a href="#h4-4-8" id="h4-4-8" class="i">+            }
+</a><a href="#h4-4-9" id="h4-4-9" class="i">+            taskSelection.add(task to documentFile)
+</a><a href="#h4-4-10" id="h4-4-10" class="i">+        }.let {
+</a><a href="#h4-4-11" id="h4-4-11" class="i">+            if (isSelected) {
+</a><a href="#h4-4-12" id="h4-4-12" class="i">+                it
+</a><a href="#h4-4-13" id="h4-4-13" class="i">+                    .border(2.dp, MaterialTheme.colorScheme.primary)
+</a><a href="#h4-4-14" id="h4-4-14" class="i">+                    .clip(MaterialTheme.shapes.medium)
+</a><a href="#h4-4-15" id="h4-4-15" class="i">+            } else it
+</a><a href="#h4-4-16" id="h4-4-16" class="i">+        }) {
+</a>             Row(
+                 modifier = Modifier.padding(15.dp),
+                 verticalAlignment = Alignment.CenterVertically
+<a href="#h4-5" id="h4-5" class="h">@@ -110,15 +306,35 @@ class TasksSection : Section() {
+</a>                 Column(
+                     modifier = Modifier.padding(end = 15.dp)
+                 ) {
+<a href="#h4-5-3" id="h4-5-3" class="d">-                    when (task.type) {
+</a><a href="#h4-5-4" id="h4-5-4" class="d">-                        TaskType.DOWNLOAD -&gt; Icon(Icons.Filled.Download, contentDescription = &quot;Download&quot;)
+</a><a href="#h4-5-5" id="h4-5-5" class="d">-                        TaskType.CHAT_ACTION -&gt; Icon(Icons.Filled.ChatBubble, contentDescription = &quot;Chat Action&quot;)
+</a><a href="#h4-5-6" id="h4-5-6" class="i">+                    documentFile?.let { file -&gt;
+</a><a href="#h4-5-7" id="h4-5-7" class="i">+                        val mimeType = file.type ?: &quot;&quot;
+</a><a href="#h4-5-8" id="h4-5-8" class="i">+                        when {
+</a><a href="#h4-5-9" id="h4-5-9" class="i">+                            !isDocumentFileReadable -&gt; Icon(Icons.Filled.DeleteOutline, contentDescription = &quot;File not found&quot;)
+</a><a href="#h4-5-10" id="h4-5-10" class="i">+                            mimeType.contains(&quot;image&quot;) -&gt; Icon(Icons.Filled.Image, contentDescription = &quot;Image&quot;)
+</a><a href="#h4-5-11" id="h4-5-11" class="i">+                            mimeType.contains(&quot;video&quot;) -&gt; Icon(Icons.Filled.Videocam, contentDescription = &quot;Video&quot;)
+</a><a href="#h4-5-12" id="h4-5-12" class="i">+                            mimeType.contains(&quot;audio&quot;) -&gt; Icon(Icons.Filled.MusicNote, contentDescription = &quot;Audio&quot;)
+</a><a href="#h4-5-13" id="h4-5-13" class="i">+                            else -&gt; Icon(Icons.Filled.FileCopy, contentDescription = &quot;File&quot;)
+</a><a href="#h4-5-14" id="h4-5-14" class="i">+                        }
+</a><a href="#h4-5-15" id="h4-5-15" class="i">+                    } ?: run {
+</a><a href="#h4-5-16" id="h4-5-16" class="i">+                        when (task.type) {
+</a><a href="#h4-5-17" id="h4-5-17" class="i">+                            TaskType.DOWNLOAD -&gt; Icon(Icons.Filled.Download, contentDescription = &quot;Download&quot;)
+</a><a href="#h4-5-18" id="h4-5-18" class="i">+                            TaskType.CHAT_ACTION -&gt; Icon(Icons.Filled.ChatBubble, contentDescription = &quot;Chat Action&quot;)
+</a><a href="#h4-5-19" id="h4-5-19" class="i">+                        }
+</a>                     }
+                 }
+                 Column(
+                     modifier = Modifier.weight(1f),
+                 ) {
+<a href="#h4-5-25" id="h4-5-25" class="d">-                    Text(task.title, style = MaterialTheme.typography.bodyLarge)
+</a><a href="#h4-5-26" id="h4-5-26" class="i">+                    Row(
+</a><a href="#h4-5-27" id="h4-5-27" class="i">+                        modifier = Modifier.fillMaxWidth(),
+</a><a href="#h4-5-28" id="h4-5-28" class="i">+                        verticalAlignment = Alignment.CenterVertically
+</a><a href="#h4-5-29" id="h4-5-29" class="i">+                    ) {
+</a><a href="#h4-5-30" id="h4-5-30" class="i">+                        Text(task.title, style = MaterialTheme.typography.bodyMedium)
+</a><a href="#h4-5-31" id="h4-5-31" class="i">+                        task.author?.takeIf { it != &quot;null&quot; }?.let {
+</a><a href="#h4-5-32" id="h4-5-32" class="i">+                            Spacer(modifier = Modifier.width(5.dp))
+</a><a href="#h4-5-33" id="h4-5-33" class="i">+                            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+</a><a href="#h4-5-34" id="h4-5-34" class="i">+                        }
+</a><a href="#h4-5-35" id="h4-5-35" class="i">+                    }
+</a>                     Text(task.hash, style = MaterialTheme.typography.labelSmall)
+                     Column(
+                         modifier = Modifier.padding(top = 5.dp),
+<a href="#h4-6" id="h4-6" class="h">@@ -183,27 +399,25 @@ class TasksSection : Section() {
+</a>                 val tasks = context.taskManager.fetchStoredTasks(lastFetchedTaskId ?: Long.MAX_VALUE)
+                 if (tasks.isNotEmpty()) {
+                     lastFetchedTaskId = tasks.keys.last()
+<a href="#h4-6-3" id="h4-6-3" class="d">-                    scope.launch {
+</a><a href="#h4-6-4" id="h4-6-4" class="d">-                        val activeTaskIds = activeTasks.map { it.taskId }
+</a><a href="#h4-6-5" id="h4-6-5" class="d">-                        recentTasks.addAll(tasks.filter { it.key !in activeTaskIds }.values)
+</a><a href="#h4-6-6" id="h4-6-6" class="d">-                    }
+</a><a href="#h4-6-7" id="h4-6-7" class="i">+                    val activeTaskIds = activeTasks.map { it.taskId }
+</a><a href="#h4-6-8" id="h4-6-8" class="i">+                    recentTasks.addAll(tasks.filter { it.key !in activeTaskIds }.values)
+</a>                 }
+             }
+         }
+ 
+<a href="#h4-6-13" id="h4-6-13" class="d">-        fun fetchActiveTasks() {
+</a><a href="#h4-6-14" id="h4-6-14" class="d">-            activeTasks = context.taskManager.getActiveTasks().values.sortedByDescending { it.taskId }.toMutableList()
+</a><a href="#h4-6-15" id="h4-6-15" class="i">+        LaunchedEffect(Unit) {
+</a><a href="#h4-6-16" id="h4-6-16" class="i">+            fetchActiveTasks(this)
+</a>         }
+ 
+<a href="#h4-6-19" id="h4-6-19" class="d">-        LaunchedEffect(Unit) {
+</a><a href="#h4-6-20" id="h4-6-20" class="d">-            fetchActiveTasks()
+</a><a href="#h4-6-21" id="h4-6-21" class="i">+        DisposableEffect(Unit) {
+</a><a href="#h4-6-22" id="h4-6-22" class="i">+            onDispose {
+</a><a href="#h4-6-23" id="h4-6-23" class="i">+                taskSelection.clear()
+</a><a href="#h4-6-24" id="h4-6-24" class="i">+            }
+</a>         }
+ 
+         OnLifecycleEvent { _, event -&gt;
+             if (event == Lifecycle.Event.ON_RESUME) {
+<a href="#h4-6-29" id="h4-6-29" class="d">-                scope.launch {
+</a><a href="#h4-6-30" id="h4-6-30" class="d">-                    fetchActiveTasks()
+</a><a href="#h4-6-31" id="h4-6-31" class="d">-                }
+</a><a href="#h4-6-32" id="h4-6-32" class="i">+                fetchActiveTasks(scope)
+</a>             }
+         }
+ 
+<a href="#h4-7" id="h4-7" class="h">@@ -218,12 +432,14 @@ class TasksSection : Section() {
+</a>                         horizontalAlignment = Alignment.CenterHorizontally,
+                         verticalArrangement = Arrangement.Center
+                     ) {
+<a href="#h4-7-3" id="h4-7-3" class="d">-                        Icon(Icons.Filled.CheckCircle, contentDescription = &quot;No tasks&quot;, tint = MaterialTheme.colorScheme.primary)
+</a><a href="#h4-7-4" id="h4-7-4" class="d">-                        Text(&quot;No tasks&quot;, style = MaterialTheme.typography.bodyLarge)
+</a><a href="#h4-7-5" id="h4-7-5" class="i">+                        context.translation[&quot;manager.sections.tasks.no_tasks&quot;].let {
+</a><a href="#h4-7-6" id="h4-7-6" class="i">+                            Icon(Icons.Filled.CheckCircle, contentDescription = it, tint = MaterialTheme.colorScheme.primary)
+</a><a href="#h4-7-7" id="h4-7-7" class="i">+                            Text(it, style = MaterialTheme.typography.bodyLarge)
+</a><a href="#h4-7-8" id="h4-7-8" class="i">+                        }
+</a>                     }
+                 }
+             }
+<a href="#h4-7-12" id="h4-7-12" class="d">-            items(activeTasks, key = { it.task.hash }) {pendingTask -&gt;
+</a><a href="#h4-7-13" id="h4-7-13" class="i">+            items(activeTasks, key = { it.taskId }) {pendingTask -&gt;
+</a>                 TaskCard(modifier = Modifier.padding(8.dp), pendingTask.task, pendingTask = pendingTask)
+             }
+             items(recentTasks, key = { it.hash }) { task -&gt;
+<a href="#h4-8" id="h4-8" class="h">@@ -231,7 +447,7 @@ class TasksSection : Section() {
+</a>             }
+             item {
+                 Spacer(modifier = Modifier.height(20.dp))
+<a href="#h4-8-3" id="h4-8-3" class="d">-                SideEffect {
+</a><a href="#h4-8-4" id="h4-8-4" class="i">+                LaunchedEffect(remember { derivedStateOf { scrollState.firstVisibleItemIndex } }) {
+</a>                     fetchNewRecentTasks()
+                 }
+             }
+<b>diff --git a/<a id="h5" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/LoggedStories.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/LoggedStories.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/LoggedStories.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/social/LoggedStories.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -118,7 +118,7 @@ fun LoggedStories(
+</a> 
+                         Button(onClick = {
+                             val mediaAuthor = friendInfo?.mutableUsername ?: userId
+<a href="#h5-0-3" id="h5-0-3" class="d">-                            val uniqueHash = selectedStory?.url?.longHashCode()?.absoluteValue?.toString(16) ?: UUID.randomUUID().toString()
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+                            val uniqueHash = (selectedStory?.url ?: UUID.randomUUID().toString()).longHashCode().absoluteValue.toString(16)
+</a> 
+                             DownloadProcessor(
+                                 remoteSideContext = context,
+<a href="#h5-1" id="h5-1" class="h">@@ -150,7 +150,7 @@ fun LoggedStories(
+</a>                                 ),
+                                 iconUrl = null,
+                                 mediaAuthor = friendInfo?.mutableUsername ?: userId,
+<a href="#h5-1-3" id="h5-1-3" class="d">-                                downloadSource = MediaDownloadSource.STORY_LOGGER.key
+</a><a href="#h5-1-4" id="h5-1-4" class="i">+                                downloadSource = MediaDownloadSource.STORY_LOGGER.translate(context.translation),
+</a>                             ))
+                         }) {
+                             Text(text = &quot;Download&quot;)
+<b>diff --git a/<a id="h6" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -38,8 +38,8 @@
+</a>                     &quot;export_logs_button&quot;: &quot;Export Logs&quot;
+                 }
+             },
+<a href="#h6-0-3" id="h6-0-3" class="d">-            &quot;downloads&quot;: {
+</a><a href="#h6-0-4" id="h6-0-4" class="d">-                &quot;empty_download_list&quot;: &quot;(empty)&quot;
+</a><a href="#h6-0-5" id="h6-0-5" class="i">+            &quot;tasks&quot;: {
+</a><a href="#h6-0-6" id="h6-0-6" class="i">+                &quot;no_tasks&quot;: &quot;No tasks&quot;
+</a>             },
+             &quot;features&quot;: {
+                 &quot;disabled&quot;: &quot;Disabled&quot;
+<a href="#h6-1" id="h6-1" class="h">@@ -899,6 +899,18 @@
+</a>         &quot;STATUS_COUNTDOWN&quot;: &quot;Countdown&quot;
+     },
+ 
+<a href="#h6-1-3" id="h6-1-3" class="i">+    &quot;media_download_source&quot;: {
+</a><a href="#h6-1-4" id="h6-1-4" class="i">+        &quot;none&quot;: &quot;None&quot;,
+</a><a href="#h6-1-5" id="h6-1-5" class="i">+        &quot;pending&quot;: &quot;Pending&quot;,
+</a><a href="#h6-1-6" id="h6-1-6" class="i">+        &quot;chat_media&quot;: &quot;Chat Media&quot;,
+</a><a href="#h6-1-7" id="h6-1-7" class="i">+        &quot;story&quot;: &quot;Story&quot;,
+</a><a href="#h6-1-8" id="h6-1-8" class="i">+        &quot;public_story&quot;: &quot;Public Story&quot;,
+</a><a href="#h6-1-9" id="h6-1-9" class="i">+        &quot;spotlight&quot;: &quot;Spotlight&quot;,
+</a><a href="#h6-1-10" id="h6-1-10" class="i">+        &quot;profile_picture&quot;: &quot;Profile Picture&quot;,
+</a><a href="#h6-1-11" id="h6-1-11" class="i">+        &quot;story_logger&quot;: &quot;Story Logger&quot;,
+</a><a href="#h6-1-12" id="h6-1-12" class="i">+        &quot;merged&quot;: &quot;Merged&quot;
+</a><a href="#h6-1-13" id="h6-1-13" class="i">+    },
+</a><a href="#h6-1-14" id="h6-1-14" class="i">+
+</a>     &quot;chat_action_menu&quot;: {
+         &quot;preview_button&quot;: &quot;Preview&quot;,
+         &quot;download_button&quot;: &quot;Download&quot;,
+<b>diff --git a/<a id="h7" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/FileType.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/FileType.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/FileType.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/FileType.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -13,6 +13,8 @@ enum class FileType(
+</a>     GIF(&quot;gif&quot;, &quot;image/gif&quot;, false, false, false),
+     PNG(&quot;png&quot;, &quot;image/png&quot;, false, true, false),
+     MP4(&quot;mp4&quot;, &quot;video/mp4&quot;, true, false, false),
+<a href="#h7-0-3" id="h7-0-3" class="i">+    MKV(&quot;mkv&quot;, &quot;video/mkv&quot;, true, false, false),
+</a><a href="#h7-0-4" id="h7-0-4" class="i">+    AVI(&quot;avi&quot;, &quot;video/avi&quot;, true, false, false),
+</a>     MP3(&quot;mp3&quot;, &quot;audio/mp3&quot;,false, false, true),
+     OPUS(&quot;opus&quot;, &quot;audio/opus&quot;, false, false, true),
+     AAC(&quot;aac&quot;, &quot;audio/aac&quot;, false, false, true),
+<a href="#h7-1" id="h7-1" class="h">@@ -34,6 +36,9 @@ enum class FileType(
+</a>             &quot;4f676753&quot; to OPUS,
+             &quot;fff15&quot; to AAC,
+             &quot;ffd8ff&quot; to JPG,
+<a href="#h7-1-3" id="h7-1-3" class="i">+            &quot;47494638&quot; to GIF,
+</a><a href="#h7-1-4" id="h7-1-4" class="i">+            &quot;1a45dfa3&quot; to MKV,
+</a><a href="#h7-1-5" id="h7-1-5" class="i">+            &quot;52494646&quot; to AVI,
+</a>         )
+ 
+         fun fromString(string: String?): FileType {
+<b>diff --git a/<a id="h8" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/DownloadRequest.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/DownloadRequest.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/DownloadRequest.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/DownloadRequest.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -40,12 +40,12 @@ fun createNewFilePath(
+</a>     config: RootConfig,
+     hexHash: String,
+     downloadSource: MediaDownloadSource,
+<a href="#h8-0-3" id="h8-0-3" class="d">-    mediaAuthor: String,
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+    mediaAuthor: String?,
+</a>     creationTimestamp: Long?
+ ): String {
+     val pathFormat by config.downloader.pathFormat
+     val customPathFormat by config.downloader.customPathFormat
+<a href="#h8-0-9" id="h8-0-9" class="d">-    val sanitizedMediaAuthor = mediaAuthor.sanitizeForPath().ifEmpty { hexHash }
+</a><a href="#h8-0-10" id="h8-0-10" class="i">+    val sanitizedMediaAuthor = mediaAuthor?.sanitizeForPath() ?: hexHash
+</a>     val currentDateTime = SimpleDateFormat(&quot;yyyy-MM-dd_HH-mm-ss&quot;, Locale.ENGLISH).format(creationTimestamp ?: System.currentTimeMillis())
+ 
+     val finalPath = StringBuilder()
+<b>diff --git a/<a id="h9" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/MediaDownloadSource.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/MediaDownloadSource.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/MediaDownloadSource.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/MediaDownloadSource.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -1,25 +1,31 @@
+</a> package me.rhunk.snapenhance.common.data.download
+ 
+<a href="#h9-0-2" id="h9-0-2" class="i">+import me.rhunk.snapenhance.common.bridge.wrapper.LocaleWrapper
+</a><a href="#h9-0-3" id="h9-0-3" class="i">+
+</a> enum class MediaDownloadSource(
+     val key: String,
+<a href="#h9-0-6" id="h9-0-6" class="d">-    val displayName: String = key,
+</a>     val pathName: String = key,
+     val ignoreFilter: Boolean = false
+ ) {
+<a href="#h9-0-10" id="h9-0-10" class="d">-    NONE(&quot;none&quot;, &quot;None&quot;, ignoreFilter = true),
+</a><a href="#h9-0-11" id="h9-0-11" class="d">-    PENDING(&quot;pending&quot;, &quot;Pending&quot;, ignoreFilter = true),
+</a><a href="#h9-0-12" id="h9-0-12" class="d">-    CHAT_MEDIA(&quot;chat_media&quot;, &quot;Chat Media&quot;, &quot;chat_media&quot;),
+</a><a href="#h9-0-13" id="h9-0-13" class="d">-    STORY(&quot;story&quot;, &quot;Story&quot;, &quot;story&quot;),
+</a><a href="#h9-0-14" id="h9-0-14" class="d">-    PUBLIC_STORY(&quot;public_story&quot;, &quot;Public Story&quot;, &quot;public_story&quot;),
+</a><a href="#h9-0-15" id="h9-0-15" class="d">-    SPOTLIGHT(&quot;spotlight&quot;, &quot;Spotlight&quot;, &quot;spotlight&quot;),
+</a><a href="#h9-0-16" id="h9-0-16" class="d">-    PROFILE_PICTURE(&quot;profile_picture&quot;, &quot;Profile Picture&quot;, &quot;profile_picture&quot;),
+</a><a href="#h9-0-17" id="h9-0-17" class="d">-    STORY_LOGGER(&quot;story_logger&quot;, &quot;Story Logger&quot;, &quot;story_logger&quot;);
+</a><a href="#h9-0-18" id="h9-0-18" class="i">+    NONE(&quot;none&quot;, ignoreFilter = true),
+</a><a href="#h9-0-19" id="h9-0-19" class="i">+    PENDING(&quot;pending&quot;, ignoreFilter = true),
+</a><a href="#h9-0-20" id="h9-0-20" class="i">+    CHAT_MEDIA(&quot;chat_media&quot;, &quot;chat_media&quot;),
+</a><a href="#h9-0-21" id="h9-0-21" class="i">+    STORY(&quot;story&quot;,  &quot;story&quot;),
+</a><a href="#h9-0-22" id="h9-0-22" class="i">+    PUBLIC_STORY(&quot;public_story&quot;, &quot;public_story&quot;),
+</a><a href="#h9-0-23" id="h9-0-23" class="i">+    SPOTLIGHT(&quot;spotlight&quot;,  &quot;spotlight&quot;),
+</a><a href="#h9-0-24" id="h9-0-24" class="i">+    PROFILE_PICTURE(&quot;profile_picture&quot;, &quot;profile_picture&quot;),
+</a><a href="#h9-0-25" id="h9-0-25" class="i">+    STORY_LOGGER(&quot;story_logger&quot;, &quot;story_logger&quot;),
+</a><a href="#h9-0-26" id="h9-0-26" class="i">+    MERGED(&quot;merged&quot;, &quot;merged&quot;);
+</a> 
+     fun matches(source: String?): Boolean {
+         if (source == null) return false
+         return source.contains(key, ignoreCase = true)
+     }
+ 
+<a href="#h9-0-33" id="h9-0-33" class="i">+    fun translate(translation: LocaleWrapper): String {
+</a><a href="#h9-0-34" id="h9-0-34" class="i">+        return translation[&quot;media_download_source.$key&quot;]
+</a><a href="#h9-0-35" id="h9-0-35" class="i">+    }
+</a><a href="#h9-0-36" id="h9-0-36" class="i">+
+</a>     companion object {
+         fun fromKey(key: String?): MediaDownloadSource {
+             if (key == null) return NONE
+<b>diff --git a/<a id="h10" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -102,7 +102,7 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>             metadata = DownloadMetadata(
+                 mediaIdentifier = generatedHash,
+                 mediaAuthor = mediaAuthor,
+<a href="#h10-0-3" id="h10-0-3" class="d">-                downloadSource = downloadSource.key,
+</a><a href="#h10-0-4" id="h10-0-4" class="i">+                downloadSource = downloadSource.translate(context.translation),
+</a>                 iconUrl = iconUrl,
+                 outputPath = outputPath
+             ),
+</pre>
+</div>
+</body>
+</html>

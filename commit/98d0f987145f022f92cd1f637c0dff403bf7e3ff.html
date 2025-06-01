@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>refactor: convert message locally - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/98d0f987145f022f92cd1f637c0dff403bf7e3ff.html">98d0f987145f022f92cd1f637c0dff403bf7e3ff</a>
+<b>parent</b> <a href="../commit/202638841a23b5a2d25d11398c9dd934658ac291.html">202638841a23b5a2d25d11398c9dd934658ac291</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri,  1 Dec 2023 21:44:40 +0100
+
+refactor: convert message locally
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">9</td><td><span class="i">+++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ConvertMessageLocally.kt</a></td><td> | </td><td class="num">68</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="D">D</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/SnapToChatMedia.kt</a></td><td> | </td><td class="num">26</td><td><span class="i"></span><span class="d">--------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt</a></td><td> | </td><td class="num">14</td><td><span class="i">++++++++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt</a></td><td> | </td><td class="num">28</td><td><span class="i">++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>7 files changed, 118 insertions(+), 37 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -581,9 +581,9 @@
+</a>                             }
+                         }
+                     },
+<a href="#h0-0-3" id="h0-0-3" class="d">-                    &quot;snap_to_chat_media&quot;: {
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-                        &quot;name&quot;: &quot;Snap to Chat Media&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-                        &quot;description&quot;: &quot;Converts snaps to chat external media&quot;
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                    &quot;convert_message_locally&quot;: {
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+                        &quot;name&quot;: &quot;Convert Message Locally&quot;,
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+                        &quot;description&quot;: &quot;Converts snaps to chat external media locally. This appears in chat download context menu&quot;
+</a>                     },
+                     &quot;app_passcode&quot;: {
+                         &quot;name&quot;: &quot;App Passcode&quot;,
+<a href="#h0-1" id="h0-1" class="h">@@ -813,7 +813,8 @@
+</a>     &quot;chat_action_menu&quot;: {
+         &quot;preview_button&quot;: &quot;Preview&quot;,
+         &quot;download_button&quot;: &quot;Download&quot;,
+<a href="#h0-1-3" id="h0-1-3" class="d">-        &quot;delete_logged_message_button&quot;: &quot;Delete Logged Message&quot;
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+        &quot;delete_logged_message_button&quot;: &quot;Delete Logged Message&quot;,
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+        &quot;convert_message&quot;: &quot;Convert Message&quot;
+</a>     },
+ 
+     &quot;opera_context_menu&quot;: {
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -10,7 +10,7 @@ class Experimental : ConfigContainer() {
+</a> 
+     val nativeHooks = container(&quot;native_hooks&quot;, NativeHooks()) { icon = &quot;Memory&quot;; requireRestart() }
+     val spoof = container(&quot;spoof&quot;, Spoof()) { icon = &quot;Fingerprint&quot; }
+<a href="#h1-0-3" id="h1-0-3" class="d">-    val snapToChatMedia = boolean(&quot;snap_to_chat_media&quot;) { requireRestart(); addNotices(FeatureNotice.UNSTABLE) }
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    val convertMessageLocally = boolean(&quot;convert_message_locally&quot;) { requireRestart() }
+</a>     val appPasscode = string(&quot;app_passcode&quot;)
+     val appLockOnResume = boolean(&quot;app_lock_on_resume&quot;)
+     val infiniteStoryBoost = boolean(&quot;infinite_story_boost&quot;)
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ConvertMessageLocally.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ConvertMessageLocally.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ConvertMessageLocally.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ConvertMessageLocally.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -0,0 +1,67 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="i">+package me.rhunk.snapenhance.core.features.impl.experiments
+</a><a href="#h2-0-1" id="h2-0-1" class="i">+
+</a><a href="#h2-0-2" id="h2-0-2" class="i">+import me.rhunk.snapenhance.common.data.ContentType
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import me.rhunk.snapenhance.common.util.protobuf.ProtoWriter
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+import me.rhunk.snapenhance.core.event.events.impl.BuildMessageEvent
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+import me.rhunk.snapenhance.core.features.Feature
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+import me.rhunk.snapenhance.core.features.FeatureLoadParams
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+import me.rhunk.snapenhance.core.features.impl.messaging.Messaging
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+import me.rhunk.snapenhance.core.ui.ViewAppearanceHelper
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+import me.rhunk.snapenhance.core.wrapper.impl.Message
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+import me.rhunk.snapenhance.core.wrapper.impl.MessageContent
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+class ConvertMessageLocally : Feature(&quot;Convert Message Edit&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+    private val messageCache = mutableMapOf&lt;Long, MessageContent&gt;()
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+
+</a><a href="#h2-0-16" id="h2-0-16" class="i">+    private fun dispatchMessageEdit(message: Message, restore: Boolean = false) {
+</a><a href="#h2-0-17" id="h2-0-17" class="i">+        val messageId = message.messageDescriptor!!.messageId!!
+</a><a href="#h2-0-18" id="h2-0-18" class="i">+        if (!restore) messageCache[messageId] = message.messageContent!!
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+        context.runOnUiThread {
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+            context.feature(Messaging::class).localUpdateMessage(
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+                message.messageDescriptor!!.conversationId!!.toString(),
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+                message
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+            )
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+        }
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+    }
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+    fun convertMessageInterface(messageInstance: Message) {
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+        val actions = mutableMapOf&lt;String, (Message) -&gt; Unit&gt;()
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+        actions[&quot;restore_original&quot;] = {
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+            messageCache.remove(it.messageDescriptor!!.messageId!!)
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+            dispatchMessageEdit(it, restore = true)
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+        }
+</a><a href="#h2-0-34" id="h2-0-34" class="i">+
+</a><a href="#h2-0-35" id="h2-0-35" class="i">+        val contentType = messageInstance.messageContent?.contentType
+</a><a href="#h2-0-36" id="h2-0-36" class="i">+        if (contentType == ContentType.SNAP) {
+</a><a href="#h2-0-37" id="h2-0-37" class="i">+            actions[&quot;convert_external_media&quot;] = convert@{ message -&gt;
+</a><a href="#h2-0-38" id="h2-0-38" class="i">+                val snapMessageContent = ProtoReader(message.messageContent!!.content!!).followPath(11)
+</a><a href="#h2-0-39" id="h2-0-39" class="i">+                    ?.getBuffer() ?: return@convert
+</a><a href="#h2-0-40" id="h2-0-40" class="i">+                message.messageContent!!.content = ProtoWriter().apply {
+</a><a href="#h2-0-41" id="h2-0-41" class="i">+                    from(3) {
+</a><a href="#h2-0-42" id="h2-0-42" class="i">+                        addBuffer(3, snapMessageContent)
+</a><a href="#h2-0-43" id="h2-0-43" class="i">+                    }
+</a><a href="#h2-0-44" id="h2-0-44" class="i">+                }.toByteArray()
+</a><a href="#h2-0-45" id="h2-0-45" class="i">+                dispatchMessageEdit(message)
+</a><a href="#h2-0-46" id="h2-0-46" class="i">+            }
+</a><a href="#h2-0-47" id="h2-0-47" class="i">+        }
+</a><a href="#h2-0-48" id="h2-0-48" class="i">+
+</a><a href="#h2-0-49" id="h2-0-49" class="i">+        ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity).apply {
+</a><a href="#h2-0-50" id="h2-0-50" class="i">+            setItems(actions.keys.toTypedArray()) { _, which -&gt;
+</a><a href="#h2-0-51" id="h2-0-51" class="i">+                actions.values.elementAt(which).invoke(messageInstance)
+</a><a href="#h2-0-52" id="h2-0-52" class="i">+            }
+</a><a href="#h2-0-53" id="h2-0-53" class="i">+            setPositiveButton(this@ConvertMessageLocally.context.translation[&quot;button.cancel&quot;]) { dialog, _ -&gt;
+</a><a href="#h2-0-54" id="h2-0-54" class="i">+                dialog.dismiss()
+</a><a href="#h2-0-55" id="h2-0-55" class="i">+            }
+</a><a href="#h2-0-56" id="h2-0-56" class="i">+        }.show()
+</a><a href="#h2-0-57" id="h2-0-57" class="i">+    }
+</a><a href="#h2-0-58" id="h2-0-58" class="i">+
+</a><a href="#h2-0-59" id="h2-0-59" class="i">+    override fun onActivityCreate() {
+</a><a href="#h2-0-60" id="h2-0-60" class="i">+        context.event.subscribe(BuildMessageEvent::class, priority = 2) {
+</a><a href="#h2-0-61" id="h2-0-61" class="i">+            val clientMessageId = it.message.messageDescriptor?.messageId ?: return@subscribe
+</a><a href="#h2-0-62" id="h2-0-62" class="i">+            if (!messageCache.containsKey(clientMessageId)) return@subscribe
+</a><a href="#h2-0-63" id="h2-0-63" class="i">+            it.message.messageContent = messageCache[clientMessageId]
+</a><a href="#h2-0-64" id="h2-0-64" class="i">+        }
+</a><a href="#h2-0-65" id="h2-0-65" class="i">+    }
+</a><a href="#h2-0-66" id="h2-0-66" class="i">+}</a><a href="#h2-0-67" id="h2-0-67" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/SnapToChatMedia.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/SnapToChatMedia.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/SnapToChatMedia.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/SnapToChatMedia.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -1,25 +0,0 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="d">-package me.rhunk.snapenhance.core.features.impl.experiments
+</a><a href="#h3-0-1" id="h3-0-1" class="d">-
+</a><a href="#h3-0-2" id="h3-0-2" class="d">-import me.rhunk.snapenhance.common.data.ContentType
+</a><a href="#h3-0-3" id="h3-0-3" class="d">-import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+</a><a href="#h3-0-4" id="h3-0-4" class="d">-import me.rhunk.snapenhance.common.util.protobuf.ProtoWriter
+</a><a href="#h3-0-5" id="h3-0-5" class="d">-import me.rhunk.snapenhance.core.event.events.impl.BuildMessageEvent
+</a><a href="#h3-0-6" id="h3-0-6" class="d">-import me.rhunk.snapenhance.core.features.Feature
+</a><a href="#h3-0-7" id="h3-0-7" class="d">-import me.rhunk.snapenhance.core.features.FeatureLoadParams
+</a><a href="#h3-0-8" id="h3-0-8" class="d">-
+</a><a href="#h3-0-9" id="h3-0-9" class="d">-class SnapToChatMedia : Feature(&quot;SnapToChatMedia&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+</a><a href="#h3-0-10" id="h3-0-10" class="d">-    override fun onActivityCreate() {
+</a><a href="#h3-0-11" id="h3-0-11" class="d">-        if (!context.config.experimental.snapToChatMedia.get()) return
+</a><a href="#h3-0-12" id="h3-0-12" class="d">-
+</a><a href="#h3-0-13" id="h3-0-13" class="d">-        context.event.subscribe(BuildMessageEvent::class, priority = 100) { event -&gt;
+</a><a href="#h3-0-14" id="h3-0-14" class="d">-            if (event.message.messageContent!!.contentType != ContentType.SNAP) return@subscribe
+</a><a href="#h3-0-15" id="h3-0-15" class="d">-
+</a><a href="#h3-0-16" id="h3-0-16" class="d">-            val snapMessageContent = ProtoReader(event.message.messageContent!!.content!!).followPath(11)?.getBuffer() ?: return@subscribe
+</a><a href="#h3-0-17" id="h3-0-17" class="d">-            event.message.messageContent!!.content = ProtoWriter().apply {
+</a><a href="#h3-0-18" id="h3-0-18" class="d">-                from(3) {
+</a><a href="#h3-0-19" id="h3-0-19" class="d">-                    addBuffer(3, snapMessageContent)
+</a><a href="#h3-0-20" id="h3-0-20" class="d">-                }
+</a><a href="#h3-0-21" id="h3-0-21" class="d">-            }.toByteArray()
+</a><a href="#h3-0-22" id="h3-0-22" class="d">-        }
+</a><a href="#h3-0-23" id="h3-0-23" class="d">-    }
+</a><a href="#h3-0-24" id="h3-0-24" class="d">-}</a><a href="#h3-0-25" id="h3-0-25" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Messaging.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -61,6 +61,14 @@ class Messaging : Feature(&quot;Messaging&quot;, loadParams = FeatureLoadParams.ACTIVITY_C
+</a>         })
+     }
+ 
+<a href="#h4-0-3" id="h4-0-3" class="i">+    fun localUpdateMessage(conversationId: String, message: Message) {
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+        conversationManagerDelegate?.let {
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+            it::class.java.methods.first { method -&gt;
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+                method.name == &quot;onConversationUpdated&quot;
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+            }.invoke(conversationManagerDelegate, conversationId.toSnapUUID().instanceNonNull(), null, mutableListOf(message.instanceNonNull()), mutableListOf&lt;Any&gt;())
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+        }
+</a><a href="#h4-0-9" id="h4-0-9" class="i">+    }
+</a><a href="#h4-0-10" id="h4-0-10" class="i">+
+</a>     override fun onActivityCreate() {
+         context.mappings.getMappedObjectNullable(&quot;FriendsFeedEventDispatcher&quot;).let { it as? Map&lt;*, *&gt; }?.let { mappings -&gt;
+             findClass(mappings[&quot;class&quot;].toString()).hook(&quot;onItemLongPress&quot;, HookStage.BEFORE) { param -&gt;
+<a href="#h4-1" id="h4-1" class="h">@@ -75,8 +83,10 @@ class Messaging : Feature(&quot;Messaging&quot;, loadParams = FeatureLoadParams.ACTIVITY_C
+</a>             }
+         }
+ 
+<a href="#h4-1-3" id="h4-1-3" class="d">-        context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;ConversationManagerDelegate&quot;).hookConstructor(HookStage.AFTER) { param -&gt;
+</a><a href="#h4-1-4" id="h4-1-4" class="d">-            conversationManagerDelegate = param.thisObject()
+</a><a href="#h4-1-5" id="h4-1-5" class="i">+        context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;ConversationManagerDelegate&quot;).apply {
+</a><a href="#h4-1-6" id="h4-1-6" class="i">+            hookConstructor(HookStage.AFTER) { param -&gt;
+</a><a href="#h4-1-7" id="h4-1-7" class="i">+                conversationManagerDelegate = param.thisObject()
+</a><a href="#h4-1-8" id="h4-1-8" class="i">+            }
+</a>         }
+ 
+         context.classCache.feedEntry.hookConstructor(HookStage.AFTER) { param -&gt;
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -9,17 +9,17 @@ import me.rhunk.snapenhance.core.features.FeatureLoadParams
+</a> import me.rhunk.snapenhance.core.features.MessagingRuleFeature
+ import me.rhunk.snapenhance.core.features.impl.ConfigurationOverride
+ import me.rhunk.snapenhance.core.features.impl.ScopeSync
+<a href="#h5-0-3" id="h5-0-3" class="i">+import me.rhunk.snapenhance.core.features.impl.Stories
+</a> import me.rhunk.snapenhance.core.features.impl.downloader.MediaDownloader
+ import me.rhunk.snapenhance.core.features.impl.downloader.ProfilePictureDownloader
+ import me.rhunk.snapenhance.core.features.impl.experiments.*
+ import me.rhunk.snapenhance.core.features.impl.global.*
+ import me.rhunk.snapenhance.core.features.impl.messaging.*
+<a href="#h5-0-9" id="h5-0-9" class="d">-import me.rhunk.snapenhance.core.features.impl.spying.MessageLogger
+</a> import me.rhunk.snapenhance.core.features.impl.spying.HalfSwipeNotifier
+<a href="#h5-0-11" id="h5-0-11" class="i">+import me.rhunk.snapenhance.core.features.impl.spying.MessageLogger
+</a> import me.rhunk.snapenhance.core.features.impl.spying.StealthMode
+<a href="#h5-0-13" id="h5-0-13" class="d">-import me.rhunk.snapenhance.core.features.impl.tweaks.CameraTweaks
+</a> import me.rhunk.snapenhance.core.features.impl.tweaks.BypassScreenshotDetection
+<a href="#h5-0-15" id="h5-0-15" class="d">-import me.rhunk.snapenhance.core.features.impl.Stories
+</a><a href="#h5-0-16" id="h5-0-16" class="i">+import me.rhunk.snapenhance.core.features.impl.tweaks.CameraTweaks
+</a> import me.rhunk.snapenhance.core.features.impl.ui.*
+ import me.rhunk.snapenhance.core.logger.CoreLogger
+ import me.rhunk.snapenhance.core.manager.Manager
+<a href="#h5-1" id="h5-1" class="h">@@ -70,6 +70,7 @@ class FeatureManager(
+</a>             MenuViewInjector::class,
+             PreventReadReceipts::class,
+             MessageLogger::class,
+<a href="#h5-1-3" id="h5-1-3" class="i">+            ConvertMessageLocally::class,
+</a>             SnapchatPlus::class,
+             DisableMetrics::class,
+             PreventMessageSending::class,
+<a href="#h5-2" id="h5-2" class="h">@@ -97,7 +98,6 @@ class FeatureManager(
+</a>             AddFriendSourceSpoof::class,
+             DisableReplayInFF::class,
+             OldBitmojiSelfie::class,
+<a href="#h5-2-3" id="h5-2-3" class="d">-            SnapToChatMedia::class,
+</a>             FriendFeedMessagePreview::class,
+             HideStreakRestore::class,
+             HideFriendFeedEntry::class,
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -13,6 +13,7 @@ import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+</a> import me.rhunk.snapenhance.core.features.impl.downloader.MediaDownloader
+ import me.rhunk.snapenhance.core.features.impl.messaging.Messaging
+ import me.rhunk.snapenhance.core.features.impl.spying.MessageLogger
+<a href="#h6-0-3" id="h6-0-3" class="i">+import me.rhunk.snapenhance.core.features.impl.experiments.ConvertMessageLocally
+</a> import me.rhunk.snapenhance.core.ui.ViewAppearanceHelper
+ import me.rhunk.snapenhance.core.ui.ViewTagState
+ import me.rhunk.snapenhance.core.ui.applyTheme
+<a href="#h6-1" id="h6-1" class="h">@@ -147,6 +148,33 @@ class ChatActionMenu : AbstractMenu() {
+</a>             })
+         }
+ 
+<a href="#h6-1-3" id="h6-1-3" class="i">+        if (context.config.experimental.convertMessageLocally.get()) {
+</a><a href="#h6-1-4" id="h6-1-4" class="i">+            injectButton(Button(viewGroup.context).apply {
+</a><a href="#h6-1-5" id="h6-1-5" class="i">+                text = this@ChatActionMenu.context.translation[&quot;chat_action_menu.convert_message&quot;]
+</a><a href="#h6-1-6" id="h6-1-6" class="i">+                setOnClickListener {
+</a><a href="#h6-1-7" id="h6-1-7" class="i">+                    closeActionMenu()
+</a><a href="#h6-1-8" id="h6-1-8" class="i">+                    messaging.conversationManager?.fetchMessage(
+</a><a href="#h6-1-9" id="h6-1-9" class="i">+                        messaging.openedConversationUUID.toString(),
+</a><a href="#h6-1-10" id="h6-1-10" class="i">+                        messaging.lastFocusedMessageId,
+</a><a href="#h6-1-11" id="h6-1-11" class="i">+                        onSuccess = {
+</a><a href="#h6-1-12" id="h6-1-12" class="i">+                            this@ChatActionMenu.context.runOnUiThread {
+</a><a href="#h6-1-13" id="h6-1-13" class="i">+                                runCatching {
+</a><a href="#h6-1-14" id="h6-1-14" class="i">+                                    this@ChatActionMenu.context.feature(ConvertMessageLocally::class)
+</a><a href="#h6-1-15" id="h6-1-15" class="i">+                                        .convertMessageInterface(it)
+</a><a href="#h6-1-16" id="h6-1-16" class="i">+                                }.onFailure {
+</a><a href="#h6-1-17" id="h6-1-17" class="i">+                                    this@ChatActionMenu.context.log.verbose(&quot;Failed to convert message: $it&quot;)
+</a><a href="#h6-1-18" id="h6-1-18" class="i">+                                    this@ChatActionMenu.context.shortToast(&quot;Failed to edit message: $it&quot;)
+</a><a href="#h6-1-19" id="h6-1-19" class="i">+                                }
+</a><a href="#h6-1-20" id="h6-1-20" class="i">+                            }
+</a><a href="#h6-1-21" id="h6-1-21" class="i">+                        },
+</a><a href="#h6-1-22" id="h6-1-22" class="i">+                        onError = {
+</a><a href="#h6-1-23" id="h6-1-23" class="i">+                            this@ChatActionMenu.context.shortToast(&quot;Failed to fetch message: $it&quot;)
+</a><a href="#h6-1-24" id="h6-1-24" class="i">+                        }
+</a><a href="#h6-1-25" id="h6-1-25" class="i">+                    )
+</a><a href="#h6-1-26" id="h6-1-26" class="i">+                }
+</a><a href="#h6-1-27" id="h6-1-27" class="i">+            })
+</a><a href="#h6-1-28" id="h6-1-28" class="i">+        }
+</a><a href="#h6-1-29" id="h6-1-29" class="i">+
+</a>         if (context.isDeveloper) {
+             viewGroup.addView(createContainer(viewGroup).apply {
+                 val debugText = StringBuilder()
+</pre>
+</div>
+</body>
+</html>

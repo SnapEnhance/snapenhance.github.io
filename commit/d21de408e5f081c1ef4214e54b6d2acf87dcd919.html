@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(native): module base, size - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/d21de408e5f081c1ef4214e54b6d2acf87dcd919.html">d21de408e5f081c1ef4214e54b6d2acf87dcd919</a>
+<b>parent</b> <a href="../commit/c0225919e977a3e29a46737b348babc3bfeae5b8.html">c0225919e977a3e29a46737b348babc3bfeae5b8</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 26 Aug 2023 12:05:58 +0200
+
+feat(native): module base, size
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt</a></td><td> | </td><td class="num">1</td><td><span class="i"></span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">native/jni/src/library.cpp</a></td><td> | </td><td class="num">49</td><td><span class="i">+++++++++++++++++++++++++++++++</span><span class="d">------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">native/jni/src/logger.h</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h4">native/jni/src/util.h</a></td><td> | </td><td class="num">74</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeConfig.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a></td><td> | </td><td class="num">5</td><td><span class="i">+++</span><span class="d">--</span></td></tr>
+</table></pre><pre>7 files changed, 112 insertions(+), 23 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -106,6 +106,5 @@ class EventDispatcher(
+</a>                 if (event.canceled) param.setResult(null)
+             }
+         }
+<a href="#h0-0-3" id="h0-0-3" class="d">-
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -98,7 +98,7 @@ class SnapEnhance {
+</a>         measureTime {
+             with(appContext) {
+                 runCatching {
+<a href="#h1-0-3" id="h1-0-3" class="d">-                    native.init()
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+                    native.initOnce(appContext.androidContext.classLoader)
+</a>                 }.onFailure {
+                     Logger.xposedLog(&quot;Failed to init native&quot;, it)
+                     return
+<b>diff --git a/<a id="h2" href="../file/native/jni/src/library.cpp.html">native/jni/src/library.cpp</a> b/<a href="../file/native/jni/src/library.cpp.html">native/jni/src/library.cpp</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,17 +1,16 @@
+</a> #include &lt;jni.h&gt;
+ #include &lt;string&gt;
+ #include &lt;dobby.h&gt;
+<a href="#h2-0-3" id="h2-0-3" class="d">-#include &lt;sys/stat.h&gt;
+</a> #include &lt;unistd.h&gt;
+<a href="#h2-0-5" id="h2-0-5" class="d">-#include &lt;fstream&gt;
+</a> #include &lt;vector&gt;
+ 
+ #include &quot;logger.h&quot;
+ #include &quot;config.h&quot;
+<a href="#h2-0-10" id="h2-0-10" class="i">+#include &quot;util.h&quot;
+</a> 
+ static native_config_t *native_config;
+ 
+<a href="#h2-0-14" id="h2-0-14" class="d">-static auto fstat_original = fstat;
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+static auto fstat_original = (int (*)(int, struct stat *)) nullptr;
+</a> static int fstat_hook(int fd, struct stat *buf) {
+     char name[256];
+     memset(name, 0, 256);
+<a href="#h2-1" id="h2-1" class="h">@@ -35,14 +34,37 @@ static int fstat_hook(int fd, struct stat *buf) {
+</a> }
+ 
+ 
+<a href="#h2-1-3" id="h2-1-3" class="d">-#define GET_BOOL_FIELD(env, clazz, field) env-&gt;GetBooleanField(clazz, env-&gt;GetFieldID(clazz, field, &quot;Z&quot;))
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+extern &quot;C&quot; JNIEXPORT void JNICALL
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+init(JNIEnv *env, jobject clazz, jobject classloader) {
+</a><a href="#h2-1-6" id="h2-1-6" class="i">+    LOGD(&quot;initializing native&quot;);
+</a><a href="#h2-1-7" id="h2-1-7" class="i">+    // config
+</a><a href="#h2-1-8" id="h2-1-8" class="i">+    native_config = new native_config_t;
+</a><a href="#h2-1-9" id="h2-1-9" class="i">+
+</a><a href="#h2-1-10" id="h2-1-10" class="i">+    // load libclient.so
+</a><a href="#h2-1-11" id="h2-1-11" class="i">+    util::load_library(env, classloader, &quot;client&quot;);
+</a><a href="#h2-1-12" id="h2-1-12" class="i">+    auto client_module = util::get_module(&quot;libclient.so&quot;);
+</a><a href="#h2-1-13" id="h2-1-13" class="i">+    if (client_module.base == 0) {
+</a><a href="#h2-1-14" id="h2-1-14" class="i">+        LOGE(&quot;libclient not found&quot;);
+</a><a href="#h2-1-15" id="h2-1-15" class="i">+        return;
+</a><a href="#h2-1-16" id="h2-1-16" class="i">+    }
+</a><a href="#h2-1-17" id="h2-1-17" class="i">+    client_module.base -= 0x1000;
+</a><a href="#h2-1-18" id="h2-1-18" class="i">+    LOGD(&quot;libclient: offset: 0x%x size: 0x%x&quot;, client_module.base, client_module.size);
+</a><a href="#h2-1-19" id="h2-1-19" class="i">+
+</a><a href="#h2-1-20" id="h2-1-20" class="i">+    // hooks
+</a><a href="#h2-1-21" id="h2-1-21" class="i">+    DobbyHook((void *) DobbySymbolResolver(&quot;libc.so&quot;, &quot;fstat&quot;), (void *) fstat_hook,
+</a><a href="#h2-1-22" id="h2-1-22" class="i">+              (void **) &amp;fstat_original);
+</a><a href="#h2-1-23" id="h2-1-23" class="i">+
+</a><a href="#h2-1-24" id="h2-1-24" class="i">+    LOGD(&quot;native initialized&quot;);
+</a><a href="#h2-1-25" id="h2-1-25" class="i">+}
+</a><a href="#h2-1-26" id="h2-1-26" class="i">+
+</a> 
+ extern &quot;C&quot; JNIEXPORT void JNICALL
+<a href="#h2-1-29" id="h2-1-29" class="d">-loadConfig(JNIEnv *env, jobject  clazz, jobject config_object) {
+</a><a href="#h2-1-30" id="h2-1-30" class="d">-    auto native_config_class = env-&gt;GetObjectClass(config_object);
+</a><a href="#h2-1-31" id="h2-1-31" class="i">+loadConfig(JNIEnv *env, jobject clazz, jobject config_object) {
+</a><a href="#h2-1-32" id="h2-1-32" class="i">+    auto native_config_clazz = env-&gt;GetObjectClass(config_object);
+</a><a href="#h2-1-33" id="h2-1-33" class="i">+    #define GET_CONFIG_BOOL(name) env-&gt;GetBooleanField(config_object, env-&gt;GetFieldID(native_config_clazz, name, &quot;Z&quot;))
+</a> 
+<a href="#h2-1-35" id="h2-1-35" class="d">-    native_config-&gt;disable_bitmoji = GET_BOOL_FIELD(env, native_config_class, &quot;disableBitmoji&quot;);
+</a><a href="#h2-1-36" id="h2-1-36" class="d">-    native_config-&gt;disable_metrics = GET_BOOL_FIELD(env, native_config_class, &quot;disableMetrics&quot;);
+</a><a href="#h2-1-37" id="h2-1-37" class="i">+    native_config-&gt;disable_bitmoji = GET_CONFIG_BOOL(&quot;disableBitmoji&quot;);
+</a><a href="#h2-1-38" id="h2-1-38" class="i">+    native_config-&gt;disable_metrics = GET_CONFIG_BOOL(&quot;disableMetrics&quot;);
+</a> 
+     LOGD(&quot;config loaded&quot;);
+ }
+<a href="#h2-2" id="h2-2" class="h">@@ -50,18 +72,12 @@ loadConfig(JNIEnv *env, jobject  clazz, jobject config_object) {
+</a> //jni onload
+ extern &quot;C&quot; JNIEXPORT jint JNICALL
+ JNI_OnLoad(JavaVM *vm, void *reserved) {
+<a href="#h2-2-3" id="h2-2-3" class="d">-    LOGD(&quot;initializing native&quot;);
+</a><a href="#h2-2-4" id="h2-2-4" class="d">-    // config
+</a><a href="#h2-2-5" id="h2-2-5" class="d">-    native_config = new native_config_t;
+</a><a href="#h2-2-6" id="h2-2-6" class="d">-
+</a><a href="#h2-2-7" id="h2-2-7" class="d">-    // hooks
+</a><a href="#h2-2-8" id="h2-2-8" class="d">-    DobbyHook((void *) fstat_original,(void *) fstat_hook,(void **) &amp;fstat_original);
+</a><a href="#h2-2-9" id="h2-2-9" class="d">-
+</a>     // register native methods
+     JNIEnv *env = nullptr;
+     vm-&gt;GetEnv((void **) &amp;env, JNI_VERSION_1_6);
+ 
+     auto methods = std::vector&lt;JNINativeMethod&gt;();
+<a href="#h2-2-15" id="h2-2-15" class="i">+    methods.push_back({&quot;init&quot;, &quot;(Ljava/lang/ClassLoader;)V&quot;, (void *) init});
+</a>     methods.push_back({&quot;loadConfig&quot;, &quot;(Lme/rhunk/snapenhance/nativelib/NativeConfig;)V&quot;, (void *) loadConfig});
+ 
+     env-&gt;RegisterNatives(
+<a href="#h2-3" id="h2-3" class="h">@@ -69,8 +85,5 @@ JNI_OnLoad(JavaVM *vm, void *reserved) {
+</a>             methods.data(),
+             methods.size()
+     );
+<a href="#h2-3-3" id="h2-3-3" class="d">-
+</a><a href="#h2-3-4" id="h2-3-4" class="d">-    LOGD(&quot;native initialized&quot;);
+</a><a href="#h2-3-5" id="h2-3-5" class="d">-
+</a>     return JNI_VERSION_1_6;
+ }
+<b>diff --git a/<a id="h3" href="../file/native/jni/src/logger.h.html">native/jni/src/logger.h</a> b/<a href="../file/native/jni/src/logger.h.html">native/jni/src/logger.h</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -7,4 +7,5 @@
+</a> #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
+ #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, __VA_ARGS__)
+ #define LOGW(...) __android_log_print(ANDROID_LOG_WARN,  LOG_TAG, __VA_ARGS__)
+<a href="#h3-0-3" id="h3-0-3" class="i">+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR,  LOG_TAG, __VA_ARGS__)
+</a> 
+<b>diff --git a/<a id="h4" href="../file/native/jni/src/util.h.html">native/jni/src/util.h</a> b/<a href="../file/native/jni/src/util.h.html">native/jni/src/util.h</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -0,0 +1,73 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="i">+#pragma once
+</a><a href="#h4-0-1" id="h4-0-1" class="i">+#include &lt;unistd.h&gt;
+</a><a href="#h4-0-2" id="h4-0-2" class="i">+#include &lt;dlfcn.h&gt;
+</a><a href="#h4-0-3" id="h4-0-3" class="i">+#include &lt;elf.h&gt;
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+namespace util {
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+    typedef struct {
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+        uintptr_t base;
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+        size_t size;
+</a><a href="#h4-0-9" id="h4-0-9" class="i">+    } ModuleInfo;
+</a><a href="#h4-0-10" id="h4-0-10" class="i">+
+</a><a href="#h4-0-11" id="h4-0-11" class="i">+    static void hexDump(void* ptr, uint8_t line_length, uint32_t lines) {
+</a><a href="#h4-0-12" id="h4-0-12" class="i">+        auto* p = (unsigned char*)ptr;
+</a><a href="#h4-0-13" id="h4-0-13" class="i">+        for (uint8_t i = 0; i &lt; lines; i++) {
+</a><a href="#h4-0-14" id="h4-0-14" class="i">+            std::string line;
+</a><a href="#h4-0-15" id="h4-0-15" class="i">+            for (uint8_t j = 0; j &lt; line_length; j++) {
+</a><a href="#h4-0-16" id="h4-0-16" class="i">+                char buf[3];
+</a><a href="#h4-0-17" id="h4-0-17" class="i">+                sprintf(buf, &quot;%02x&quot;, p[i * line_length + j]);
+</a><a href="#h4-0-18" id="h4-0-18" class="i">+                line += buf;
+</a><a href="#h4-0-19" id="h4-0-19" class="i">+                line += &quot; &quot;;
+</a><a href="#h4-0-20" id="h4-0-20" class="i">+            }
+</a><a href="#h4-0-21" id="h4-0-21" class="i">+            LOGI(&quot;%s&quot;, line.c_str());
+</a><a href="#h4-0-22" id="h4-0-22" class="i">+        }
+</a><a href="#h4-0-23" id="h4-0-23" class="i">+    }
+</a><a href="#h4-0-24" id="h4-0-24" class="i">+
+</a><a href="#h4-0-25" id="h4-0-25" class="i">+    static ModuleInfo get_module(const char*  libname)
+</a><a href="#h4-0-26" id="h4-0-26" class="i">+    {
+</a><a href="#h4-0-27" id="h4-0-27" class="i">+        char path[256];
+</a><a href="#h4-0-28" id="h4-0-28" class="i">+        char buff[256];
+</a><a href="#h4-0-29" id="h4-0-29" class="i">+        int len_libname = strlen(libname);
+</a><a href="#h4-0-30" id="h4-0-30" class="i">+        FILE* file;
+</a><a href="#h4-0-31" id="h4-0-31" class="i">+        uintptr_t addr = 0;
+</a><a href="#h4-0-32" id="h4-0-32" class="i">+        size_t size = 0;
+</a><a href="#h4-0-33" id="h4-0-33" class="i">+
+</a><a href="#h4-0-34" id="h4-0-34" class="i">+        snprintf(path, sizeof path, &quot;/proc/%d/smaps&quot;, getpid());
+</a><a href="#h4-0-35" id="h4-0-35" class="i">+        file = fopen(path, &quot;rt&quot;);
+</a><a href="#h4-0-36" id="h4-0-36" class="i">+        if (file == NULL)
+</a><a href="#h4-0-37" id="h4-0-37" class="i">+            return {0, 0};
+</a><a href="#h4-0-38" id="h4-0-38" class="i">+
+</a><a href="#h4-0-39" id="h4-0-39" class="i">+        while (fgets(buff, sizeof buff, file) != NULL) {
+</a><a href="#h4-0-40" id="h4-0-40" class="i">+            int  len = strlen(buff);
+</a><a href="#h4-0-41" id="h4-0-41" class="i">+            if (len &gt; 0 &amp;&amp; buff[len-1] == &#39;\n&#39;) {
+</a><a href="#h4-0-42" id="h4-0-42" class="i">+                buff[--len] = &#39;\0&#39;;
+</a><a href="#h4-0-43" id="h4-0-43" class="i">+            }
+</a><a href="#h4-0-44" id="h4-0-44" class="i">+            if (len &lt;= len_libname || memcmp(buff + len - len_libname, libname, len_libname)) {
+</a><a href="#h4-0-45" id="h4-0-45" class="i">+                continue;
+</a><a href="#h4-0-46" id="h4-0-46" class="i">+            }
+</a><a href="#h4-0-47" id="h4-0-47" class="i">+            size_t start, end, offset;
+</a><a href="#h4-0-48" id="h4-0-48" class="i">+            char flags[4];
+</a><a href="#h4-0-49" id="h4-0-49" class="i">+            if (sscanf(buff, &quot;%zx-%zx %c%c%c%c %zx&quot;, &amp;start, &amp;end,
+</a><a href="#h4-0-50" id="h4-0-50" class="i">+                       &amp;flags[0], &amp;flags[1], &amp;flags[2], &amp;flags[3], &amp;offset) != 7) {
+</a><a href="#h4-0-51" id="h4-0-51" class="i">+                continue;
+</a><a href="#h4-0-52" id="h4-0-52" class="i">+            }
+</a><a href="#h4-0-53" id="h4-0-53" class="i">+
+</a><a href="#h4-0-54" id="h4-0-54" class="i">+            if (flags[0] != &#39;r&#39; || flags[2] != &#39;x&#39;) {
+</a><a href="#h4-0-55" id="h4-0-55" class="i">+                continue;
+</a><a href="#h4-0-56" id="h4-0-56" class="i">+            }
+</a><a href="#h4-0-57" id="h4-0-57" class="i">+            addr = start - offset;
+</a><a href="#h4-0-58" id="h4-0-58" class="i">+            size = end - start;
+</a><a href="#h4-0-59" id="h4-0-59" class="i">+            break;
+</a><a href="#h4-0-60" id="h4-0-60" class="i">+        }
+</a><a href="#h4-0-61" id="h4-0-61" class="i">+        fclose(file);
+</a><a href="#h4-0-62" id="h4-0-62" class="i">+        return {addr, size};
+</a><a href="#h4-0-63" id="h4-0-63" class="i">+    }
+</a><a href="#h4-0-64" id="h4-0-64" class="i">+
+</a><a href="#h4-0-65" id="h4-0-65" class="i">+    void load_library(JNIEnv* env, jobject classLoader, const char* libName) {
+</a><a href="#h4-0-66" id="h4-0-66" class="i">+        auto runtimeClass = env-&gt;FindClass(&quot;java/lang/Runtime&quot;);
+</a><a href="#h4-0-67" id="h4-0-67" class="i">+        auto getRuntimeMethod = env-&gt;GetStaticMethodID(runtimeClass, &quot;getRuntime&quot;, &quot;()Ljava/lang/Runtime;&quot;);
+</a><a href="#h4-0-68" id="h4-0-68" class="i">+        auto runtime = env-&gt;CallStaticObjectMethod(runtimeClass, getRuntimeMethod);
+</a><a href="#h4-0-69" id="h4-0-69" class="i">+        auto loadLibraryMethod = env-&gt;GetMethodID(runtimeClass, &quot;loadLibrary0&quot;, &quot;(Ljava/lang/ClassLoader;Ljava/lang/String;)V&quot;);
+</a><a href="#h4-0-70" id="h4-0-70" class="i">+        env-&gt;CallVoidMethod(runtime, loadLibraryMethod, classLoader, env-&gt;NewStringUTF(libName));
+</a><a href="#h4-0-71" id="h4-0-71" class="i">+    }
+</a><a href="#h4-0-72" id="h4-0-72" class="i">+}</a><a href="#h4-0-73" id="h4-0-73" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h5" href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeConfig.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeConfig.kt</a> b/<a href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeConfig.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeConfig.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -3,4 +3,4 @@ package me.rhunk.snapenhance.nativelib
+</a> data class NativeConfig(
+     val disableBitmoji: Boolean = false,
+     val disableMetrics: Boolean = false
+<a href="#h5-0-3" id="h5-0-3" class="d">-)
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+)</a><a href="#h5-0-5" id="h5-0-5" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h6" href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a> b/<a href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -1,10 +1,11 @@
+</a> package me.rhunk.snapenhance.nativelib
+ 
+ class NativeLib {
+<a href="#h6-0-3" id="h6-0-3" class="d">-    fun init() {
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+    fun initOnce(classloader: ClassLoader) {
+</a>         System.loadLibrary(&quot;nativelib&quot;)
+<a href="#h6-0-6" id="h6-0-6" class="i">+        init(classloader)
+</a>     }
+ 
+<a href="#h6-0-9" id="h6-0-9" class="d">-
+</a><a href="#h6-0-10" id="h6-0-10" class="i">+    external fun init(classLoader: ClassLoader)
+</a>     external fun loadConfig(config: NativeConfig)
+ } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

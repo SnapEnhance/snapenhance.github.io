@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core): voice note auto play - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/39525c9dca5f06d9d1be74425bb6c3bfe24bf25e.html">39525c9dca5f06d9d1be74425bb6c3bfe24bf25e</a>
+<b>parent</b> <a href="../commit/34090f3110ff5b9295b904f6803b33899065310b.html">34090f3110ff5b9295b904f6803b33899065310b</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Tue, 30 Jul 2024 11:06:39 +0200
+
+fix(core): voice note auto play
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/VoiceNoteAutoPlay.kt</a></td><td> | </td><td class="num">98</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">----------------------------------</span></td></tr>
+</table></pre><pre>1 file changed, 56 insertions(+), 42 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/VoiceNoteAutoPlay.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/VoiceNoteAutoPlay.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/VoiceNoteAutoPlay.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/VoiceNoteAutoPlay.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,6 +1,8 @@
+</a> package me.rhunk.snapenhance.core.features.impl.tweaks
+ 
+<a href="#h0-0-2" id="h0-0-2" class="d">-import android.view.View
+</a><a href="#h0-0-3" id="h0-0-3" class="i">+import kotlinx.coroutines.Dispatchers
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+import kotlinx.coroutines.launch
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+import kotlinx.coroutines.withContext
+</a> import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+ import me.rhunk.snapenhance.core.features.Feature
+ import me.rhunk.snapenhance.core.util.dataBuilder
+<a href="#h0-1" id="h0-1" class="h">@@ -9,49 +11,49 @@ import me.rhunk.snapenhance.core.util.hook.hook
+</a> import me.rhunk.snapenhance.core.util.ktx.getObjectField
+ import me.rhunk.snapenhance.mapper.impl.PlaybackViewContextMapper
+ import java.lang.reflect.Proxy
+<a href="#h0-1-3" id="h0-1-3" class="d">-import java.util.WeakHashMap
+</a> 
+ class VoiceNoteAutoPlay: Feature(&quot;Voice Note Auto Play&quot;) {
+     override fun init() {
+         if (!context.config.experimental.voiceNoteAutoPlay.get()) return
+ 
+<a href="#h0-1-9" id="h0-1-9" class="d">-        val views = WeakHashMap&lt;View, Any&gt;() // component context -&gt; view
+</a><a href="#h0-1-10" id="h0-1-10" class="i">+        val playbackMap = sortedMapOf&lt;Long, MutableList&lt;Any&gt;&gt;()
+</a> 
+         fun setPlaybackState(componentContext: Any, state: String): Boolean {
+<a href="#h0-1-13" id="h0-1-13" class="i">+            val seek = componentContext.getObjectField(&quot;_seek&quot;) ?: return false
+</a><a href="#h0-1-14" id="h0-1-14" class="i">+            seek.javaClass.getMethod(&quot;invoke&quot;, Any::class.java).invoke(seek, 0)
+</a><a href="#h0-1-15" id="h0-1-15" class="i">+
+</a>             val onPlayButtonTapped = componentContext.getObjectField(&quot;_onPlayButtonTapped&quot;) ?: return false
+             onPlayButtonTapped.javaClass.getMethod(&quot;invoke&quot;, Any::class.java).invoke(
+                 onPlayButtonTapped,
+<a href="#h0-1-19" id="h0-1-19" class="d">-                findClass(&quot;com.snap.voicenotes.PlaybackState&quot;).enumConstants.first {
+</a><a href="#h0-1-20" id="h0-1-20" class="i">+                findClass(&quot;com.snap.voicenotes.PlaybackState&quot;).enumConstants?.first {
+</a>                     it.toString() == state
+                 }
+             )
+             return true
+         }
+ 
+<a href="#h0-1-27" id="h0-1-27" class="d">-        fun playNextVoiceNote(currentContext: Any): Boolean {
+</a><a href="#h0-1-28" id="h0-1-28" class="d">-            val currentContextView = views.entries.filter { it.key.isAttachedToWindow }.firstOrNull { it.value.hashCode() == currentContext.hashCode() }?.key ?: return false
+</a><a href="#h0-1-29" id="h0-1-29" class="d">-
+</a><a href="#h0-1-30" id="h0-1-30" class="d">-            val currentViewLocation = IntArray(2)
+</a><a href="#h0-1-31" id="h0-1-31" class="d">-            currentContextView.getLocationOnScreen(currentViewLocation)
+</a><a href="#h0-1-32" id="h0-1-32" class="i">+        fun playNextVoiceNote(currentContext: Any) {
+</a><a href="#h0-1-33" id="h0-1-33" class="i">+            val currentContextMessageId = playbackMap.entries.firstOrNull { entry -&gt; entry.value.any { it.hashCode() == currentContext.hashCode() } }?.key ?: return
+</a> 
+<a href="#h0-1-35" id="h0-1-35" class="d">-            context.log.verbose(&quot;currentView -&gt; $currentContextView&quot;)
+</a><a href="#h0-1-36" id="h0-1-36" class="i">+            context.log.verbose(&quot;messageId=$currentContextMessageId&quot;)
+</a> 
+<a href="#h0-1-38" id="h0-1-38" class="d">-            // find a view under the current view
+</a><a href="#h0-1-39" id="h0-1-39" class="d">-            val nextView = views.entries.filter { it.key.isAttachedToWindow }.map { entry -&gt;
+</a><a href="#h0-1-40" id="h0-1-40" class="d">-                entry to IntArray(2).let {
+</a><a href="#h0-1-41" id="h0-1-41" class="d">-                    entry.key.getLocationOnScreen(it)
+</a><a href="#h0-1-42" id="h0-1-42" class="d">-                    it[1] - currentViewLocation[1]
+</a><a href="#h0-1-43" id="h0-1-43" class="d">-                }
+</a><a href="#h0-1-44" id="h0-1-44" class="d">-            }.filter { it.second &gt; 1 }.minByOrNull { it.second }?.first
+</a><a href="#h0-1-45" id="h0-1-45" class="i">+            val nextPlayback = playbackMap.entries.firstOrNull { it.key &gt; currentContextMessageId }
+</a> 
+<a href="#h0-1-47" id="h0-1-47" class="d">-            if (nextView == null) {
+</a><a href="#h0-1-48" id="h0-1-48" class="i">+            if (nextPlayback == null) {
+</a>                 context.log.verbose(&quot;No more voice notes to play&quot;)
+<a href="#h0-1-50" id="h0-1-50" class="d">-                return false
+</a><a href="#h0-1-51" id="h0-1-51" class="i">+                return
+</a>             }
+<a href="#h0-1-53" id="h0-1-53" class="i">+            nextPlayback.value.forEach { setPlaybackState(it, &quot;PLAYING&quot;) }
+</a><a href="#h0-1-54" id="h0-1-54" class="i">+        }
+</a> 
+<a href="#h0-1-56" id="h0-1-56" class="d">-            context.log.verbose(&quot;nextView -&gt; ${nextView.key}&quot;)
+</a><a href="#h0-1-57" id="h0-1-57" class="d">-
+</a><a href="#h0-1-58" id="h0-1-58" class="d">-            return setPlaybackState(nextView.value, &quot;PLAYING&quot;)
+</a><a href="#h0-1-59" id="h0-1-59" class="i">+        context.classCache.conversationManager.apply {
+</a><a href="#h0-1-60" id="h0-1-60" class="i">+            arrayOf(&quot;enterConversation&quot;, &quot;exitConversation&quot;).forEach {
+</a><a href="#h0-1-61" id="h0-1-61" class="i">+                hook(it, HookStage.BEFORE) {
+</a><a href="#h0-1-62" id="h0-1-62" class="i">+                    context.coroutineScope.launch(Dispatchers.Main) {
+</a><a href="#h0-1-63" id="h0-1-63" class="i">+                        playbackMap.clear()
+</a><a href="#h0-1-64" id="h0-1-64" class="i">+                    }
+</a><a href="#h0-1-65" id="h0-1-65" class="i">+                }
+</a><a href="#h0-1-66" id="h0-1-66" class="i">+            }
+</a>         }
+ 
+         context.mappings.useMapper(PlaybackViewContextMapper::class) {
+<a href="#h0-2" id="h0-2" class="h">@@ -92,10 +94,11 @@ class VoiceNoteAutoPlay: Feature(&quot;Voice Note Auto Play&quot;) {
+</a>                                     val state = listenerArgs[2]?.toString()
+ 
+                                     if (state == &quot;PAUSED&quot; &amp;&amp; lastPlayerState == &quot;PLAYING&quot;) {
+<a href="#h0-2-3" id="h0-2-3" class="i">+                                        lastPlayerState = null
+</a>                                         context.log.verbose(&quot;playback finished. playing next voice note&quot;)
+                                         runCatching {
+<a href="#h0-2-6" id="h0-2-6" class="d">-                                            if (!playNextVoiceNote(instance)) {
+</a><a href="#h0-2-7" id="h0-2-7" class="d">-                                                lastPlayerState = null
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+                                            context.coroutineScope.launch(Dispatchers.Main) {
+</a><a href="#h0-2-9" id="h0-2-9" class="i">+                                                playNextVoiceNote(instance)
+</a>                                             }
+                                         }.onFailure {
+                                             context.log.error(&quot;Failed to play next voice note&quot;, it)
+<a href="#h0-3" id="h0-3" class="h">@@ -106,7 +109,6 @@ class VoiceNoteAutoPlay: Feature(&quot;Voice Note Auto Play&quot;) {
+</a>                                     function4.javaClass.methods.first { it.parameterCount == 4 }.invoke(function4, *listenerArgs)
+                                 }
+                             )
+<a href="#h0-3-3" id="h0-3-3" class="d">-
+</a>                         })
+                     }
+                 }
+<a href="#h0-4" id="h0-4" class="h">@@ -116,26 +118,38 @@ class VoiceNoteAutoPlay: Feature(&quot;Voice Note Auto Play&quot;) {
+</a>         onNextActivityCreate {
+             context.event.subscribe(BindViewEvent::class) { event -&gt;
+                 if (!event.prevModel.toString().contains(&quot;audio_note&quot;)) return@subscribe
+<a href="#h0-4-3" id="h0-4-3" class="i">+                event.chatMessage { _, messageId -&gt;
+</a><a href="#h0-4-4" id="h0-4-4" class="i">+                    // find view model of the audio note
+</a><a href="#h0-4-5" id="h0-4-5" class="i">+                    val viewModelField = event.prevModel.javaClass.fields.firstOrNull { field -&gt;
+</a><a href="#h0-4-6" id="h0-4-6" class="i">+                        field.type.constructors.firstOrNull()?.parameterTypes?.takeIf { it.size == 3 }?.let { args -&gt;
+</a><a href="#h0-4-7" id="h0-4-7" class="i">+                            args[1].interfaces.any { it.name == &quot;com.snap.composer.utils.ComposerMarshallable&quot; }
+</a><a href="#h0-4-8" id="h0-4-8" class="i">+                        } == true
+</a><a href="#h0-4-9" id="h0-4-9" class="i">+                    } ?: return@subscribe
+</a><a href="#h0-4-10" id="h0-4-10" class="i">+
+</a><a href="#h0-4-11" id="h0-4-11" class="i">+                    val viewModel = viewModelField.get(event.prevModel)
+</a><a href="#h0-4-12" id="h0-4-12" class="i">+                    var playbackViewComponentContext: Any? = null
+</a><a href="#h0-4-13" id="h0-4-13" class="i">+
+</a><a href="#h0-4-14" id="h0-4-14" class="i">+                    for (field in viewModel.javaClass.fields) {
+</a><a href="#h0-4-15" id="h0-4-15" class="i">+                        val fieldContent = runCatching { field.get(viewModel) }.getOrNull() ?: continue
+</a><a href="#h0-4-16" id="h0-4-16" class="i">+                        if (fieldContent.javaClass.declaredFields.any { it.name == &quot;_onPlayButtonTapped&quot; }) {
+</a><a href="#h0-4-17" id="h0-4-17" class="i">+                            playbackViewComponentContext = fieldContent
+</a><a href="#h0-4-18" id="h0-4-18" class="i">+                            break;
+</a><a href="#h0-4-19" id="h0-4-19" class="i">+                        }
+</a><a href="#h0-4-20" id="h0-4-20" class="i">+                    }
+</a> 
+<a href="#h0-4-22" id="h0-4-22" class="d">-                // find view model of the audio note
+</a><a href="#h0-4-23" id="h0-4-23" class="d">-                val viewModelField = event.prevModel.javaClass.fields.firstOrNull { field -&gt;
+</a><a href="#h0-4-24" id="h0-4-24" class="d">-                    field.type.constructors.firstOrNull()?.parameterTypes?.takeIf { it.size == 3 }?.let { args -&gt;
+</a><a href="#h0-4-25" id="h0-4-25" class="d">-                        args[1].interfaces.any { it.name == &quot;com.snap.composer.utils.ComposerMarshallable&quot; }
+</a><a href="#h0-4-26" id="h0-4-26" class="d">-                    } == true
+</a><a href="#h0-4-27" id="h0-4-27" class="d">-                } ?: return@subscribe
+</a><a href="#h0-4-28" id="h0-4-28" class="d">-
+</a><a href="#h0-4-29" id="h0-4-29" class="d">-                val viewModel = viewModelField.get(event.prevModel)
+</a><a href="#h0-4-30" id="h0-4-30" class="d">-                var playbackViewComponentContext: Any? = null
+</a><a href="#h0-4-31" id="h0-4-31" class="d">-
+</a><a href="#h0-4-32" id="h0-4-32" class="d">-                for (field in viewModel.javaClass.fields) {
+</a><a href="#h0-4-33" id="h0-4-33" class="d">-                    val fieldContent = runCatching { field.get(viewModel) }.getOrNull() ?: continue
+</a><a href="#h0-4-34" id="h0-4-34" class="d">-                    if (fieldContent.javaClass.declaredFields.any { it.name == &quot;_onPlayButtonTapped&quot; }) {
+</a><a href="#h0-4-35" id="h0-4-35" class="d">-                        playbackViewComponentContext = fieldContent
+</a><a href="#h0-4-36" id="h0-4-36" class="d">-                        break;
+</a><a href="#h0-4-37" id="h0-4-37" class="i">+                    if (playbackViewComponentContext == null) {
+</a><a href="#h0-4-38" id="h0-4-38" class="i">+                        context.log.warn(&quot;Failed to find playback view component context&quot;)
+</a><a href="#h0-4-39" id="h0-4-39" class="i">+                        return@subscribe
+</a>                     }
+<a href="#h0-4-41" id="h0-4-41" class="d">-                }
+</a> 
+<a href="#h0-4-43" id="h0-4-43" class="d">-                views[event.view] = playbackViewComponentContext ?: return@subscribe
+</a><a href="#h0-4-44" id="h0-4-44" class="i">+                    context.coroutineScope.launch {
+</a><a href="#h0-4-45" id="h0-4-45" class="i">+                        val serverMessageId = context.database.getConversationMessageFromId(messageId.toLong())?.serverMessageId?.toLong() ?: return@launch
+</a><a href="#h0-4-46" id="h0-4-46" class="i">+
+</a><a href="#h0-4-47" id="h0-4-47" class="i">+                        withContext(Dispatchers.Main) {
+</a><a href="#h0-4-48" id="h0-4-48" class="i">+                            playbackMap.computeIfAbsent(serverMessageId) { mutableListOf() }.add(playbackViewComponentContext)
+</a><a href="#h0-4-49" id="h0-4-49" class="i">+                        }
+</a><a href="#h0-4-50" id="h0-4-50" class="i">+                    }
+</a><a href="#h0-4-51" id="h0-4-51" class="i">+                }
+</a>             }
+         }
+     }
+</pre>
+</div>
+</body>
+</html>

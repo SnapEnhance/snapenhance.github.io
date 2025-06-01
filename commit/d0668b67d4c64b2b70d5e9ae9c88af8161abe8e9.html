@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: profile picture downloader - new events: add view, network request - fix anonymous story viewing - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/d0668b67d4c64b2b70d5e9ae9c88af8161abe8e9.html">d0668b67d4c64b2b70d5e9ae9c88af8161abe8e9</a>
+<b>parent</b> <a href="../commit/05990a4b72ec318bab1079e5dc5e6df749627b54.html">05990a4b72ec318bab1079e5dc5e6df749627b54</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 25 Aug 2023 02:50:41 +0200
+
+feat: profile picture downloader
+- new events: add view, network request
+- fix anonymous story viewing
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt</a></td><td> | </td><td class="num">50</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/UserInterfaceTweaks.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/AddViewEvent.kt</a></td><td> | </td><td class="num">13</td><td><span class="i">+++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/NetworkApiRequestEvent.kt</a></td><td> | </td><td class="num">10</td><td><span class="i">++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/data/FileType.kt</a></td><td> | </td><td class="num">20</td><td><span class="i">+++++++++</span><span class="d">-----------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/download/data/MediaFilter.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">14</td><td><span class="i">+++++++++++++</span><span class="d">-</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/ProfilePictureDownloader.kt</a></td><td> | </td><td class="num">78</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/privacy/DisableMetrics.kt</a></td><td> | </td><td class="num">18</td><td><span class="i">++++</span><span class="d">--------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/AnonymousStoryViewing.kt</a></td><td> | </td><td class="num">25</td><td><span class="i">++++++++++++++++</span><span class="d">---------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h11">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/StartupPageOverride.kt</a></td><td> | </td><td class="num">22</td><td><span class="i">+++++++++</span><span class="d">-------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h12">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/UITweaks.kt</a></td><td> | </td><td class="num">46</td><td><span class="i">+++++++++++++++++++++</span><span class="d">-------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h13">core/src/main/kotlin/me/rhunk/snapenhance/hook/Hooker.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h14">core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h15">core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/MenuViewInjector.kt</a></td><td> | </td><td class="num">38</td><td><span class="i">+++++++++++++++</span><span class="d">-----------------------</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h16">core/src/main/kotlin/me/rhunk/snapenhance/util/download/DownloadServer.kt</a></td><td> | </td><td class="num">138</td><td><span class="i"></span><span class="d">-------------------------------------------------------------------------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h17">core/src/main/kotlin/me/rhunk/snapenhance/util/download/HttpServer.kt</a></td><td> | </td><td class="num">140</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>18 files changed, 387 insertions(+), 240 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,6 +1,11 @@
+</a> package me.rhunk.snapenhance
+ 
+ import android.content.Intent
+<a href="#h0-0-3" id="h0-0-3" class="i">+import android.view.View
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+import android.view.ViewGroup
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+import android.view.ViewGroup.LayoutParams
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+import me.rhunk.snapenhance.core.eventbus.events.impl.AddViewEvent
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+import me.rhunk.snapenhance.core.eventbus.events.impl.NetworkApiRequestEvent
+</a> import me.rhunk.snapenhance.core.eventbus.events.impl.OnSnapInteractionEvent
+ import me.rhunk.snapenhance.core.eventbus.events.impl.SendMessageWithContentEvent
+ import me.rhunk.snapenhance.core.eventbus.events.impl.SnapWidgetBroadcastReceiveEvent
+<a href="#h0-1" id="h0-1" class="h">@@ -9,6 +14,8 @@ import me.rhunk.snapenhance.data.wrapper.impl.SnapUUID
+</a> import me.rhunk.snapenhance.hook.HookStage
+ import me.rhunk.snapenhance.hook.hook
+ import me.rhunk.snapenhance.manager.Manager
+<a href="#h0-1-3" id="h0-1-3" class="i">+import me.rhunk.snapenhance.util.ktx.getObjectField
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+import me.rhunk.snapenhance.util.ktx.setObjectField
+</a> import me.rhunk.snapenhance.util.snap.SnapWidgetBroadcastReceiverHelper
+ 
+ class EventDispatcher(
+<a href="#h0-2" id="h0-2" class="h">@@ -57,5 +64,48 @@ class EventDispatcher(
+</a>                 }
+             }
+         }
+<a href="#h0-2-3" id="h0-2-3" class="i">+
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+        ViewGroup::class.java.getMethod(
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+            &quot;addView&quot;,
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+            View::class.java,
+</a><a href="#h0-2-7" id="h0-2-7" class="i">+            Int::class.javaPrimitiveType,
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+            LayoutParams::class.java
+</a><a href="#h0-2-9" id="h0-2-9" class="i">+        ).hook(HookStage.BEFORE) { param -&gt;
+</a><a href="#h0-2-10" id="h0-2-10" class="i">+            context.event.post(
+</a><a href="#h0-2-11" id="h0-2-11" class="i">+                AddViewEvent(
+</a><a href="#h0-2-12" id="h0-2-12" class="i">+                    parent = param.thisObject(),
+</a><a href="#h0-2-13" id="h0-2-13" class="i">+                    view = param.arg(0),
+</a><a href="#h0-2-14" id="h0-2-14" class="i">+                    index = param.arg(1),
+</a><a href="#h0-2-15" id="h0-2-15" class="i">+                    layoutParams = param.arg(2)
+</a><a href="#h0-2-16" id="h0-2-16" class="i">+                ).apply {
+</a><a href="#h0-2-17" id="h0-2-17" class="i">+                    adapter = param
+</a><a href="#h0-2-18" id="h0-2-18" class="i">+                }
+</a><a href="#h0-2-19" id="h0-2-19" class="i">+            )?.also { event -&gt;
+</a><a href="#h0-2-20" id="h0-2-20" class="i">+                with(param) {
+</a><a href="#h0-2-21" id="h0-2-21" class="i">+                    setArg(0, event.view)
+</a><a href="#h0-2-22" id="h0-2-22" class="i">+                    setArg(1, event.index)
+</a><a href="#h0-2-23" id="h0-2-23" class="i">+                    setArg(2, event.layoutParams)
+</a><a href="#h0-2-24" id="h0-2-24" class="i">+                }
+</a><a href="#h0-2-25" id="h0-2-25" class="i">+                if (event.canceled) param.setResult(null)
+</a><a href="#h0-2-26" id="h0-2-26" class="i">+            }
+</a><a href="#h0-2-27" id="h0-2-27" class="i">+        }
+</a><a href="#h0-2-28" id="h0-2-28" class="i">+
+</a><a href="#h0-2-29" id="h0-2-29" class="i">+        context.classCache.networkApi.hook(&quot;submit&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h0-2-30" id="h0-2-30" class="i">+            val request = param.arg&lt;Any&gt;(0)
+</a><a href="#h0-2-31" id="h0-2-31" class="i">+
+</a><a href="#h0-2-32" id="h0-2-32" class="i">+            context.event.post(
+</a><a href="#h0-2-33" id="h0-2-33" class="i">+                NetworkApiRequestEvent(
+</a><a href="#h0-2-34" id="h0-2-34" class="i">+                    url = request.getObjectField(&quot;mUrl&quot;) as String,
+</a><a href="#h0-2-35" id="h0-2-35" class="i">+                    callback = param.arg(4),
+</a><a href="#h0-2-36" id="h0-2-36" class="i">+                    request = request,
+</a><a href="#h0-2-37" id="h0-2-37" class="i">+                ).apply {
+</a><a href="#h0-2-38" id="h0-2-38" class="i">+                    adapter = param
+</a><a href="#h0-2-39" id="h0-2-39" class="i">+                }
+</a><a href="#h0-2-40" id="h0-2-40" class="i">+            )?.also { event -&gt;
+</a><a href="#h0-2-41" id="h0-2-41" class="i">+                event.request.setObjectField(&quot;mUrl&quot;, event.url)
+</a><a href="#h0-2-42" id="h0-2-42" class="i">+                if (event.canceled) param.setResult(null)
+</a><a href="#h0-2-43" id="h0-2-43" class="i">+            }
+</a><a href="#h0-2-44" id="h0-2-44" class="i">+        }
+</a><a href="#h0-2-45" id="h0-2-45" class="i">+
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ModContext.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -21,7 +21,7 @@ import me.rhunk.snapenhance.database.DatabaseAccess
+</a> import me.rhunk.snapenhance.features.Feature
+ import me.rhunk.snapenhance.manager.impl.ActionManager
+ import me.rhunk.snapenhance.manager.impl.FeatureManager
+<a href="#h1-0-3" id="h1-0-3" class="d">-import me.rhunk.snapenhance.util.download.DownloadServer
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import me.rhunk.snapenhance.util.download.HttpServer
+</a> import java.util.concurrent.ExecutorService
+ import java.util.concurrent.Executors
+ import kotlin.reflect.KClass
+<a href="#h1-1" id="h1-1" class="h">@@ -50,7 +50,7 @@ class ModContext {
+</a>     val mappings = MappingsWrapper()
+     val actionManager = ActionManager(this)
+     val database = DatabaseAccess(this)
+<a href="#h1-1-3" id="h1-1-3" class="d">-    val downloadServer = DownloadServer()
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+    val httpServer = HttpServer()
+</a>     val messageSender = MessageSender(this)
+     val classCache get() = SnapEnhance.classCache
+     val resources: Resources get() = androidContext.resources
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/UserInterfaceTweaks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/UserInterfaceTweaks.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/UserInterfaceTweaks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/UserInterfaceTweaks.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -25,13 +25,13 @@ class UserInterfaceTweaks : ConfigContainer() {
+</a>         &quot;hide_call_buttons&quot;
+     )
+     val disableSpotlight = boolean(&quot;disable_spotlight&quot;)
+<a href="#h2-0-3" id="h2-0-3" class="d">-    val startupTab = unique(&quot;startup_tab&quot;, &quot;ngs_map_icon_container&quot;,
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+    val startupTab = unique(&quot;startup_tab&quot;,
+</a>         &quot;ngs_map_icon_container&quot;,
+         &quot;ngs_chat_icon_container&quot;,
+         &quot;ngs_camera_icon_container&quot;,
+         &quot;ngs_community_icon_container&quot;,
+         &quot;ngs_spotlight_icon_container&quot;,
+         &quot;ngs_search_icon_container&quot;
+<a href="#h2-0-11" id="h2-0-11" class="d">-    )
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+    ) { addNotices(FeatureNotice.MAY_BREAK_INTERNAL_BEHAVIOR) }
+</a>     val storyViewerOverride = unique(&quot;story_viewer_override&quot;, &quot;DISCOVER_PLAYBACK_SEEKBAR&quot;, &quot;VERTICAL_STORY_VIEWER&quot;) { addNotices(FeatureNotice.UNSTABLE) }
+ }
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/AddViewEvent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/AddViewEvent.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/AddViewEvent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/AddViewEvent.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -0,0 +1,12 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="i">+package me.rhunk.snapenhance.core.eventbus.events.impl
+</a><a href="#h3-0-1" id="h3-0-1" class="i">+
+</a><a href="#h3-0-2" id="h3-0-2" class="i">+import android.view.View
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+import android.view.ViewGroup
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import me.rhunk.snapenhance.core.eventbus.events.AbstractHookEvent
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+class AddViewEvent(
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+    val parent: ViewGroup,
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+    var view: View,
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+    var index: Int,
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+    var layoutParams: ViewGroup.LayoutParams
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+) : AbstractHookEvent()</a><a href="#h3-0-12" id="h3-0-12" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/NetworkApiRequestEvent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/NetworkApiRequestEvent.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/NetworkApiRequestEvent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/NetworkApiRequestEvent.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -0,0 +1,9 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="i">+package me.rhunk.snapenhance.core.eventbus.events.impl
+</a><a href="#h4-0-1" id="h4-0-1" class="i">+
+</a><a href="#h4-0-2" id="h4-0-2" class="i">+import me.rhunk.snapenhance.core.eventbus.events.AbstractHookEvent
+</a><a href="#h4-0-3" id="h4-0-3" class="i">+
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+class NetworkApiRequestEvent(
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+    val request: Any,
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+    val callback: Any,
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+    var url: String,
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+) : AbstractHookEvent()</a><a href="#h4-0-9" id="h4-0-9" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/data/FileType.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/data/FileType.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/data/FileType.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/data/FileType.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -21,17 +21,15 @@ enum class FileType(
+</a>     UNKNOWN(&quot;dat&quot;, &quot;application/octet-stream&quot;, false, false, false);
+ 
+     companion object {
+<a href="#h5-0-3" id="h5-0-3" class="d">-        private val fileSignatures = HashMap&lt;String, FileType&gt;()
+</a><a href="#h5-0-4" id="h5-0-4" class="d">-
+</a><a href="#h5-0-5" id="h5-0-5" class="d">-        init {
+</a><a href="#h5-0-6" id="h5-0-6" class="d">-            fileSignatures[&quot;52494646&quot;] = WEBP
+</a><a href="#h5-0-7" id="h5-0-7" class="d">-            fileSignatures[&quot;504b0304&quot;] = ZIP
+</a><a href="#h5-0-8" id="h5-0-8" class="d">-            fileSignatures[&quot;89504e47&quot;] = PNG
+</a><a href="#h5-0-9" id="h5-0-9" class="d">-            fileSignatures[&quot;00000020&quot;] = MP4
+</a><a href="#h5-0-10" id="h5-0-10" class="d">-            fileSignatures[&quot;00000018&quot;] = MP4
+</a><a href="#h5-0-11" id="h5-0-11" class="d">-            fileSignatures[&quot;0000001c&quot;] = MP4
+</a><a href="#h5-0-12" id="h5-0-12" class="d">-            fileSignatures[&quot;ffd8ffe0&quot;] = JPG
+</a><a href="#h5-0-13" id="h5-0-13" class="d">-        }
+</a><a href="#h5-0-14" id="h5-0-14" class="i">+        private val fileSignatures = mapOf(
+</a><a href="#h5-0-15" id="h5-0-15" class="i">+            &quot;52494646&quot; to WEBP,
+</a><a href="#h5-0-16" id="h5-0-16" class="i">+            &quot;504b0304&quot; to ZIP,
+</a><a href="#h5-0-17" id="h5-0-17" class="i">+            &quot;89504e47&quot; to PNG,
+</a><a href="#h5-0-18" id="h5-0-18" class="i">+            &quot;00000020&quot; to  MP4,
+</a><a href="#h5-0-19" id="h5-0-19" class="i">+            &quot;00000018&quot; to MP4,
+</a><a href="#h5-0-20" id="h5-0-20" class="i">+            &quot;0000001c&quot; to MP4,
+</a><a href="#h5-0-21" id="h5-0-21" class="i">+            &quot;ffd8ff&quot; to JPG,
+</a><a href="#h5-0-22" id="h5-0-22" class="i">+        )
+</a> 
+         fun fromString(string: String?): FileType {
+             return values().firstOrNull { it.fileExtension.equals(string, ignoreCase = true) } ?: UNKNOWN
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/download/data/MediaFilter.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/download/data/MediaFilter.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/download/data/MediaFilter.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/download/data/MediaFilter.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -8,7 +8,8 @@ enum class MediaFilter(
+</a>     PENDING(&quot;pending&quot;, true),
+     CHAT_MEDIA(&quot;chat_media&quot;),
+     STORY(&quot;story&quot;),
+<a href="#h6-0-3" id="h6-0-3" class="d">-    SPOTLIGHT(&quot;spotlight&quot;);
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+    SPOTLIGHT(&quot;spotlight&quot;),
+</a><a href="#h6-0-5" id="h6-0-5" class="i">+    PROFILE_PICTURE(&quot;profile_picture&quot;);
+</a> 
+     fun matches(source: String?): Boolean {
+         if (source == null) return false
+<b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -165,7 +165,7 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>         Uri.parse(path).let { uri -&gt;
+             if (uri.scheme == &quot;file&quot;) {
+                 return@let suspendCoroutine&lt;String&gt; { continuation -&gt;
+<a href="#h7-0-3" id="h7-0-3" class="d">-                    context.downloadServer.ensureServerStarted {
+</a><a href="#h7-0-4" id="h7-0-4" class="i">+                    context.httpServer.ensureServerStarted {
+</a>                         val file = Paths.get(uri.path).toFile()
+                         val url = putDownloadableContent(file.inputStream(), file.length())
+                         continuation.resumeWith(Result.success(url))
+<a href="#h7-1" id="h7-1" class="h">@@ -532,6 +532,18 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>         }
+     }
+ 
+<a href="#h7-1-3" id="h7-1-3" class="i">+    fun downloadProfilePicture(url: String, author: String) {
+</a><a href="#h7-1-4" id="h7-1-4" class="i">+        provideDownloadManagerClient(
+</a><a href="#h7-1-5" id="h7-1-5" class="i">+            pathSuffix = &quot;Profile Pictures&quot;,
+</a><a href="#h7-1-6" id="h7-1-6" class="i">+            mediaIdentifier = url.hashCode().toString(16).replaceFirst(&quot;-&quot;, &quot;&quot;),
+</a><a href="#h7-1-7" id="h7-1-7" class="i">+            mediaDisplaySource = author,
+</a><a href="#h7-1-8" id="h7-1-8" class="i">+            mediaDisplayType = MediaFilter.PROFILE_PICTURE.key
+</a><a href="#h7-1-9" id="h7-1-9" class="i">+        ).downloadSingleMedia(
+</a><a href="#h7-1-10" id="h7-1-10" class="i">+            url,
+</a><a href="#h7-1-11" id="h7-1-11" class="i">+            DownloadMediaType.REMOTE_MEDIA
+</a><a href="#h7-1-12" id="h7-1-12" class="i">+        )
+</a><a href="#h7-1-13" id="h7-1-13" class="i">+    }
+</a><a href="#h7-1-14" id="h7-1-14" class="i">+
+</a>     /**
+      * Called when a message is focused in chat
+      */
+<b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/ProfilePictureDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/ProfilePictureDownloader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/ProfilePictureDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/ProfilePictureDownloader.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -0,0 +1,77 @@
+</a><a href="#h8-0-0" id="h8-0-0" class="i">+package me.rhunk.snapenhance.features.impl.downloader
+</a><a href="#h8-0-1" id="h8-0-1" class="i">+
+</a><a href="#h8-0-2" id="h8-0-2" class="i">+import android.annotation.SuppressLint
+</a><a href="#h8-0-3" id="h8-0-3" class="i">+import android.widget.Button
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+import android.widget.RelativeLayout
+</a><a href="#h8-0-5" id="h8-0-5" class="i">+import me.rhunk.snapenhance.Logger
+</a><a href="#h8-0-6" id="h8-0-6" class="i">+import me.rhunk.snapenhance.core.eventbus.events.impl.AddViewEvent
+</a><a href="#h8-0-7" id="h8-0-7" class="i">+import me.rhunk.snapenhance.core.eventbus.events.impl.NetworkApiRequestEvent
+</a><a href="#h8-0-8" id="h8-0-8" class="i">+import me.rhunk.snapenhance.features.Feature
+</a><a href="#h8-0-9" id="h8-0-9" class="i">+import me.rhunk.snapenhance.features.FeatureLoadParams
+</a><a href="#h8-0-10" id="h8-0-10" class="i">+import me.rhunk.snapenhance.hook.HookStage
+</a><a href="#h8-0-11" id="h8-0-11" class="i">+import me.rhunk.snapenhance.hook.Hooker
+</a><a href="#h8-0-12" id="h8-0-12" class="i">+import me.rhunk.snapenhance.ui.ViewAppearanceHelper
+</a><a href="#h8-0-13" id="h8-0-13" class="i">+import me.rhunk.snapenhance.util.protobuf.ProtoReader
+</a><a href="#h8-0-14" id="h8-0-14" class="i">+import java.nio.ByteBuffer
+</a><a href="#h8-0-15" id="h8-0-15" class="i">+
+</a><a href="#h8-0-16" id="h8-0-16" class="i">+class ProfilePictureDownloader : Feature(&quot;ProfilePictureDownloader&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_ASYNC) {
+</a><a href="#h8-0-17" id="h8-0-17" class="i">+    @SuppressLint(&quot;SetTextI18n&quot;)
+</a><a href="#h8-0-18" id="h8-0-18" class="i">+    override fun asyncOnActivityCreate() {
+</a><a href="#h8-0-19" id="h8-0-19" class="i">+        var friendUsername: String? = null
+</a><a href="#h8-0-20" id="h8-0-20" class="i">+        var backgroundUrl: String? = null
+</a><a href="#h8-0-21" id="h8-0-21" class="i">+        var avatarUrl: String? = null
+</a><a href="#h8-0-22" id="h8-0-22" class="i">+
+</a><a href="#h8-0-23" id="h8-0-23" class="i">+        context.event.subscribe(AddViewEvent::class) { event -&gt;
+</a><a href="#h8-0-24" id="h8-0-24" class="i">+            if (event.view::class.java.name != &quot;com.snap.unifiedpublicprofile.UnifiedPublicProfileView&quot;) return@subscribe
+</a><a href="#h8-0-25" id="h8-0-25" class="i">+
+</a><a href="#h8-0-26" id="h8-0-26" class="i">+            event.parent.addView(Button(event.parent.context).apply {
+</a><a href="#h8-0-27" id="h8-0-27" class="i">+                text = &quot;Download&quot;
+</a><a href="#h8-0-28" id="h8-0-28" class="i">+                layoutParams = RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT).apply {
+</a><a href="#h8-0-29" id="h8-0-29" class="i">+                    setMargins(0, 200, 0, 0)
+</a><a href="#h8-0-30" id="h8-0-30" class="i">+                }
+</a><a href="#h8-0-31" id="h8-0-31" class="i">+                setOnClickListener {
+</a><a href="#h8-0-32" id="h8-0-32" class="i">+                    ViewAppearanceHelper.newAlertDialogBuilder(
+</a><a href="#h8-0-33" id="h8-0-33" class="i">+                        this@ProfilePictureDownloader.context.mainActivity!!
+</a><a href="#h8-0-34" id="h8-0-34" class="i">+                    ).apply {
+</a><a href="#h8-0-35" id="h8-0-35" class="i">+                        setTitle(&quot;Download profile picture&quot;)
+</a><a href="#h8-0-36" id="h8-0-36" class="i">+                        val choices = mutableMapOf&lt;String, String&gt;()
+</a><a href="#h8-0-37" id="h8-0-37" class="i">+                        backgroundUrl?.let { choices[&quot;Background&quot;] = it }
+</a><a href="#h8-0-38" id="h8-0-38" class="i">+                        avatarUrl?.let { choices[&quot;Avatar&quot;] = it }
+</a><a href="#h8-0-39" id="h8-0-39" class="i">+
+</a><a href="#h8-0-40" id="h8-0-40" class="i">+                        setItems(choices.keys.toTypedArray()) { _, which -&gt;
+</a><a href="#h8-0-41" id="h8-0-41" class="i">+                            runCatching {
+</a><a href="#h8-0-42" id="h8-0-42" class="i">+                                this@ProfilePictureDownloader.context.feature(MediaDownloader::class).downloadProfilePicture(
+</a><a href="#h8-0-43" id="h8-0-43" class="i">+                                    choices.values.elementAt(which),
+</a><a href="#h8-0-44" id="h8-0-44" class="i">+                                    friendUsername!!
+</a><a href="#h8-0-45" id="h8-0-45" class="i">+                                )
+</a><a href="#h8-0-46" id="h8-0-46" class="i">+                            }.onFailure {
+</a><a href="#h8-0-47" id="h8-0-47" class="i">+                                Logger.error(&quot;Failed to download profile picture&quot;, it)
+</a><a href="#h8-0-48" id="h8-0-48" class="i">+                            }
+</a><a href="#h8-0-49" id="h8-0-49" class="i">+                        }
+</a><a href="#h8-0-50" id="h8-0-50" class="i">+                    }.show()
+</a><a href="#h8-0-51" id="h8-0-51" class="i">+                }
+</a><a href="#h8-0-52" id="h8-0-52" class="i">+            })
+</a><a href="#h8-0-53" id="h8-0-53" class="i">+        }
+</a><a href="#h8-0-54" id="h8-0-54" class="i">+
+</a><a href="#h8-0-55" id="h8-0-55" class="i">+
+</a><a href="#h8-0-56" id="h8-0-56" class="i">+        context.event.subscribe(NetworkApiRequestEvent::class) { event -&gt;
+</a><a href="#h8-0-57" id="h8-0-57" class="i">+            if (!event.url.endsWith(&quot;/rpc/getPublicProfile&quot;)) return@subscribe
+</a><a href="#h8-0-58" id="h8-0-58" class="i">+            Hooker.ephemeralHookObjectMethod(event.callback::class.java, event.callback, &quot;onSucceeded&quot;, HookStage.BEFORE) { methodParams -&gt;
+</a><a href="#h8-0-59" id="h8-0-59" class="i">+                val content = methodParams.arg&lt;ByteBuffer&gt;(2).run {
+</a><a href="#h8-0-60" id="h8-0-60" class="i">+                    ByteArray(capacity()).also {
+</a><a href="#h8-0-61" id="h8-0-61" class="i">+                        get(it)
+</a><a href="#h8-0-62" id="h8-0-62" class="i">+                        position(0)
+</a><a href="#h8-0-63" id="h8-0-63" class="i">+                    }
+</a><a href="#h8-0-64" id="h8-0-64" class="i">+                }
+</a><a href="#h8-0-65" id="h8-0-65" class="i">+
+</a><a href="#h8-0-66" id="h8-0-66" class="i">+                ProtoReader(content).readPath(1, 1, 2) {
+</a><a href="#h8-0-67" id="h8-0-67" class="i">+                    friendUsername = getString(2) ?: return@readPath
+</a><a href="#h8-0-68" id="h8-0-68" class="i">+                    readPath(4) {
+</a><a href="#h8-0-69" id="h8-0-69" class="i">+                        backgroundUrl = getString(2)
+</a><a href="#h8-0-70" id="h8-0-70" class="i">+                        avatarUrl = getString(100)
+</a><a href="#h8-0-71" id="h8-0-71" class="i">+                    }
+</a><a href="#h8-0-72" id="h8-0-72" class="i">+                }
+</a><a href="#h8-0-73" id="h8-0-73" class="i">+            }
+</a><a href="#h8-0-74" id="h8-0-74" class="i">+        }
+</a><a href="#h8-0-75" id="h8-0-75" class="i">+    }
+</a><a href="#h8-0-76" id="h8-0-76" class="i">+}</a><a href="#h8-0-77" id="h8-0-77" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h9" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/privacy/DisableMetrics.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/privacy/DisableMetrics.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/privacy/DisableMetrics.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/privacy/DisableMetrics.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -1,6 +1,6 @@
+</a> package me.rhunk.snapenhance.features.impl.privacy
+ 
+<a href="#h9-0-2" id="h9-0-2" class="d">-import de.robv.android.xposed.XposedHelpers
+</a><a href="#h9-0-3" id="h9-0-3" class="i">+import me.rhunk.snapenhance.core.eventbus.events.impl.NetworkApiRequestEvent
+</a> import me.rhunk.snapenhance.features.Feature
+ import me.rhunk.snapenhance.features.FeatureLoadParams
+ import me.rhunk.snapenhance.hook.HookStage
+<a href="#h9-1" id="h9-1" class="h">@@ -20,20 +20,10 @@ class DisableMetrics : Feature(&quot;DisableMetrics&quot;, loadParams = FeatureLoadParams.
+</a>             }
+         }
+ 
+<a href="#h9-1-3" id="h9-1-3" class="d">-        Hooker.hook(context.classCache.networkApi, &quot;submit&quot;, HookStage.BEFORE,
+</a><a href="#h9-1-4" id="h9-1-4" class="d">-            { disableMetrics }) { param -&gt;
+</a><a href="#h9-1-5" id="h9-1-5" class="d">-            val httpRequest: Any = param.arg(0)
+</a><a href="#h9-1-6" id="h9-1-6" class="d">-            val url = XposedHelpers.getObjectField(httpRequest, &quot;mUrl&quot;).toString()
+</a><a href="#h9-1-7" id="h9-1-7" class="d">-            /*if (url.contains(&quot;resolve?co=&quot;)) {
+</a><a href="#h9-1-8" id="h9-1-8" class="d">-                val index = url.indexOf(&quot;co=&quot;)
+</a><a href="#h9-1-9" id="h9-1-9" class="d">-                val end = url.lastIndexOf(&quot;&amp;&quot;)
+</a><a href="#h9-1-10" id="h9-1-10" class="d">-                val co = url.substring(index + 3, end)
+</a><a href="#h9-1-11" id="h9-1-11" class="d">-                val decoded = Base64.getDecoder().decode(co.toByteArray(StandardCharsets.UTF_8))
+</a><a href="#h9-1-12" id="h9-1-12" class="d">-                debug(&quot;decoded : &quot; + decoded.toString(Charsets.UTF_8))
+</a><a href="#h9-1-13" id="h9-1-13" class="d">-                debug(&quot;content: $co&quot;)
+</a><a href="#h9-1-14" id="h9-1-14" class="d">-            }*/
+</a><a href="#h9-1-15" id="h9-1-15" class="i">+        context.event.subscribe(NetworkApiRequestEvent::class, { disableMetrics }) { param -&gt;
+</a><a href="#h9-1-16" id="h9-1-16" class="i">+            val url = param.url
+</a>             if (url.contains(&quot;app-analytics&quot;) || url.endsWith(&quot;v1/metrics&quot;)) {
+<a href="#h9-1-18" id="h9-1-18" class="d">-                param.setResult(null)
+</a><a href="#h9-1-19" id="h9-1-19" class="i">+                param.canceled = true
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h10" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/AnonymousStoryViewing.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/AnonymousStoryViewing.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/AnonymousStoryViewing.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/AnonymousStoryViewing.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -1,20 +1,27 @@
+</a> package me.rhunk.snapenhance.features.impl.spying
+ 
+<a href="#h10-0-2" id="h10-0-2" class="i">+import kotlinx.coroutines.runBlocking
+</a><a href="#h10-0-3" id="h10-0-3" class="i">+import me.rhunk.snapenhance.Logger
+</a><a href="#h10-0-4" id="h10-0-4" class="i">+import me.rhunk.snapenhance.core.eventbus.events.impl.NetworkApiRequestEvent
+</a> import me.rhunk.snapenhance.features.Feature
+ import me.rhunk.snapenhance.features.FeatureLoadParams
+<a href="#h10-0-7" id="h10-0-7" class="d">-import me.rhunk.snapenhance.hook.HookStage
+</a><a href="#h10-0-8" id="h10-0-8" class="d">-import me.rhunk.snapenhance.hook.Hooker
+</a><a href="#h10-0-9" id="h10-0-9" class="d">-import me.rhunk.snapenhance.util.ktx.getObjectField
+</a><a href="#h10-0-10" id="h10-0-10" class="d">-import me.rhunk.snapenhance.util.ktx.setObjectField
+</a><a href="#h10-0-11" id="h10-0-11" class="i">+import me.rhunk.snapenhance.util.download.HttpServer
+</a><a href="#h10-0-12" id="h10-0-12" class="i">+import kotlin.coroutines.suspendCoroutine
+</a> 
+ class AnonymousStoryViewing : Feature(&quot;Anonymous Story Viewing&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_ASYNC) {
+     override fun asyncOnActivityCreate() {
+         val anonymousStoryViewProperty by context.config.messaging.anonymousStoryViewing
+<a href="#h10-0-17" id="h10-0-17" class="d">-        Hooker.hook(context.classCache.networkApi,&quot;submit&quot;, HookStage.BEFORE, { anonymousStoryViewProperty }) {
+</a><a href="#h10-0-18" id="h10-0-18" class="d">-            val httpRequest: Any = it.arg(0)
+</a><a href="#h10-0-19" id="h10-0-19" class="d">-            val url = httpRequest.getObjectField(&quot;mUrl&quot;) as String
+</a><a href="#h10-0-20" id="h10-0-20" class="d">-            if (url.endsWith(&quot;readreceipt-indexer/batchuploadreadreceipts&quot;)) {
+</a><a href="#h10-0-21" id="h10-0-21" class="d">-                httpRequest.setObjectField(&quot;mUrl&quot;, &quot;http://127.0.0.1&quot;)
+</a><a href="#h10-0-22" id="h10-0-22" class="i">+        val httpServer = HttpServer()
+</a><a href="#h10-0-23" id="h10-0-23" class="i">+
+</a><a href="#h10-0-24" id="h10-0-24" class="i">+        context.event.subscribe(NetworkApiRequestEvent::class, { anonymousStoryViewProperty }) { event -&gt;
+</a><a href="#h10-0-25" id="h10-0-25" class="i">+            if (!event.url.endsWith(&quot;readreceipt-indexer/batchuploadreadreceipts&quot;)) return@subscribe
+</a><a href="#h10-0-26" id="h10-0-26" class="i">+            runBlocking {
+</a><a href="#h10-0-27" id="h10-0-27" class="i">+                suspendCoroutine {
+</a><a href="#h10-0-28" id="h10-0-28" class="i">+                    httpServer.ensureServerStarted {
+</a><a href="#h10-0-29" id="h10-0-29" class="i">+                        event.url = &quot;http://127.0.0.1:${httpServer.port}&quot;
+</a><a href="#h10-0-30" id="h10-0-30" class="i">+                        it.resumeWith(Result.success(Unit))
+</a><a href="#h10-0-31" id="h10-0-31" class="i">+                    }
+</a><a href="#h10-0-32" id="h10-0-32" class="i">+                }
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h11" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/StartupPageOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/StartupPageOverride.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/StartupPageOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/StartupPageOverride.kt</a></b>
+<a href="#h11-0" id="h11-0" class="h">@@ -3,9 +3,9 @@ package me.rhunk.snapenhance.features.impl.ui
+</a> import android.annotation.SuppressLint
+ import android.os.Handler
+ import android.view.View
+<a href="#h11-0-3" id="h11-0-3" class="d">-import android.view.ViewGroup
+</a> import android.widget.LinearLayout
+ import me.rhunk.snapenhance.Constants
+<a href="#h11-0-6" id="h11-0-6" class="i">+import me.rhunk.snapenhance.core.eventbus.events.impl.AddViewEvent
+</a> import me.rhunk.snapenhance.features.Feature
+ import me.rhunk.snapenhance.features.FeatureLoadParams
+ import me.rhunk.snapenhance.hook.HookStage
+<a href="#h11-1" id="h11-1" class="h">@@ -38,21 +38,17 @@ class StartupPageOverride : Feature(&quot;StartupPageOverride&quot;, loadParams = FeatureL
+</a>         }
+ 
+         val ngsIconId = context.androidContext.resources.getIdentifier(ngsIconName, &quot;id&quot;, Constants.SNAPCHAT_PACKAGE_NAME)
+<a href="#h11-1-3" id="h11-1-3" class="d">-        val unhooks = mutableListOf&lt;() -&gt; Unit&gt;()
+</a><a href="#h11-1-4" id="h11-1-4" class="d">-
+</a><a href="#h11-1-5" id="h11-1-5" class="d">-        ViewGroup::class.java.getMethod(
+</a><a href="#h11-1-6" id="h11-1-6" class="d">-            &quot;addView&quot;,
+</a><a href="#h11-1-7" id="h11-1-7" class="d">-            View::class.java,
+</a><a href="#h11-1-8" id="h11-1-8" class="d">-            Int::class.javaPrimitiveType,
+</a><a href="#h11-1-9" id="h11-1-9" class="d">-            ViewGroup.LayoutParams::class.java
+</a><a href="#h11-1-10" id="h11-1-10" class="d">-        ).hook(HookStage.AFTER) { param -&gt;
+</a><a href="#h11-1-11" id="h11-1-11" class="d">-            if (param.thisObject&lt;ViewGroup&gt;() !is LinearLayout) return@hook
+</a><a href="#h11-1-12" id="h11-1-12" class="d">-            with(param.arg&lt;View&gt;(0)) {
+</a><a href="#h11-1-13" id="h11-1-13" class="i">+
+</a><a href="#h11-1-14" id="h11-1-14" class="i">+        lateinit var unhook: () -&gt; Unit
+</a><a href="#h11-1-15" id="h11-1-15" class="i">+
+</a><a href="#h11-1-16" id="h11-1-16" class="i">+        context.event.subscribe(AddViewEvent::class) { event -&gt;
+</a><a href="#h11-1-17" id="h11-1-17" class="i">+            if (event.parent !is LinearLayout) return@subscribe
+</a><a href="#h11-1-18" id="h11-1-18" class="i">+            with(event.view) {
+</a>                 if (id == ngsIconId) {
+                     ngsIcon = this
+<a href="#h11-1-21" id="h11-1-21" class="d">-                    unhooks.forEach { it() }
+</a><a href="#h11-1-22" id="h11-1-22" class="i">+                    unhook()
+</a>                 }
+             }
+<a href="#h11-1-25" id="h11-1-25" class="d">-        }.also { unhooks.add(it::unhook) }
+</a><a href="#h11-1-26" id="h11-1-26" class="i">+        }.also { unhook = it }
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h12" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/UITweaks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/UITweaks.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/UITweaks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/UITweaks.kt</a></b>
+<a href="#h12-0" id="h12-0" class="h">@@ -8,9 +8,9 @@ import android.view.View
+</a> import android.view.ViewGroup
+ import android.widget.FrameLayout
+ import me.rhunk.snapenhance.Constants
+<a href="#h12-0-3" id="h12-0-3" class="i">+import me.rhunk.snapenhance.core.eventbus.events.impl.AddViewEvent
+</a> import me.rhunk.snapenhance.features.Feature
+ import me.rhunk.snapenhance.features.FeatureLoadParams
+<a href="#h12-0-6" id="h12-0-6" class="d">-import me.rhunk.snapenhance.hook.HookAdapter
+</a> import me.rhunk.snapenhance.hook.HookStage
+ import me.rhunk.snapenhance.hook.Hooker
+ import me.rhunk.snapenhance.hook.hook
+<a href="#h12-1" id="h12-1" class="h">@@ -25,12 +25,12 @@ class UITweaks : Feature(&quot;UITweaks&quot;, loadParams = FeatureLoadParams.ACTIVITY_CRE
+</a>         }
+     }
+ 
+<a href="#h12-1-3" id="h12-1-3" class="d">-    private fun hideStorySection(param: HookAdapter) {
+</a><a href="#h12-1-4" id="h12-1-4" class="d">-        val parent = param.thisObject() as ViewGroup
+</a><a href="#h12-1-5" id="h12-1-5" class="i">+    private fun hideStorySection(event: AddViewEvent) {
+</a><a href="#h12-1-6" id="h12-1-6" class="i">+        val parent = event.parent
+</a>         parent.visibility = View.GONE
+         val marginLayoutParams = parent.layoutParams as ViewGroup.MarginLayoutParams
+         marginLayoutParams.setMargins(-99999, -99999, -99999, -99999)
+<a href="#h12-1-10" id="h12-1-10" class="d">-        param.setResult(null)
+</a><a href="#h12-1-11" id="h12-1-11" class="i">+        event.canceled = true
+</a>     }
+ 
+     @SuppressLint(&quot;DiscouragedApi&quot;, &quot;InternalInsetResource&quot;)
+<a href="#h12-2" id="h12-2" class="h">@@ -69,33 +69,29 @@ class UITweaks : Feature(&quot;UITweaks&quot;, loadParams = FeatureLoadParams.ACTIVITY_CRE
+</a>             }
+         }
+ 
+<a href="#h12-2-3" id="h12-2-3" class="d">-        ViewGroup::class.java.getMethod(
+</a><a href="#h12-2-4" id="h12-2-4" class="d">-            &quot;addView&quot;,
+</a><a href="#h12-2-5" id="h12-2-5" class="d">-            View::class.java,
+</a><a href="#h12-2-6" id="h12-2-6" class="d">-            Int::class.javaPrimitiveType,
+</a><a href="#h12-2-7" id="h12-2-7" class="d">-            ViewGroup.LayoutParams::class.java
+</a><a href="#h12-2-8" id="h12-2-8" class="d">-        ).hook(HookStage.BEFORE) { param -&gt;
+</a><a href="#h12-2-9" id="h12-2-9" class="d">-            val view: View = param.arg(0)
+</a><a href="#h12-2-10" id="h12-2-10" class="d">-            val viewId = view.id
+</a><a href="#h12-2-11" id="h12-2-11" class="i">+
+</a><a href="#h12-2-12" id="h12-2-12" class="i">+        context.event.subscribe(AddViewEvent::class) { event -&gt;
+</a><a href="#h12-2-13" id="h12-2-13" class="i">+            val viewId = event.view.id
+</a><a href="#h12-2-14" id="h12-2-14" class="i">+            val view = event.view
+</a> 
+             if (hideStorySections.contains(&quot;hide_for_you&quot;)) {
+                 if (viewId == getIdentifier(&quot;df_large_story&quot;, &quot;id&quot;) ||
+                             viewId == getIdentifier(&quot;df_promoted_story&quot;, &quot;id&quot;)) {
+<a href="#h12-2-19" id="h12-2-19" class="d">-                    hideStorySection(param)
+</a><a href="#h12-2-20" id="h12-2-20" class="d">-                    return@hook
+</a><a href="#h12-2-21" id="h12-2-21" class="i">+                    hideStorySection(event)
+</a><a href="#h12-2-22" id="h12-2-22" class="i">+                    return@subscribe
+</a>                 }
+                 if (viewId == getIdentifier(&quot;stories_load_progress_layout&quot;, &quot;id&quot;)) {
+<a href="#h12-2-25" id="h12-2-25" class="d">-                    param.setResult(null)
+</a><a href="#h12-2-26" id="h12-2-26" class="i">+                    event.canceled = true
+</a>                 }
+             }
+ 
+             if (hideStorySections.contains(&quot;hide_friends&quot;) &amp;&amp; viewId == getIdentifier(&quot;friend_card_frame&quot;, &quot;id&quot;)) {
+<a href="#h12-2-31" id="h12-2-31" class="d">-                hideStorySection(param)
+</a><a href="#h12-2-32" id="h12-2-32" class="i">+                hideStorySection(event)
+</a>             }
+ 
+             //mappings?
+             if (hideStorySections.contains(&quot;hide_friend_suggestions&quot;) &amp;&amp; view.javaClass.superclass?.name?.endsWith(&quot;StackDrawLayout&quot;) == true) {
+<a href="#h12-2-37" id="h12-2-37" class="d">-                val layoutParams = view.layoutParams as? FrameLayout.LayoutParams ?: return@hook
+</a><a href="#h12-2-38" id="h12-2-38" class="i">+                val layoutParams = view.layoutParams as? FrameLayout.LayoutParams ?: return@subscribe
+</a>                 if (layoutParams.width == -1 &amp;&amp;
+                     layoutParams.height == -2 &amp;&amp;
+                     view.javaClass.let { clazz -&gt;
+<a href="#h12-3" id="h12-3" class="h">@@ -103,17 +99,17 @@ class UITweaks : Feature(&quot;UITweaks&quot;, loadParams = FeatureLoadParams.ACTIVITY_CRE
+</a>                         clazz.constructors.any { it.parameterCount == 1 &amp;&amp; it.parameterTypes[0] == Context::class.java }
+                     }
+                 ) {
+<a href="#h12-3-3" id="h12-3-3" class="d">-                    hideStorySection(param)
+</a><a href="#h12-3-4" id="h12-3-4" class="i">+                    hideStorySection(event)
+</a>                 }
+             }
+ 
+             if (hideStorySections.contains(&quot;hide_following&quot;) &amp;&amp; (viewId == getIdentifier(&quot;df_small_story&quot;, &quot;id&quot;))
+             ) {
+<a href="#h12-3-10" id="h12-3-10" class="d">-                hideStorySection(param)
+</a><a href="#h12-3-11" id="h12-3-11" class="i">+                hideStorySection(event)
+</a>             }
+ 
+             if (blockAds &amp;&amp; viewId == getIdentifier(&quot;df_promoted_story&quot;, &quot;id&quot;)) {
+<a href="#h12-3-15" id="h12-3-15" class="d">-                hideStorySection(param)
+</a><a href="#h12-3-16" id="h12-3-16" class="i">+                hideStorySection(event)
+</a>             }
+ 
+             if (isImmersiveCamera) {
+<a href="#h12-4" id="h12-4" class="h">@@ -145,15 +141,15 @@ class UITweaks : Feature(&quot;UITweaks&quot;, loadParams = FeatureLoadParams.ACTIVITY_CRE
+</a>                 view.visibility = View.GONE
+             }
+             if (getIdentifier(&quot;chat_input_bar_sharing_drawer_button&quot;, &quot;id&quot;) == viewId &amp;&amp; hiddenElements.contains(&quot;hide_live_location_share_button&quot;)) {
+<a href="#h12-4-3" id="h12-4-3" class="d">-                param.setResult(null)
+</a><a href="#h12-4-4" id="h12-4-4" class="i">+                event.canceled = true
+</a>             }
+             if (viewId == callButton1 || viewId == callButton2) {
+<a href="#h12-4-7" id="h12-4-7" class="d">-                if (!hiddenElements.contains(&quot;hide_call_buttons&quot;)) return@hook
+</a><a href="#h12-4-8" id="h12-4-8" class="d">-                if (view.visibility == View.GONE) return@hook
+</a><a href="#h12-4-9" id="h12-4-9" class="i">+                if (!hiddenElements.contains(&quot;hide_call_buttons&quot;)) return@subscribe
+</a><a href="#h12-4-10" id="h12-4-10" class="i">+                if (view.visibility == View.GONE) return@subscribe
+</a>             }
+             if (viewId == callButtonsStub) {
+<a href="#h12-4-13" id="h12-4-13" class="d">-                if (!hiddenElements.contains(&quot;hide_call_buttons&quot;)) return@hook
+</a><a href="#h12-4-14" id="h12-4-14" class="d">-                param.setResult(null)
+</a><a href="#h12-4-15" id="h12-4-15" class="i">+                if (!hiddenElements.contains(&quot;hide_call_buttons&quot;)) return@subscribe
+</a><a href="#h12-4-16" id="h12-4-16" class="i">+                event.canceled = true
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h13" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/hook/Hooker.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/hook/Hooker.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/hook/Hooker.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/hook/Hooker.kt</a></b>
+<a href="#h13-0" id="h13-0" class="h">@@ -111,8 +111,8 @@ object Hooker {
+</a>         val unhooks: MutableSet&lt;XC_MethodHook.Unhook&gt; = HashSet()
+         hook(clazz, methodName, stage) { param-&gt;
+             if (param.nullableThisObject&lt;Any&gt;() != instance) return@hook
+<a href="#h13-0-3" id="h13-0-3" class="i">+            unhooks.forEach { it.unhook() }
+</a>             hookConsumer(param)
+<a href="#h13-0-5" id="h13-0-5" class="d">-            unhooks.forEach{ it.unhook() }
+</a>         }.also { unhooks.addAll(it) }
+     }
+ }
+<b>diff --git a/<a id="h14" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></b>
+<a href="#h14-0" id="h14-0" class="h">@@ -8,6 +8,7 @@ import me.rhunk.snapenhance.features.impl.AutoUpdater
+</a> import me.rhunk.snapenhance.features.impl.ConfigurationOverride
+ import me.rhunk.snapenhance.features.impl.Messaging
+ import me.rhunk.snapenhance.features.impl.downloader.MediaDownloader
+<a href="#h14-0-3" id="h14-0-3" class="i">+import me.rhunk.snapenhance.features.impl.downloader.ProfilePictureDownloader
+</a> import me.rhunk.snapenhance.features.impl.experiments.AmoledDarkMode
+ import me.rhunk.snapenhance.features.impl.experiments.AppPasscode
+ import me.rhunk.snapenhance.features.impl.experiments.DeviceSpooferHook
+<a href="#h14-1" id="h14-1" class="h">@@ -91,6 +92,7 @@ class FeatureManager(private val context: ModContext) : Manager {
+</a>         register(StartupPageOverride::class)
+         register(GooglePlayServicesDialogs::class)
+         register(NoFriendScoreDelay::class)
+<a href="#h14-1-3" id="h14-1-3" class="i">+        register(ProfilePictureDownloader::class)
+</a> 
+         initializeFeatures()
+     }
+<b>diff --git a/<a id="h15" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/MenuViewInjector.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/MenuViewInjector.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/MenuViewInjector.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ui/menu/impl/MenuViewInjector.kt</a></b>
+<a href="#h15-0" id="h15-0" class="h">@@ -7,11 +7,10 @@ import android.view.ViewGroup
+</a> import android.widget.FrameLayout
+ import android.widget.LinearLayout
+ import me.rhunk.snapenhance.Constants
+<a href="#h15-0-3" id="h15-0-3" class="i">+import me.rhunk.snapenhance.core.eventbus.events.impl.AddViewEvent
+</a> import me.rhunk.snapenhance.features.Feature
+ import me.rhunk.snapenhance.features.FeatureLoadParams
+ import me.rhunk.snapenhance.features.impl.Messaging
+<a href="#h15-0-7" id="h15-0-7" class="d">-import me.rhunk.snapenhance.hook.HookStage
+</a><a href="#h15-0-8" id="h15-0-8" class="d">-import me.rhunk.snapenhance.hook.Hooker
+</a> import java.lang.reflect.Modifier
+ 
+ @SuppressLint(&quot;DiscouragedApi&quot;)
+<a href="#h15-1" id="h15-1" class="h">@@ -42,17 +41,9 @@ class MenuViewInjector : Feature(&quot;MenuViewInjector&quot;, loadParams = FeatureLoadPar
+</a>         val componentsHolder = context.resources.getIdentifier(&quot;components_holder&quot;, &quot;id&quot;, Constants.SNAPCHAT_PACKAGE_NAME)
+         val feedNewChat = context.resources.getIdentifier(&quot;feed_new_chat&quot;, &quot;id&quot;, Constants.SNAPCHAT_PACKAGE_NAME)
+ 
+<a href="#h15-1-3" id="h15-1-3" class="d">-        val addViewMethod = ViewGroup::class.java.getMethod(
+</a><a href="#h15-1-4" id="h15-1-4" class="d">-            &quot;addView&quot;,
+</a><a href="#h15-1-5" id="h15-1-5" class="d">-            View::class.java,
+</a><a href="#h15-1-6" id="h15-1-6" class="d">-            Int::class.javaPrimitiveType,
+</a><a href="#h15-1-7" id="h15-1-7" class="d">-            ViewGroup.LayoutParams::class.java
+</a><a href="#h15-1-8" id="h15-1-8" class="d">-        )
+</a><a href="#h15-1-9" id="h15-1-9" class="d">-
+</a><a href="#h15-1-10" id="h15-1-10" class="d">-        Hooker.hook(addViewMethod, HookStage.BEFORE) { param -&gt;
+</a><a href="#h15-1-11" id="h15-1-11" class="d">-            val viewGroup: ViewGroup = param.thisObject()
+</a><a href="#h15-1-12" id="h15-1-12" class="i">+        context.event.subscribe(AddViewEvent::class) { event -&gt;
+</a>             val originalAddView: (View) -&gt; Unit = {
+<a href="#h15-1-14" id="h15-1-14" class="d">-                param.invokeOriginal(arrayOf(it, -1,
+</a><a href="#h15-1-15" id="h15-1-15" class="i">+                event.adapter.invokeOriginal(arrayOf(it, -1,
+</a>                     FrameLayout.LayoutParams(
+                         ViewGroup.LayoutParams.MATCH_PARENT,
+                         ViewGroup.LayoutParams.MATCH_PARENT
+<a href="#h15-2" id="h15-2" class="h">@@ -60,19 +51,20 @@ class MenuViewInjector : Feature(&quot;MenuViewInjector&quot;, loadParams = FeatureLoadPar
+</a>                 )
+             }
+ 
+<a href="#h15-2-3" id="h15-2-3" class="d">-            val childView: View = param.arg(0)
+</a><a href="#h15-2-4" id="h15-2-4" class="d">-            operaContextActionMenu.inject(viewGroup, childView)
+</a><a href="#h15-2-5" id="h15-2-5" class="i">+            val viewGroup: ViewGroup = event.parent
+</a><a href="#h15-2-6" id="h15-2-6" class="i">+            val childView: View = event.view
+</a><a href="#h15-2-7" id="h15-2-7" class="i">+            operaContextActionMenu.inject(event.parent, childView)
+</a> 
+<a href="#h15-2-9" id="h15-2-9" class="d">-            if (viewGroup.id == componentsHolder &amp;&amp; childView.id == feedNewChat) {
+</a><a href="#h15-2-10" id="h15-2-10" class="d">-                settingsGearInjector.inject(viewGroup, childView)
+</a><a href="#h15-2-11" id="h15-2-11" class="d">-                return@hook
+</a><a href="#h15-2-12" id="h15-2-12" class="i">+            if (event.parent.id == componentsHolder &amp;&amp; childView.id == feedNewChat) {
+</a><a href="#h15-2-13" id="h15-2-13" class="i">+                settingsGearInjector.inject(event.parent, childView)
+</a><a href="#h15-2-14" id="h15-2-14" class="i">+                return@subscribe
+</a>             }
+ 
+             //download in chat snaps and notes from the chat action menu
+             if (viewGroup.javaClass.name.endsWith(&quot;ActionMenuChatItemContainer&quot;)) {
+<a href="#h15-2-19" id="h15-2-19" class="d">-                if (viewGroup.parent == null || viewGroup.parent.parent == null) return@hook
+</a><a href="#h15-2-20" id="h15-2-20" class="i">+                if (viewGroup.parent == null || viewGroup.parent.parent == null) return@subscribe
+</a>                 chatActionMenu.inject(viewGroup)
+<a href="#h15-2-22" id="h15-2-22" class="d">-                return@hook
+</a><a href="#h15-2-23" id="h15-2-23" class="i">+                return@subscribe
+</a>             }
+ 
+             //TODO: inject in group chat menus
+<a href="#h15-3" id="h15-3" class="h">@@ -101,7 +93,7 @@ class MenuViewInjector : Feature(&quot;MenuViewInjector&quot;, loadParams = FeatureLoadPar
+</a>                     viewList.reversed().forEach { injectedLayout.addView(it, 0) }
+                 }
+ 
+<a href="#h15-3-3" id="h15-3-3" class="d">-                param.setArg(0, injectedLayout)
+</a><a href="#h15-3-4" id="h15-3-4" class="i">+                event.view = injectedLayout
+</a>             }
+ 
+             if (viewGroup is LinearLayout &amp;&amp; viewGroup.id == actionSheetItemsContainerLayoutId) {
+<a href="#h15-4" id="h15-4" class="h">@@ -125,12 +117,12 @@ class MenuViewInjector : Feature(&quot;MenuViewInjector&quot;, loadParams = FeatureLoadPar
+</a>                             //context.config.writeConfig()
+                         }
+                     })
+<a href="#h15-4-3" id="h15-4-3" class="d">-                    return@hook
+</a><a href="#h15-4-4" id="h15-4-4" class="i">+                    return@subscribe
+</a>                 }
+<a href="#h15-4-6" id="h15-4-6" class="d">-                if (messaging.lastFetchConversationUUID == null || messaging.lastFetchConversationUserUUID == null) return@hook
+</a><a href="#h15-4-7" id="h15-4-7" class="i">+                if (messaging.lastFetchConversationUUID == null || messaging.lastFetchConversationUserUUID == null) return@subscribe
+</a> 
+                 //filter by the slot index
+<a href="#h15-4-10" id="h15-4-10" class="d">-                if (viewGroup.getChildCount() != context.config.userInterface.friendFeedMenuPosition.get()) return@hook
+</a><a href="#h15-4-11" id="h15-4-11" class="i">+                if (viewGroup.getChildCount() != context.config.userInterface.friendFeedMenuPosition.get()) return@subscribe
+</a>                 friendFeedInfoMenu.inject(viewGroup, originalAddView)
+             }
+         }
+<b>diff --git a/<a id="h16" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/download/DownloadServer.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/download/DownloadServer.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/download/DownloadServer.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/download/DownloadServer.kt</a></b>
+<a href="#h16-0" id="h16-0" class="h">@@ -1,137 +0,0 @@
+</a><a href="#h16-0-0" id="h16-0-0" class="d">-package me.rhunk.snapenhance.util.download
+</a><a href="#h16-0-1" id="h16-0-1" class="d">-
+</a><a href="#h16-0-2" id="h16-0-2" class="d">-import kotlinx.coroutines.CoroutineScope
+</a><a href="#h16-0-3" id="h16-0-3" class="d">-import kotlinx.coroutines.Dispatchers
+</a><a href="#h16-0-4" id="h16-0-4" class="d">-import kotlinx.coroutines.Job
+</a><a href="#h16-0-5" id="h16-0-5" class="d">-import kotlinx.coroutines.delay
+</a><a href="#h16-0-6" id="h16-0-6" class="d">-import kotlinx.coroutines.launch
+</a><a href="#h16-0-7" id="h16-0-7" class="d">-import me.rhunk.snapenhance.Logger
+</a><a href="#h16-0-8" id="h16-0-8" class="d">-import java.io.BufferedReader
+</a><a href="#h16-0-9" id="h16-0-9" class="d">-import java.io.InputStream
+</a><a href="#h16-0-10" id="h16-0-10" class="d">-import java.io.InputStreamReader
+</a><a href="#h16-0-11" id="h16-0-11" class="d">-import java.io.PrintWriter
+</a><a href="#h16-0-12" id="h16-0-12" class="d">-import java.net.ServerSocket
+</a><a href="#h16-0-13" id="h16-0-13" class="d">-import java.net.Socket
+</a><a href="#h16-0-14" id="h16-0-14" class="d">-import java.net.SocketException
+</a><a href="#h16-0-15" id="h16-0-15" class="d">-import java.util.Locale
+</a><a href="#h16-0-16" id="h16-0-16" class="d">-import java.util.StringTokenizer
+</a><a href="#h16-0-17" id="h16-0-17" class="d">-import java.util.concurrent.ConcurrentHashMap
+</a><a href="#h16-0-18" id="h16-0-18" class="d">-import kotlin.random.Random
+</a><a href="#h16-0-19" id="h16-0-19" class="d">-
+</a><a href="#h16-0-20" id="h16-0-20" class="d">-class DownloadServer(
+</a><a href="#h16-0-21" id="h16-0-21" class="d">-    private val timeout: Int = 10000
+</a><a href="#h16-0-22" id="h16-0-22" class="d">-) {
+</a><a href="#h16-0-23" id="h16-0-23" class="d">-    private val port = Random.nextInt(10000, 65535)
+</a><a href="#h16-0-24" id="h16-0-24" class="d">-
+</a><a href="#h16-0-25" id="h16-0-25" class="d">-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+</a><a href="#h16-0-26" id="h16-0-26" class="d">-    private var timeoutJob: Job? = null
+</a><a href="#h16-0-27" id="h16-0-27" class="d">-    private var socketJob: Job? = null
+</a><a href="#h16-0-28" id="h16-0-28" class="d">-
+</a><a href="#h16-0-29" id="h16-0-29" class="d">-    private val cachedData = ConcurrentHashMap&lt;String, Pair&lt;InputStream, Long&gt;&gt;()
+</a><a href="#h16-0-30" id="h16-0-30" class="d">-    private var serverSocket: ServerSocket? = null
+</a><a href="#h16-0-31" id="h16-0-31" class="d">-
+</a><a href="#h16-0-32" id="h16-0-32" class="d">-    fun ensureServerStarted(callback: DownloadServer.() -&gt; Unit) {
+</a><a href="#h16-0-33" id="h16-0-33" class="d">-        if (serverSocket != null &amp;&amp; !serverSocket!!.isClosed) {
+</a><a href="#h16-0-34" id="h16-0-34" class="d">-            callback(this)
+</a><a href="#h16-0-35" id="h16-0-35" class="d">-            return
+</a><a href="#h16-0-36" id="h16-0-36" class="d">-        }
+</a><a href="#h16-0-37" id="h16-0-37" class="d">-
+</a><a href="#h16-0-38" id="h16-0-38" class="d">-        coroutineScope.launch(Dispatchers.IO) {
+</a><a href="#h16-0-39" id="h16-0-39" class="d">-            Logger.debug(&quot;starting download server on port $port&quot;)
+</a><a href="#h16-0-40" id="h16-0-40" class="d">-            serverSocket = ServerSocket(port)
+</a><a href="#h16-0-41" id="h16-0-41" class="d">-            callback(this@DownloadServer)
+</a><a href="#h16-0-42" id="h16-0-42" class="d">-            while (!serverSocket!!.isClosed) {
+</a><a href="#h16-0-43" id="h16-0-43" class="d">-                try {
+</a><a href="#h16-0-44" id="h16-0-44" class="d">-                    val socket = serverSocket!!.accept()
+</a><a href="#h16-0-45" id="h16-0-45" class="d">-                    timeoutJob?.cancel()
+</a><a href="#h16-0-46" id="h16-0-46" class="d">-                    launch {
+</a><a href="#h16-0-47" id="h16-0-47" class="d">-                        handleRequest(socket)
+</a><a href="#h16-0-48" id="h16-0-48" class="d">-                        timeoutJob = launch {
+</a><a href="#h16-0-49" id="h16-0-49" class="d">-                            delay(timeout.toLong())
+</a><a href="#h16-0-50" id="h16-0-50" class="d">-                            Logger.debug(&quot;download server closed due to timeout&quot;)
+</a><a href="#h16-0-51" id="h16-0-51" class="d">-                            runCatching {
+</a><a href="#h16-0-52" id="h16-0-52" class="d">-                                socketJob?.cancel()
+</a><a href="#h16-0-53" id="h16-0-53" class="d">-                                socket.close()
+</a><a href="#h16-0-54" id="h16-0-54" class="d">-                                serverSocket?.close()
+</a><a href="#h16-0-55" id="h16-0-55" class="d">-                            }.onFailure {
+</a><a href="#h16-0-56" id="h16-0-56" class="d">-                                Logger.error(it)
+</a><a href="#h16-0-57" id="h16-0-57" class="d">-                            }
+</a><a href="#h16-0-58" id="h16-0-58" class="d">-                        }
+</a><a href="#h16-0-59" id="h16-0-59" class="d">-                    }
+</a><a href="#h16-0-60" id="h16-0-60" class="d">-                } catch (e: SocketException) {
+</a><a href="#h16-0-61" id="h16-0-61" class="d">-                    Logger.debug(&quot;download server timed out&quot;)
+</a><a href="#h16-0-62" id="h16-0-62" class="d">-                    break;
+</a><a href="#h16-0-63" id="h16-0-63" class="d">-                } catch (e: Throwable) {
+</a><a href="#h16-0-64" id="h16-0-64" class="d">-                    Logger.error(&quot;failed to handle request&quot;, e)
+</a><a href="#h16-0-65" id="h16-0-65" class="d">-                }
+</a><a href="#h16-0-66" id="h16-0-66" class="d">-            }
+</a><a href="#h16-0-67" id="h16-0-67" class="d">-        }.also { socketJob = it }
+</a><a href="#h16-0-68" id="h16-0-68" class="d">-    }
+</a><a href="#h16-0-69" id="h16-0-69" class="d">-
+</a><a href="#h16-0-70" id="h16-0-70" class="d">-    fun close() {
+</a><a href="#h16-0-71" id="h16-0-71" class="d">-        serverSocket?.close()
+</a><a href="#h16-0-72" id="h16-0-72" class="d">-    }
+</a><a href="#h16-0-73" id="h16-0-73" class="d">-
+</a><a href="#h16-0-74" id="h16-0-74" class="d">-    fun putDownloadableContent(inputStream: InputStream, size: Long): String {
+</a><a href="#h16-0-75" id="h16-0-75" class="d">-        val key = System.nanoTime().toString(16)
+</a><a href="#h16-0-76" id="h16-0-76" class="d">-        cachedData[key] = inputStream to size
+</a><a href="#h16-0-77" id="h16-0-77" class="d">-        return &quot;http://127.0.0.1:$port/$key&quot;
+</a><a href="#h16-0-78" id="h16-0-78" class="d">-    }
+</a><a href="#h16-0-79" id="h16-0-79" class="d">-
+</a><a href="#h16-0-80" id="h16-0-80" class="d">-    private fun handleRequest(socket: Socket) {
+</a><a href="#h16-0-81" id="h16-0-81" class="d">-        val reader = BufferedReader(InputStreamReader(socket.getInputStream()))
+</a><a href="#h16-0-82" id="h16-0-82" class="d">-        val outputStream = socket.getOutputStream()
+</a><a href="#h16-0-83" id="h16-0-83" class="d">-        val writer = PrintWriter(outputStream)
+</a><a href="#h16-0-84" id="h16-0-84" class="d">-        val line = reader.readLine() ?: return
+</a><a href="#h16-0-85" id="h16-0-85" class="d">-        fun close() {
+</a><a href="#h16-0-86" id="h16-0-86" class="d">-            runCatching {
+</a><a href="#h16-0-87" id="h16-0-87" class="d">-                reader.close()
+</a><a href="#h16-0-88" id="h16-0-88" class="d">-                writer.close()
+</a><a href="#h16-0-89" id="h16-0-89" class="d">-                outputStream.close()
+</a><a href="#h16-0-90" id="h16-0-90" class="d">-                socket.close()
+</a><a href="#h16-0-91" id="h16-0-91" class="d">-            }.onFailure {
+</a><a href="#h16-0-92" id="h16-0-92" class="d">-                Logger.error(&quot;failed to close socket&quot;, it)
+</a><a href="#h16-0-93" id="h16-0-93" class="d">-            }
+</a><a href="#h16-0-94" id="h16-0-94" class="d">-        }
+</a><a href="#h16-0-95" id="h16-0-95" class="d">-        val parse = StringTokenizer(line)
+</a><a href="#h16-0-96" id="h16-0-96" class="d">-        val method = parse.nextToken().uppercase(Locale.getDefault())
+</a><a href="#h16-0-97" id="h16-0-97" class="d">-        var fileRequested = parse.nextToken().lowercase(Locale.getDefault())
+</a><a href="#h16-0-98" id="h16-0-98" class="d">-        if (method != &quot;GET&quot;) {
+</a><a href="#h16-0-99" id="h16-0-99" class="d">-            with(writer) {
+</a><a href="#h16-0-100" id="h16-0-100" class="d">-                println(&quot;HTTP/1.1 501 Not Implemented&quot;)
+</a><a href="#h16-0-101" id="h16-0-101" class="d">-                println(&quot;Content-type: &quot; + &quot;application/octet-stream&quot;)
+</a><a href="#h16-0-102" id="h16-0-102" class="d">-                println(&quot;Content-length: &quot; + 0)
+</a><a href="#h16-0-103" id="h16-0-103" class="d">-                println()
+</a><a href="#h16-0-104" id="h16-0-104" class="d">-                flush()
+</a><a href="#h16-0-105" id="h16-0-105" class="d">-            }
+</a><a href="#h16-0-106" id="h16-0-106" class="d">-            close()
+</a><a href="#h16-0-107" id="h16-0-107" class="d">-            return
+</a><a href="#h16-0-108" id="h16-0-108" class="d">-        }
+</a><a href="#h16-0-109" id="h16-0-109" class="d">-        if (fileRequested.startsWith(&quot;/&quot;)) {
+</a><a href="#h16-0-110" id="h16-0-110" class="d">-            fileRequested = fileRequested.substring(1)
+</a><a href="#h16-0-111" id="h16-0-111" class="d">-        }
+</a><a href="#h16-0-112" id="h16-0-112" class="d">-        if (!cachedData.containsKey(fileRequested)) {
+</a><a href="#h16-0-113" id="h16-0-113" class="d">-            with(writer) {
+</a><a href="#h16-0-114" id="h16-0-114" class="d">-                println(&quot;HTTP/1.1 404 Not Found&quot;)
+</a><a href="#h16-0-115" id="h16-0-115" class="d">-                println(&quot;Content-type: &quot; + &quot;application/octet-stream&quot;)
+</a><a href="#h16-0-116" id="h16-0-116" class="d">-                println(&quot;Content-length: &quot; + 0)
+</a><a href="#h16-0-117" id="h16-0-117" class="d">-                println()
+</a><a href="#h16-0-118" id="h16-0-118" class="d">-                flush()
+</a><a href="#h16-0-119" id="h16-0-119" class="d">-            }
+</a><a href="#h16-0-120" id="h16-0-120" class="d">-            close()
+</a><a href="#h16-0-121" id="h16-0-121" class="d">-            return
+</a><a href="#h16-0-122" id="h16-0-122" class="d">-        }
+</a><a href="#h16-0-123" id="h16-0-123" class="d">-        val requestedData = cachedData[fileRequested]!!
+</a><a href="#h16-0-124" id="h16-0-124" class="d">-        with(writer) {
+</a><a href="#h16-0-125" id="h16-0-125" class="d">-            println(&quot;HTTP/1.1 200 OK&quot;)
+</a><a href="#h16-0-126" id="h16-0-126" class="d">-            println(&quot;Content-type: &quot; + &quot;application/octet-stream&quot;)
+</a><a href="#h16-0-127" id="h16-0-127" class="d">-            println(&quot;Content-length: &quot; + requestedData.second)
+</a><a href="#h16-0-128" id="h16-0-128" class="d">-            println()
+</a><a href="#h16-0-129" id="h16-0-129" class="d">-            flush()
+</a><a href="#h16-0-130" id="h16-0-130" class="d">-        }
+</a><a href="#h16-0-131" id="h16-0-131" class="d">-        requestedData.first.copyTo(outputStream)
+</a><a href="#h16-0-132" id="h16-0-132" class="d">-        outputStream.flush()
+</a><a href="#h16-0-133" id="h16-0-133" class="d">-        cachedData.remove(fileRequested)
+</a><a href="#h16-0-134" id="h16-0-134" class="d">-        close()
+</a><a href="#h16-0-135" id="h16-0-135" class="d">-    }
+</a><a href="#h16-0-136" id="h16-0-136" class="d">-}</a><a href="#h16-0-137" id="h16-0-137" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h17" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/download/HttpServer.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/download/HttpServer.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/download/HttpServer.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/download/HttpServer.kt</a></b>
+<a href="#h17-0" id="h17-0" class="h">@@ -0,0 +1,139 @@
+</a><a href="#h17-0-0" id="h17-0-0" class="i">+package me.rhunk.snapenhance.util.download
+</a><a href="#h17-0-1" id="h17-0-1" class="i">+
+</a><a href="#h17-0-2" id="h17-0-2" class="i">+import kotlinx.coroutines.CoroutineScope
+</a><a href="#h17-0-3" id="h17-0-3" class="i">+import kotlinx.coroutines.Dispatchers
+</a><a href="#h17-0-4" id="h17-0-4" class="i">+import kotlinx.coroutines.Job
+</a><a href="#h17-0-5" id="h17-0-5" class="i">+import kotlinx.coroutines.delay
+</a><a href="#h17-0-6" id="h17-0-6" class="i">+import kotlinx.coroutines.launch
+</a><a href="#h17-0-7" id="h17-0-7" class="i">+import me.rhunk.snapenhance.Logger
+</a><a href="#h17-0-8" id="h17-0-8" class="i">+import java.io.BufferedReader
+</a><a href="#h17-0-9" id="h17-0-9" class="i">+import java.io.InputStream
+</a><a href="#h17-0-10" id="h17-0-10" class="i">+import java.io.InputStreamReader
+</a><a href="#h17-0-11" id="h17-0-11" class="i">+import java.io.PrintWriter
+</a><a href="#h17-0-12" id="h17-0-12" class="i">+import java.net.ServerSocket
+</a><a href="#h17-0-13" id="h17-0-13" class="i">+import java.net.Socket
+</a><a href="#h17-0-14" id="h17-0-14" class="i">+import java.net.SocketException
+</a><a href="#h17-0-15" id="h17-0-15" class="i">+import java.util.Locale
+</a><a href="#h17-0-16" id="h17-0-16" class="i">+import java.util.StringTokenizer
+</a><a href="#h17-0-17" id="h17-0-17" class="i">+import java.util.concurrent.ConcurrentHashMap
+</a><a href="#h17-0-18" id="h17-0-18" class="i">+import kotlin.random.Random
+</a><a href="#h17-0-19" id="h17-0-19" class="i">+
+</a><a href="#h17-0-20" id="h17-0-20" class="i">+class HttpServer(
+</a><a href="#h17-0-21" id="h17-0-21" class="i">+    private val timeout: Int = 10000
+</a><a href="#h17-0-22" id="h17-0-22" class="i">+) {
+</a><a href="#h17-0-23" id="h17-0-23" class="i">+    val port = Random.nextInt(10000, 65535)
+</a><a href="#h17-0-24" id="h17-0-24" class="i">+
+</a><a href="#h17-0-25" id="h17-0-25" class="i">+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+</a><a href="#h17-0-26" id="h17-0-26" class="i">+    private var timeoutJob: Job? = null
+</a><a href="#h17-0-27" id="h17-0-27" class="i">+    private var socketJob: Job? = null
+</a><a href="#h17-0-28" id="h17-0-28" class="i">+
+</a><a href="#h17-0-29" id="h17-0-29" class="i">+    private val cachedData = ConcurrentHashMap&lt;String, Pair&lt;InputStream, Long&gt;&gt;()
+</a><a href="#h17-0-30" id="h17-0-30" class="i">+    private var serverSocket: ServerSocket? = null
+</a><a href="#h17-0-31" id="h17-0-31" class="i">+
+</a><a href="#h17-0-32" id="h17-0-32" class="i">+    fun ensureServerStarted(callback: HttpServer.() -&gt; Unit) {
+</a><a href="#h17-0-33" id="h17-0-33" class="i">+        if (serverSocket != null &amp;&amp; !serverSocket!!.isClosed) {
+</a><a href="#h17-0-34" id="h17-0-34" class="i">+            callback(this)
+</a><a href="#h17-0-35" id="h17-0-35" class="i">+            return
+</a><a href="#h17-0-36" id="h17-0-36" class="i">+        }
+</a><a href="#h17-0-37" id="h17-0-37" class="i">+
+</a><a href="#h17-0-38" id="h17-0-38" class="i">+        coroutineScope.launch(Dispatchers.IO) {
+</a><a href="#h17-0-39" id="h17-0-39" class="i">+            Logger.debug(&quot;starting http server on port $port&quot;)
+</a><a href="#h17-0-40" id="h17-0-40" class="i">+            serverSocket = ServerSocket(port)
+</a><a href="#h17-0-41" id="h17-0-41" class="i">+            callback(this@HttpServer)
+</a><a href="#h17-0-42" id="h17-0-42" class="i">+            while (!serverSocket!!.isClosed) {
+</a><a href="#h17-0-43" id="h17-0-43" class="i">+                try {
+</a><a href="#h17-0-44" id="h17-0-44" class="i">+                    val socket = serverSocket!!.accept()
+</a><a href="#h17-0-45" id="h17-0-45" class="i">+                    timeoutJob?.cancel()
+</a><a href="#h17-0-46" id="h17-0-46" class="i">+                    launch {
+</a><a href="#h17-0-47" id="h17-0-47" class="i">+                        handleRequest(socket)
+</a><a href="#h17-0-48" id="h17-0-48" class="i">+                        timeoutJob = launch {
+</a><a href="#h17-0-49" id="h17-0-49" class="i">+                            delay(timeout.toLong())
+</a><a href="#h17-0-50" id="h17-0-50" class="i">+                            Logger.debug(&quot;http server closed due to timeout&quot;)
+</a><a href="#h17-0-51" id="h17-0-51" class="i">+                            runCatching {
+</a><a href="#h17-0-52" id="h17-0-52" class="i">+                                socketJob?.cancel()
+</a><a href="#h17-0-53" id="h17-0-53" class="i">+                                socket.close()
+</a><a href="#h17-0-54" id="h17-0-54" class="i">+                                serverSocket?.close()
+</a><a href="#h17-0-55" id="h17-0-55" class="i">+                            }.onFailure {
+</a><a href="#h17-0-56" id="h17-0-56" class="i">+                                Logger.error(it)
+</a><a href="#h17-0-57" id="h17-0-57" class="i">+                            }
+</a><a href="#h17-0-58" id="h17-0-58" class="i">+                        }
+</a><a href="#h17-0-59" id="h17-0-59" class="i">+                    }
+</a><a href="#h17-0-60" id="h17-0-60" class="i">+                } catch (e: SocketException) {
+</a><a href="#h17-0-61" id="h17-0-61" class="i">+                    Logger.debug(&quot;http server timed out&quot;)
+</a><a href="#h17-0-62" id="h17-0-62" class="i">+                    break;
+</a><a href="#h17-0-63" id="h17-0-63" class="i">+                } catch (e: Throwable) {
+</a><a href="#h17-0-64" id="h17-0-64" class="i">+                    Logger.error(&quot;failed to handle request&quot;, e)
+</a><a href="#h17-0-65" id="h17-0-65" class="i">+                }
+</a><a href="#h17-0-66" id="h17-0-66" class="i">+            }
+</a><a href="#h17-0-67" id="h17-0-67" class="i">+        }.also { socketJob = it }
+</a><a href="#h17-0-68" id="h17-0-68" class="i">+    }
+</a><a href="#h17-0-69" id="h17-0-69" class="i">+
+</a><a href="#h17-0-70" id="h17-0-70" class="i">+    fun close() {
+</a><a href="#h17-0-71" id="h17-0-71" class="i">+        serverSocket?.close()
+</a><a href="#h17-0-72" id="h17-0-72" class="i">+    }
+</a><a href="#h17-0-73" id="h17-0-73" class="i">+
+</a><a href="#h17-0-74" id="h17-0-74" class="i">+    fun putDownloadableContent(inputStream: InputStream, size: Long): String {
+</a><a href="#h17-0-75" id="h17-0-75" class="i">+        val key = System.nanoTime().toString(16)
+</a><a href="#h17-0-76" id="h17-0-76" class="i">+        cachedData[key] = inputStream to size
+</a><a href="#h17-0-77" id="h17-0-77" class="i">+        return &quot;http://127.0.0.1:$port/$key&quot;
+</a><a href="#h17-0-78" id="h17-0-78" class="i">+    }
+</a><a href="#h17-0-79" id="h17-0-79" class="i">+
+</a><a href="#h17-0-80" id="h17-0-80" class="i">+    private fun handleRequest(socket: Socket) {
+</a><a href="#h17-0-81" id="h17-0-81" class="i">+        val reader = BufferedReader(InputStreamReader(socket.getInputStream()))
+</a><a href="#h17-0-82" id="h17-0-82" class="i">+        val outputStream = socket.getOutputStream()
+</a><a href="#h17-0-83" id="h17-0-83" class="i">+        val writer = PrintWriter(outputStream)
+</a><a href="#h17-0-84" id="h17-0-84" class="i">+        val line = reader.readLine() ?: return
+</a><a href="#h17-0-85" id="h17-0-85" class="i">+        fun close() {
+</a><a href="#h17-0-86" id="h17-0-86" class="i">+            runCatching {
+</a><a href="#h17-0-87" id="h17-0-87" class="i">+                reader.close()
+</a><a href="#h17-0-88" id="h17-0-88" class="i">+                writer.close()
+</a><a href="#h17-0-89" id="h17-0-89" class="i">+                outputStream.close()
+</a><a href="#h17-0-90" id="h17-0-90" class="i">+                socket.close()
+</a><a href="#h17-0-91" id="h17-0-91" class="i">+            }.onFailure {
+</a><a href="#h17-0-92" id="h17-0-92" class="i">+                Logger.error(&quot;failed to close socket&quot;, it)
+</a><a href="#h17-0-93" id="h17-0-93" class="i">+            }
+</a><a href="#h17-0-94" id="h17-0-94" class="i">+        }
+</a><a href="#h17-0-95" id="h17-0-95" class="i">+        val parse = StringTokenizer(line)
+</a><a href="#h17-0-96" id="h17-0-96" class="i">+        val method = parse.nextToken().uppercase(Locale.getDefault())
+</a><a href="#h17-0-97" id="h17-0-97" class="i">+        var fileRequested = parse.nextToken().lowercase(Locale.getDefault())
+</a><a href="#h17-0-98" id="h17-0-98" class="i">+        Logger.debug(&quot;[http-server:${port}] $method $fileRequested&quot;)
+</a><a href="#h17-0-99" id="h17-0-99" class="i">+
+</a><a href="#h17-0-100" id="h17-0-100" class="i">+        if (method != &quot;GET&quot;) {
+</a><a href="#h17-0-101" id="h17-0-101" class="i">+            with(writer) {
+</a><a href="#h17-0-102" id="h17-0-102" class="i">+                println(&quot;HTTP/1.1 501 Not Implemented&quot;)
+</a><a href="#h17-0-103" id="h17-0-103" class="i">+                println(&quot;Content-type: &quot; + &quot;application/octet-stream&quot;)
+</a><a href="#h17-0-104" id="h17-0-104" class="i">+                println(&quot;Content-length: &quot; + 0)
+</a><a href="#h17-0-105" id="h17-0-105" class="i">+                println()
+</a><a href="#h17-0-106" id="h17-0-106" class="i">+                flush()
+</a><a href="#h17-0-107" id="h17-0-107" class="i">+            }
+</a><a href="#h17-0-108" id="h17-0-108" class="i">+            close()
+</a><a href="#h17-0-109" id="h17-0-109" class="i">+            return
+</a><a href="#h17-0-110" id="h17-0-110" class="i">+        }
+</a><a href="#h17-0-111" id="h17-0-111" class="i">+        if (fileRequested.startsWith(&quot;/&quot;)) {
+</a><a href="#h17-0-112" id="h17-0-112" class="i">+            fileRequested = fileRequested.substring(1)
+</a><a href="#h17-0-113" id="h17-0-113" class="i">+        }
+</a><a href="#h17-0-114" id="h17-0-114" class="i">+        if (!cachedData.containsKey(fileRequested)) {
+</a><a href="#h17-0-115" id="h17-0-115" class="i">+            with(writer) {
+</a><a href="#h17-0-116" id="h17-0-116" class="i">+                println(&quot;HTTP/1.1 404 Not Found&quot;)
+</a><a href="#h17-0-117" id="h17-0-117" class="i">+                println(&quot;Content-type: &quot; + &quot;application/octet-stream&quot;)
+</a><a href="#h17-0-118" id="h17-0-118" class="i">+                println(&quot;Content-length: &quot; + 0)
+</a><a href="#h17-0-119" id="h17-0-119" class="i">+                println()
+</a><a href="#h17-0-120" id="h17-0-120" class="i">+                flush()
+</a><a href="#h17-0-121" id="h17-0-121" class="i">+            }
+</a><a href="#h17-0-122" id="h17-0-122" class="i">+            close()
+</a><a href="#h17-0-123" id="h17-0-123" class="i">+            return
+</a><a href="#h17-0-124" id="h17-0-124" class="i">+        }
+</a><a href="#h17-0-125" id="h17-0-125" class="i">+        val requestedData = cachedData[fileRequested]!!
+</a><a href="#h17-0-126" id="h17-0-126" class="i">+        with(writer) {
+</a><a href="#h17-0-127" id="h17-0-127" class="i">+            println(&quot;HTTP/1.1 200 OK&quot;)
+</a><a href="#h17-0-128" id="h17-0-128" class="i">+            println(&quot;Content-type: &quot; + &quot;application/octet-stream&quot;)
+</a><a href="#h17-0-129" id="h17-0-129" class="i">+            println(&quot;Content-length: &quot; + requestedData.second)
+</a><a href="#h17-0-130" id="h17-0-130" class="i">+            println()
+</a><a href="#h17-0-131" id="h17-0-131" class="i">+            flush()
+</a><a href="#h17-0-132" id="h17-0-132" class="i">+        }
+</a><a href="#h17-0-133" id="h17-0-133" class="i">+        requestedData.first.copyTo(outputStream)
+</a><a href="#h17-0-134" id="h17-0-134" class="i">+        outputStream.flush()
+</a><a href="#h17-0-135" id="h17-0-135" class="i">+        cachedData.remove(fileRequested)
+</a><a href="#h17-0-136" id="h17-0-136" class="i">+        close()
+</a><a href="#h17-0-137" id="h17-0-137" class="i">+    }
+</a><a href="#h17-0-138" id="h17-0-138" class="i">+}</a><a href="#h17-0-139" id="h17-0-139" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

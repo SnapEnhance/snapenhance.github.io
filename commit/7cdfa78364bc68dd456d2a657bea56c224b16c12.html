@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(manager/scripts): pull refresh - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/7cdfa78364bc68dd456d2a657bea56c224b16c12.html">7cdfa78364bc68dd456d2a657bea56c224b16c12</a>
+<b>parent</b> <a href="../commit/a8e74c363c73ec9480fd7d7281c774eb18d9fb94.html">a8e74c363c73ec9480fd7d7281c774eb18d9fb94</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu,  5 Oct 2023 22:13:31 +0200
+
+feat(manager/scripts): pull refresh
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/InterfaceManager.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a></td><td> | </td><td class="num">71</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">---------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefresh.kt</a></td><td> | </td><td class="num">120</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h4">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefreshIndicator.kt</a></td><td> | </td><td class="num">238</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h5">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefreshIndicatorTransform.kt</a></td><td> | </td><td class="num">75</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h6">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefreshState.kt</a></td><td> | </td><td class="num">219</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/UnlimitedSnapViewTime.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+</table></pre><pre>8 files changed, 717 insertions(+), 20 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -52,11 +52,15 @@ class RemoteScriptManager(
+</a>             if (getModuleDataFolder(name) == null) {
+                 context.log.warn(&quot;Module data folder not found for $name&quot;)
+             }
+<a href="#h0-0-3" id="h0-0-3" class="d">-            val content = getScriptContent(name) ?: return@forEach
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-            runtime.load(name, content)
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+            loadScript(name)
+</a>         }
+     }
+ 
+<a href="#h0-0-9" id="h0-0-9" class="i">+    fun loadScript(name: String) {
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+        val content = getScriptContent(name) ?: return
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+        runtime.load(name, content)
+</a><a href="#h0-0-12" id="h0-0-12" class="i">+    }
+</a><a href="#h0-0-13" id="h0-0-13" class="i">+
+</a>     fun getScriptInterface(scriptName: String, interfaceName: String)
+             = userInterfaces[scriptName]?.get(interfaceName)
+ 
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/InterfaceManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/InterfaceManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/InterfaceManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/impl/ui/InterfaceManager.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -71,7 +71,7 @@ class InterfaceManager(
+</a> ) {
+     @JSFunction
+     fun create(name: String, callback: Function) {
+<a href="#h1-0-3" id="h1-0-3" class="d">-        logger.info(&quot;Creating interface for ${moduleInfo.name}&quot;)
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+        logger.info(&quot;Creating interface $name for ${moduleInfo.name}&quot;)
+</a>         val interfaceBuilder = InterfaceBuilder()
+         callback.call(Context.getCurrentContext(), callback, callback, arrayOf(interfaceBuilder))
+         registerInterface(name, interfaceBuilder)
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -12,11 +12,15 @@ import androidx.compose.ui.Modifier
+</a> import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+<a href="#h2-0-3" id="h2-0-3" class="i">+import kotlinx.coroutines.delay
+</a> import kotlinx.coroutines.launch
+ import me.rhunk.snapenhance.scripting.impl.ui.components.Node
+ import me.rhunk.snapenhance.scripting.impl.ui.components.NodeType
+ import me.rhunk.snapenhance.scripting.type.ModuleInfo
+ import me.rhunk.snapenhance.ui.manager.Section
+<a href="#h2-0-9" id="h2-0-9" class="i">+import me.rhunk.snapenhance.ui.util.pullrefresh.PullRefreshIndicator
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+import me.rhunk.snapenhance.ui.util.pullrefresh.pullRefresh
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+import me.rhunk.snapenhance.ui.util.pullrefresh.rememberPullRefreshState
+</a> import kotlin.math.abs
+ 
+ class ScriptsSection : Section() {
+<a href="#h2-1" id="h2-1" class="h">@@ -70,12 +74,14 @@ class ScriptsSection : Section() {
+</a>                     checked = enabled,
+                     onCheckedChange = {
+                         context.modDatabase.setScriptEnabled(script.name, it)
+<a href="#h2-1-3" id="h2-1-3" class="i">+                        if (it) {
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+                            context.scriptManager.loadScript(script.name)
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+                        }
+</a>                         enabled = it
+                     }
+                 )
+             }
+ 
+<a href="#h2-1-11" id="h2-1-11" class="d">-
+</a>             if (openSettings) {
+                 ScriptSettings(script)
+             }
+<a href="#h2-2" id="h2-2" class="h">@@ -100,7 +106,11 @@ class ScriptsSection : Section() {
+</a>         val rowColumnModifier = Modifier
+             .then(if (cachedAttributes[&quot;fillMaxWidth&quot;] as? Boolean == true) Modifier.fillMaxWidth() else Modifier)
+             .then(if (cachedAttributes[&quot;fillMaxHeight&quot;] as? Boolean == true) Modifier.fillMaxHeight() else Modifier)
+<a href="#h2-2-3" id="h2-2-3" class="d">-            .padding((cachedAttributes[&quot;padding&quot;]?.toString()?.toInt()?.let { abs(it) } ?: 2).dp)
+</a><a href="#h2-2-4" id="h2-2-4" class="i">+            .padding(
+</a><a href="#h2-2-5" id="h2-2-5" class="i">+                (cachedAttributes[&quot;padding&quot;]
+</a><a href="#h2-2-6" id="h2-2-6" class="i">+                    ?.toString()
+</a><a href="#h2-2-7" id="h2-2-7" class="i">+                    ?.toInt()
+</a><a href="#h2-2-8" id="h2-2-8" class="i">+                    ?.let { abs(it) } ?: 2).dp)
+</a> 
+         fun runCallbackSafe(callback: () -&gt; Unit) {
+             runCatching {
+<a href="#h2-3" id="h2-3" class="h">@@ -219,25 +229,56 @@ class ScriptsSection : Section() {
+</a> 
+     @Composable
+     override fun Content() {
+<a href="#h2-3-3" id="h2-3-3" class="d">-        val scriptModules = remember {
+</a><a href="#h2-3-4" id="h2-3-4" class="d">-            context.modDatabase.getScripts()
+</a><a href="#h2-3-5" id="h2-3-5" class="i">+        var scriptModules by remember {
+</a><a href="#h2-3-6" id="h2-3-6" class="i">+            mutableStateOf(context.modDatabase.getScripts())
+</a><a href="#h2-3-7" id="h2-3-7" class="i">+        }
+</a><a href="#h2-3-8" id="h2-3-8" class="i">+        val coroutineScope = rememberCoroutineScope()
+</a><a href="#h2-3-9" id="h2-3-9" class="i">+
+</a><a href="#h2-3-10" id="h2-3-10" class="i">+        var refreshing by remember {
+</a><a href="#h2-3-11" id="h2-3-11" class="i">+            mutableStateOf(false)
+</a>         }
+ 
+<a href="#h2-3-14" id="h2-3-14" class="d">-        LazyColumn(
+</a><a href="#h2-3-15" id="h2-3-15" class="i">+        val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = {
+</a><a href="#h2-3-16" id="h2-3-16" class="i">+            refreshing = true
+</a><a href="#h2-3-17" id="h2-3-17" class="i">+            runCatching {
+</a><a href="#h2-3-18" id="h2-3-18" class="i">+                context.scriptManager.sync()
+</a><a href="#h2-3-19" id="h2-3-19" class="i">+                scriptModules = context.modDatabase.getScripts()
+</a><a href="#h2-3-20" id="h2-3-20" class="i">+            }.onFailure {
+</a><a href="#h2-3-21" id="h2-3-21" class="i">+                context.log.error(&quot;Failed to sync scripts&quot;, it)
+</a><a href="#h2-3-22" id="h2-3-22" class="i">+            }
+</a><a href="#h2-3-23" id="h2-3-23" class="i">+            coroutineScope.launch {
+</a><a href="#h2-3-24" id="h2-3-24" class="i">+                delay(300)
+</a><a href="#h2-3-25" id="h2-3-25" class="i">+                refreshing = false
+</a><a href="#h2-3-26" id="h2-3-26" class="i">+            }
+</a><a href="#h2-3-27" id="h2-3-27" class="i">+        })
+</a><a href="#h2-3-28" id="h2-3-28" class="i">+
+</a><a href="#h2-3-29" id="h2-3-29" class="i">+        Box(
+</a>             modifier = Modifier.fillMaxSize()
+         ) {
+<a href="#h2-3-32" id="h2-3-32" class="d">-            item {
+</a><a href="#h2-3-33" id="h2-3-33" class="d">-                if (scriptModules.isEmpty()) {
+</a><a href="#h2-3-34" id="h2-3-34" class="d">-                    Text(
+</a><a href="#h2-3-35" id="h2-3-35" class="d">-                        text = &quot;No scripts found&quot;,
+</a><a href="#h2-3-36" id="h2-3-36" class="d">-                        style = MaterialTheme.typography.bodySmall,
+</a><a href="#h2-3-37" id="h2-3-37" class="d">-                        modifier = Modifier.padding(8.dp)
+</a><a href="#h2-3-38" id="h2-3-38" class="d">-                    )
+</a><a href="#h2-3-39" id="h2-3-39" class="i">+            LazyColumn(
+</a><a href="#h2-3-40" id="h2-3-40" class="i">+                modifier = Modifier
+</a><a href="#h2-3-41" id="h2-3-41" class="i">+                    .fillMaxSize()
+</a><a href="#h2-3-42" id="h2-3-42" class="i">+                    .pullRefresh(pullRefreshState),
+</a><a href="#h2-3-43" id="h2-3-43" class="i">+            ) {
+</a><a href="#h2-3-44" id="h2-3-44" class="i">+                item {
+</a><a href="#h2-3-45" id="h2-3-45" class="i">+                    if (scriptModules.isEmpty()) {
+</a><a href="#h2-3-46" id="h2-3-46" class="i">+                        Text(
+</a><a href="#h2-3-47" id="h2-3-47" class="i">+                            text = &quot;No scripts found&quot;,
+</a><a href="#h2-3-48" id="h2-3-48" class="i">+                            style = MaterialTheme.typography.bodySmall,
+</a><a href="#h2-3-49" id="h2-3-49" class="i">+                            modifier = Modifier.padding(8.dp).align(Alignment.Center)
+</a><a href="#h2-3-50" id="h2-3-50" class="i">+                        )
+</a><a href="#h2-3-51" id="h2-3-51" class="i">+                    }
+</a><a href="#h2-3-52" id="h2-3-52" class="i">+                }
+</a><a href="#h2-3-53" id="h2-3-53" class="i">+                items(scriptModules.size) { index -&gt;
+</a><a href="#h2-3-54" id="h2-3-54" class="i">+                    ModuleItem(scriptModules[index])
+</a>                 }
+             }
+<a href="#h2-3-57" id="h2-3-57" class="d">-            items(scriptModules.size) { index -&gt;
+</a><a href="#h2-3-58" id="h2-3-58" class="d">-                ModuleItem(scriptModules[index])
+</a><a href="#h2-3-59" id="h2-3-59" class="d">-            }
+</a><a href="#h2-3-60" id="h2-3-60" class="i">+
+</a><a href="#h2-3-61" id="h2-3-61" class="i">+            PullRefreshIndicator(
+</a><a href="#h2-3-62" id="h2-3-62" class="i">+                refreshing = refreshing,
+</a><a href="#h2-3-63" id="h2-3-63" class="i">+                state = pullRefreshState,
+</a><a href="#h2-3-64" id="h2-3-64" class="i">+                modifier = Modifier.align(Alignment.TopCenter)
+</a><a href="#h2-3-65" id="h2-3-65" class="i">+            )
+</a>         }
+     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefresh.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefresh.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefresh.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefresh.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -0,0 +1,120 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="i">+/*
+</a><a href="#h3-0-1" id="h3-0-1" class="i">+ * Copyright 2022 The Android Open Source Project
+</a><a href="#h3-0-2" id="h3-0-2" class="i">+ *
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+ * you may not use this file except in compliance with the License.
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+ * You may obtain a copy of the License at
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+ *
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+ *      http://www.apache.org/licenses/LICENSE-2.0
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+ *
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+ * Unless required by applicable law or agreed to in writing, software
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+ * See the License for the specific language governing permissions and
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+ * limitations under the License.
+</a><a href="#h3-0-14" id="h3-0-14" class="i">+ */
+</a><a href="#h3-0-15" id="h3-0-15" class="i">+
+</a><a href="#h3-0-16" id="h3-0-16" class="i">+package me.rhunk.snapenhance.ui.util.pullrefresh
+</a><a href="#h3-0-17" id="h3-0-17" class="i">+
+</a><a href="#h3-0-18" id="h3-0-18" class="i">+import androidx.compose.ui.Modifier
+</a><a href="#h3-0-19" id="h3-0-19" class="i">+import androidx.compose.ui.geometry.Offset
+</a><a href="#h3-0-20" id="h3-0-20" class="i">+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+</a><a href="#h3-0-21" id="h3-0-21" class="i">+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+</a><a href="#h3-0-22" id="h3-0-22" class="i">+import androidx.compose.ui.input.nestedscroll.NestedScrollSource.Companion.Drag
+</a><a href="#h3-0-23" id="h3-0-23" class="i">+import androidx.compose.ui.input.nestedscroll.nestedScroll
+</a><a href="#h3-0-24" id="h3-0-24" class="i">+import androidx.compose.ui.platform.debugInspectorInfo
+</a><a href="#h3-0-25" id="h3-0-25" class="i">+import androidx.compose.ui.platform.inspectable
+</a><a href="#h3-0-26" id="h3-0-26" class="i">+import androidx.compose.ui.unit.Velocity
+</a><a href="#h3-0-27" id="h3-0-27" class="i">+
+</a><a href="#h3-0-28" id="h3-0-28" class="i">+/**
+</a><a href="#h3-0-29" id="h3-0-29" class="i">+ * A nested scroll modifier that provides scroll events to [state].
+</a><a href="#h3-0-30" id="h3-0-30" class="i">+ *
+</a><a href="#h3-0-31" id="h3-0-31" class="i">+ * Note that this modifier must be added above a scrolling container, such as a lazy column, in
+</a><a href="#h3-0-32" id="h3-0-32" class="i">+ * order to receive scroll events. For example:
+</a><a href="#h3-0-33" id="h3-0-33" class="i">+ *
+</a><a href="#h3-0-34" id="h3-0-34" class="i">+ * @sample androidx.compose.material.samples.PullRefreshSample
+</a><a href="#h3-0-35" id="h3-0-35" class="i">+ *
+</a><a href="#h3-0-36" id="h3-0-36" class="i">+ * @param state The [PullRefreshState] associated with this pull-to-refresh component.
+</a><a href="#h3-0-37" id="h3-0-37" class="i">+ * The state will be updated by this modifier.
+</a><a href="#h3-0-38" id="h3-0-38" class="i">+ * @param enabled If not enabled, all scroll delta and fling velocity will be ignored.
+</a><a href="#h3-0-39" id="h3-0-39" class="i">+ */
+</a><a href="#h3-0-40" id="h3-0-40" class="i">+// TODO(b/244423199): Move pullRefresh into its own material library similar to material-ripple.
+</a><a href="#h3-0-41" id="h3-0-41" class="i">+fun Modifier.pullRefresh(
+</a><a href="#h3-0-42" id="h3-0-42" class="i">+    state: PullRefreshState,
+</a><a href="#h3-0-43" id="h3-0-43" class="i">+    enabled: Boolean = true,
+</a><a href="#h3-0-44" id="h3-0-44" class="i">+) = inspectable(
+</a><a href="#h3-0-45" id="h3-0-45" class="i">+    inspectorInfo = debugInspectorInfo {
+</a><a href="#h3-0-46" id="h3-0-46" class="i">+        name = &quot;pullRefresh&quot;
+</a><a href="#h3-0-47" id="h3-0-47" class="i">+        properties[&quot;state&quot;] = state
+</a><a href="#h3-0-48" id="h3-0-48" class="i">+        properties[&quot;enabled&quot;] = enabled
+</a><a href="#h3-0-49" id="h3-0-49" class="i">+    },
+</a><a href="#h3-0-50" id="h3-0-50" class="i">+) {
+</a><a href="#h3-0-51" id="h3-0-51" class="i">+    Modifier.pullRefresh(state::onPull, state::onRelease, enabled)
+</a><a href="#h3-0-52" id="h3-0-52" class="i">+}
+</a><a href="#h3-0-53" id="h3-0-53" class="i">+
+</a><a href="#h3-0-54" id="h3-0-54" class="i">+/**
+</a><a href="#h3-0-55" id="h3-0-55" class="i">+ * A nested scroll modifier that provides [onPull] and [onRelease] callbacks to aid building custom
+</a><a href="#h3-0-56" id="h3-0-56" class="i">+ * pull refresh components.
+</a><a href="#h3-0-57" id="h3-0-57" class="i">+ *
+</a><a href="#h3-0-58" id="h3-0-58" class="i">+ * Note that this modifier must be added above a scrolling container, such as a lazy column, in
+</a><a href="#h3-0-59" id="h3-0-59" class="i">+ * order to receive scroll events. For example:
+</a><a href="#h3-0-60" id="h3-0-60" class="i">+ *
+</a><a href="#h3-0-61" id="h3-0-61" class="i">+ * @sample androidx.compose.material.samples.CustomPullRefreshSample
+</a><a href="#h3-0-62" id="h3-0-62" class="i">+ *
+</a><a href="#h3-0-63" id="h3-0-63" class="i">+ * @param onPull Callback for dispatching vertical scroll delta, takes float pullDelta as argument.
+</a><a href="#h3-0-64" id="h3-0-64" class="i">+ * Positive delta (pulling down) is dispatched only if the child does not consume it (i.e. pulling
+</a><a href="#h3-0-65" id="h3-0-65" class="i">+ * down despite being at the top of a scrollable component), whereas negative delta (swiping up) is
+</a><a href="#h3-0-66" id="h3-0-66" class="i">+ * dispatched first (in case it is needed to push the indicator back up), and then the unconsumed
+</a><a href="#h3-0-67" id="h3-0-67" class="i">+ * delta is passed on to the child. The callback returns how much delta was consumed.
+</a><a href="#h3-0-68" id="h3-0-68" class="i">+ * @param onRelease Callback for when drag is released, takes float flingVelocity as argument.
+</a><a href="#h3-0-69" id="h3-0-69" class="i">+ * The callback returns how much velocity was consumed - in most cases this should only consume
+</a><a href="#h3-0-70" id="h3-0-70" class="i">+ * velocity if pull refresh has been dragged already and the velocity is positive (the fling is
+</a><a href="#h3-0-71" id="h3-0-71" class="i">+ * downwards), as an upwards fling should typically still scroll a scrollable component beneath the
+</a><a href="#h3-0-72" id="h3-0-72" class="i">+ * pullRefresh. This is invoked before any remaining velocity is passed to the child.
+</a><a href="#h3-0-73" id="h3-0-73" class="i">+ * @param enabled If not enabled, all scroll delta and fling velocity will be ignored and neither
+</a><a href="#h3-0-74" id="h3-0-74" class="i">+ * [onPull] nor [onRelease] will be invoked.
+</a><a href="#h3-0-75" id="h3-0-75" class="i">+ */
+</a><a href="#h3-0-76" id="h3-0-76" class="i">+fun Modifier.pullRefresh(
+</a><a href="#h3-0-77" id="h3-0-77" class="i">+    onPull: (pullDelta: Float) -&gt; Float,
+</a><a href="#h3-0-78" id="h3-0-78" class="i">+    onRelease: suspend (flingVelocity: Float) -&gt; Float,
+</a><a href="#h3-0-79" id="h3-0-79" class="i">+    enabled: Boolean = true,
+</a><a href="#h3-0-80" id="h3-0-80" class="i">+) = inspectable(
+</a><a href="#h3-0-81" id="h3-0-81" class="i">+    inspectorInfo = debugInspectorInfo {
+</a><a href="#h3-0-82" id="h3-0-82" class="i">+        name = &quot;pullRefresh&quot;
+</a><a href="#h3-0-83" id="h3-0-83" class="i">+        properties[&quot;onPull&quot;] = onPull
+</a><a href="#h3-0-84" id="h3-0-84" class="i">+        properties[&quot;onRelease&quot;] = onRelease
+</a><a href="#h3-0-85" id="h3-0-85" class="i">+        properties[&quot;enabled&quot;] = enabled
+</a><a href="#h3-0-86" id="h3-0-86" class="i">+    },
+</a><a href="#h3-0-87" id="h3-0-87" class="i">+) {
+</a><a href="#h3-0-88" id="h3-0-88" class="i">+    Modifier.nestedScroll(PullRefreshNestedScrollConnection(onPull, onRelease, enabled))
+</a><a href="#h3-0-89" id="h3-0-89" class="i">+}
+</a><a href="#h3-0-90" id="h3-0-90" class="i">+
+</a><a href="#h3-0-91" id="h3-0-91" class="i">+private class PullRefreshNestedScrollConnection(
+</a><a href="#h3-0-92" id="h3-0-92" class="i">+    private val onPull: (pullDelta: Float) -&gt; Float,
+</a><a href="#h3-0-93" id="h3-0-93" class="i">+    private val onRelease: suspend (flingVelocity: Float) -&gt; Float,
+</a><a href="#h3-0-94" id="h3-0-94" class="i">+    private val enabled: Boolean,
+</a><a href="#h3-0-95" id="h3-0-95" class="i">+) : NestedScrollConnection {
+</a><a href="#h3-0-96" id="h3-0-96" class="i">+
+</a><a href="#h3-0-97" id="h3-0-97" class="i">+    override fun onPreScroll(
+</a><a href="#h3-0-98" id="h3-0-98" class="i">+        available: Offset,
+</a><a href="#h3-0-99" id="h3-0-99" class="i">+        source: NestedScrollSource,
+</a><a href="#h3-0-100" id="h3-0-100" class="i">+    ): Offset = when {
+</a><a href="#h3-0-101" id="h3-0-101" class="i">+        !enabled -&gt; Offset.Zero
+</a><a href="#h3-0-102" id="h3-0-102" class="i">+        source == Drag &amp;&amp; available.y &lt; 0 -&gt; Offset(0f, onPull(available.y)) // Swiping up
+</a><a href="#h3-0-103" id="h3-0-103" class="i">+        else -&gt; Offset.Zero
+</a><a href="#h3-0-104" id="h3-0-104" class="i">+    }
+</a><a href="#h3-0-105" id="h3-0-105" class="i">+
+</a><a href="#h3-0-106" id="h3-0-106" class="i">+    override fun onPostScroll(
+</a><a href="#h3-0-107" id="h3-0-107" class="i">+        consumed: Offset,
+</a><a href="#h3-0-108" id="h3-0-108" class="i">+        available: Offset,
+</a><a href="#h3-0-109" id="h3-0-109" class="i">+        source: NestedScrollSource,
+</a><a href="#h3-0-110" id="h3-0-110" class="i">+    ): Offset = when {
+</a><a href="#h3-0-111" id="h3-0-111" class="i">+        !enabled -&gt; Offset.Zero
+</a><a href="#h3-0-112" id="h3-0-112" class="i">+        source == Drag &amp;&amp; available.y &gt; 0 -&gt; Offset(0f, onPull(available.y)) // Pulling down
+</a><a href="#h3-0-113" id="h3-0-113" class="i">+        else -&gt; Offset.Zero
+</a><a href="#h3-0-114" id="h3-0-114" class="i">+    }
+</a><a href="#h3-0-115" id="h3-0-115" class="i">+
+</a><a href="#h3-0-116" id="h3-0-116" class="i">+    override suspend fun onPreFling(available: Velocity): Velocity {
+</a><a href="#h3-0-117" id="h3-0-117" class="i">+        return Velocity(0f, onRelease(available.y))
+</a><a href="#h3-0-118" id="h3-0-118" class="i">+    }
+</a><a href="#h3-0-119" id="h3-0-119" class="i">+}
+</a><b>diff --git a/<a id="h4" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefreshIndicator.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefreshIndicator.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefreshIndicator.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefreshIndicator.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -0,0 +1,238 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="i">+/*
+</a><a href="#h4-0-1" id="h4-0-1" class="i">+ * Copyright 2022 The Android Open Source Project
+</a><a href="#h4-0-2" id="h4-0-2" class="i">+ *
+</a><a href="#h4-0-3" id="h4-0-3" class="i">+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+ * you may not use this file except in compliance with the License.
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+ * You may obtain a copy of the License at
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+ *
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+ *      http://www.apache.org/licenses/LICENSE-2.0
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+ *
+</a><a href="#h4-0-9" id="h4-0-9" class="i">+ * Unless required by applicable law or agreed to in writing, software
+</a><a href="#h4-0-10" id="h4-0-10" class="i">+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+</a><a href="#h4-0-11" id="h4-0-11" class="i">+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+</a><a href="#h4-0-12" id="h4-0-12" class="i">+ * See the License for the specific language governing permissions and
+</a><a href="#h4-0-13" id="h4-0-13" class="i">+ * limitations under the License.
+</a><a href="#h4-0-14" id="h4-0-14" class="i">+ */
+</a><a href="#h4-0-15" id="h4-0-15" class="i">+
+</a><a href="#h4-0-16" id="h4-0-16" class="i">+package me.rhunk.snapenhance.ui.util.pullrefresh
+</a><a href="#h4-0-17" id="h4-0-17" class="i">+
+</a><a href="#h4-0-18" id="h4-0-18" class="i">+import androidx.compose.animation.Crossfade
+</a><a href="#h4-0-19" id="h4-0-19" class="i">+import androidx.compose.animation.core.LinearEasing
+</a><a href="#h4-0-20" id="h4-0-20" class="i">+import androidx.compose.animation.core.animateFloatAsState
+</a><a href="#h4-0-21" id="h4-0-21" class="i">+import androidx.compose.animation.core.tween
+</a><a href="#h4-0-22" id="h4-0-22" class="i">+import androidx.compose.foundation.Canvas
+</a><a href="#h4-0-23" id="h4-0-23" class="i">+import androidx.compose.foundation.layout.Box
+</a><a href="#h4-0-24" id="h4-0-24" class="i">+import androidx.compose.foundation.layout.fillMaxSize
+</a><a href="#h4-0-25" id="h4-0-25" class="i">+import androidx.compose.foundation.layout.size
+</a><a href="#h4-0-26" id="h4-0-26" class="i">+import androidx.compose.foundation.shape.CircleShape
+</a><a href="#h4-0-27" id="h4-0-27" class="i">+import androidx.compose.material3.CircularProgressIndicator
+</a><a href="#h4-0-28" id="h4-0-28" class="i">+import androidx.compose.material3.MaterialTheme
+</a><a href="#h4-0-29" id="h4-0-29" class="i">+import androidx.compose.material3.Surface
+</a><a href="#h4-0-30" id="h4-0-30" class="i">+import androidx.compose.material3.contentColorFor
+</a><a href="#h4-0-31" id="h4-0-31" class="i">+import androidx.compose.runtime.Composable
+</a><a href="#h4-0-32" id="h4-0-32" class="i">+import androidx.compose.runtime.Immutable
+</a><a href="#h4-0-33" id="h4-0-33" class="i">+import androidx.compose.runtime.derivedStateOf
+</a><a href="#h4-0-34" id="h4-0-34" class="i">+import androidx.compose.runtime.getValue
+</a><a href="#h4-0-35" id="h4-0-35" class="i">+import androidx.compose.runtime.remember
+</a><a href="#h4-0-36" id="h4-0-36" class="i">+import androidx.compose.ui.Alignment
+</a><a href="#h4-0-37" id="h4-0-37" class="i">+import androidx.compose.ui.Modifier
+</a><a href="#h4-0-38" id="h4-0-38" class="i">+import androidx.compose.ui.geometry.Offset
+</a><a href="#h4-0-39" id="h4-0-39" class="i">+import androidx.compose.ui.geometry.Rect
+</a><a href="#h4-0-40" id="h4-0-40" class="i">+import androidx.compose.ui.geometry.center
+</a><a href="#h4-0-41" id="h4-0-41" class="i">+import androidx.compose.ui.graphics.Color
+</a><a href="#h4-0-42" id="h4-0-42" class="i">+import androidx.compose.ui.graphics.Path
+</a><a href="#h4-0-43" id="h4-0-43" class="i">+import androidx.compose.ui.graphics.PathFillType
+</a><a href="#h4-0-44" id="h4-0-44" class="i">+import androidx.compose.ui.graphics.StrokeCap
+</a><a href="#h4-0-45" id="h4-0-45" class="i">+import androidx.compose.ui.graphics.drawscope.DrawScope
+</a><a href="#h4-0-46" id="h4-0-46" class="i">+import androidx.compose.ui.graphics.drawscope.Stroke
+</a><a href="#h4-0-47" id="h4-0-47" class="i">+import androidx.compose.ui.graphics.drawscope.rotate
+</a><a href="#h4-0-48" id="h4-0-48" class="i">+import androidx.compose.ui.semantics.semantics
+</a><a href="#h4-0-49" id="h4-0-49" class="i">+import androidx.compose.ui.unit.dp
+</a><a href="#h4-0-50" id="h4-0-50" class="i">+import kotlin.math.abs
+</a><a href="#h4-0-51" id="h4-0-51" class="i">+import kotlin.math.max
+</a><a href="#h4-0-52" id="h4-0-52" class="i">+import kotlin.math.min
+</a><a href="#h4-0-53" id="h4-0-53" class="i">+import kotlin.math.pow
+</a><a href="#h4-0-54" id="h4-0-54" class="i">+
+</a><a href="#h4-0-55" id="h4-0-55" class="i">+/**
+</a><a href="#h4-0-56" id="h4-0-56" class="i">+ * The default indicator for Compose pull-to-refresh, based on Android&#39;s SwipeRefreshLayout.
+</a><a href="#h4-0-57" id="h4-0-57" class="i">+ *
+</a><a href="#h4-0-58" id="h4-0-58" class="i">+ * @sample androidx.compose.material.samples.PullRefreshSample
+</a><a href="#h4-0-59" id="h4-0-59" class="i">+ *
+</a><a href="#h4-0-60" id="h4-0-60" class="i">+ * @param refreshing A boolean representing whether a refresh is occurring.
+</a><a href="#h4-0-61" id="h4-0-61" class="i">+ * @param state The [PullRefreshState] which controls where and how the indicator will be drawn.
+</a><a href="#h4-0-62" id="h4-0-62" class="i">+ * @param modifier Modifiers for the indicator.
+</a><a href="#h4-0-63" id="h4-0-63" class="i">+ * @param backgroundColor The color of the indicator&#39;s background.
+</a><a href="#h4-0-64" id="h4-0-64" class="i">+ * @param contentColor The color of the indicator&#39;s arc and arrow.
+</a><a href="#h4-0-65" id="h4-0-65" class="i">+ * @param scale A boolean controlling whether the indicator&#39;s size scales with pull progress or not.
+</a><a href="#h4-0-66" id="h4-0-66" class="i">+ */
+</a><a href="#h4-0-67" id="h4-0-67" class="i">+// TODO(b/244423199): Consider whether the state parameter should be replaced with lambdas to
+</a><a href="#h4-0-68" id="h4-0-68" class="i">+//  enable people to use this indicator with custom pull-to-refresh components.
+</a><a href="#h4-0-69" id="h4-0-69" class="i">+@Composable
+</a><a href="#h4-0-70" id="h4-0-70" class="i">+fun PullRefreshIndicator(
+</a><a href="#h4-0-71" id="h4-0-71" class="i">+    refreshing: Boolean,
+</a><a href="#h4-0-72" id="h4-0-72" class="i">+    state: PullRefreshState,
+</a><a href="#h4-0-73" id="h4-0-73" class="i">+    modifier: Modifier = Modifier,
+</a><a href="#h4-0-74" id="h4-0-74" class="i">+    backgroundColor: Color = MaterialTheme.colorScheme.surface,
+</a><a href="#h4-0-75" id="h4-0-75" class="i">+    contentColor: Color = contentColorFor(backgroundColor),
+</a><a href="#h4-0-76" id="h4-0-76" class="i">+    scale: Boolean = false,
+</a><a href="#h4-0-77" id="h4-0-77" class="i">+) {
+</a><a href="#h4-0-78" id="h4-0-78" class="i">+    val showElevation by remember(refreshing, state) {
+</a><a href="#h4-0-79" id="h4-0-79" class="i">+        derivedStateOf { refreshing || state.position &gt; 0.5f }
+</a><a href="#h4-0-80" id="h4-0-80" class="i">+    }
+</a><a href="#h4-0-81" id="h4-0-81" class="i">+
+</a><a href="#h4-0-82" id="h4-0-82" class="i">+    Surface(
+</a><a href="#h4-0-83" id="h4-0-83" class="i">+        modifier = modifier
+</a><a href="#h4-0-84" id="h4-0-84" class="i">+            .size(IndicatorSize)
+</a><a href="#h4-0-85" id="h4-0-85" class="i">+            .pullRefreshIndicatorTransform(state, scale),
+</a><a href="#h4-0-86" id="h4-0-86" class="i">+        shape = SpinnerShape,
+</a><a href="#h4-0-87" id="h4-0-87" class="i">+        color = backgroundColor,
+</a><a href="#h4-0-88" id="h4-0-88" class="i">+        shadowElevation = if (showElevation) Elevation else 0.dp,
+</a><a href="#h4-0-89" id="h4-0-89" class="i">+    ) {
+</a><a href="#h4-0-90" id="h4-0-90" class="i">+        Crossfade(
+</a><a href="#h4-0-91" id="h4-0-91" class="i">+            targetState = refreshing,
+</a><a href="#h4-0-92" id="h4-0-92" class="i">+            animationSpec = tween(durationMillis = CrossfadeDurationMs),
+</a><a href="#h4-0-93" id="h4-0-93" class="i">+        ) { refreshing -&gt;
+</a><a href="#h4-0-94" id="h4-0-94" class="i">+            Box(
+</a><a href="#h4-0-95" id="h4-0-95" class="i">+                modifier = Modifier.fillMaxSize(),
+</a><a href="#h4-0-96" id="h4-0-96" class="i">+                contentAlignment = Alignment.Center,
+</a><a href="#h4-0-97" id="h4-0-97" class="i">+            ) {
+</a><a href="#h4-0-98" id="h4-0-98" class="i">+                val spinnerSize = (ArcRadius + StrokeWidth).times(2)
+</a><a href="#h4-0-99" id="h4-0-99" class="i">+
+</a><a href="#h4-0-100" id="h4-0-100" class="i">+                if (refreshing) {
+</a><a href="#h4-0-101" id="h4-0-101" class="i">+                    CircularProgressIndicator(
+</a><a href="#h4-0-102" id="h4-0-102" class="i">+                        color = contentColor,
+</a><a href="#h4-0-103" id="h4-0-103" class="i">+                        strokeWidth = StrokeWidth,
+</a><a href="#h4-0-104" id="h4-0-104" class="i">+                        modifier = Modifier.size(spinnerSize),
+</a><a href="#h4-0-105" id="h4-0-105" class="i">+                    )
+</a><a href="#h4-0-106" id="h4-0-106" class="i">+                } else {
+</a><a href="#h4-0-107" id="h4-0-107" class="i">+                    CircularArrowIndicator(state, contentColor, Modifier.size(spinnerSize))
+</a><a href="#h4-0-108" id="h4-0-108" class="i">+                }
+</a><a href="#h4-0-109" id="h4-0-109" class="i">+            }
+</a><a href="#h4-0-110" id="h4-0-110" class="i">+        }
+</a><a href="#h4-0-111" id="h4-0-111" class="i">+    }
+</a><a href="#h4-0-112" id="h4-0-112" class="i">+}
+</a><a href="#h4-0-113" id="h4-0-113" class="i">+
+</a><a href="#h4-0-114" id="h4-0-114" class="i">+/**
+</a><a href="#h4-0-115" id="h4-0-115" class="i">+ * Modifier.size MUST be specified.
+</a><a href="#h4-0-116" id="h4-0-116" class="i">+ */
+</a><a href="#h4-0-117" id="h4-0-117" class="i">+@Composable
+</a><a href="#h4-0-118" id="h4-0-118" class="i">+private fun CircularArrowIndicator(
+</a><a href="#h4-0-119" id="h4-0-119" class="i">+    state: PullRefreshState,
+</a><a href="#h4-0-120" id="h4-0-120" class="i">+    color: Color,
+</a><a href="#h4-0-121" id="h4-0-121" class="i">+    modifier: Modifier,
+</a><a href="#h4-0-122" id="h4-0-122" class="i">+) {
+</a><a href="#h4-0-123" id="h4-0-123" class="i">+    val path = remember { Path().apply { fillType = PathFillType.EvenOdd } }
+</a><a href="#h4-0-124" id="h4-0-124" class="i">+
+</a><a href="#h4-0-125" id="h4-0-125" class="i">+    val targetAlpha by remember(state) {
+</a><a href="#h4-0-126" id="h4-0-126" class="i">+        derivedStateOf {
+</a><a href="#h4-0-127" id="h4-0-127" class="i">+            if (state.progress &gt;= 1f) MaxAlpha else MinAlpha
+</a><a href="#h4-0-128" id="h4-0-128" class="i">+        }
+</a><a href="#h4-0-129" id="h4-0-129" class="i">+    }
+</a><a href="#h4-0-130" id="h4-0-130" class="i">+
+</a><a href="#h4-0-131" id="h4-0-131" class="i">+    val alphaState = animateFloatAsState(targetValue = targetAlpha, animationSpec = AlphaTween)
+</a><a href="#h4-0-132" id="h4-0-132" class="i">+
+</a><a href="#h4-0-133" id="h4-0-133" class="i">+    // Empty semantics for tests
+</a><a href="#h4-0-134" id="h4-0-134" class="i">+    Canvas(modifier.semantics {}) {
+</a><a href="#h4-0-135" id="h4-0-135" class="i">+        val values = ArrowValues(state.progress)
+</a><a href="#h4-0-136" id="h4-0-136" class="i">+        val alpha = alphaState.value
+</a><a href="#h4-0-137" id="h4-0-137" class="i">+
+</a><a href="#h4-0-138" id="h4-0-138" class="i">+        rotate(degrees = values.rotation) {
+</a><a href="#h4-0-139" id="h4-0-139" class="i">+            val arcRadius = ArcRadius.toPx() + StrokeWidth.toPx() / 2f
+</a><a href="#h4-0-140" id="h4-0-140" class="i">+            val arcBounds = Rect(
+</a><a href="#h4-0-141" id="h4-0-141" class="i">+                size.center.x - arcRadius,
+</a><a href="#h4-0-142" id="h4-0-142" class="i">+                size.center.y - arcRadius,
+</a><a href="#h4-0-143" id="h4-0-143" class="i">+                size.center.x + arcRadius,
+</a><a href="#h4-0-144" id="h4-0-144" class="i">+                size.center.y + arcRadius,
+</a><a href="#h4-0-145" id="h4-0-145" class="i">+            )
+</a><a href="#h4-0-146" id="h4-0-146" class="i">+            drawArc(
+</a><a href="#h4-0-147" id="h4-0-147" class="i">+                color = color,
+</a><a href="#h4-0-148" id="h4-0-148" class="i">+                alpha = alpha,
+</a><a href="#h4-0-149" id="h4-0-149" class="i">+                startAngle = values.startAngle,
+</a><a href="#h4-0-150" id="h4-0-150" class="i">+                sweepAngle = values.endAngle - values.startAngle,
+</a><a href="#h4-0-151" id="h4-0-151" class="i">+                useCenter = false,
+</a><a href="#h4-0-152" id="h4-0-152" class="i">+                topLeft = arcBounds.topLeft,
+</a><a href="#h4-0-153" id="h4-0-153" class="i">+                size = arcBounds.size,
+</a><a href="#h4-0-154" id="h4-0-154" class="i">+                style = Stroke(
+</a><a href="#h4-0-155" id="h4-0-155" class="i">+                    width = StrokeWidth.toPx(),
+</a><a href="#h4-0-156" id="h4-0-156" class="i">+                    cap = StrokeCap.Square,
+</a><a href="#h4-0-157" id="h4-0-157" class="i">+                ),
+</a><a href="#h4-0-158" id="h4-0-158" class="i">+            )
+</a><a href="#h4-0-159" id="h4-0-159" class="i">+            drawArrow(path, arcBounds, color, alpha, values)
+</a><a href="#h4-0-160" id="h4-0-160" class="i">+        }
+</a><a href="#h4-0-161" id="h4-0-161" class="i">+    }
+</a><a href="#h4-0-162" id="h4-0-162" class="i">+}
+</a><a href="#h4-0-163" id="h4-0-163" class="i">+
+</a><a href="#h4-0-164" id="h4-0-164" class="i">+@Immutable
+</a><a href="#h4-0-165" id="h4-0-165" class="i">+private class ArrowValues(
+</a><a href="#h4-0-166" id="h4-0-166" class="i">+    val rotation: Float,
+</a><a href="#h4-0-167" id="h4-0-167" class="i">+    val startAngle: Float,
+</a><a href="#h4-0-168" id="h4-0-168" class="i">+    val endAngle: Float,
+</a><a href="#h4-0-169" id="h4-0-169" class="i">+    val scale: Float,
+</a><a href="#h4-0-170" id="h4-0-170" class="i">+)
+</a><a href="#h4-0-171" id="h4-0-171" class="i">+
+</a><a href="#h4-0-172" id="h4-0-172" class="i">+private fun ArrowValues(progress: Float): ArrowValues {
+</a><a href="#h4-0-173" id="h4-0-173" class="i">+    // Discard first 40% of progress. Scale remaining progress to full range between 0 and 100%.
+</a><a href="#h4-0-174" id="h4-0-174" class="i">+    val adjustedPercent = max(min(1f, progress) - 0.4f, 0f) * 5 / 3
+</a><a href="#h4-0-175" id="h4-0-175" class="i">+    // How far beyond the threshold pull has gone, as a percentage of the threshold.
+</a><a href="#h4-0-176" id="h4-0-176" class="i">+    val overshootPercent = abs(progress) - 1.0f
+</a><a href="#h4-0-177" id="h4-0-177" class="i">+    // Limit the overshoot to 200%. Linear between 0 and 200.
+</a><a href="#h4-0-178" id="h4-0-178" class="i">+    val linearTension = overshootPercent.coerceIn(0f, 2f)
+</a><a href="#h4-0-179" id="h4-0-179" class="i">+    // Non-linear tension. Increases with linearTension, but at a decreasing rate.
+</a><a href="#h4-0-180" id="h4-0-180" class="i">+    val tensionPercent = linearTension - linearTension.pow(2) / 4
+</a><a href="#h4-0-181" id="h4-0-181" class="i">+
+</a><a href="#h4-0-182" id="h4-0-182" class="i">+    // Calculations based on SwipeRefreshLayout specification.
+</a><a href="#h4-0-183" id="h4-0-183" class="i">+    val endTrim = adjustedPercent * MaxProgressArc
+</a><a href="#h4-0-184" id="h4-0-184" class="i">+    val rotation = (-0.25f + 0.4f * adjustedPercent + tensionPercent) * 0.5f
+</a><a href="#h4-0-185" id="h4-0-185" class="i">+    val startAngle = rotation * 360
+</a><a href="#h4-0-186" id="h4-0-186" class="i">+    val endAngle = (rotation + endTrim) * 360
+</a><a href="#h4-0-187" id="h4-0-187" class="i">+    val scale = min(1f, adjustedPercent)
+</a><a href="#h4-0-188" id="h4-0-188" class="i">+
+</a><a href="#h4-0-189" id="h4-0-189" class="i">+    return ArrowValues(rotation, startAngle, endAngle, scale)
+</a><a href="#h4-0-190" id="h4-0-190" class="i">+}
+</a><a href="#h4-0-191" id="h4-0-191" class="i">+
+</a><a href="#h4-0-192" id="h4-0-192" class="i">+private fun DrawScope.drawArrow(
+</a><a href="#h4-0-193" id="h4-0-193" class="i">+    arrow: Path,
+</a><a href="#h4-0-194" id="h4-0-194" class="i">+    bounds: Rect,
+</a><a href="#h4-0-195" id="h4-0-195" class="i">+    color: Color,
+</a><a href="#h4-0-196" id="h4-0-196" class="i">+    alpha: Float,
+</a><a href="#h4-0-197" id="h4-0-197" class="i">+    values: ArrowValues,
+</a><a href="#h4-0-198" id="h4-0-198" class="i">+) {
+</a><a href="#h4-0-199" id="h4-0-199" class="i">+    arrow.reset()
+</a><a href="#h4-0-200" id="h4-0-200" class="i">+    arrow.moveTo(0f, 0f) // Move to left corner
+</a><a href="#h4-0-201" id="h4-0-201" class="i">+    arrow.lineTo(x = ArrowWidth.toPx() * values.scale, y = 0f) // Line to right corner
+</a><a href="#h4-0-202" id="h4-0-202" class="i">+
+</a><a href="#h4-0-203" id="h4-0-203" class="i">+    // Line to tip of arrow
+</a><a href="#h4-0-204" id="h4-0-204" class="i">+    arrow.lineTo(
+</a><a href="#h4-0-205" id="h4-0-205" class="i">+        x = ArrowWidth.toPx() * values.scale / 2,
+</a><a href="#h4-0-206" id="h4-0-206" class="i">+        y = ArrowHeight.toPx() * values.scale,
+</a><a href="#h4-0-207" id="h4-0-207" class="i">+    )
+</a><a href="#h4-0-208" id="h4-0-208" class="i">+
+</a><a href="#h4-0-209" id="h4-0-209" class="i">+    val radius = min(bounds.width, bounds.height) / 2f
+</a><a href="#h4-0-210" id="h4-0-210" class="i">+    val inset = ArrowWidth.toPx() * values.scale / 2f
+</a><a href="#h4-0-211" id="h4-0-211" class="i">+    arrow.translate(
+</a><a href="#h4-0-212" id="h4-0-212" class="i">+        Offset(
+</a><a href="#h4-0-213" id="h4-0-213" class="i">+            x = radius + bounds.center.x - inset,
+</a><a href="#h4-0-214" id="h4-0-214" class="i">+            y = bounds.center.y + StrokeWidth.toPx() / 2f,
+</a><a href="#h4-0-215" id="h4-0-215" class="i">+        ),
+</a><a href="#h4-0-216" id="h4-0-216" class="i">+    )
+</a><a href="#h4-0-217" id="h4-0-217" class="i">+    arrow.close()
+</a><a href="#h4-0-218" id="h4-0-218" class="i">+    rotate(degrees = values.endAngle) {
+</a><a href="#h4-0-219" id="h4-0-219" class="i">+        drawPath(path = arrow, color = color, alpha = alpha)
+</a><a href="#h4-0-220" id="h4-0-220" class="i">+    }
+</a><a href="#h4-0-221" id="h4-0-221" class="i">+}
+</a><a href="#h4-0-222" id="h4-0-222" class="i">+
+</a><a href="#h4-0-223" id="h4-0-223" class="i">+private const val CrossfadeDurationMs = 100
+</a><a href="#h4-0-224" id="h4-0-224" class="i">+private const val MaxProgressArc = 0.8f
+</a><a href="#h4-0-225" id="h4-0-225" class="i">+
+</a><a href="#h4-0-226" id="h4-0-226" class="i">+private val IndicatorSize = 40.dp
+</a><a href="#h4-0-227" id="h4-0-227" class="i">+private val SpinnerShape = CircleShape
+</a><a href="#h4-0-228" id="h4-0-228" class="i">+private val ArcRadius = 7.5.dp
+</a><a href="#h4-0-229" id="h4-0-229" class="i">+private val StrokeWidth = 2.5.dp
+</a><a href="#h4-0-230" id="h4-0-230" class="i">+private val ArrowWidth = 10.dp
+</a><a href="#h4-0-231" id="h4-0-231" class="i">+private val ArrowHeight = 5.dp
+</a><a href="#h4-0-232" id="h4-0-232" class="i">+private val Elevation = 6.dp
+</a><a href="#h4-0-233" id="h4-0-233" class="i">+
+</a><a href="#h4-0-234" id="h4-0-234" class="i">+// Values taken from SwipeRefreshLayout
+</a><a href="#h4-0-235" id="h4-0-235" class="i">+private const val MinAlpha = 0.3f
+</a><a href="#h4-0-236" id="h4-0-236" class="i">+private const val MaxAlpha = 1f
+</a><a href="#h4-0-237" id="h4-0-237" class="i">+private val AlphaTween = tween&lt;Float&gt;(300, easing = LinearEasing)
+</a><b>diff --git a/<a id="h5" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefreshIndicatorTransform.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefreshIndicatorTransform.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefreshIndicatorTransform.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefreshIndicatorTransform.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -0,0 +1,75 @@
+</a><a href="#h5-0-0" id="h5-0-0" class="i">+/*
+</a><a href="#h5-0-1" id="h5-0-1" class="i">+ * Copyright 2022 The Android Open Source Project
+</a><a href="#h5-0-2" id="h5-0-2" class="i">+ *
+</a><a href="#h5-0-3" id="h5-0-3" class="i">+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+ * you may not use this file except in compliance with the License.
+</a><a href="#h5-0-5" id="h5-0-5" class="i">+ * You may obtain a copy of the License at
+</a><a href="#h5-0-6" id="h5-0-6" class="i">+ *
+</a><a href="#h5-0-7" id="h5-0-7" class="i">+ *      http://www.apache.org/licenses/LICENSE-2.0
+</a><a href="#h5-0-8" id="h5-0-8" class="i">+ *
+</a><a href="#h5-0-9" id="h5-0-9" class="i">+ * Unless required by applicable law or agreed to in writing, software
+</a><a href="#h5-0-10" id="h5-0-10" class="i">+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+</a><a href="#h5-0-11" id="h5-0-11" class="i">+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+</a><a href="#h5-0-12" id="h5-0-12" class="i">+ * See the License for the specific language governing permissions and
+</a><a href="#h5-0-13" id="h5-0-13" class="i">+ * limitations under the License.
+</a><a href="#h5-0-14" id="h5-0-14" class="i">+ */
+</a><a href="#h5-0-15" id="h5-0-15" class="i">+
+</a><a href="#h5-0-16" id="h5-0-16" class="i">+package me.rhunk.snapenhance.ui.util.pullrefresh
+</a><a href="#h5-0-17" id="h5-0-17" class="i">+
+</a><a href="#h5-0-18" id="h5-0-18" class="i">+import androidx.compose.animation.core.LinearOutSlowInEasing
+</a><a href="#h5-0-19" id="h5-0-19" class="i">+import androidx.compose.ui.Modifier
+</a><a href="#h5-0-20" id="h5-0-20" class="i">+import androidx.compose.ui.draw.drawWithContent
+</a><a href="#h5-0-21" id="h5-0-21" class="i">+import androidx.compose.ui.graphics.drawscope.clipRect
+</a><a href="#h5-0-22" id="h5-0-22" class="i">+import androidx.compose.ui.graphics.graphicsLayer
+</a><a href="#h5-0-23" id="h5-0-23" class="i">+import androidx.compose.ui.platform.debugInspectorInfo
+</a><a href="#h5-0-24" id="h5-0-24" class="i">+import androidx.compose.ui.platform.inspectable
+</a><a href="#h5-0-25" id="h5-0-25" class="i">+
+</a><a href="#h5-0-26" id="h5-0-26" class="i">+/**
+</a><a href="#h5-0-27" id="h5-0-27" class="i">+ * A modifier for translating the position and scaling the size of a pull-to-refresh indicator
+</a><a href="#h5-0-28" id="h5-0-28" class="i">+ * based on the given [PullRefreshState].
+</a><a href="#h5-0-29" id="h5-0-29" class="i">+ *
+</a><a href="#h5-0-30" id="h5-0-30" class="i">+ * @sample androidx.compose.material.samples.PullRefreshIndicatorTransformSample
+</a><a href="#h5-0-31" id="h5-0-31" class="i">+ *
+</a><a href="#h5-0-32" id="h5-0-32" class="i">+ * @param state The [PullRefreshState] which determines the position of the indicator.
+</a><a href="#h5-0-33" id="h5-0-33" class="i">+ * @param scale A boolean controlling whether the indicator&#39;s size scales with pull progress or not.
+</a><a href="#h5-0-34" id="h5-0-34" class="i">+ */
+</a><a href="#h5-0-35" id="h5-0-35" class="i">+// TODO: Consider whether the state parameter should be replaced with lambdas.
+</a><a href="#h5-0-36" id="h5-0-36" class="i">+fun Modifier.pullRefreshIndicatorTransform(
+</a><a href="#h5-0-37" id="h5-0-37" class="i">+    state: PullRefreshState,
+</a><a href="#h5-0-38" id="h5-0-38" class="i">+    scale: Boolean = false,
+</a><a href="#h5-0-39" id="h5-0-39" class="i">+) = inspectable(
+</a><a href="#h5-0-40" id="h5-0-40" class="i">+    inspectorInfo = debugInspectorInfo {
+</a><a href="#h5-0-41" id="h5-0-41" class="i">+        name = &quot;pullRefreshIndicatorTransform&quot;
+</a><a href="#h5-0-42" id="h5-0-42" class="i">+        properties[&quot;state&quot;] = state
+</a><a href="#h5-0-43" id="h5-0-43" class="i">+        properties[&quot;scale&quot;] = scale
+</a><a href="#h5-0-44" id="h5-0-44" class="i">+    },
+</a><a href="#h5-0-45" id="h5-0-45" class="i">+) {
+</a><a href="#h5-0-46" id="h5-0-46" class="i">+    Modifier
+</a><a href="#h5-0-47" id="h5-0-47" class="i">+        // Essentially we only want to clip the at the top, so the indicator will not appear when
+</a><a href="#h5-0-48" id="h5-0-48" class="i">+        // the position is 0. It is preferable to clip the indicator as opposed to the layout that
+</a><a href="#h5-0-49" id="h5-0-49" class="i">+        // contains the indicator, as this would also end up clipping shadows drawn by items in a
+</a><a href="#h5-0-50" id="h5-0-50" class="i">+        // list for example - so we leave the clipping to the scrolling container. We use MAX_VALUE
+</a><a href="#h5-0-51" id="h5-0-51" class="i">+        // for the other dimensions to allow for more room for elevation / arbitrary indicators - we
+</a><a href="#h5-0-52" id="h5-0-52" class="i">+        // only ever really want to clip at the top edge.
+</a><a href="#h5-0-53" id="h5-0-53" class="i">+        .drawWithContent {
+</a><a href="#h5-0-54" id="h5-0-54" class="i">+            clipRect(
+</a><a href="#h5-0-55" id="h5-0-55" class="i">+                top = 0f,
+</a><a href="#h5-0-56" id="h5-0-56" class="i">+                left = -Float.MAX_VALUE,
+</a><a href="#h5-0-57" id="h5-0-57" class="i">+                right = Float.MAX_VALUE,
+</a><a href="#h5-0-58" id="h5-0-58" class="i">+                bottom = Float.MAX_VALUE,
+</a><a href="#h5-0-59" id="h5-0-59" class="i">+            ) {
+</a><a href="#h5-0-60" id="h5-0-60" class="i">+                this@drawWithContent.drawContent()
+</a><a href="#h5-0-61" id="h5-0-61" class="i">+            }
+</a><a href="#h5-0-62" id="h5-0-62" class="i">+        }
+</a><a href="#h5-0-63" id="h5-0-63" class="i">+        .graphicsLayer {
+</a><a href="#h5-0-64" id="h5-0-64" class="i">+            translationY = state.position - size.height
+</a><a href="#h5-0-65" id="h5-0-65" class="i">+
+</a><a href="#h5-0-66" id="h5-0-66" class="i">+            if (scale &amp;&amp; !state.refreshing) {
+</a><a href="#h5-0-67" id="h5-0-67" class="i">+                val scaleFraction = LinearOutSlowInEasing
+</a><a href="#h5-0-68" id="h5-0-68" class="i">+                    .transform(state.position / state.threshold)
+</a><a href="#h5-0-69" id="h5-0-69" class="i">+                    .coerceIn(0f, 1f)
+</a><a href="#h5-0-70" id="h5-0-70" class="i">+                scaleX = scaleFraction
+</a><a href="#h5-0-71" id="h5-0-71" class="i">+                scaleY = scaleFraction
+</a><a href="#h5-0-72" id="h5-0-72" class="i">+            }
+</a><a href="#h5-0-73" id="h5-0-73" class="i">+        }
+</a><a href="#h5-0-74" id="h5-0-74" class="i">+}
+</a><b>diff --git a/<a id="h6" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefreshState.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefreshState.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefreshState.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/pullrefresh/PullRefreshState.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -0,0 +1,219 @@
+</a><a href="#h6-0-0" id="h6-0-0" class="i">+/*
+</a><a href="#h6-0-1" id="h6-0-1" class="i">+ * Copyright 2022 The Android Open Source Project
+</a><a href="#h6-0-2" id="h6-0-2" class="i">+ *
+</a><a href="#h6-0-3" id="h6-0-3" class="i">+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+ * you may not use this file except in compliance with the License.
+</a><a href="#h6-0-5" id="h6-0-5" class="i">+ * You may obtain a copy of the License at
+</a><a href="#h6-0-6" id="h6-0-6" class="i">+ *
+</a><a href="#h6-0-7" id="h6-0-7" class="i">+ *      http://www.apache.org/licenses/LICENSE-2.0
+</a><a href="#h6-0-8" id="h6-0-8" class="i">+ *
+</a><a href="#h6-0-9" id="h6-0-9" class="i">+ * Unless required by applicable law or agreed to in writing, software
+</a><a href="#h6-0-10" id="h6-0-10" class="i">+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+</a><a href="#h6-0-11" id="h6-0-11" class="i">+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+</a><a href="#h6-0-12" id="h6-0-12" class="i">+ * See the License for the specific language governing permissions and
+</a><a href="#h6-0-13" id="h6-0-13" class="i">+ * limitations under the License.
+</a><a href="#h6-0-14" id="h6-0-14" class="i">+ */
+</a><a href="#h6-0-15" id="h6-0-15" class="i">+
+</a><a href="#h6-0-16" id="h6-0-16" class="i">+package me.rhunk.snapenhance.ui.util.pullrefresh
+</a><a href="#h6-0-17" id="h6-0-17" class="i">+
+</a><a href="#h6-0-18" id="h6-0-18" class="i">+import androidx.compose.animation.core.animate
+</a><a href="#h6-0-19" id="h6-0-19" class="i">+import androidx.compose.foundation.MutatorMutex
+</a><a href="#h6-0-20" id="h6-0-20" class="i">+import androidx.compose.runtime.*
+</a><a href="#h6-0-21" id="h6-0-21" class="i">+import androidx.compose.ui.platform.LocalDensity
+</a><a href="#h6-0-22" id="h6-0-22" class="i">+import androidx.compose.ui.unit.Dp
+</a><a href="#h6-0-23" id="h6-0-23" class="i">+import androidx.compose.ui.unit.dp
+</a><a href="#h6-0-24" id="h6-0-24" class="i">+import kotlinx.coroutines.CoroutineScope
+</a><a href="#h6-0-25" id="h6-0-25" class="i">+import kotlinx.coroutines.launch
+</a><a href="#h6-0-26" id="h6-0-26" class="i">+import kotlin.math.abs
+</a><a href="#h6-0-27" id="h6-0-27" class="i">+import kotlin.math.pow
+</a><a href="#h6-0-28" id="h6-0-28" class="i">+
+</a><a href="#h6-0-29" id="h6-0-29" class="i">+/**
+</a><a href="#h6-0-30" id="h6-0-30" class="i">+ * Creates a [PullRefreshState] that is remembered across compositions.
+</a><a href="#h6-0-31" id="h6-0-31" class="i">+ *
+</a><a href="#h6-0-32" id="h6-0-32" class="i">+ * Changes to [refreshing] will result in [PullRefreshState] being updated.
+</a><a href="#h6-0-33" id="h6-0-33" class="i">+ *
+</a><a href="#h6-0-34" id="h6-0-34" class="i">+ * @sample androidx.compose.material.samples.PullRefreshSample
+</a><a href="#h6-0-35" id="h6-0-35" class="i">+ *
+</a><a href="#h6-0-36" id="h6-0-36" class="i">+ * @param refreshing A boolean representing whether a refresh is currently occurring.
+</a><a href="#h6-0-37" id="h6-0-37" class="i">+ * @param onRefresh The function to be called to trigger a refresh.
+</a><a href="#h6-0-38" id="h6-0-38" class="i">+ * @param refreshThreshold The threshold below which, if a release
+</a><a href="#h6-0-39" id="h6-0-39" class="i">+ * occurs, [onRefresh] will be called.
+</a><a href="#h6-0-40" id="h6-0-40" class="i">+ * @param refreshingOffset The offset at which the indicator will be drawn while refreshing. This
+</a><a href="#h6-0-41" id="h6-0-41" class="i">+ * offset corresponds to the position of the bottom of the indicator.
+</a><a href="#h6-0-42" id="h6-0-42" class="i">+ */
+</a><a href="#h6-0-43" id="h6-0-43" class="i">+@Composable
+</a><a href="#h6-0-44" id="h6-0-44" class="i">+fun rememberPullRefreshState(
+</a><a href="#h6-0-45" id="h6-0-45" class="i">+    refreshing: Boolean,
+</a><a href="#h6-0-46" id="h6-0-46" class="i">+    onRefresh: () -&gt; Unit,
+</a><a href="#h6-0-47" id="h6-0-47" class="i">+    refreshThreshold: Dp = PullRefreshDefaults.RefreshThreshold,
+</a><a href="#h6-0-48" id="h6-0-48" class="i">+    refreshingOffset: Dp = PullRefreshDefaults.RefreshingOffset,
+</a><a href="#h6-0-49" id="h6-0-49" class="i">+): PullRefreshState {
+</a><a href="#h6-0-50" id="h6-0-50" class="i">+    require(refreshThreshold &gt; 0.dp) { &quot;The refresh trigger must be greater than zero!&quot; }
+</a><a href="#h6-0-51" id="h6-0-51" class="i">+
+</a><a href="#h6-0-52" id="h6-0-52" class="i">+    val scope = rememberCoroutineScope()
+</a><a href="#h6-0-53" id="h6-0-53" class="i">+    val onRefreshState = rememberUpdatedState(onRefresh)
+</a><a href="#h6-0-54" id="h6-0-54" class="i">+    val thresholdPx: Float
+</a><a href="#h6-0-55" id="h6-0-55" class="i">+    val refreshingOffsetPx: Float
+</a><a href="#h6-0-56" id="h6-0-56" class="i">+
+</a><a href="#h6-0-57" id="h6-0-57" class="i">+    with(LocalDensity.current) {
+</a><a href="#h6-0-58" id="h6-0-58" class="i">+        thresholdPx = refreshThreshold.toPx()
+</a><a href="#h6-0-59" id="h6-0-59" class="i">+        refreshingOffsetPx = refreshingOffset.toPx()
+</a><a href="#h6-0-60" id="h6-0-60" class="i">+    }
+</a><a href="#h6-0-61" id="h6-0-61" class="i">+
+</a><a href="#h6-0-62" id="h6-0-62" class="i">+    val state = remember(scope) {
+</a><a href="#h6-0-63" id="h6-0-63" class="i">+        PullRefreshState(scope, onRefreshState, refreshingOffsetPx, thresholdPx)
+</a><a href="#h6-0-64" id="h6-0-64" class="i">+    }
+</a><a href="#h6-0-65" id="h6-0-65" class="i">+
+</a><a href="#h6-0-66" id="h6-0-66" class="i">+    SideEffect {
+</a><a href="#h6-0-67" id="h6-0-67" class="i">+        state.setRefreshing(refreshing)
+</a><a href="#h6-0-68" id="h6-0-68" class="i">+        state.setThreshold(thresholdPx)
+</a><a href="#h6-0-69" id="h6-0-69" class="i">+        state.setRefreshingOffset(refreshingOffsetPx)
+</a><a href="#h6-0-70" id="h6-0-70" class="i">+    }
+</a><a href="#h6-0-71" id="h6-0-71" class="i">+
+</a><a href="#h6-0-72" id="h6-0-72" class="i">+    return state
+</a><a href="#h6-0-73" id="h6-0-73" class="i">+}
+</a><a href="#h6-0-74" id="h6-0-74" class="i">+
+</a><a href="#h6-0-75" id="h6-0-75" class="i">+/**
+</a><a href="#h6-0-76" id="h6-0-76" class="i">+ * A state object that can be used in conjunction with [pullRefresh] to add pull-to-refresh
+</a><a href="#h6-0-77" id="h6-0-77" class="i">+ * behaviour to a scroll component. Based on Android&#39;s SwipeRefreshLayout.
+</a><a href="#h6-0-78" id="h6-0-78" class="i">+ *
+</a><a href="#h6-0-79" id="h6-0-79" class="i">+ * Provides [progress], a float representing how far the user has pulled as a percentage of the
+</a><a href="#h6-0-80" id="h6-0-80" class="i">+ * refreshThreshold. Values of one or less indicate that the user has not yet pulled past the
+</a><a href="#h6-0-81" id="h6-0-81" class="i">+ * threshold. Values greater than one indicate how far past the threshold the user has pulled.
+</a><a href="#h6-0-82" id="h6-0-82" class="i">+ *
+</a><a href="#h6-0-83" id="h6-0-83" class="i">+ * Can be used in conjunction with [pullRefreshIndicatorTransform] to implement Android-like
+</a><a href="#h6-0-84" id="h6-0-84" class="i">+ * pull-to-refresh behaviour with a custom indicator.
+</a><a href="#h6-0-85" id="h6-0-85" class="i">+ *
+</a><a href="#h6-0-86" id="h6-0-86" class="i">+ * Should be created using [rememberPullRefreshState].
+</a><a href="#h6-0-87" id="h6-0-87" class="i">+ */
+</a><a href="#h6-0-88" id="h6-0-88" class="i">+class PullRefreshState internal constructor(
+</a><a href="#h6-0-89" id="h6-0-89" class="i">+    private val animationScope: CoroutineScope,
+</a><a href="#h6-0-90" id="h6-0-90" class="i">+    private val onRefreshState: State&lt;() -&gt; Unit&gt;,
+</a><a href="#h6-0-91" id="h6-0-91" class="i">+    refreshingOffset: Float,
+</a><a href="#h6-0-92" id="h6-0-92" class="i">+    threshold: Float,
+</a><a href="#h6-0-93" id="h6-0-93" class="i">+) {
+</a><a href="#h6-0-94" id="h6-0-94" class="i">+    /**
+</a><a href="#h6-0-95" id="h6-0-95" class="i">+     * A float representing how far the user has pulled as a percentage of the refreshThreshold.
+</a><a href="#h6-0-96" id="h6-0-96" class="i">+     *
+</a><a href="#h6-0-97" id="h6-0-97" class="i">+     * If the component has not been pulled at all, progress is zero. If the pull has reached
+</a><a href="#h6-0-98" id="h6-0-98" class="i">+     * halfway to the threshold, progress is 0.5f. A value greater than 1 indicates that pull has
+</a><a href="#h6-0-99" id="h6-0-99" class="i">+     * gone beyond the refreshThreshold - e.g. a value of 2f indicates that the user has pulled to
+</a><a href="#h6-0-100" id="h6-0-100" class="i">+     * two times the refreshThreshold.
+</a><a href="#h6-0-101" id="h6-0-101" class="i">+     */
+</a><a href="#h6-0-102" id="h6-0-102" class="i">+    val progress get() = adjustedDistancePulled / threshold
+</a><a href="#h6-0-103" id="h6-0-103" class="i">+
+</a><a href="#h6-0-104" id="h6-0-104" class="i">+    internal val refreshing get() = _refreshing
+</a><a href="#h6-0-105" id="h6-0-105" class="i">+    internal val position get() = _position
+</a><a href="#h6-0-106" id="h6-0-106" class="i">+    internal val threshold get() = _threshold
+</a><a href="#h6-0-107" id="h6-0-107" class="i">+
+</a><a href="#h6-0-108" id="h6-0-108" class="i">+    private val adjustedDistancePulled by derivedStateOf { distancePulled * DragMultiplier }
+</a><a href="#h6-0-109" id="h6-0-109" class="i">+
+</a><a href="#h6-0-110" id="h6-0-110" class="i">+    private var _refreshing by mutableStateOf(false)
+</a><a href="#h6-0-111" id="h6-0-111" class="i">+    private var _position by mutableFloatStateOf(0f)
+</a><a href="#h6-0-112" id="h6-0-112" class="i">+    private var distancePulled by mutableFloatStateOf(0f)
+</a><a href="#h6-0-113" id="h6-0-113" class="i">+    private var _threshold by mutableFloatStateOf(threshold)
+</a><a href="#h6-0-114" id="h6-0-114" class="i">+    private var _refreshingOffset by mutableFloatStateOf(refreshingOffset)
+</a><a href="#h6-0-115" id="h6-0-115" class="i">+
+</a><a href="#h6-0-116" id="h6-0-116" class="i">+    internal fun onPull(pullDelta: Float): Float {
+</a><a href="#h6-0-117" id="h6-0-117" class="i">+        if (_refreshing) return 0f // Already refreshing, do nothing.
+</a><a href="#h6-0-118" id="h6-0-118" class="i">+
+</a><a href="#h6-0-119" id="h6-0-119" class="i">+        val newOffset = (distancePulled + pullDelta).coerceAtLeast(0f)
+</a><a href="#h6-0-120" id="h6-0-120" class="i">+        val dragConsumed = newOffset - distancePulled
+</a><a href="#h6-0-121" id="h6-0-121" class="i">+        distancePulled = newOffset
+</a><a href="#h6-0-122" id="h6-0-122" class="i">+        _position = calculateIndicatorPosition()
+</a><a href="#h6-0-123" id="h6-0-123" class="i">+        return dragConsumed
+</a><a href="#h6-0-124" id="h6-0-124" class="i">+    }
+</a><a href="#h6-0-125" id="h6-0-125" class="i">+
+</a><a href="#h6-0-126" id="h6-0-126" class="i">+    internal fun onRelease(velocity: Float): Float {
+</a><a href="#h6-0-127" id="h6-0-127" class="i">+        if (refreshing) return 0f // Already refreshing, do nothing
+</a><a href="#h6-0-128" id="h6-0-128" class="i">+
+</a><a href="#h6-0-129" id="h6-0-129" class="i">+        if (adjustedDistancePulled &gt; threshold) {
+</a><a href="#h6-0-130" id="h6-0-130" class="i">+            onRefreshState.value()
+</a><a href="#h6-0-131" id="h6-0-131" class="i">+        }
+</a><a href="#h6-0-132" id="h6-0-132" class="i">+        animateIndicatorTo(0f)
+</a><a href="#h6-0-133" id="h6-0-133" class="i">+        val consumed = when {
+</a><a href="#h6-0-134" id="h6-0-134" class="i">+            // We are flinging without having dragged the pull refresh (for example a fling inside
+</a><a href="#h6-0-135" id="h6-0-135" class="i">+            // a list) - don&#39;t consume
+</a><a href="#h6-0-136" id="h6-0-136" class="i">+            distancePulled == 0f -&gt; 0f
+</a><a href="#h6-0-137" id="h6-0-137" class="i">+            // If the velocity is negative, the fling is upwards, and we don&#39;t want to prevent the
+</a><a href="#h6-0-138" id="h6-0-138" class="i">+            // the list from scrolling
+</a><a href="#h6-0-139" id="h6-0-139" class="i">+            velocity &lt; 0f -&gt; 0f
+</a><a href="#h6-0-140" id="h6-0-140" class="i">+            // We are showing the indicator, and the fling is downwards - consume everything
+</a><a href="#h6-0-141" id="h6-0-141" class="i">+            else -&gt; velocity
+</a><a href="#h6-0-142" id="h6-0-142" class="i">+        }
+</a><a href="#h6-0-143" id="h6-0-143" class="i">+        distancePulled = 0f
+</a><a href="#h6-0-144" id="h6-0-144" class="i">+        return consumed
+</a><a href="#h6-0-145" id="h6-0-145" class="i">+    }
+</a><a href="#h6-0-146" id="h6-0-146" class="i">+
+</a><a href="#h6-0-147" id="h6-0-147" class="i">+    internal fun setRefreshing(refreshing: Boolean) {
+</a><a href="#h6-0-148" id="h6-0-148" class="i">+        if (_refreshing != refreshing) {
+</a><a href="#h6-0-149" id="h6-0-149" class="i">+            _refreshing = refreshing
+</a><a href="#h6-0-150" id="h6-0-150" class="i">+            distancePulled = 0f
+</a><a href="#h6-0-151" id="h6-0-151" class="i">+            animateIndicatorTo(if (refreshing) _refreshingOffset else 0f)
+</a><a href="#h6-0-152" id="h6-0-152" class="i">+        }
+</a><a href="#h6-0-153" id="h6-0-153" class="i">+    }
+</a><a href="#h6-0-154" id="h6-0-154" class="i">+
+</a><a href="#h6-0-155" id="h6-0-155" class="i">+    internal fun setThreshold(threshold: Float) {
+</a><a href="#h6-0-156" id="h6-0-156" class="i">+        _threshold = threshold
+</a><a href="#h6-0-157" id="h6-0-157" class="i">+    }
+</a><a href="#h6-0-158" id="h6-0-158" class="i">+
+</a><a href="#h6-0-159" id="h6-0-159" class="i">+    internal fun setRefreshingOffset(refreshingOffset: Float) {
+</a><a href="#h6-0-160" id="h6-0-160" class="i">+        if (_refreshingOffset != refreshingOffset) {
+</a><a href="#h6-0-161" id="h6-0-161" class="i">+            _refreshingOffset = refreshingOffset
+</a><a href="#h6-0-162" id="h6-0-162" class="i">+            if (refreshing) animateIndicatorTo(refreshingOffset)
+</a><a href="#h6-0-163" id="h6-0-163" class="i">+        }
+</a><a href="#h6-0-164" id="h6-0-164" class="i">+    }
+</a><a href="#h6-0-165" id="h6-0-165" class="i">+
+</a><a href="#h6-0-166" id="h6-0-166" class="i">+    // Make sure to cancel any existing animations when we launch a new one. We use this instead of
+</a><a href="#h6-0-167" id="h6-0-167" class="i">+    // Animatable as calling snapTo() on every drag delta has a one frame delay, and some extra
+</a><a href="#h6-0-168" id="h6-0-168" class="i">+    // overhead of running through the animation pipeline instead of directly mutating the state.
+</a><a href="#h6-0-169" id="h6-0-169" class="i">+    private val mutatorMutex = MutatorMutex()
+</a><a href="#h6-0-170" id="h6-0-170" class="i">+
+</a><a href="#h6-0-171" id="h6-0-171" class="i">+    private fun animateIndicatorTo(offset: Float) = animationScope.launch {
+</a><a href="#h6-0-172" id="h6-0-172" class="i">+        mutatorMutex.mutate {
+</a><a href="#h6-0-173" id="h6-0-173" class="i">+            animate(initialValue = _position, targetValue = offset) { value, _ -&gt;
+</a><a href="#h6-0-174" id="h6-0-174" class="i">+                _position = value
+</a><a href="#h6-0-175" id="h6-0-175" class="i">+            }
+</a><a href="#h6-0-176" id="h6-0-176" class="i">+        }
+</a><a href="#h6-0-177" id="h6-0-177" class="i">+    }
+</a><a href="#h6-0-178" id="h6-0-178" class="i">+
+</a><a href="#h6-0-179" id="h6-0-179" class="i">+    private fun calculateIndicatorPosition(): Float = when {
+</a><a href="#h6-0-180" id="h6-0-180" class="i">+        // If drag hasn&#39;t gone past the threshold, the position is the adjustedDistancePulled.
+</a><a href="#h6-0-181" id="h6-0-181" class="i">+        adjustedDistancePulled &lt;= threshold -&gt; adjustedDistancePulled
+</a><a href="#h6-0-182" id="h6-0-182" class="i">+        else -&gt; {
+</a><a href="#h6-0-183" id="h6-0-183" class="i">+            // How far beyond the threshold pull has gone, as a percentage of the threshold.
+</a><a href="#h6-0-184" id="h6-0-184" class="i">+            val overshootPercent = abs(progress) - 1.0f
+</a><a href="#h6-0-185" id="h6-0-185" class="i">+            // Limit the overshoot to 200%. Linear between 0 and 200.
+</a><a href="#h6-0-186" id="h6-0-186" class="i">+            val linearTension = overshootPercent.coerceIn(0f, 2f)
+</a><a href="#h6-0-187" id="h6-0-187" class="i">+            // Non-linear tension. Increases with linearTension, but at a decreasing rate.
+</a><a href="#h6-0-188" id="h6-0-188" class="i">+            val tensionPercent = linearTension - linearTension.pow(2) / 4
+</a><a href="#h6-0-189" id="h6-0-189" class="i">+            // The additional offset beyond the threshold.
+</a><a href="#h6-0-190" id="h6-0-190" class="i">+            val extraOffset = threshold * tensionPercent
+</a><a href="#h6-0-191" id="h6-0-191" class="i">+            threshold + extraOffset
+</a><a href="#h6-0-192" id="h6-0-192" class="i">+        }
+</a><a href="#h6-0-193" id="h6-0-193" class="i">+    }
+</a><a href="#h6-0-194" id="h6-0-194" class="i">+}
+</a><a href="#h6-0-195" id="h6-0-195" class="i">+
+</a><a href="#h6-0-196" id="h6-0-196" class="i">+/**
+</a><a href="#h6-0-197" id="h6-0-197" class="i">+ * Default parameter values for [rememberPullRefreshState].
+</a><a href="#h6-0-198" id="h6-0-198" class="i">+ */
+</a><a href="#h6-0-199" id="h6-0-199" class="i">+object PullRefreshDefaults {
+</a><a href="#h6-0-200" id="h6-0-200" class="i">+    /**
+</a><a href="#h6-0-201" id="h6-0-201" class="i">+     * If the indicator is below this threshold offset when it is released, a refresh
+</a><a href="#h6-0-202" id="h6-0-202" class="i">+     * will be triggered.
+</a><a href="#h6-0-203" id="h6-0-203" class="i">+     */
+</a><a href="#h6-0-204" id="h6-0-204" class="i">+    val RefreshThreshold = 80.dp
+</a><a href="#h6-0-205" id="h6-0-205" class="i">+
+</a><a href="#h6-0-206" id="h6-0-206" class="i">+    /**
+</a><a href="#h6-0-207" id="h6-0-207" class="i">+     * The offset at which the indicator should be rendered whilst a refresh is occurring.
+</a><a href="#h6-0-208" id="h6-0-208" class="i">+     */
+</a><a href="#h6-0-209" id="h6-0-209" class="i">+    val RefreshingOffset = 56.dp
+</a><a href="#h6-0-210" id="h6-0-210" class="i">+}
+</a><a href="#h6-0-211" id="h6-0-211" class="i">+
+</a><a href="#h6-0-212" id="h6-0-212" class="i">+/**
+</a><a href="#h6-0-213" id="h6-0-213" class="i">+ * The distance pulled is multiplied by this value to give us the adjusted distance pulled, which
+</a><a href="#h6-0-214" id="h6-0-214" class="i">+ * is used in calculating the indicator position (when the adjusted distance pulled is less than
+</a><a href="#h6-0-215" id="h6-0-215" class="i">+ * the refresh threshold, it is the indicator position, otherwise the indicator position is
+</a><a href="#h6-0-216" id="h6-0-216" class="i">+ * derived from the progress).
+</a><a href="#h6-0-217" id="h6-0-217" class="i">+ */
+</a><a href="#h6-0-218" id="h6-0-218" class="i">+private const val DragMultiplier = 0.5f
+</a><b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/UnlimitedSnapViewTime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/UnlimitedSnapViewTime.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/UnlimitedSnapViewTime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/UnlimitedSnapViewTime.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -9,8 +9,8 @@ import me.rhunk.snapenhance.features.Feature
+</a> import me.rhunk.snapenhance.features.FeatureLoadParams
+ 
+ class UnlimitedSnapViewTime :
+<a href="#h7-0-3" id="h7-0-3" class="d">-    Feature(&quot;UnlimitedSnapViewTime&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_ASYNC) {
+</a><a href="#h7-0-4" id="h7-0-4" class="d">-    override fun asyncOnActivityCreate() {
+</a><a href="#h7-0-5" id="h7-0-5" class="i">+    Feature(&quot;UnlimitedSnapViewTime&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+</a><a href="#h7-0-6" id="h7-0-6" class="i">+    override fun onActivityCreate() {
+</a>         val state by context.config.messaging.unlimitedSnapViewTime
+ 
+         context.event.subscribe(BuildMessageEvent::class, { state }, priority = 101) { event -&gt;
+</pre>
+</div>
+</body>
+</html>

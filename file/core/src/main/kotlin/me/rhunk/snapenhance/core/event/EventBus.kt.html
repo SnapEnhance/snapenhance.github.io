@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EventBus.kt - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../../../../../../../../../../logo.png"/>
+<link rel="alternate icon" href="../../../../../../../../../../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../../../../../../../../../../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../../../../../../../../../../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../../../../../../../../../../"><img src="../../../../../../../../../../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../../../../../../../../../../about.html">About</a> | <a href="../../../../../../../../../../log.html">Log</a> | <a href="../../../../../../../../../../files.html">Files</a> | <a href="../../../../../../../../../../refs.html">Refs</a> | <a href="../../../../../../../../../../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<p> EventBus.kt (2484B) - <a href="../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt">raw</a></p><hr/><pre id="blob">
+<a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core.event
+<a href="#l2" class="line" id="l2">      2</a> 
+<a href="#l3" class="line" id="l3">      3</a> import me.rhunk.snapenhance.core.ModContext
+<a href="#l4" class="line" id="l4">      4</a> import java.util.concurrent.ConcurrentHashMap
+<a href="#l5" class="line" id="l5">      5</a> import kotlin.reflect.KClass
+<a href="#l6" class="line" id="l6">      6</a> 
+<a href="#l7" class="line" id="l7">      7</a> abstract class Event {
+<a href="#l8" class="line" id="l8">      8</a>     lateinit var context: ModContext
+<a href="#l9" class="line" id="l9">      9</a>     var canceled = false
+<a href="#l10" class="line" id="l10">     10</a> }
+<a href="#l11" class="line" id="l11">     11</a> 
+<a href="#l12" class="line" id="l12">     12</a> interface IListener&lt;T&gt; {
+<a href="#l13" class="line" id="l13">     13</a>     fun handle(event: T)
+<a href="#l14" class="line" id="l14">     14</a> }
+<a href="#l15" class="line" id="l15">     15</a> 
+<a href="#l16" class="line" id="l16">     16</a> class EventBus(
+<a href="#l17" class="line" id="l17">     17</a>     val context: ModContext
+<a href="#l18" class="line" id="l18">     18</a> ) {
+<a href="#l19" class="line" id="l19">     19</a>     private val subscribers = ConcurrentHashMap&lt;KClass&lt;out Event&gt;, MutableMap&lt;Int, IListener&lt;out Event&gt;&gt;&gt;()
+<a href="#l20" class="line" id="l20">     20</a> 
+<a href="#l21" class="line" id="l21">     21</a>     fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;, listener: IListener&lt;T&gt;, priority: Int? = null) {
+<a href="#l22" class="line" id="l22">     22</a>         synchronized(subscribers) {
+<a href="#l23" class="line" id="l23">     23</a>             if (!subscribers.containsKey(event)) {
+<a href="#l24" class="line" id="l24">     24</a>                 subscribers[event] = sortedMapOf()
+<a href="#l25" class="line" id="l25">     25</a>             }
+<a href="#l26" class="line" id="l26">     26</a>             val lastSubscriber = subscribers[event]?.keys?.lastOrNull() ?: 0
+<a href="#l27" class="line" id="l27">     27</a>             subscribers[event]?.put(priority ?: (lastSubscriber + 1), listener)
+<a href="#l28" class="line" id="l28">     28</a>         }
+<a href="#l29" class="line" id="l29">     29</a>     }
+<a href="#l30" class="line" id="l30">     30</a> 
+<a href="#l31" class="line" id="l31">     31</a>     fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;, priority: Int? = null, listener: (T) -&gt; Unit) = subscribe(event, { true }, priority, listener)
+<a href="#l32" class="line" id="l32">     32</a> 
+<a href="#l33" class="line" id="l33">     33</a>     fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;,  filter: (T) -&gt; Boolean, priority: Int? = null, listener: (T) -&gt; Unit): () -&gt; Unit {
+<a href="#l34" class="line" id="l34">     34</a>         val obj = object : IListener&lt;T&gt; {
+<a href="#l35" class="line" id="l35">     35</a>             override fun handle(event: T) {
+<a href="#l36" class="line" id="l36">     36</a>                 if (!filter(event)) return
+<a href="#l37" class="line" id="l37">     37</a>                 runCatching {
+<a href="#l38" class="line" id="l38">     38</a>                     listener(event)
+<a href="#l39" class="line" id="l39">     39</a>                 }.onFailure {
+<a href="#l40" class="line" id="l40">     40</a>                     context.log.error(&quot;Error while handling event ${event::class.simpleName}&quot;, it)
+<a href="#l41" class="line" id="l41">     41</a>                 }
+<a href="#l42" class="line" id="l42">     42</a>             }
+<a href="#l43" class="line" id="l43">     43</a>         }
+<a href="#l44" class="line" id="l44">     44</a>         subscribe(event, obj, priority)
+<a href="#l45" class="line" id="l45">     45</a>         return { unsubscribe(event, obj) }
+<a href="#l46" class="line" id="l46">     46</a>     }
+<a href="#l47" class="line" id="l47">     47</a> 
+<a href="#l48" class="line" id="l48">     48</a>     fun &lt;T : Event&gt; unsubscribe(event: KClass&lt;T&gt;, listener: IListener&lt;T&gt;) {
+<a href="#l49" class="line" id="l49">     49</a>         synchronized(subscribers) {
+<a href="#l50" class="line" id="l50">     50</a>             subscribers[event]?.values?.remove(listener)
+<a href="#l51" class="line" id="l51">     51</a>         }
+<a href="#l52" class="line" id="l52">     52</a>     }
+<a href="#l53" class="line" id="l53">     53</a> 
+<a href="#l54" class="line" id="l54">     54</a>     fun &lt;T : Event&gt; post(event: T, afterBlock: T.() -&gt; Unit = {}): T? {
+<a href="#l55" class="line" id="l55">     55</a>         if (!subscribers.containsKey(event::class)) {
+<a href="#l56" class="line" id="l56">     56</a>             return null
+<a href="#l57" class="line" id="l57">     57</a>         }
+<a href="#l58" class="line" id="l58">     58</a> 
+<a href="#l59" class="line" id="l59">     59</a>         event.context = context
+<a href="#l60" class="line" id="l60">     60</a> 
+<a href="#l61" class="line" id="l61">     61</a>         subscribers[event::class]?.toSortedMap()?.forEach { (_, listener) -&gt;
+<a href="#l62" class="line" id="l62">     62</a>             @Suppress(&quot;UNCHECKED_CAST&quot;)
+<a href="#l63" class="line" id="l63">     63</a>             runCatching {
+<a href="#l64" class="line" id="l64">     64</a>                 (listener as IListener&lt;T&gt;).handle(event)
+<a href="#l65" class="line" id="l65">     65</a>             }.onFailure { t -&gt;
+<a href="#l66" class="line" id="l66">     66</a>                 context.log.error(&quot;Error while handling event ${event::class.simpleName} by ${listener::class.simpleName}&quot;, t)
+<a href="#l67" class="line" id="l67">     67</a>             }
+<a href="#l68" class="line" id="l68">     68</a>         }
+<a href="#l69" class="line" id="l69">     69</a>         afterBlock(event)
+<a href="#l70" class="line" id="l70">     70</a>         return event
+<a href="#l71" class="line" id="l71">     71</a>     }
+<a href="#l72" class="line" id="l72">     72</a> 
+<a href="#l73" class="line" id="l73">     73</a>     fun clear() {
+<a href="#l74" class="line" id="l74">     74</a>         subscribers.clear()
+<a href="#l75" class="line" id="l75">     75</a>     }
+<a href="#l76" class="line" id="l76">     76</a> }</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>perf(e2ee): cache optimization - shared secret key cache - remove uncommitted messages from the cache - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/ec0fd2cf08ed312188d2d73f5fc0bcfadbb7f38f.html">ec0fd2cf08ed312188d2d73f5fc0bcfadbb7f38f</a>
+<b>parent</b> <a href="../commit/8e36425a369a0fd6d621c5f71d6b2e1fddf59e2b.html">8e36425a369a0fd6d621c5f71d6b2e1fddf59e2b</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 17 Jan 2024 16:18:20 +0100
+
+perf(e2ee): cache optimization
+- shared secret key cache
+- remove uncommitted messages from the cache
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/e2ee/E2EEImplementation.kt</a></td><td> | </td><td class="num">41</td><td><span class="i">++++++++++++++++++</span><span class="d">-----------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt</a></td><td> | </td><td class="num">17</td><td><span class="i">+++++++++++++</span><span class="d">----</span></td></tr>
+</table></pre><pre>2 files changed, 31 insertions(+), 27 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/e2ee/E2EEImplementation.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/e2ee/E2EEImplementation.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/e2ee/E2EEImplementation.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/e2ee/E2EEImplementation.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -3,6 +3,7 @@ package me.rhunk.snapenhance.e2ee
+</a> import me.rhunk.snapenhance.RemoteSideContext
+ import me.rhunk.snapenhance.bridge.e2ee.E2eeInterface
+ import me.rhunk.snapenhance.bridge.e2ee.EncryptionResult
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.core.util.EvictingMap
+</a> import org.bouncycastle.pqc.crypto.crystals.kyber.*
+ import java.io.File
+ import java.security.MessageDigest
+<a href="#h0-1" id="h0-1" class="h">@@ -23,25 +24,33 @@ class E2EEImplementation (
+</a>     }}
+     private val pairingFolder by lazy { File(context.androidContext.cacheDir, &quot;e2ee-pairing&quot;).also {
+         if (!it.exists()) it.mkdirs()
+<a href="#h0-1-3" id="h0-1-3" class="i">+        else {
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+            it.deleteRecursively()
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+            it.mkdirs()
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+        }
+</a>     } }
+ 
+<a href="#h0-1-9" id="h0-1-9" class="i">+    private val sharedSecretKeyCache = EvictingMap&lt;String, ByteArray?&gt;(100)
+</a><a href="#h0-1-10" id="h0-1-10" class="i">+
+</a>     fun storeSharedSecretKey(friendId: String, key: ByteArray) {
+         File(e2eeFolder, &quot;$friendId.key&quot;).writeBytes(key)
+<a href="#h0-1-13" id="h0-1-13" class="i">+        sharedSecretKeyCache[friendId] = key
+</a>     }
+ 
+     fun getSharedSecretKey(friendId: String): ByteArray? {
+<a href="#h0-1-17" id="h0-1-17" class="d">-        return runCatching {
+</a><a href="#h0-1-18" id="h0-1-18" class="d">-            File(e2eeFolder, &quot;$friendId.key&quot;).readBytes()
+</a><a href="#h0-1-19" id="h0-1-19" class="d">-        }.onFailure {
+</a><a href="#h0-1-20" id="h0-1-20" class="d">-            context.log.error(&quot;Failed to read shared secret key&quot;, it)
+</a><a href="#h0-1-21" id="h0-1-21" class="d">-        }.getOrNull()
+</a><a href="#h0-1-22" id="h0-1-22" class="i">+        return sharedSecretKeyCache.getOrPut(friendId) {
+</a><a href="#h0-1-23" id="h0-1-23" class="i">+            runCatching {
+</a><a href="#h0-1-24" id="h0-1-24" class="i">+                File(e2eeFolder, &quot;$friendId.key&quot;).readBytes()
+</a><a href="#h0-1-25" id="h0-1-25" class="i">+            }.onFailure {
+</a><a href="#h0-1-26" id="h0-1-26" class="i">+                context.log.error(&quot;Failed to read shared secret key&quot;, it)
+</a><a href="#h0-1-27" id="h0-1-27" class="i">+            }.getOrNull()
+</a><a href="#h0-1-28" id="h0-1-28" class="i">+        }
+</a>     }
+ 
+     fun deleteSharedSecretKey(friendId: String) {
+         File(e2eeFolder, &quot;$friendId.key&quot;).delete()
+     }
+ 
+<a href="#h0-1-35" id="h0-1-35" class="d">-
+</a>     override fun createKeyExchange(friendId: String): ByteArray? {
+         val keyPairGenerator = KyberKeyPairGenerator()
+         keyPairGenerator.init(
+<a href="#h0-2" id="h0-2" class="h">@@ -117,12 +126,7 @@ class E2EEImplementation (
+</a>     }
+ 
+     override fun getSecretFingerprint(friendId: String): String? {
+<a href="#h0-2-3" id="h0-2-3" class="d">-        val sharedSecretKey = runCatching {
+</a><a href="#h0-2-4" id="h0-2-4" class="d">-            File(e2eeFolder, &quot;$friendId.key&quot;).readBytes()
+</a><a href="#h0-2-5" id="h0-2-5" class="d">-        }.onFailure {
+</a><a href="#h0-2-6" id="h0-2-6" class="d">-            context.log.error(&quot;Failed to read shared secret key&quot;, it)
+</a><a href="#h0-2-7" id="h0-2-7" class="d">-            return null
+</a><a href="#h0-2-8" id="h0-2-8" class="d">-        }.getOrThrow()
+</a><a href="#h0-2-9" id="h0-2-9" class="i">+        val sharedSecretKey = getSharedSecretKey(friendId) ?: return null
+</a> 
+         return MessageDigest.getInstance(&quot;SHA-256&quot;)
+             .digest(sharedSecretKey)
+<a href="#h0-3" id="h0-3" class="h">@@ -132,11 +136,7 @@ class E2EEImplementation (
+</a>     }
+ 
+     override fun encryptMessage(friendId: String, message: ByteArray): EncryptionResult? {
+<a href="#h0-3-3" id="h0-3-3" class="d">-        val encryptionKey = runCatching {
+</a><a href="#h0-3-4" id="h0-3-4" class="d">-            File(e2eeFolder, &quot;$friendId.key&quot;).readBytes()
+</a><a href="#h0-3-5" id="h0-3-5" class="d">-        }.onFailure {
+</a><a href="#h0-3-6" id="h0-3-6" class="d">-            context.log.error(&quot;Failed to read shared secret key&quot;, it)
+</a><a href="#h0-3-7" id="h0-3-7" class="d">-        }.getOrNull()
+</a><a href="#h0-3-8" id="h0-3-8" class="i">+        val encryptionKey = getSharedSecretKey(friendId) ?: return null
+</a> 
+         return runCatching {
+             val iv = ByteArray(16).apply { secureRandom.nextBytes(this) }
+<a href="#h0-4" id="h0-4" class="h">@@ -152,12 +152,7 @@ class E2EEImplementation (
+</a>     }
+ 
+     override fun decryptMessage(friendId: String, message: ByteArray, iv: ByteArray): ByteArray? {
+<a href="#h0-4-3" id="h0-4-3" class="d">-        val encryptionKey = runCatching {
+</a><a href="#h0-4-4" id="h0-4-4" class="d">-            File(e2eeFolder, &quot;$friendId.key&quot;).readBytes()
+</a><a href="#h0-4-5" id="h0-4-5" class="d">-        }.onFailure {
+</a><a href="#h0-4-6" id="h0-4-6" class="d">-            context.log.error(&quot;Failed to read shared secret key&quot;, it)
+</a><a href="#h0-4-7" id="h0-4-7" class="d">-            return null
+</a><a href="#h0-4-8" id="h0-4-8" class="d">-        }.getOrNull()
+</a><a href="#h0-4-9" id="h0-4-9" class="i">+        val encryptionKey = getSharedSecretKey(friendId) ?: return null
+</a> 
+         return runCatching {
+             val cipher = Cipher.getInstance(&quot;AES/CBC/PKCS5Padding&quot;)
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
+</a> import androidx.compose.ui.Modifier
+ import androidx.compose.ui.unit.dp
+ import me.rhunk.snapenhance.common.data.ContentType
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.common.data.MessageState
+</a> import me.rhunk.snapenhance.common.data.MessagingRuleType
+ import me.rhunk.snapenhance.common.data.RuleState
+ import me.rhunk.snapenhance.common.util.protobuf.ProtoEditor
+<a href="#h1-1" id="h1-1" class="h">@@ -312,7 +313,7 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>             if (messageTypeId == ENCRYPTED_MESSAGE_ID) {
+                 runCatching {
+                     eachBuffer(2) {
+<a href="#h1-1-3" id="h1-1-3" class="d">-                        if (encryptedMessages.contains(clientMessageId)) return@eachBuffer
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+                        if (decryptedMessageCache.containsKey(clientMessageId)) return@eachBuffer
+</a> 
+                         val participantIdHash = getByteArray(1) ?: return@eachBuffer
+                         val iv = getByteArray(2) ?: return@eachBuffer
+<a href="#h1-2" id="h1-2" class="h">@@ -373,10 +374,15 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>         return outputContentType to outputBuffer
+     }
+ 
+<a href="#h1-2-3" id="h1-2-3" class="d">-    private fun messageHook(conversationId: String, messageId: Long, senderId: String, messageContent: MessageContent) {
+</a><a href="#h1-2-4" id="h1-2-4" class="i">+    private fun messageHook(conversationId: String, messageId: Long, senderId: String, messageContent: MessageContent, committed: Boolean) {
+</a>         val (contentType, buffer) = tryDecryptMessage(senderId, messageId, conversationId, messageContent.contentType ?: ContentType.CHAT, messageContent.content!!)
+         messageContent.contentType = contentType
+         messageContent.content = buffer
+<a href="#h1-2-8" id="h1-2-8" class="i">+        // remove messages currently being sent from the cache
+</a><a href="#h1-2-9" id="h1-2-9" class="i">+        if (!committed) {
+</a><a href="#h1-2-10" id="h1-2-10" class="i">+            decryptedMessageCache.remove(messageId)
+</a><a href="#h1-2-11" id="h1-2-11" class="i">+            encryptedMessages.remove(messageId)
+</a><a href="#h1-2-12" id="h1-2-12" class="i">+        }
+</a>     }
+ 
+     override fun asyncInit() {
+<a href="#h1-3" id="h1-3" class="h">@@ -520,11 +526,13 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>         context.event.subscribe(BuildMessageEvent::class, priority = 0) { event -&gt;
+             val message = event.message
+             val conversationId = message.messageDescriptor!!.conversationId.toString()
+<a href="#h1-3-3" id="h1-3-3" class="i">+            val isMessageCommitted = message.messageState == MessageState.COMMITTED
+</a>             messageHook(
+                 conversationId = conversationId,
+                 messageId = message.messageDescriptor!!.messageId!!,
+                 senderId = message.senderId.toString(),
+<a href="#h1-3-8" id="h1-3-8" class="d">-                messageContent = message.messageContent!!
+</a><a href="#h1-3-9" id="h1-3-9" class="i">+                messageContent = message.messageContent!!,
+</a><a href="#h1-3-10" id="h1-3-10" class="i">+                committed = isMessageCommitted
+</a>             )
+ 
+             message.messageContent!!.instanceNonNull()
+<a href="#h1-4" id="h1-4" class="h">@@ -535,7 +543,8 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>                     conversationId = conversationId,
+                     messageId = quotedMessage.getObjectField(&quot;mMessageId&quot;)?.toString()?.toLong() ?: return@also,
+                     senderId = SnapUUID(quotedMessage.getObjectField(&quot;mSenderId&quot;)).toString(),
+<a href="#h1-4-3" id="h1-4-3" class="d">-                    messageContent = MessageContent(quotedMessage)
+</a><a href="#h1-4-4" id="h1-4-4" class="i">+                    messageContent = MessageContent(quotedMessage),
+</a><a href="#h1-4-5" id="h1-4-5" class="i">+                    committed = isMessageCommitted
+</a>                 )
+             }
+         }
+</pre>
+</div>
+</body>
+</html>

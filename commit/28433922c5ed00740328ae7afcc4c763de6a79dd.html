@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix: friend relationship changer mapper - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/28433922c5ed00740328ae7afcc4c763de6a79dd.html">28433922c5ed00740328ae7afcc4c763de6a79dd</a>
+<b>parent</b> <a href="../commit/fc65dfc626ea12091d502b0e48a8383929830c2b.html">fc65dfc626ea12091d502b0e48a8383929830c2b</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 17 May 2024 16:37:29 +0200
+
+fix: friend relationship changer mapper
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a></td><td> | </td><td class="num">27</td><td><span class="i">++++++++++++++++++++</span><span class="d">-------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/FriendRelationshipChangerMapper.kt</a></td><td> | </td><td class="num">27</td><td><span class="i">+++++++++++++</span><span class="d">--------------</span></td></tr>
+</table></pre><pre>2 files changed, 33 insertions(+), 21 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -48,6 +48,7 @@ import me.rhunk.snapenhance.core.features.impl.experiments.AddFriendSourceSpoof
+</a> import me.rhunk.snapenhance.core.features.impl.messaging.Messaging
+ import me.rhunk.snapenhance.core.ui.ViewAppearanceHelper
+ import me.rhunk.snapenhance.core.util.EvictingMap
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.core.util.dataBuilder
+</a> import me.rhunk.snapenhance.mapper.impl.FriendRelationshipChangerMapper
+ import java.net.URL
+ import java.text.DateFormat
+<a href="#h0-1" id="h0-1" class="h">@@ -537,16 +538,28 @@ class BulkMessagingAction : AbstractAction() {
+</a>     private fun removeFriend(userId: String) {
+         context.mappings.useMapper(FriendRelationshipChangerMapper::class) {
+             val friendRelationshipChangerInstance = context.feature(AddFriendSourceSpoof::class).friendRelationshipChangerInstance!!
+<a href="#h0-1-3" id="h0-1-3" class="d">-            val removeMethod = friendshipRelationshipChangerKtx.getAsClass()?.methods?.first {
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-                it.name == removeFriendMethod.getAsString()
+</a><a href="#h0-1-5" id="h0-1-5" class="d">-            } ?: throw Exception(&quot;Failed to find removeFriend method&quot;)
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+            val runFriendDurableJobMethod = classReference.getAsClass()?.methods?.first {
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+                it.name == runFriendDurableJob.getAsString()
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+            } ?: throw Exception(&quot;Failed to find runFriendDurableJobMethod method&quot;)
+</a><a href="#h0-1-9" id="h0-1-9" class="i">+
+</a><a href="#h0-1-10" id="h0-1-10" class="i">+            val removeFriendDurableJob = context.androidContext.classLoader.loadClass(&quot;com.snap.identity.job.snapchatter.RemoveFriendDurableJob&quot;)
+</a><a href="#h0-1-11" id="h0-1-11" class="i">+                .constructors.firstOrNull {
+</a><a href="#h0-1-12" id="h0-1-12" class="i">+                it.parameterTypes.size == 1
+</a><a href="#h0-1-13" id="h0-1-13" class="i">+            }?.run {
+</a><a href="#h0-1-14" id="h0-1-14" class="i">+                newInstance(
+</a><a href="#h0-1-15" id="h0-1-15" class="i">+                    parameterTypes[0].dataBuilder {
+</a><a href="#h0-1-16" id="h0-1-16" class="i">+                        set(&quot;a&quot;, userId) // userId
+</a><a href="#h0-1-17" id="h0-1-17" class="i">+                        set(&quot;b&quot;, &quot;DELETED_BY_MY_FRIENDS&quot;) // deleteSourceType
+</a><a href="#h0-1-18" id="h0-1-18" class="i">+                    }
+</a><a href="#h0-1-19" id="h0-1-19" class="i">+                )
+</a><a href="#h0-1-20" id="h0-1-20" class="i">+            } ?: throw Exception(&quot;Failed to create RemoveFriendDurableJob instance&quot;)
+</a> 
+<a href="#h0-1-22" id="h0-1-22" class="d">-            val completable = removeMethod.invoke(null,
+</a><a href="#h0-1-23" id="h0-1-23" class="i">+            val completable = runFriendDurableJobMethod.invoke(null,
+</a>                 friendRelationshipChangerInstance,
+                 userId, // userId
+<a href="#h0-1-26" id="h0-1-26" class="d">-                removeMethod.parameterTypes[2].enumConstants.first { it.toString() == &quot;DELETED_BY_MY_FRIENDS&quot; }, // source
+</a><a href="#h0-1-27" id="h0-1-27" class="d">-                null, // InteractionPlacementInfo
+</a><a href="#h0-1-28" id="h0-1-28" class="d">-                0
+</a><a href="#h0-1-29" id="h0-1-29" class="i">+                removeFriendDurableJob, // friend durable job
+</a><a href="#h0-1-30" id="h0-1-30" class="i">+                0x5, // action type
+</a><a href="#h0-1-31" id="h0-1-31" class="i">+                &quot;DELETED_BY_MY_FRIENDS&quot;, // deleteSourceType
+</a>             )!!
+             completable::class.java.methods.first {
+                 it.name == &quot;subscribe&quot; &amp;&amp; it.parameterTypes.isEmpty()
+<b>diff --git a/<a id="h1" href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/FriendRelationshipChangerMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/FriendRelationshipChangerMapper.kt</a> b/<a href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/FriendRelationshipChangerMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/FriendRelationshipChangerMapper.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -12,30 +12,28 @@ class FriendRelationshipChangerMapper : AbstractClassMapper(&quot;FriendRelationshipC
+</a> 
+     val friendshipRelationshipChangerKtx = classReference(&quot;removeFriendClass&quot;)
+     val addFriendMethod = string(&quot;addFriendMethod&quot;)
+<a href="#h1-0-3" id="h1-0-3" class="d">-    val removeFriendMethod = string(&quot;removeFriendMethod&quot;)
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    val runFriendDurableJob = string(&quot;runFriendDurableJob&quot;)
+</a> 
+     init {
+         mapper {
+             for (classDef in classes) {
+                 classDef.methods.firstOrNull { it.name == &quot;&lt;init&gt;&quot; }?.implementation?.findConstString(&quot;FriendRelationshipChangerImpl&quot;)?.takeIf { it } ?: continue
+                 classReference.set(classDef.getClassName())
+<a href="#h1-0-11" id="h1-0-11" class="d">-                return@mapper
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+                runFriendDurableJob.set(classDef.methods.firstOrNull {
+</a><a href="#h1-0-14" id="h1-0-14" class="i">+                    Modifier.isStatic(it.accessFlags) &amp;&amp;
+</a><a href="#h1-0-15" id="h1-0-15" class="i">+                            it.returnType.contains(&quot;CompletableAndThenCompletable&quot;) &amp;&amp;
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+                            it.parameterTypes.size == 5 &amp;&amp;
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+                            it.parameterTypes[0] == classDef.type &amp;&amp;
+</a><a href="#h1-0-18" id="h1-0-18" class="i">+                            it.parameterTypes[1] == &quot;Ljava/lang/String;&quot; &amp;&amp;
+</a><a href="#h1-0-19" id="h1-0-19" class="i">+                            it.parameterTypes[3] == &quot;I&quot; &amp;&amp;
+</a><a href="#h1-0-20" id="h1-0-20" class="i">+                            it.parameterTypes[4] == &quot;Ljava/lang/String;&quot;
+</a><a href="#h1-0-21" id="h1-0-21" class="i">+                }?.name ?: continue)
+</a>             }
+         }
+         mapper {
+             for (classDef in classes) {
+                 if (!classDef.isAbstract()) continue
+<a href="#h1-0-27" id="h1-0-27" class="d">-                val removeFriendDexMethod = classDef.methods.firstOrNull {
+</a><a href="#h1-0-28" id="h1-0-28" class="d">-                    Modifier.isStatic(it.accessFlags) &amp;&amp;
+</a><a href="#h1-0-29" id="h1-0-29" class="d">-                    it.parameterTypes.size == 5 &amp;&amp;
+</a><a href="#h1-0-30" id="h1-0-30" class="d">-                    it.returnType.contains(&quot;io/reactivex/rxjava3&quot;) &amp;&amp;
+</a><a href="#h1-0-31" id="h1-0-31" class="d">-                    getClass(it.parameterTypes[2])?.isEnum() == true &amp;&amp;
+</a><a href="#h1-0-32" id="h1-0-32" class="d">-                    getClass(it.parameterTypes[3])?.getClassName()?.endsWith(&quot;InteractionPlacementInfo&quot;) == true
+</a><a href="#h1-0-33" id="h1-0-33" class="d">-                } ?: continue
+</a><a href="#h1-0-34" id="h1-0-34" class="d">-
+</a><a href="#h1-0-35" id="h1-0-35" class="d">-                friendshipRelationshipChangerKtx.set(classDef.getClassName())
+</a><a href="#h1-0-36" id="h1-0-36" class="d">-                removeFriendMethod.set(removeFriendDexMethod.name)
+</a><a href="#h1-0-37" id="h1-0-37" class="d">-
+</a>                 val addFriendDexMethod = classDef.methods.firstOrNull {
+                     Modifier.isStatic(it.accessFlags) &amp;&amp;
+                     it.parameterTypes.size == 6 &amp;&amp;
+<a href="#h1-1" id="h1-1" class="h">@@ -43,8 +41,9 @@ class FriendRelationshipChangerMapper : AbstractClassMapper(&quot;FriendRelationshipC
+</a>                     getClass(it.parameterTypes[2])?.isEnum() == true &amp;&amp;
+                     getClass(it.parameterTypes[4])?.isEnum() == true &amp;&amp;
+                     it.parameterTypes[5] == &quot;I&quot;
+<a href="#h1-1-3" id="h1-1-3" class="d">-                } ?: return@mapper
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+                } ?: continue
+</a> 
+<a href="#h1-1-6" id="h1-1-6" class="i">+                friendshipRelationshipChangerKtx.set(classDef.getClassName())
+</a>                 addFriendMethod.set(addFriendDexMethod.name)
+                 return@mapper
+             }
+</pre>
+</div>
+</body>
+</html>

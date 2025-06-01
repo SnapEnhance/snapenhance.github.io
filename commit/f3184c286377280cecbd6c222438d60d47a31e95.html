@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(mediadownloader): mpeg dash support - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/f3184c286377280cecbd6c222438d60d47a31e95.html">f3184c286377280cecbd6c222438d60d47a31e95</a>
+<b>parent</b> <a href="../commit/09ab95199d6b4190d60df3fd0b112ac4b0393168.html">09ab95199d6b4190d60df3fd0b112ac4b0393168</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 21 May 2023 17:26:32 +0200
+
+feat(mediadownloader): mpeg dash support
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/build.gradle</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/dash/LongformVideoPlaylistItem.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/dash/SnapChapter.kt</a></td><td> | </td><td class="num">13</td><td><span class="i">+++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/dash/SnapPlaylistItem.kt</a></td><td> | </td><td class="num">10</td><td><span class="i">++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">76</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">---------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">app/src/main/kotlin/me/rhunk/snapenhance/util/MediaDownloaderHelper.kt</a></td><td> | </td><td class="num">26</td><td><span class="i">++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>6 files changed, 129 insertions(+), 10 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/build.gradle.html">app/build.gradle</a> b/<a href="../file/app/build.gradle.html">app/build.gradle</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -140,5 +140,5 @@ dependencies {
+</a>     implementation &#39;org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.1&#39;
+     compileOnly files(&#39;libs/LSPosed-api-1.0-SNAPSHOT.jar&#39;)
+     implementation &#39;com.google.code.gson:gson:2.10.1&#39;
+<a href="#h0-0-3" id="h0-0-3" class="d">-    implementation &#39;com.arthenica:ffmpeg-kit-min-gpl:5.1&#39;
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+    implementation &#39;com.arthenica:ffmpeg-kit-full-gpl:5.1.LTS&#39;
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/dash/LongformVideoPlaylistItem.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/dash/LongformVideoPlaylistItem.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/dash/LongformVideoPlaylistItem.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/dash/LongformVideoPlaylistItem.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -0,0 +1,11 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="i">+package me.rhunk.snapenhance.data.wrapper.impl.media.dash
+</a><a href="#h1-0-1" id="h1-0-1" class="i">+
+</a><a href="#h1-0-2" id="h1-0-2" class="i">+import me.rhunk.snapenhance.data.wrapper.AbstractWrapper
+</a><a href="#h1-0-3" id="h1-0-3" class="i">+
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+class LongformVideoPlaylistItem(obj: Any?) : AbstractWrapper(obj) {
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+    private val chapterList by lazy {
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+        instanceNonNull().javaClass.declaredFields.first { it.type == List::class.java }
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+    }
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+    val chapters: List&lt;SnapChapter&gt;
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+        get() = (chapterList.get(instanceNonNull()) as List&lt;*&gt;).map { SnapChapter(it) }
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+}</a><a href="#h1-0-11" id="h1-0-11" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/dash/SnapChapter.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/dash/SnapChapter.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/dash/SnapChapter.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/dash/SnapChapter.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -0,0 +1,12 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="i">+package me.rhunk.snapenhance.data.wrapper.impl.media.dash
+</a><a href="#h2-0-1" id="h2-0-1" class="i">+
+</a><a href="#h2-0-2" id="h2-0-2" class="i">+import me.rhunk.snapenhance.data.wrapper.AbstractWrapper
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+class SnapChapter (obj: Any?) : AbstractWrapper(obj) {
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+    val snapId by lazy {
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+        instanceNonNull().javaClass.declaredFields.first { it.type == Long::class.javaPrimitiveType }.get(instanceNonNull()) as Long
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+    }
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+    val startTimeMs by lazy {
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+        instanceNonNull().javaClass.declaredFields.filter { it.type == Long::class.javaPrimitiveType }[1].get(instanceNonNull()) as Long
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+    }
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+}</a><a href="#h2-0-12" id="h2-0-12" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/dash/SnapPlaylistItem.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/dash/SnapPlaylistItem.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/dash/SnapPlaylistItem.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/data/wrapper/impl/media/dash/SnapPlaylistItem.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -0,0 +1,9 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="i">+package me.rhunk.snapenhance.data.wrapper.impl.media.dash
+</a><a href="#h3-0-1" id="h3-0-1" class="i">+
+</a><a href="#h3-0-2" id="h3-0-2" class="i">+import me.rhunk.snapenhance.data.wrapper.AbstractWrapper
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+class SnapPlaylistItem (obj: Any?) : AbstractWrapper(obj) {
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+    val snapId by lazy {
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+        instanceNonNull().javaClass.declaredFields.first { it.type == Long::class.javaPrimitiveType }.get(instanceNonNull()) as Long
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+    }
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+}</a><a href="#h3-0-9" id="h3-0-9" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h4" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -14,6 +14,8 @@ import me.rhunk.snapenhance.config.ConfigProperty
+</a> import me.rhunk.snapenhance.data.ContentType
+ import me.rhunk.snapenhance.data.FileType
+ import me.rhunk.snapenhance.data.wrapper.impl.media.MediaInfo
+<a href="#h4-0-3" id="h4-0-3" class="i">+import me.rhunk.snapenhance.data.wrapper.impl.media.dash.LongformVideoPlaylistItem
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+import me.rhunk.snapenhance.data.wrapper.impl.media.dash.SnapPlaylistItem
+</a> import me.rhunk.snapenhance.data.wrapper.impl.media.opera.Layer
+ import me.rhunk.snapenhance.data.wrapper.impl.media.opera.ParamMap
+ import me.rhunk.snapenhance.features.Feature
+<a href="#h4-1" id="h4-1" class="h">@@ -27,32 +29,37 @@ import me.rhunk.snapenhance.util.EncryptionUtils
+</a> import me.rhunk.snapenhance.util.MediaDownloaderHelper
+ import me.rhunk.snapenhance.util.MediaType
+ import me.rhunk.snapenhance.util.PreviewUtils
+<a href="#h4-1-3" id="h4-1-3" class="i">+import me.rhunk.snapenhance.util.download.CdnDownloader
+</a> import me.rhunk.snapenhance.util.getObjectField
+ import me.rhunk.snapenhance.util.protobuf.ProtoReader
+<a href="#h4-1-6" id="h4-1-6" class="d">-import java.io.*
+</a><a href="#h4-1-7" id="h4-1-7" class="i">+import java.io.ByteArrayOutputStream
+</a><a href="#h4-1-8" id="h4-1-8" class="i">+import java.io.File
+</a><a href="#h4-1-9" id="h4-1-9" class="i">+import java.io.FileOutputStream
+</a><a href="#h4-1-10" id="h4-1-10" class="i">+import java.io.InputStream
+</a> import java.net.HttpURLConnection
+ import java.net.URL
+ import java.nio.file.Paths
+<a href="#h4-1-14" id="h4-1-14" class="d">-import java.util.*
+</a><a href="#h4-1-15" id="h4-1-15" class="i">+import java.util.Arrays
+</a> import java.util.concurrent.atomic.AtomicReference
+ import javax.crypto.Cipher
+ import javax.crypto.CipherInputStream
+<a href="#h4-1-19" id="h4-1-19" class="i">+import javax.xml.parsers.DocumentBuilderFactory
+</a><a href="#h4-1-20" id="h4-1-20" class="i">+import javax.xml.transform.TransformerFactory
+</a><a href="#h4-1-21" id="h4-1-21" class="i">+import javax.xml.transform.dom.DOMSource
+</a><a href="#h4-1-22" id="h4-1-22" class="i">+import javax.xml.transform.stream.StreamResult
+</a> import kotlin.io.path.inputStream
+ 
+ 
+ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_ASYNC) {
+     private var lastSeenMediaInfoMap: MutableMap&lt;MediaType, MediaInfo&gt;? = null
+     private var lastSeenMapParams: ParamMap? = null
+<a href="#h4-1-29" id="h4-1-29" class="d">-    private var isFFmpegPresent: Boolean? = null
+</a><a href="#h4-1-30" id="h4-1-30" class="i">+    private val isFFmpegPresent by lazy {
+</a><a href="#h4-1-31" id="h4-1-31" class="i">+        runCatching { FFmpegKit.execute(&quot;-version&quot;) }.isSuccess
+</a><a href="#h4-1-32" id="h4-1-32" class="i">+    }
+</a> 
+     private fun canMergeOverlay(): Boolean {
+         if (!context.config.bool(ConfigProperty.OVERLAY_MERGE)) return false
+<a href="#h4-1-36" id="h4-1-36" class="d">-        if (isFFmpegPresent != null) {
+</a><a href="#h4-1-37" id="h4-1-37" class="d">-            return isFFmpegPresent!!
+</a><a href="#h4-1-38" id="h4-1-38" class="d">-        }
+</a><a href="#h4-1-39" id="h4-1-39" class="d">-        //check if ffmpeg is correctly installed
+</a><a href="#h4-1-40" id="h4-1-40" class="d">-        isFFmpegPresent = runCatching { FFmpegKit.execute(&quot;-version&quot;) }.isSuccess
+</a><a href="#h4-1-41" id="h4-1-41" class="d">-        return isFFmpegPresent!!
+</a><a href="#h4-1-42" id="h4-1-42" class="i">+        return isFFmpegPresent
+</a>     }
+ 
+     private fun createNewFilePath(hash: Int, author: String, fileType: FileType): String? {
+<a href="#h4-2" id="h4-2" class="h">@@ -229,11 +236,62 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a>                     &quot;[^\\x00-\\x7F]&quot;.toRegex(),
+                     &quot;&quot;)
+             downloadOperaMedia(mediaInfoMap, &quot;Public-Stories/$userDisplayName&quot;)
+<a href="#h4-2-3" id="h4-2-3" class="i">+            return
+</a>         }
+ 
+         //spotlight
+         if (snapSource == &quot;SINGLE_SNAP_STORY&quot; &amp;&amp; (forceDownload || context.config.bool(ConfigProperty.AUTO_DOWNLOAD_SPOTLIGHT))) {
+             downloadOperaMedia(mediaInfoMap, &quot;Spotlight&quot;)
+<a href="#h4-2-9" id="h4-2-9" class="i">+            return
+</a><a href="#h4-2-10" id="h4-2-10" class="i">+        }
+</a><a href="#h4-2-11" id="h4-2-11" class="i">+
+</a><a href="#h4-2-12" id="h4-2-12" class="i">+        //stories with mpeg dash media
+</a><a href="#h4-2-13" id="h4-2-13" class="i">+        //TODO: option to download multiple chapters
+</a><a href="#h4-2-14" id="h4-2-14" class="i">+        if (paramMap.containsKey(&quot;SNAP_PLAYLIST_ITEM&quot;) &amp;&amp; forceDownload) {
+</a><a href="#h4-2-15" id="h4-2-15" class="i">+            if (!isFFmpegPresent) {
+</a><a href="#h4-2-16" id="h4-2-16" class="i">+                context.shortToast(&quot;Can&#39;t download media. ffmpeg was not found&quot;)
+</a><a href="#h4-2-17" id="h4-2-17" class="i">+                return
+</a><a href="#h4-2-18" id="h4-2-18" class="i">+            }
+</a><a href="#h4-2-19" id="h4-2-19" class="i">+
+</a><a href="#h4-2-20" id="h4-2-20" class="i">+            val storyName = paramMap[&quot;STORY_NAME&quot;].toString().replace(
+</a><a href="#h4-2-21" id="h4-2-21" class="i">+                &quot;[^\\x00-\\x7F]&quot;.toRegex(),
+</a><a href="#h4-2-22" id="h4-2-22" class="i">+                &quot;&quot;)
+</a><a href="#h4-2-23" id="h4-2-23" class="i">+
+</a><a href="#h4-2-24" id="h4-2-24" class="i">+            //get the position of the media in the playlist and the duration
+</a><a href="#h4-2-25" id="h4-2-25" class="i">+            val snapItem = SnapPlaylistItem(paramMap[&quot;SNAP_PLAYLIST_ITEM&quot;]!!)
+</a><a href="#h4-2-26" id="h4-2-26" class="i">+            val snapChapterList = LongformVideoPlaylistItem(paramMap[&quot;LONGFORM_VIDEO_PLAYLIST_ITEM&quot;]!!).chapters
+</a><a href="#h4-2-27" id="h4-2-27" class="i">+            if (snapChapterList.isEmpty()) {
+</a><a href="#h4-2-28" id="h4-2-28" class="i">+                context.shortToast(&quot;No chapters found&quot;)
+</a><a href="#h4-2-29" id="h4-2-29" class="i">+                return
+</a><a href="#h4-2-30" id="h4-2-30" class="i">+            }
+</a><a href="#h4-2-31" id="h4-2-31" class="i">+            val snapChapter = snapChapterList.first { it.snapId == snapItem.snapId }
+</a><a href="#h4-2-32" id="h4-2-32" class="i">+            val nextChapter = snapChapterList.getOrNull(snapChapterList.indexOf(snapChapter) + 1)
+</a><a href="#h4-2-33" id="h4-2-33" class="i">+
+</a><a href="#h4-2-34" id="h4-2-34" class="i">+            //add 100ms to the start time to prevent the video from starting too early
+</a><a href="#h4-2-35" id="h4-2-35" class="i">+            val snapChapterTimestamp = snapChapter.startTimeMs.plus(100)
+</a><a href="#h4-2-36" id="h4-2-36" class="i">+            val duration = nextChapter?.startTimeMs?.minus(snapChapterTimestamp) ?: 0
+</a><a href="#h4-2-37" id="h4-2-37" class="i">+
+</a><a href="#h4-2-38" id="h4-2-38" class="i">+            //get the mpd playlist and append the cdn url to baseurl nodes
+</a><a href="#h4-2-39" id="h4-2-39" class="i">+            val playlistUrl = paramMap[&quot;MEDIA_ID&quot;].toString().let { it.substring(it.indexOf(&quot;https://cf-st.sc-cdn.net&quot;)) }
+</a><a href="#h4-2-40" id="h4-2-40" class="i">+            val playlistXml = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(URL(playlistUrl).openStream())
+</a><a href="#h4-2-41" id="h4-2-41" class="i">+            val baseUrlNodeList = playlistXml.getElementsByTagName(&quot;BaseURL&quot;)
+</a><a href="#h4-2-42" id="h4-2-42" class="i">+            for (i in 0 until baseUrlNodeList.length) {
+</a><a href="#h4-2-43" id="h4-2-43" class="i">+                val baseUrlNode = baseUrlNodeList.item(i)
+</a><a href="#h4-2-44" id="h4-2-44" class="i">+                val baseUrl = baseUrlNode.textContent
+</a><a href="#h4-2-45" id="h4-2-45" class="i">+                baseUrlNode.textContent = &quot;${CdnDownloader.CF_ST_CDN_D}$baseUrl&quot;
+</a><a href="#h4-2-46" id="h4-2-46" class="i">+            }
+</a><a href="#h4-2-47" id="h4-2-47" class="i">+
+</a><a href="#h4-2-48" id="h4-2-48" class="i">+            val xmlData = ByteArrayOutputStream()
+</a><a href="#h4-2-49" id="h4-2-49" class="i">+            TransformerFactory.newInstance().newTransformer().transform(DOMSource(playlistXml), StreamResult(xmlData))
+</a><a href="#h4-2-50" id="h4-2-50" class="i">+            runCatching {
+</a><a href="#h4-2-51" id="h4-2-51" class="i">+                context.shortToast(&quot;Downloading dash media. This might take a while...&quot;)
+</a><a href="#h4-2-52" id="h4-2-52" class="i">+                val downloadedMedia = MediaDownloaderHelper.downloadDashChapter(xmlData.toByteArray().toString(Charsets.UTF_8), snapChapterTimestamp, duration)
+</a><a href="#h4-2-53" id="h4-2-53" class="i">+                downloadMediaContent(downloadedMedia, downloadedMedia.contentHashCode(), &quot;Pro-Stories/${storyName}&quot;, FileType.fromByteArray(downloadedMedia))
+</a><a href="#h4-2-54" id="h4-2-54" class="i">+            }.onFailure {
+</a><a href="#h4-2-55" id="h4-2-55" class="i">+                context.longToast(&quot;Failed to download media: ${it.message}&quot;)
+</a><a href="#h4-2-56" id="h4-2-56" class="i">+                xposedLog(it)
+</a><a href="#h4-2-57" id="h4-2-57" class="i">+            }
+</a><a href="#h4-2-58" id="h4-2-58" class="i">+            return
+</a>         }
+     }
+ 
+<b>diff --git a/<a id="h5" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/util/MediaDownloaderHelper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/util/MediaDownloaderHelper.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/util/MediaDownloaderHelper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/util/MediaDownloaderHelper.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -49,6 +49,32 @@ object MediaDownloaderHelper {
+</a>         return mapOf(MediaType.ORIGINAL to content)
+     }
+ 
+<a href="#h5-0-3" id="h5-0-3" class="i">+    fun downloadDashChapter(playlistXmlData: String, startTime: Long, duration: Long?): ByteArray {
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+        val outputFile = File.createTempFile(&quot;output&quot;, &quot;.mp4&quot;)
+</a><a href="#h5-0-5" id="h5-0-5" class="i">+        val playlistFile = File.createTempFile(&quot;playlist&quot;, &quot;.mpd&quot;).also {
+</a><a href="#h5-0-6" id="h5-0-6" class="i">+            with(FileOutputStream(it)) {
+</a><a href="#h5-0-7" id="h5-0-7" class="i">+                write(playlistXmlData.toByteArray(Charsets.UTF_8))
+</a><a href="#h5-0-8" id="h5-0-8" class="i">+                close()
+</a><a href="#h5-0-9" id="h5-0-9" class="i">+            }
+</a><a href="#h5-0-10" id="h5-0-10" class="i">+        }
+</a><a href="#h5-0-11" id="h5-0-11" class="i">+
+</a><a href="#h5-0-12" id="h5-0-12" class="i">+        val ffmpegSession = FFmpegKit.execute(
+</a><a href="#h5-0-13" id="h5-0-13" class="i">+            &quot;-y -i &quot; +
+</a><a href="#h5-0-14" id="h5-0-14" class="i">+                    playlistFile.absolutePath +
+</a><a href="#h5-0-15" id="h5-0-15" class="i">+                    &quot; -ss &#39;${startTime}ms&#39;&quot; +
+</a><a href="#h5-0-16" id="h5-0-16" class="i">+                    (if (duration != null) &quot; -t &#39;${duration}ms&#39;&quot; else &quot;&quot;) +
+</a><a href="#h5-0-17" id="h5-0-17" class="i">+                    &quot; -c:v libx264 -threads 6 -q:v 13 &quot; + outputFile.absolutePath
+</a><a href="#h5-0-18" id="h5-0-18" class="i">+        )
+</a><a href="#h5-0-19" id="h5-0-19" class="i">+
+</a><a href="#h5-0-20" id="h5-0-20" class="i">+        playlistFile.delete()
+</a><a href="#h5-0-21" id="h5-0-21" class="i">+        if (!ffmpegSession.returnCode.isValueSuccess) {
+</a><a href="#h5-0-22" id="h5-0-22" class="i">+            throw Exception(ffmpegSession.output)
+</a><a href="#h5-0-23" id="h5-0-23" class="i">+        }
+</a><a href="#h5-0-24" id="h5-0-24" class="i">+        val outputData = FileInputStream(outputFile).readBytes()
+</a><a href="#h5-0-25" id="h5-0-25" class="i">+        outputFile.delete()
+</a><a href="#h5-0-26" id="h5-0-26" class="i">+        return outputData
+</a><a href="#h5-0-27" id="h5-0-27" class="i">+    }
+</a><a href="#h5-0-28" id="h5-0-28" class="i">+
+</a>     fun mergeOverlay(original: ByteArray, overlay: ByteArray, isPreviewMode: Boolean): ByteArray {
+         val originalFileType = FileType.fromByteArray(original)
+         val overlayFileType = FileType.fromByteArray(overlay)
+</pre>
+</div>
+</body>
+</html>

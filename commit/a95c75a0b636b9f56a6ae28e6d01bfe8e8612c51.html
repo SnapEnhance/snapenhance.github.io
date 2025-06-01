@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(message_logger): quoted messages support - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/a95c75a0b636b9f56a6ae28e6d01bfe8e8612c51.html">a95c75a0b636b9f56a6ae28e6d01bfe8e8612c51</a>
+<b>parent</b> <a href="../commit/ec0fd2cf08ed312188d2d73f5fc0bcfadbb7f38f.html">ec0fd2cf08ed312188d2d73f5fc0bcfadbb7f38f</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 17 Jan 2024 17:37:24 +0100
+
+feat(message_logger): quoted messages support
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">+++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt</a></td><td> | </td><td class="num">18</td><td><span class="i">++++++++++</span><span class="d">--------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/AbstractWrapper.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/QuotedMessage.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">+++</span><span class="d"></span></td></tr>
+</table></pre><pre>5 files changed, 25 insertions(+), 11 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -158,4 +158,13 @@ enum class MixerStoryType(
+</a>             return entries.firstOrNull { it.index == index } ?: UNKNOWN
+         }
+     }
+<a href="#h0-0-3" id="h0-0-3" class="i">+}
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+enum class QuotedMessageContentStatus {
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+    UNKNOWN,
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+    AVAILABLE,
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+    DELETED,
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+    JOINEDAFTERORIGINALMESSAGESENT,
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+    UNAVAILABLE,
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+    STORYMEDIADELETEDBYPOSTER
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventBus.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -27,9 +27,9 @@ class EventBus(
+</a>         }
+     }
+ 
+<a href="#h1-0-3" id="h1-0-3" class="d">-    inline fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;, priority: Int? = null, crossinline listener: (T) -&gt; Unit) = subscribe(event, { true }, priority, listener)
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;, priority: Int? = null, listener: (T) -&gt; Unit) = subscribe(event, { true }, priority, listener)
+</a> 
+<a href="#h1-0-6" id="h1-0-6" class="d">-    inline fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;,  crossinline filter: (T) -&gt; Boolean, priority: Int? = null, crossinline listener: (T) -&gt; Unit): () -&gt; Unit {
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+    fun &lt;T : Event&gt; subscribe(event: KClass&lt;T&gt;,  filter: (T) -&gt; Boolean, priority: Int? = null, listener: (T) -&gt; Unit): () -&gt; Unit {
+</a>         val obj = object : IListener&lt;T&gt; {
+             override fun handle(event: T) {
+                 if (!filter(event)) return
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -9,6 +9,7 @@ import com.google.gson.JsonObject
+</a> import com.google.gson.JsonParser
+ import me.rhunk.snapenhance.common.data.ContentType
+ import me.rhunk.snapenhance.common.data.MessageState
+<a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.common.data.QuotedMessageContentStatus
+</a> import me.rhunk.snapenhance.common.util.ktx.longHashCode
+ import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+<a href="#h2-1" id="h2-1" class="h">@@ -38,7 +39,7 @@ class MessageLogger : Feature(&quot;MessageLogger&quot;,
+</a> 
+     private val threadPool = Executors.newFixedThreadPool(10)
+ 
+<a href="#h2-1-3" id="h2-1-3" class="d">-    private val cachedIdLinks = mutableMapOf&lt;Long, Long&gt;() // client id -&gt; server id
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+    private val cachedIdLinks = EvictingMap&lt;Long, Long&gt;(500) // client id -&gt; server id
+</a>     private val fetchedMessages = mutableListOf&lt;Long&gt;() // list of unique message ids
+     private val deletedMessageCache = EvictingMap&lt;Long, JsonObject&gt;(200) // unique message id -&gt; message json object
+ 
+<a href="#h2-2" id="h2-2" class="h">@@ -112,8 +113,11 @@ class MessageLogger : Feature(&quot;MessageLogger&quot;,
+</a> 
+             val uniqueMessageIdentifier = computeMessageIdentifier(conversationId, event.message.orderKey!!)
+             val messageContentType = event.message.messageContent!!.contentType
+<a href="#h2-2-3" id="h2-2-3" class="i">+            val isMessageDeleted = messageContentType == ContentType.STATUS || event.message.messageContent!!.quotedMessage?.status?.let {
+</a><a href="#h2-2-4" id="h2-2-4" class="i">+                it == QuotedMessageContentStatus.DELETED || it == QuotedMessageContentStatus.STORYMEDIADELETEDBYPOSTER
+</a><a href="#h2-2-5" id="h2-2-5" class="i">+            } == true
+</a> 
+<a href="#h2-2-7" id="h2-2-7" class="d">-            if (messageContentType != ContentType.STATUS) {
+</a><a href="#h2-2-8" id="h2-2-8" class="i">+            if (!isMessageDeleted) {
+</a>                 if (messageFilter.isNotEmpty() &amp;&amp; !messageFilter.contains(messageContentType?.name)) return@subscribe
+                 if (fetchedMessages.contains(uniqueMessageIdentifier)) return@subscribe
+                 fetchedMessages.add(uniqueMessageIdentifier)
+<a href="#h2-3" id="h2-3" class="h">@@ -136,18 +140,16 @@ class MessageLogger : Feature(&quot;MessageLogger&quot;,
+</a>                 }
+             } ?: return@subscribe
+ 
+<a href="#h2-3-3" id="h2-3-3" class="d">-            val messageJsonObject = deletedMessageObject.asJsonObject
+</a><a href="#h2-3-4" id="h2-3-4" class="d">-
+</a>             //if the message is a snap make it playable
+<a href="#h2-3-6" id="h2-3-6" class="d">-            if (messageJsonObject[&quot;mMessageContent&quot;]?.asJsonObject?.get(&quot;mContentType&quot;)?.asString == &quot;SNAP&quot;) {
+</a><a href="#h2-3-7" id="h2-3-7" class="d">-                messageJsonObject[&quot;mMetadata&quot;].asJsonObject.addProperty(&quot;mPlayableSnapState&quot;, &quot;PLAYABLE&quot;)
+</a><a href="#h2-3-8" id="h2-3-8" class="i">+            if (deletedMessageObject[&quot;mMessageContent&quot;]?.asJsonObject?.get(&quot;mContentType&quot;)?.asString == &quot;SNAP&quot;) {
+</a><a href="#h2-3-9" id="h2-3-9" class="i">+                deletedMessageObject[&quot;mMetadata&quot;].asJsonObject.addProperty(&quot;mPlayableSnapState&quot;, &quot;PLAYABLE&quot;)
+</a>             }
+ 
+             //serialize all properties of messageJsonObject and put mMessageContent &amp; mMetadata in the message object
+<a href="#h2-3-13" id="h2-3-13" class="d">-            messageInstance.javaClass.declaredFields.forEach { field -&gt;
+</a><a href="#h2-3-14" id="h2-3-14" class="i">+            messageInstance::class.java.declaredFields.forEach { field -&gt;
+</a>                 if (field.name != &quot;mMessageContent&quot; &amp;&amp; field.name != &quot;mMetadata&quot;) return@forEach
+                 field.isAccessible = true
+<a href="#h2-3-17" id="h2-3-17" class="d">-                messageJsonObject[field.name]?.let { fieldValue -&gt;
+</a><a href="#h2-3-18" id="h2-3-18" class="i">+                deletedMessageObject[field.name]?.let { fieldValue -&gt;
+</a>                     field.set(messageInstance, context.gson.fromJson(fieldValue, field.type))
+                 }
+             }
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/AbstractWrapper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/AbstractWrapper.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/AbstractWrapper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/AbstractWrapper.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -57,7 +57,7 @@ abstract class AbstractWrapper(
+</a>     protected fun &lt;T&gt; field(fieldName: String, mapper: ((Any?) -&gt; T?)? = null) = FieldAccessor(fieldName, mapper)
+ 
+     fun &lt;T : Enum&lt;*&gt;&gt; getEnumValue(fieldName: String, defaultValue: T?): T? {
+<a href="#h3-0-3" id="h3-0-3" class="d">-        if (defaultValue == null) return null
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+        if (defaultValue == null || instance == null) return null
+</a>         val mContentType = XposedHelpers.getObjectField(instance, fieldName) as? Enum&lt;*&gt; ?: return null
+         return java.lang.Enum.valueOf(defaultValue::class.java, mContentType.name)
+     }
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/QuotedMessage.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/QuotedMessage.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/QuotedMessage.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/QuotedMessage.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -1,5 +1,6 @@
+</a> package me.rhunk.snapenhance.core.wrapper.impl
+ 
+<a href="#h4-0-2" id="h4-0-2" class="i">+import me.rhunk.snapenhance.common.data.QuotedMessageContentStatus
+</a> import me.rhunk.snapenhance.core.wrapper.AbstractWrapper
+ import org.mozilla.javascript.annotations.JSGetter
+ import org.mozilla.javascript.annotations.JSSetter
+<a href="#h4-1" id="h4-1" class="h">@@ -7,4 +8,6 @@ import org.mozilla.javascript.annotations.JSSetter
+</a> class QuotedMessage(obj: Any?) : AbstractWrapper(obj) {
+     @get:JSGetter @set:JSSetter
+     var content by field(&quot;mContent&quot;) { QuotedMessageContent(it) }
+<a href="#h4-1-3" id="h4-1-3" class="i">+    @get:JSGetter
+</a><a href="#h4-1-4" id="h4-1-4" class="i">+    val status by enum(&quot;mStatus&quot;, QuotedMessageContentStatus.UNKNOWN)
+</a> } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

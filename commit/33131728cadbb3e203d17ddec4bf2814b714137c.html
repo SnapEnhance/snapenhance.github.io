@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(export_chat_messages): ability to select the amount of message - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/33131728cadbb3e203d17ddec4bf2814b714137c.html">33131728cadbb3e203d17ddec4bf2814b714137c</a>
+<b>parent</b> <a href="../commit/58f4f51fe69cec02a273dfe082d09eb08372bdce.html">58f4f51fe69cec02a273dfe082d09eb08372bdce</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat,  2 Sep 2023 12:32:24 +0200
+
+feat(export_chat_messages): ability to select the amount of message
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/action/impl/ExportChatMessages.kt</a></td><td> | </td><td class="num">109</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">----------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/util/export/MessageExporter.kt</a></td><td> | </td><td class="num">162</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">+++++</span><span class="d">--</span></td></tr>
+</table></pre><pre>4 files changed, 162 insertions(+), 117 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a> b/<a href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -587,6 +587,7 @@
+</a>     &quot;chat_export&quot;: {
+         &quot;select_export_format&quot;: &quot;Select the Export Format&quot;,
+         &quot;select_media_type&quot;: &quot;Select Media Types to export&quot;,
+<a href="#h0-0-3" id="h0-0-3" class="i">+        &quot;select_amount_of_messages&quot;: &quot;Select the amount of messages to export (leave empty for all)&quot;,
+</a>         &quot;select_conversation&quot;: &quot;Select a Conversation to export&quot;,
+         &quot;dialog_negative_button&quot;: &quot;Cancel&quot;,
+         &quot;dialog_neutral_button&quot;: &quot;Export All&quot;,
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/action/impl/ExportChatMessages.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/action/impl/ExportChatMessages.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/action/impl/ExportChatMessages.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/action/impl/ExportChatMessages.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -2,12 +2,11 @@ package me.rhunk.snapenhance.action.impl
+</a> 
+ import android.app.AlertDialog
+ import android.content.DialogInterface
+<a href="#h1-0-3" id="h1-0-3" class="d">-import android.content.Intent
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-import android.net.Uri
+</a> import android.os.Environment
+<a href="#h1-0-6" id="h1-0-6" class="d">-import kotlinx.coroutines.DelicateCoroutinesApi
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+import android.text.InputType
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+import android.widget.EditText
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+import kotlinx.coroutines.CoroutineScope
+</a> import kotlinx.coroutines.Dispatchers
+<a href="#h1-0-11" id="h1-0-11" class="d">-import kotlinx.coroutines.GlobalScope
+</a> import kotlinx.coroutines.Job
+ import kotlinx.coroutines.joinAll
+ import kotlinx.coroutines.launch
+<a href="#h1-1" id="h1-1" class="h">@@ -24,8 +23,8 @@ import me.rhunk.snapenhance.util.CallbackBuilder
+</a> import me.rhunk.snapenhance.util.export.ExportFormat
+ import me.rhunk.snapenhance.util.export.MessageExporter
+ import java.io.File
+<a href="#h1-1-3" id="h1-1-3" class="i">+import kotlin.math.absoluteValue
+</a> 
+<a href="#h1-1-5" id="h1-1-5" class="d">-@OptIn(DelicateCoroutinesApi::class)
+</a> class ExportChatMessages : AbstractAction() {
+     private val callbackClass by lazy {  context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;Callback&quot;) }
+ 
+<a href="#h1-2" id="h1-2" class="h">@@ -45,21 +44,30 @@ class ExportChatMessages : AbstractAction() {
+</a>         context.feature(Messaging::class).conversationManager
+     }
+ 
+<a href="#h1-2-3" id="h1-2-3" class="i">+    private val coroutineScope = CoroutineScope(Dispatchers.Default)
+</a><a href="#h1-2-4" id="h1-2-4" class="i">+
+</a>     private val dialogLogs = mutableListOf&lt;String&gt;()
+     private var currentActionDialog: AlertDialog? = null
+ 
+     private var exportType: ExportFormat? = null
+     private var mediaToDownload: List&lt;ContentType&gt;? = null
+<a href="#h1-2-10" id="h1-2-10" class="i">+    private var amountOfMessages: Int? = null
+</a> 
+     private fun logDialog(message: String) {
+         context.runOnUiThread {
+<a href="#h1-2-14" id="h1-2-14" class="d">-            if (dialogLogs.size &gt; 15) dialogLogs.removeAt(0)
+</a><a href="#h1-2-15" id="h1-2-15" class="i">+            if (dialogLogs.size &gt; 10) dialogLogs.removeAt(0)
+</a>             dialogLogs.add(message)
+<a href="#h1-2-17" id="h1-2-17" class="d">-            context.log.debug(&quot;dialog: $message&quot;)
+</a><a href="#h1-2-18" id="h1-2-18" class="i">+            context.log.debug(&quot;dialog: $message&quot;, &quot;ExportChatMessages&quot;)
+</a>             currentActionDialog!!.setMessage(dialogLogs.joinToString(&quot;\n&quot;))
+         }
+     }
+ 
+<a href="#h1-2-23" id="h1-2-23" class="i">+    private fun setStatus(message: String) {
+</a><a href="#h1-2-24" id="h1-2-24" class="i">+        context.runOnUiThread {
+</a><a href="#h1-2-25" id="h1-2-25" class="i">+            currentActionDialog!!.setTitle(message)
+</a><a href="#h1-2-26" id="h1-2-26" class="i">+        }
+</a><a href="#h1-2-27" id="h1-2-27" class="i">+    }
+</a><a href="#h1-2-28" id="h1-2-28" class="i">+
+</a>     private suspend fun askExportType() = suspendCancellableCoroutine { cont -&gt;
+         context.runOnUiThread {
+             ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity)
+<a href="#h1-3" id="h1-3" class="h">@@ -74,6 +82,26 @@ class ExportChatMessages : AbstractAction() {
+</a>         }
+     }
+ 
+<a href="#h1-3-3" id="h1-3-3" class="i">+    private suspend fun askAmountOfMessages() = suspendCancellableCoroutine { cont -&gt;
+</a><a href="#h1-3-4" id="h1-3-4" class="i">+        coroutineScope.launch(Dispatchers.Main) {
+</a><a href="#h1-3-5" id="h1-3-5" class="i">+            val input = EditText(context.mainActivity)
+</a><a href="#h1-3-6" id="h1-3-6" class="i">+            input.inputType = InputType.TYPE_CLASS_NUMBER
+</a><a href="#h1-3-7" id="h1-3-7" class="i">+            input.setSingleLine()
+</a><a href="#h1-3-8" id="h1-3-8" class="i">+            input.maxLines = 1
+</a><a href="#h1-3-9" id="h1-3-9" class="i">+
+</a><a href="#h1-3-10" id="h1-3-10" class="i">+            ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity)
+</a><a href="#h1-3-11" id="h1-3-11" class="i">+                .setTitle(context.translation[&quot;chat_export.select_amount_of_messages&quot;])
+</a><a href="#h1-3-12" id="h1-3-12" class="i">+                .setView(input)
+</a><a href="#h1-3-13" id="h1-3-13" class="i">+                .setPositiveButton(context.translation[&quot;button.ok&quot;]) { _, _ -&gt;
+</a><a href="#h1-3-14" id="h1-3-14" class="i">+                    cont.resumeWith(Result.success(input.text.takeIf { it.isNotEmpty() }?.toString()?.toIntOrNull()?.absoluteValue))
+</a><a href="#h1-3-15" id="h1-3-15" class="i">+                }
+</a><a href="#h1-3-16" id="h1-3-16" class="i">+                .setOnCancelListener {
+</a><a href="#h1-3-17" id="h1-3-17" class="i">+                    cont.resumeWith(Result.success(null))
+</a><a href="#h1-3-18" id="h1-3-18" class="i">+                }
+</a><a href="#h1-3-19" id="h1-3-19" class="i">+                .show()
+</a><a href="#h1-3-20" id="h1-3-20" class="i">+        }
+</a><a href="#h1-3-21" id="h1-3-21" class="i">+    }
+</a><a href="#h1-3-22" id="h1-3-22" class="i">+
+</a>     private suspend fun askMediaToDownload() = suspendCancellableCoroutine { cont -&gt;
+         context.runOnUiThread {
+             val mediasToDownload = mutableListOf&lt;ContentType&gt;()
+<a href="#h1-4" id="h1-4" class="h">@@ -96,7 +124,7 @@ class ExportChatMessages : AbstractAction() {
+</a>                 .setOnCancelListener {
+                     cont.resumeWith(Result.success(null))
+                 }
+<a href="#h1-4-3" id="h1-4-3" class="d">-                .setPositiveButton(&quot;OK&quot;) { _, _ -&gt;
+</a><a href="#h1-4-4" id="h1-4-4" class="i">+                .setPositiveButton(context.translation[&quot;button.ok&quot;]) { _, _ -&gt;
+</a>                     cont.resumeWith(Result.success(mediasToDownload))
+                 }
+                 .show()
+<a href="#h1-5" id="h1-5" class="h">@@ -104,11 +132,12 @@ class ExportChatMessages : AbstractAction() {
+</a>     }
+ 
+     override fun run() {
+<a href="#h1-5-3" id="h1-5-3" class="d">-        GlobalScope.launch(Dispatchers.Main) {
+</a><a href="#h1-5-4" id="h1-5-4" class="i">+        coroutineScope.launch(Dispatchers.Main) {
+</a>             exportType = askExportType() ?: return@launch
+             mediaToDownload = if (exportType == ExportFormat.HTML) askMediaToDownload() else null
+<a href="#h1-5-7" id="h1-5-7" class="i">+            amountOfMessages = askAmountOfMessages()
+</a> 
+<a href="#h1-5-9" id="h1-5-9" class="d">-            val friendFeedEntries = context.database.getFeedEntries(20)
+</a><a href="#h1-5-10" id="h1-5-10" class="i">+            val friendFeedEntries = context.database.getFeedEntries(500)
+</a>             val selectedConversations = mutableListOf&lt;FriendFeedEntry&gt;()
+ 
+             ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity)
+<a href="#h1-6" id="h1-6" class="h">@@ -177,7 +206,7 @@ class ExportChatMessages : AbstractAction() {
+</a>             conversationManagerInstance,
+             SnapUUID.fromString(conversationId).instanceNonNull(),
+             lastMessageId,
+<a href="#h1-6-3" id="h1-6-3" class="d">-            100,
+</a><a href="#h1-6-4" id="h1-6-4" class="i">+            500,
+</a>             callback
+         )
+     }
+<a href="#h1-7" id="h1-7" class="h">@@ -200,10 +229,17 @@ class ExportChatMessages : AbstractAction() {
+</a>         while (true) {
+             val messages = fetchMessagesPaginated(conversationId, lastMessageId)
+             if (messages.isEmpty()) break
+<a href="#h1-7-3" id="h1-7-3" class="i">+
+</a><a href="#h1-7-4" id="h1-7-4" class="i">+            if (amountOfMessages != null &amp;&amp; messages.size + foundMessages.size &gt;= amountOfMessages!!) {
+</a><a href="#h1-7-5" id="h1-7-5" class="i">+                foundMessages.addAll(messages.take(amountOfMessages!! - foundMessages.size))
+</a><a href="#h1-7-6" id="h1-7-6" class="i">+                break
+</a><a href="#h1-7-7" id="h1-7-7" class="i">+            }
+</a><a href="#h1-7-8" id="h1-7-8" class="i">+
+</a>             foundMessages.addAll(messages)
+             messages.firstOrNull()?.let {
+                 lastMessageId = it.messageDescriptor.messageId
+             }
+<a href="#h1-7-13" id="h1-7-13" class="i">+            setStatus(&quot;Exporting (${foundMessages.size} / ${foundMessages.firstOrNull()?.orderKey})&quot;)
+</a>         }
+ 
+         val outputFile = File(
+<a href="#h1-8" id="h1-8" class="h">@@ -212,33 +248,26 @@ class ExportChatMessages : AbstractAction() {
+</a>         ).also { it.parentFile?.mkdirs() }
+ 
+         logDialog(context.translation[&quot;chat_export.writing_output&quot;])
+<a href="#h1-8-3" id="h1-8-3" class="d">-        MessageExporter(
+</a><a href="#h1-8-4" id="h1-8-4" class="d">-            context = context,
+</a><a href="#h1-8-5" id="h1-8-5" class="d">-            friendFeedEntry = friendFeedEntry,
+</a><a href="#h1-8-6" id="h1-8-6" class="d">-            outputFile = outputFile,
+</a><a href="#h1-8-7" id="h1-8-7" class="d">-            mediaToDownload = mediaToDownload,
+</a><a href="#h1-8-8" id="h1-8-8" class="d">-            printLog = ::logDialog
+</a><a href="#h1-8-9" id="h1-8-9" class="d">-        ).also {
+</a><a href="#h1-8-10" id="h1-8-10" class="d">-            runCatching {
+</a><a href="#h1-8-11" id="h1-8-11" class="d">-                it.readMessages(foundMessages)
+</a><a href="#h1-8-12" id="h1-8-12" class="d">-            }.onFailure {
+</a><a href="#h1-8-13" id="h1-8-13" class="d">-                logDialog(context.translation.format(&quot;chat_export.export_failed&quot;,&quot;conversation&quot; to it.message.toString()))
+</a><a href="#h1-8-14" id="h1-8-14" class="d">-                context.log.error(&quot;Failed to read messages&quot;, it)
+</a><a href="#h1-8-15" id="h1-8-15" class="d">-                return
+</a><a href="#h1-8-16" id="h1-8-16" class="d">-            }
+</a><a href="#h1-8-17" id="h1-8-17" class="d">-        }.exportTo(exportType!!)
+</a><a href="#h1-8-18" id="h1-8-18" class="i">+
+</a><a href="#h1-8-19" id="h1-8-19" class="i">+        runCatching {
+</a><a href="#h1-8-20" id="h1-8-20" class="i">+            MessageExporter(
+</a><a href="#h1-8-21" id="h1-8-21" class="i">+                context = context,
+</a><a href="#h1-8-22" id="h1-8-22" class="i">+                friendFeedEntry = friendFeedEntry,
+</a><a href="#h1-8-23" id="h1-8-23" class="i">+                outputFile = outputFile,
+</a><a href="#h1-8-24" id="h1-8-24" class="i">+                mediaToDownload = mediaToDownload,
+</a><a href="#h1-8-25" id="h1-8-25" class="i">+                printLog = ::logDialog
+</a><a href="#h1-8-26" id="h1-8-26" class="i">+            ).apply { readMessages(foundMessages) }.exportTo(exportType!!)
+</a><a href="#h1-8-27" id="h1-8-27" class="i">+        }.onFailure {
+</a><a href="#h1-8-28" id="h1-8-28" class="i">+            logDialog(context.translation.format(&quot;chat_export.export_failed&quot;,&quot;conversation&quot; to it.message.toString()))
+</a><a href="#h1-8-29" id="h1-8-29" class="i">+            context.log.error(&quot;Failed to export conversation $conversationName&quot;, it)
+</a><a href="#h1-8-30" id="h1-8-30" class="i">+            return
+</a><a href="#h1-8-31" id="h1-8-31" class="i">+        }
+</a> 
+         dialogLogs.clear()
+         logDialog(&quot;\n&quot; + context.translation.format(&quot;chat_export.exported_to&quot;,
+             &quot;path&quot; to outputFile.absolutePath.toString()
+         ) + &quot;\n&quot;)
+ 
+<a href="#h1-8-38" id="h1-8-38" class="d">-        currentActionDialog?.setButton(DialogInterface.BUTTON_POSITIVE, &quot;Open&quot;) { _, _ -&gt;
+</a><a href="#h1-8-39" id="h1-8-39" class="d">-            val intent = Intent(Intent.ACTION_VIEW)
+</a><a href="#h1-8-40" id="h1-8-40" class="d">-            intent.setDataAndType(Uri.fromFile(outputFile.parentFile), &quot;resource/folder&quot;)
+</a><a href="#h1-8-41" id="h1-8-41" class="d">-            context.mainActivity!!.startActivity(intent)
+</a><a href="#h1-8-42" id="h1-8-42" class="d">-        }
+</a><a href="#h1-8-43" id="h1-8-43" class="d">-
+</a>         runCatching {
+             conversationAction(false, conversationId, null)
+         }
+<a href="#h1-9" id="h1-9" class="h">@@ -252,19 +281,13 @@ class ExportChatMessages : AbstractAction() {
+</a>             .setTitle(context.translation[&quot;chat_export.exporting_chats&quot;])
+             .setCancelable(false)
+             .setMessage(&quot;&quot;)
+<a href="#h1-9-3" id="h1-9-3" class="d">-            .setNegativeButton(context.translation[&quot;chat_export.dialog_negative_button&quot;]) { dialog, _ -&gt;
+</a><a href="#h1-9-4" id="h1-9-4" class="d">-                jobs.forEach { it.cancel() }
+</a><a href="#h1-9-5" id="h1-9-5" class="d">-                dialog.dismiss()
+</a><a href="#h1-9-6" id="h1-9-6" class="d">-            }
+</a>             .create()
+         
+         val conversationSize = context.translation.format(&quot;chat_export.processing_chats&quot;, &quot;amount&quot; to conversations.size.toString())
+         
+         logDialog(conversationSize)
+ 
+<a href="#h1-9-13" id="h1-9-13" class="d">-        currentActionDialog!!.show()
+</a><a href="#h1-9-14" id="h1-9-14" class="d">-
+</a><a href="#h1-9-15" id="h1-9-15" class="d">-        GlobalScope.launch(Dispatchers.Default) {
+</a><a href="#h1-9-16" id="h1-9-16" class="i">+        coroutineScope.launch {
+</a>             conversations.forEach { conversation -&gt;
+                 launch {
+                     runCatching {
+<a href="#h1-10" id="h1-10" class="h">@@ -278,6 +301,14 @@ class ExportChatMessages : AbstractAction() {
+</a>             }
+             jobs.joinAll()
+             logDialog(context.translation[&quot;chat_export.finished&quot;])
+<a href="#h1-10-3" id="h1-10-3" class="i">+        }.also {
+</a><a href="#h1-10-4" id="h1-10-4" class="i">+            currentActionDialog?.setButton(DialogInterface.BUTTON_POSITIVE, context.translation[&quot;chat_export.dialog_negative_button&quot;]) { dialog, _ -&gt;
+</a><a href="#h1-10-5" id="h1-10-5" class="i">+                it.cancel()
+</a><a href="#h1-10-6" id="h1-10-6" class="i">+                jobs.forEach { it.cancel() }
+</a><a href="#h1-10-7" id="h1-10-7" class="i">+                dialog.dismiss()
+</a><a href="#h1-10-8" id="h1-10-8" class="i">+            }
+</a>         }
+<a href="#h1-10-10" id="h1-10-10" class="i">+
+</a><a href="#h1-10-11" id="h1-10-11" class="i">+        currentActionDialog!!.show()
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/export/MessageExporter.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/export/MessageExporter.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/export/MessageExporter.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/export/MessageExporter.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -6,8 +6,6 @@ import com.google.gson.JsonArray
+</a> import com.google.gson.JsonObject
+ import de.robv.android.xposed.XposedHelpers
+ import kotlinx.coroutines.Dispatchers
+<a href="#h2-0-3" id="h2-0-3" class="d">-import kotlinx.coroutines.async
+</a><a href="#h2-0-4" id="h2-0-4" class="d">-import kotlinx.coroutines.awaitAll
+</a> import kotlinx.coroutines.withContext
+ import me.rhunk.snapenhance.ModContext
+ import me.rhunk.snapenhance.core.BuildConfig
+<a href="#h2-1" id="h2-1" class="h">@@ -30,6 +28,8 @@ import java.util.Base64
+</a> import java.util.Collections
+ import java.util.Date
+ import java.util.Locale
+<a href="#h2-1-3" id="h2-1-3" class="i">+import java.util.concurrent.Executors
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+import java.util.concurrent.TimeUnit
+</a> import java.util.zip.Deflater
+ import java.util.zip.DeflaterInputStream
+ import java.util.zip.ZipFile
+<a href="#h2-2" id="h2-2" class="h">@@ -98,14 +98,23 @@ class MessageExporter(
+</a>     suspend fun exportHtml(output: OutputStream) {
+         val downloadMediaCacheFolder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), &quot;SnapEnhance/cache&quot;).also { it.mkdirs() }
+         val mediaFiles = Collections.synchronizedMap(mutableMapOf&lt;String, Pair&lt;FileType, File&gt;&gt;())
+<a href="#h2-2-3" id="h2-2-3" class="d">-
+</a><a href="#h2-2-4" id="h2-2-4" class="d">-        printLog(&quot;found ${messages.size} messages&quot;)
+</a><a href="#h2-2-5" id="h2-2-5" class="i">+        val threadPool = Executors.newFixedThreadPool(15)
+</a> 
+         withContext(Dispatchers.IO) {
+<a href="#h2-2-8" id="h2-2-8" class="i">+            var processCount = 0
+</a><a href="#h2-2-9" id="h2-2-9" class="i">+
+</a><a href="#h2-2-10" id="h2-2-10" class="i">+            fun updateProgress(type: String) {
+</a><a href="#h2-2-11" id="h2-2-11" class="i">+                val total = messages.filter {
+</a><a href="#h2-2-12" id="h2-2-12" class="i">+                    mediaToDownload?.contains(it.messageContent.contentType) ?: false
+</a><a href="#h2-2-13" id="h2-2-13" class="i">+                }.size
+</a><a href="#h2-2-14" id="h2-2-14" class="i">+                processCount++
+</a><a href="#h2-2-15" id="h2-2-15" class="i">+                printLog(&quot;$type $processCount/$total&quot;)
+</a><a href="#h2-2-16" id="h2-2-16" class="i">+            }
+</a><a href="#h2-2-17" id="h2-2-17" class="i">+
+</a>             messages.filter {
+                 mediaToDownload?.contains(it.messageContent.contentType) ?: false
+<a href="#h2-2-20" id="h2-2-20" class="d">-            }.map { message -&gt;
+</a><a href="#h2-2-21" id="h2-2-21" class="d">-                async {
+</a><a href="#h2-2-22" id="h2-2-22" class="i">+            }.forEach { message -&gt;
+</a><a href="#h2-2-23" id="h2-2-23" class="i">+                threadPool.execute {
+</a>                     val remoteMediaReferences by lazy {
+                         val serializedMessageContent = context.gson.toJsonTree(message.messageContent.instanceNonNull()).asJsonObject
+                         serializedMessageContent[&quot;mRemoteMediaReferences&quot;]
+<a href="#h2-3" id="h2-3" class="h">@@ -121,8 +130,6 @@ class MessageExporter(
+</a>                                 EncryptionHelper.decryptInputStream(it, message.messageContent.contentType!!, ProtoReader(message.messageContent.content), isArroyo = false)
+                             }
+ 
+<a href="#h2-3-3" id="h2-3-3" class="d">-                            printLog(&quot;downloaded media ${message.orderKey}&quot;)
+</a><a href="#h2-3-4" id="h2-3-4" class="d">-
+</a>                             downloadedMedia.forEach { (type, mediaData) -&gt;
+                                 val fileType = FileType.fromByteArray(mediaData)
+                                 val fileName = &quot;${type}_${kotlin.io.encoding.Base64.UrlSafe.encode(protoMediaReference).replace(&quot;=&quot;, &quot;&quot;)}&quot;
+<a href="#h2-4" id="h2-4" class="h">@@ -134,6 +141,7 @@ class MessageExporter(
+</a>                                 }
+ 
+                                 mediaFiles[fileName] = fileType to mediaFile
+<a href="#h2-4-3" id="h2-4-3" class="i">+                                updateProgress(&quot;downloaded&quot;)
+</a>                             }
+                         }.onFailure {
+                             printLog(&quot;failed to download media for ${message.messageDescriptor.conversationId}_${message.orderKey}&quot;)
+<a href="#h2-5" id="h2-5" class="h">@@ -141,64 +149,67 @@ class MessageExporter(
+</a>                         }
+                     }
+                 }
+<a href="#h2-5-3" id="h2-5-3" class="d">-            }.awaitAll()
+</a><a href="#h2-5-4" id="h2-5-4" class="d">-        }
+</a><a href="#h2-5-5" id="h2-5-5" class="i">+            }
+</a> 
+<a href="#h2-5-7" id="h2-5-7" class="d">-        printLog(&quot;writing downloaded medias...&quot;)
+</a><a href="#h2-5-8" id="h2-5-8" class="d">-
+</a><a href="#h2-5-9" id="h2-5-9" class="d">-        //write the head of the html file
+</a><a href="#h2-5-10" id="h2-5-10" class="d">-        output.write(&quot;&quot;&quot;
+</a><a href="#h2-5-11" id="h2-5-11" class="d">-            &lt;!DOCTYPE html&gt;
+</a><a href="#h2-5-12" id="h2-5-12" class="d">-            &lt;html&gt;
+</a><a href="#h2-5-13" id="h2-5-13" class="d">-            &lt;head&gt;
+</a><a href="#h2-5-14" id="h2-5-14" class="d">-                &lt;meta charset=&quot;UTF-8&quot;&gt;
+</a><a href="#h2-5-15" id="h2-5-15" class="d">-                &lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;IE=edge&quot;&gt;
+</a><a href="#h2-5-16" id="h2-5-16" class="d">-                &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+</a><a href="#h2-5-17" id="h2-5-17" class="d">-                &lt;title&gt;&lt;/title&gt;
+</a><a href="#h2-5-18" id="h2-5-18" class="d">-            &lt;/head&gt;
+</a><a href="#h2-5-19" id="h2-5-19" class="d">-        &quot;&quot;&quot;.trimIndent().toByteArray())
+</a><a href="#h2-5-20" id="h2-5-20" class="d">-
+</a><a href="#h2-5-21" id="h2-5-21" class="d">-        output.write(&quot;&lt;!-- This file was generated by SnapEnhance ${BuildConfig.VERSION_NAME} --&gt;\n&quot;.toByteArray())
+</a><a href="#h2-5-22" id="h2-5-22" class="d">-
+</a><a href="#h2-5-23" id="h2-5-23" class="d">-        mediaFiles.forEach { (key, filePair) -&gt;
+</a><a href="#h2-5-24" id="h2-5-24" class="d">-            printLog(&quot;writing $key...&quot;)
+</a><a href="#h2-5-25" id="h2-5-25" class="d">-            output.write(&quot;&lt;div class=\&quot;media-$key\&quot;&gt;&lt;!-- &quot;.toByteArray())
+</a><a href="#h2-5-26" id="h2-5-26" class="d">-
+</a><a href="#h2-5-27" id="h2-5-27" class="d">-            val deflateInputStream = DeflaterInputStream(filePair.second.inputStream(), Deflater(Deflater.BEST_COMPRESSION, true))
+</a><a href="#h2-5-28" id="h2-5-28" class="d">-            val base64InputStream = XposedHelpers.newInstance(
+</a><a href="#h2-5-29" id="h2-5-29" class="d">-                Base64InputStream::class.java,
+</a><a href="#h2-5-30" id="h2-5-30" class="d">-                deflateInputStream,
+</a><a href="#h2-5-31" id="h2-5-31" class="d">-                android.util.Base64.DEFAULT or android.util.Base64.NO_WRAP,
+</a><a href="#h2-5-32" id="h2-5-32" class="d">-                true
+</a><a href="#h2-5-33" id="h2-5-33" class="d">-            ) as InputStream
+</a><a href="#h2-5-34" id="h2-5-34" class="d">-            base64InputStream.copyTo(output)
+</a><a href="#h2-5-35" id="h2-5-35" class="d">-            deflateInputStream.close()
+</a><a href="#h2-5-36" id="h2-5-36" class="d">-
+</a><a href="#h2-5-37" id="h2-5-37" class="d">-            output.write(&quot; --&gt;&lt;/div&gt;\n&quot;.toByteArray())
+</a><a href="#h2-5-38" id="h2-5-38" class="d">-            output.flush()
+</a><a href="#h2-5-39" id="h2-5-39" class="d">-        }
+</a><a href="#h2-5-40" id="h2-5-40" class="d">-        printLog(&quot;writing json conversation data...&quot;)
+</a><a href="#h2-5-41" id="h2-5-41" class="d">-
+</a><a href="#h2-5-42" id="h2-5-42" class="d">-        //write the json file
+</a><a href="#h2-5-43" id="h2-5-43" class="d">-        output.write(&quot;&lt;script type=\&quot;application/json\&quot; class=\&quot;exported_content\&quot;&gt;&quot;.toByteArray())
+</a><a href="#h2-5-44" id="h2-5-44" class="d">-        exportJson(output)
+</a><a href="#h2-5-45" id="h2-5-45" class="d">-        output.write(&quot;&lt;/script&gt;\n&quot;.toByteArray())
+</a><a href="#h2-5-46" id="h2-5-46" class="d">-
+</a><a href="#h2-5-47" id="h2-5-47" class="d">-        printLog(&quot;writing template...&quot;)
+</a><a href="#h2-5-48" id="h2-5-48" class="d">-
+</a><a href="#h2-5-49" id="h2-5-49" class="d">-        runCatching {
+</a><a href="#h2-5-50" id="h2-5-50" class="d">-            ZipFile(context.bridgeClient.getApplicationApkPath()).use { apkFile -&gt;
+</a><a href="#h2-5-51" id="h2-5-51" class="d">-                //export rawinflate.js
+</a><a href="#h2-5-52" id="h2-5-52" class="d">-                apkFile.getEntry(&quot;assets/web/rawinflate.js&quot;).let { entry -&gt;
+</a><a href="#h2-5-53" id="h2-5-53" class="d">-                    output.write(&quot;&lt;script&gt;&quot;.toByteArray())
+</a><a href="#h2-5-54" id="h2-5-54" class="d">-                    apkFile.getInputStream(entry).copyTo(output)
+</a><a href="#h2-5-55" id="h2-5-55" class="d">-                    output.write(&quot;&lt;/script&gt;\n&quot;.toByteArray())
+</a><a href="#h2-5-56" id="h2-5-56" class="d">-                }
+</a><a href="#h2-5-57" id="h2-5-57" class="i">+            threadPool.shutdown()
+</a><a href="#h2-5-58" id="h2-5-58" class="i">+            threadPool.awaitTermination(30, TimeUnit.DAYS)
+</a><a href="#h2-5-59" id="h2-5-59" class="i">+            processCount = 0
+</a><a href="#h2-5-60" id="h2-5-60" class="i">+
+</a><a href="#h2-5-61" id="h2-5-61" class="i">+            printLog(&quot;writing downloaded medias...&quot;)
+</a><a href="#h2-5-62" id="h2-5-62" class="i">+
+</a><a href="#h2-5-63" id="h2-5-63" class="i">+            //write the head of the html file
+</a><a href="#h2-5-64" id="h2-5-64" class="i">+            output.write(&quot;&quot;&quot;
+</a><a href="#h2-5-65" id="h2-5-65" class="i">+                &lt;!DOCTYPE html&gt;
+</a><a href="#h2-5-66" id="h2-5-66" class="i">+                &lt;html&gt;
+</a><a href="#h2-5-67" id="h2-5-67" class="i">+                &lt;head&gt;
+</a><a href="#h2-5-68" id="h2-5-68" class="i">+                    &lt;meta charset=&quot;UTF-8&quot;&gt;
+</a><a href="#h2-5-69" id="h2-5-69" class="i">+                    &lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;IE=edge&quot;&gt;
+</a><a href="#h2-5-70" id="h2-5-70" class="i">+                    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+</a><a href="#h2-5-71" id="h2-5-71" class="i">+                    &lt;title&gt;&lt;/title&gt;
+</a><a href="#h2-5-72" id="h2-5-72" class="i">+                &lt;/head&gt;
+</a><a href="#h2-5-73" id="h2-5-73" class="i">+            &quot;&quot;&quot;.trimIndent().toByteArray())
+</a><a href="#h2-5-74" id="h2-5-74" class="i">+
+</a><a href="#h2-5-75" id="h2-5-75" class="i">+            output.write(&quot;&lt;!-- This file was generated by SnapEnhance ${BuildConfig.VERSION_NAME} --&gt;\n&quot;.toByteArray())
+</a><a href="#h2-5-76" id="h2-5-76" class="i">+
+</a><a href="#h2-5-77" id="h2-5-77" class="i">+            mediaFiles.forEach { (key, filePair) -&gt;
+</a><a href="#h2-5-78" id="h2-5-78" class="i">+                output.write(&quot;&lt;div class=\&quot;media-$key\&quot;&gt;&lt;!-- &quot;.toByteArray())
+</a><a href="#h2-5-79" id="h2-5-79" class="i">+
+</a><a href="#h2-5-80" id="h2-5-80" class="i">+                val deflateInputStream = DeflaterInputStream(filePair.second.inputStream(), Deflater(Deflater.BEST_COMPRESSION, true))
+</a><a href="#h2-5-81" id="h2-5-81" class="i">+                val base64InputStream = XposedHelpers.newInstance(
+</a><a href="#h2-5-82" id="h2-5-82" class="i">+                    Base64InputStream::class.java,
+</a><a href="#h2-5-83" id="h2-5-83" class="i">+                    deflateInputStream,
+</a><a href="#h2-5-84" id="h2-5-84" class="i">+                    android.util.Base64.DEFAULT or android.util.Base64.NO_WRAP,
+</a><a href="#h2-5-85" id="h2-5-85" class="i">+                    true
+</a><a href="#h2-5-86" id="h2-5-86" class="i">+                ) as InputStream
+</a><a href="#h2-5-87" id="h2-5-87" class="i">+                base64InputStream.copyTo(output)
+</a><a href="#h2-5-88" id="h2-5-88" class="i">+                deflateInputStream.close()
+</a><a href="#h2-5-89" id="h2-5-89" class="i">+
+</a><a href="#h2-5-90" id="h2-5-90" class="i">+                output.write(&quot; --&gt;&lt;/div&gt;\n&quot;.toByteArray())
+</a><a href="#h2-5-91" id="h2-5-91" class="i">+                output.flush()
+</a><a href="#h2-5-92" id="h2-5-92" class="i">+                updateProgress(&quot;wrote&quot;)
+</a><a href="#h2-5-93" id="h2-5-93" class="i">+            }
+</a><a href="#h2-5-94" id="h2-5-94" class="i">+            printLog(&quot;writing json conversation data...&quot;)
+</a><a href="#h2-5-95" id="h2-5-95" class="i">+
+</a><a href="#h2-5-96" id="h2-5-96" class="i">+            //write the json file
+</a><a href="#h2-5-97" id="h2-5-97" class="i">+            output.write(&quot;&lt;script type=\&quot;application/json\&quot; class=\&quot;exported_content\&quot;&gt;&quot;.toByteArray())
+</a><a href="#h2-5-98" id="h2-5-98" class="i">+            exportJson(output)
+</a><a href="#h2-5-99" id="h2-5-99" class="i">+            output.write(&quot;&lt;/script&gt;\n&quot;.toByteArray())
+</a><a href="#h2-5-100" id="h2-5-100" class="i">+
+</a><a href="#h2-5-101" id="h2-5-101" class="i">+            printLog(&quot;writing template...&quot;)
+</a><a href="#h2-5-102" id="h2-5-102" class="i">+
+</a><a href="#h2-5-103" id="h2-5-103" class="i">+            runCatching {
+</a><a href="#h2-5-104" id="h2-5-104" class="i">+                ZipFile(context.bridgeClient.getApplicationApkPath()).use { apkFile -&gt;
+</a><a href="#h2-5-105" id="h2-5-105" class="i">+                    //export rawinflate.js
+</a><a href="#h2-5-106" id="h2-5-106" class="i">+                    apkFile.getEntry(&quot;assets/web/rawinflate.js&quot;).let { entry -&gt;
+</a><a href="#h2-5-107" id="h2-5-107" class="i">+                        output.write(&quot;&lt;script&gt;&quot;.toByteArray())
+</a><a href="#h2-5-108" id="h2-5-108" class="i">+                        apkFile.getInputStream(entry).copyTo(output)
+</a><a href="#h2-5-109" id="h2-5-109" class="i">+                        output.write(&quot;&lt;/script&gt;\n&quot;.toByteArray())
+</a><a href="#h2-5-110" id="h2-5-110" class="i">+                    }
+</a> 
+<a href="#h2-5-112" id="h2-5-112" class="d">-                //export avenir next font
+</a><a href="#h2-5-113" id="h2-5-113" class="d">-                apkFile.getEntry(&quot;res/font/avenir_next_medium.ttf&quot;).let { entry -&gt;
+</a><a href="#h2-5-114" id="h2-5-114" class="d">-                    val encodedFontData = kotlin.io.encoding.Base64.Default.encode(apkFile.getInputStream(entry).readBytes())
+</a><a href="#h2-5-115" id="h2-5-115" class="d">-                    output.write(&quot;&quot;&quot;
+</a><a href="#h2-5-116" id="h2-5-116" class="i">+                    //export avenir next font
+</a><a href="#h2-5-117" id="h2-5-117" class="i">+                    apkFile.getEntry(&quot;res/font/avenir_next_medium.ttf&quot;).let { entry -&gt;
+</a><a href="#h2-5-118" id="h2-5-118" class="i">+                        val encodedFontData = kotlin.io.encoding.Base64.Default.encode(apkFile.getInputStream(entry).readBytes())
+</a><a href="#h2-5-119" id="h2-5-119" class="i">+                        output.write(&quot;&quot;&quot;
+</a>                         &lt;style&gt;
+                             @font-face {
+                                 font-family: &#39;Avenir Next&#39;;
+<a href="#h2-6" id="h2-6" class="h">@@ -208,22 +219,21 @@ class MessageExporter(
+</a>                             }
+                         &lt;/style&gt;
+                     &quot;&quot;&quot;.trimIndent().toByteArray())
+<a href="#h2-6-3" id="h2-6-3" class="d">-                }
+</a><a href="#h2-6-4" id="h2-6-4" class="i">+                    }
+</a> 
+<a href="#h2-6-6" id="h2-6-6" class="d">-                apkFile.getEntry(&quot;assets/web/export_template.html&quot;).let { entry -&gt;
+</a><a href="#h2-6-7" id="h2-6-7" class="d">-                    apkFile.getInputStream(entry).copyTo(output)
+</a><a href="#h2-6-8" id="h2-6-8" class="d">-                }
+</a><a href="#h2-6-9" id="h2-6-9" class="i">+                    apkFile.getEntry(&quot;assets/web/export_template.html&quot;).let { entry -&gt;
+</a><a href="#h2-6-10" id="h2-6-10" class="i">+                        apkFile.getInputStream(entry).copyTo(output)
+</a><a href="#h2-6-11" id="h2-6-11" class="i">+                    }
+</a> 
+<a href="#h2-6-13" id="h2-6-13" class="d">-                apkFile.close()
+</a><a href="#h2-6-14" id="h2-6-14" class="i">+                    apkFile.close()
+</a><a href="#h2-6-15" id="h2-6-15" class="i">+                }
+</a><a href="#h2-6-16" id="h2-6-16" class="i">+            }.onFailure {
+</a><a href="#h2-6-17" id="h2-6-17" class="i">+                throw Throwable(&quot;Failed to read template from apk&quot;, it)
+</a>             }
+<a href="#h2-6-19" id="h2-6-19" class="d">-        }.onFailure {
+</a><a href="#h2-6-20" id="h2-6-20" class="d">-            printLog(&quot;failed to read template from apk&quot;)
+</a><a href="#h2-6-21" id="h2-6-21" class="d">-            context.log.error(&quot;failed to read template from apk&quot;, it)
+</a><a href="#h2-6-22" id="h2-6-22" class="d">-        }
+</a> 
+<a href="#h2-6-24" id="h2-6-24" class="d">-        output.write(&quot;&lt;/html&gt;&quot;.toByteArray())
+</a><a href="#h2-6-25" id="h2-6-25" class="d">-        output.close()
+</a><a href="#h2-6-26" id="h2-6-26" class="d">-        printLog(&quot;done&quot;)
+</a><a href="#h2-6-27" id="h2-6-27" class="i">+            output.write(&quot;&lt;/html&gt;&quot;.toByteArray())
+</a><a href="#h2-6-28" id="h2-6-28" class="i">+            output.close()
+</a><a href="#h2-6-29" id="h2-6-29" class="i">+        }
+</a>     }
+ 
+     private fun exportJson(output: OutputStream) {
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/snap/MediaDownloaderHelper.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -36,8 +36,11 @@ object MediaDownloaderHelper {
+</a>         }
+     }
+ 
+<a href="#h3-0-3" id="h3-0-3" class="d">-    fun downloadMediaFromReference(mediaReference: ByteArray, decryptionCallback: (InputStream) -&gt; InputStream): Map&lt;SplitMediaAssetType, ByteArray&gt; {
+</a><a href="#h3-0-4" id="h3-0-4" class="d">-        val inputStream: InputStream = RemoteMediaResolver.downloadBoltMedia(mediaReference) ?: throw FileNotFoundException(&quot;Unable to get media key. Check the logs for more info&quot;)
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+    fun downloadMediaFromReference(
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+        mediaReference: ByteArray,
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+        decryptionCallback: (InputStream) -&gt; InputStream,
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+    ): Map&lt;SplitMediaAssetType, ByteArray&gt; {
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+        val inputStream = RemoteMediaResolver.downloadBoltMedia(mediaReference) ?: throw FileNotFoundException(&quot;Unable to get media key. Check the logs for more info&quot;)
+</a>         val content = decryptionCallback(inputStream).readBytes()
+         val fileType = FileType.fromByteArray(content)
+         val isZipFile = fileType == FileType.ZIP
+</pre>
+</div>
+</body>
+</html>

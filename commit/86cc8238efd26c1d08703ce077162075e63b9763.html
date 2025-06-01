@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(scripting): static class type - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/86cc8238efd26c1d08703ce077162075e63b9763.html">86cc8238efd26c1d08703ce077162075e63b9763</a>
+<b>parent</b> <a href="../commit/19a0ab8398c9c8fd2ddb6dce8afcc3bc24375d11.html">19a0ab8398c9c8fd2ddb6dce8afcc3bc24375d11</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Mon, 18 Sep 2023 00:03:12 +0200
+
+feat(scripting): static class type
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/scripting/JSModule.kt</a></td><td> | </td><td class="num">36</td><td><span class="i">++++++++++++++++++++++++++++++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptRuntime.kt</a></td><td> | </td><td class="num">5</td><td><span class="i">+++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/scripting/core/CoreScriptRuntime.kt</a></td><td> | </td><td class="num">13</td><td><span class="i">++</span><span class="d">-----------</span></td></tr>
+</table></pre><pre>4 files changed, 40 insertions(+), 16 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -12,7 +12,7 @@ import java.io.InputStream
+</a> class RemoteScriptManager(
+     private val context: RemoteSideContext,
+ ) : IScripting.Stub() {
+<a href="#h0-0-3" id="h0-0-3" class="d">-    val runtime = ScriptRuntime(context.log)
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+    val runtime = ScriptRuntime(context.log, context.androidContext.classLoader)
+</a> 
+     private val reloadListeners = mutableListOf&lt;ReloadListener&gt;()
+     private val cachedModuleInfo = mutableMapOf&lt;String, ModuleInfo&gt;()
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/scripting/JSModule.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/scripting/JSModule.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/scripting/JSModule.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/scripting/JSModule.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -9,12 +9,13 @@ import org.mozilla.javascript.Function
+</a> import org.mozilla.javascript.NativeJavaObject
+ import org.mozilla.javascript.ScriptableObject
+ import org.mozilla.javascript.Undefined
+<a href="#h1-0-3" id="h1-0-3" class="i">+import java.lang.reflect.Modifier
+</a> 
+ class JSModule(
+<a href="#h1-0-6" id="h1-0-6" class="i">+    val scriptRuntime: ScriptRuntime,
+</a>     val moduleInfo: ModuleInfo,
+     val content: String,
+ ) {
+<a href="#h1-0-10" id="h1-0-10" class="d">-    lateinit var logger: AbstractLogger
+</a>     private lateinit var moduleObject: ScriptableObject
+ 
+     fun load(block: ScriptableObject.() -&gt; Unit) {
+<a href="#h1-1" id="h1-1" class="h">@@ -50,8 +51,39 @@ class JSModule(
+</a>                 field.get(obj.unwrap())
+             }
+ 
+<a href="#h1-1-3" id="h1-1-3" class="i">+            moduleObject.putFunction(&quot;findClass&quot;) {
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+                val className = it?.get(0).toString()
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+                scriptRuntime.classLoader.loadClass(className)
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+            }
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+
+</a><a href="#h1-1-8" id="h1-1-8" class="i">+            moduleObject.putFunction(&quot;type&quot;) { args -&gt;
+</a><a href="#h1-1-9" id="h1-1-9" class="i">+                val className = args?.get(0).toString()
+</a><a href="#h1-1-10" id="h1-1-10" class="i">+                val clazz = scriptRuntime.classLoader.loadClass(className)
+</a><a href="#h1-1-11" id="h1-1-11" class="i">+
+</a><a href="#h1-1-12" id="h1-1-12" class="i">+                scriptableObject(&quot;JavaClassWrapper&quot;) {
+</a><a href="#h1-1-13" id="h1-1-13" class="i">+                    putFunction(&quot;newInstance&quot;) newInstance@{ args -&gt;
+</a><a href="#h1-1-14" id="h1-1-14" class="i">+                        val constructor = clazz.declaredConstructors.find {
+</a><a href="#h1-1-15" id="h1-1-15" class="i">+                            it.parameterCount == (args?.size ?: 0)
+</a><a href="#h1-1-16" id="h1-1-16" class="i">+                        } ?: return@newInstance Undefined.instance
+</a><a href="#h1-1-17" id="h1-1-17" class="i">+                        constructor.newInstance(*args ?: emptyArray())
+</a><a href="#h1-1-18" id="h1-1-18" class="i">+                    }
+</a><a href="#h1-1-19" id="h1-1-19" class="i">+
+</a><a href="#h1-1-20" id="h1-1-20" class="i">+                    clazz.declaredMethods.forEach { method -&gt;
+</a><a href="#h1-1-21" id="h1-1-21" class="i">+                        method.isAccessible = true
+</a><a href="#h1-1-22" id="h1-1-22" class="i">+                        putFunction(method.name) { args -&gt;
+</a><a href="#h1-1-23" id="h1-1-23" class="i">+                            args?.also { method.invoke(null, *it) } ?: method.invoke(null)
+</a><a href="#h1-1-24" id="h1-1-24" class="i">+                        }
+</a><a href="#h1-1-25" id="h1-1-25" class="i">+                    }
+</a><a href="#h1-1-26" id="h1-1-26" class="i">+
+</a><a href="#h1-1-27" id="h1-1-27" class="i">+                    clazz.declaredFields.filter { Modifier.isStatic(it.modifiers) }.forEach { field -&gt;
+</a><a href="#h1-1-28" id="h1-1-28" class="i">+                        field.isAccessible = true
+</a><a href="#h1-1-29" id="h1-1-29" class="i">+                        defineProperty(field.name, { field.get(null)}, { value -&gt; field.set(null, value) }, 0)
+</a><a href="#h1-1-30" id="h1-1-30" class="i">+                    }
+</a><a href="#h1-1-31" id="h1-1-31" class="i">+                }
+</a><a href="#h1-1-32" id="h1-1-32" class="i">+            }
+</a><a href="#h1-1-33" id="h1-1-33" class="i">+
+</a>             moduleObject.putFunction(&quot;logInfo&quot;) { args -&gt;
+<a href="#h1-1-35" id="h1-1-35" class="d">-                logger.info(args?.joinToString(&quot; &quot;) ?: &quot;&quot;)
+</a><a href="#h1-1-36" id="h1-1-36" class="i">+                scriptRuntime.logger.info(args?.joinToString(&quot; &quot;) ?: &quot;&quot;)
+</a>                 Undefined.instance
+             }
+ 
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptRuntime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptRuntime.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptRuntime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptRuntime.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -8,7 +8,8 @@ import java.io.ByteArrayInputStream
+</a> import java.io.InputStream
+ 
+ open class ScriptRuntime(
+<a href="#h2-0-3" id="h2-0-3" class="d">-    protected val logger: AbstractLogger,
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+    val logger: AbstractLogger,
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+    val classLoader: ClassLoader,
+</a> ) {
+     var buildModuleObject: ScriptableObject.(JSModule) -&gt; Unit = {}
+     private val modules = mutableMapOf&lt;String, JSModule&gt;()
+<a href="#h2-1" id="h2-1" class="h">@@ -72,10 +73,10 @@ open class ScriptRuntime(
+</a>         logger.info(&quot;Loading module $path&quot;)
+         return runCatching {
+             JSModule(
+<a href="#h2-1-3" id="h2-1-3" class="i">+                scriptRuntime = this,
+</a>                 moduleInfo = readModuleInfo(ByteArrayInputStream(content.toByteArray(Charsets.UTF_8)).bufferedReader()),
+                 content = content,
+             ).apply {
+<a href="#h2-1-7" id="h2-1-7" class="d">-                logger = this@ScriptRuntime.logger
+</a>                 load {
+                     buildModuleObject(this, this@apply)
+                 }
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/scripting/core/CoreScriptRuntime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/scripting/core/CoreScriptRuntime.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/scripting/core/CoreScriptRuntime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/scripting/core/CoreScriptRuntime.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -8,14 +8,11 @@ import me.rhunk.snapenhance.scripting.IPCInterface
+</a> import me.rhunk.snapenhance.scripting.Listener
+ import me.rhunk.snapenhance.scripting.ScriptRuntime
+ import me.rhunk.snapenhance.scripting.core.impl.ScriptHooker
+<a href="#h3-0-3" id="h3-0-3" class="d">-import me.rhunk.snapenhance.scripting.ktx.putFunction
+</a> 
+ class CoreScriptRuntime(
+     logger: AbstractLogger,
+<a href="#h3-0-7" id="h3-0-7" class="d">-    private val classLoader: ClassLoader
+</a><a href="#h3-0-8" id="h3-0-8" class="d">-): ScriptRuntime(logger) {
+</a><a href="#h3-0-9" id="h3-0-9" class="d">-    private lateinit var ipcInterface: IPCInterface
+</a><a href="#h3-0-10" id="h3-0-10" class="d">-
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+    classLoader: ClassLoader,
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+): ScriptRuntime(logger, classLoader) {
+</a>     private val scriptHookers = mutableListOf&lt;ScriptHooker&gt;()
+ 
+     fun connect(scriptingInterface: IScripting) {
+<a href="#h3-1" id="h3-1" class="h">@@ -48,18 +45,12 @@ class CoreScriptRuntime(
+</a>                         sendIPCMessage(channel, eventName, args)
+                     }
+                 })
+<a href="#h3-1-3" id="h3-1-3" class="d">-                putFunction(&quot;findClass&quot;) {
+</a><a href="#h3-1-4" id="h3-1-4" class="d">-                    val className = it?.get(0).toString()
+</a><a href="#h3-1-5" id="h3-1-5" class="d">-                    classLoader.loadClass(className)
+</a><a href="#h3-1-6" id="h3-1-6" class="d">-                }
+</a>                 putConst(&quot;hooker&quot;, this, ScriptHooker(module.moduleInfo, logger, classLoader).also {
+                     scriptHookers.add(it)
+                 })
+             }
+         }
+ 
+<a href="#h3-1-13" id="h3-1-13" class="d">-
+</a><a href="#h3-1-14" id="h3-1-14" class="d">-
+</a>         scriptingInterface.enabledScripts.forEach { path -&gt;
+             runCatching {
+                 load(path, scriptingInterface.getScriptContent(path))
+</pre>
+</div>
+</body>
+</html>

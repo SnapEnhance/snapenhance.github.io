@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: save overridden snaps in chat - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/514c5f186a616f8896824c38211e444aa6dae892.html">514c5f186a616f8896824c38211e444aa6dae892</a>
+<b>parent</b> <a href="../commit/9b7ff403025ffafe6682c3641f9ea86ea261c10c.html">9b7ff403025ffafe6682c3641f9ea86ea261c10c</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Mon, 28 Aug 2023 03:57:35 +0200
+
+feat: save overridden snaps in chat
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a></td><td> | </td><td class="num">19</td><td><span class="i">+++++++++++++</span><span class="d">------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/UnaryCallEvent.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">+++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt</a></td><td> | </td><td class="num">21</td><td><span class="i">+++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoEditor.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">native/jni/src/library.cpp</a></td><td> | </td><td class="num">45</td><td><span class="i">++++++++++++++++++++++</span><span class="d">-----------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">native/jni/src/util.h</a></td><td> | </td><td class="num">11</td><td><span class="i">+++</span><span class="d">--------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+</table></pre><pre>7 files changed, 70 insertions(+), 38 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -10,6 +10,7 @@ import me.rhunk.snapenhance.bridge.BridgeClient
+</a> import me.rhunk.snapenhance.bridge.SyncCallback
+ import me.rhunk.snapenhance.core.BuildConfig
+ import me.rhunk.snapenhance.core.eventbus.events.impl.SnapWidgetBroadcastReceiveEvent
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.core.eventbus.events.impl.UnaryCallEvent
+</a> import me.rhunk.snapenhance.core.messaging.MessagingFriendInfo
+ import me.rhunk.snapenhance.core.messaging.MessagingGroupInfo
+ import me.rhunk.snapenhance.data.SnapClassCache
+<a href="#h0-1" id="h0-1" class="h">@@ -97,12 +98,6 @@ class SnapEnhance {
+</a>     private suspend fun init() {
+         measureTime {
+             with(appContext) {
+<a href="#h0-1-3" id="h0-1-3" class="d">-                runCatching {
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-                    native.initOnce(appContext.androidContext.classLoader)
+</a><a href="#h0-1-5" id="h0-1-5" class="d">-                }.onFailure {
+</a><a href="#h0-1-6" id="h0-1-6" class="d">-                    Logger.xposedLog(&quot;Failed to init native&quot;, it)
+</a><a href="#h0-1-7" id="h0-1-7" class="d">-                    return
+</a><a href="#h0-1-8" id="h0-1-8" class="d">-                }
+</a>                 reloadConfig()
+                 withContext(appContext.coroutineDispatcher) {
+                     translation.userLocale = getConfigLocale()
+<a href="#h0-2" id="h0-2" class="h">@@ -126,6 +121,18 @@ class SnapEnhance {
+</a>     private fun onActivityCreate() {
+         measureTime {
+             with(appContext) {
+<a href="#h0-2-3" id="h0-2-3" class="i">+                runCatching {
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+                    native.initOnce(appContext.androidContext.classLoader)
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+                    native.nativeUnaryCallCallback = { request -&gt;
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+                        event.post(UnaryCallEvent(request.uri, request.buffer))?.also {
+</a><a href="#h0-2-7" id="h0-2-7" class="i">+                            request.buffer = it.buffer
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+                            request.canceled = it.canceled
+</a><a href="#h0-2-9" id="h0-2-9" class="i">+                        }
+</a><a href="#h0-2-10" id="h0-2-10" class="i">+                    }
+</a><a href="#h0-2-11" id="h0-2-11" class="i">+                }.onFailure {
+</a><a href="#h0-2-12" id="h0-2-12" class="i">+                    Logger.xposedLog(&quot;Failed to init native&quot;, it)
+</a><a href="#h0-2-13" id="h0-2-13" class="i">+                }
+</a><a href="#h0-2-14" id="h0-2-14" class="i">+
+</a>                 features.onActivityCreate()
+                 actionManager.init()
+             }
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/UnaryCallEvent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/UnaryCallEvent.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/UnaryCallEvent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/UnaryCallEvent.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -0,0 +1,8 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="i">+package me.rhunk.snapenhance.core.eventbus.events.impl
+</a><a href="#h1-0-1" id="h1-0-1" class="i">+
+</a><a href="#h1-0-2" id="h1-0-2" class="i">+import me.rhunk.snapenhance.core.eventbus.events.AbstractHookEvent
+</a><a href="#h1-0-3" id="h1-0-3" class="i">+
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+class UnaryCallEvent(
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+    val uri: String,
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+    var buffer: ByteArray
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+) : AbstractHookEvent()</a><a href="#h1-0-8" id="h1-0-8" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/GalleryMediaSendOverride.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,11 +1,13 @@
+</a> package me.rhunk.snapenhance.features.impl.tweaks
+ 
+ import me.rhunk.snapenhance.core.eventbus.events.impl.SendMessageWithContentEvent
+<a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.core.eventbus.events.impl.UnaryCallEvent
+</a> import me.rhunk.snapenhance.data.ContentType
+ import me.rhunk.snapenhance.data.MessageSender
+ import me.rhunk.snapenhance.features.Feature
+ import me.rhunk.snapenhance.features.FeatureLoadParams
+ import me.rhunk.snapenhance.ui.ViewAppearanceHelper
+<a href="#h2-0-9" id="h2-0-9" class="i">+import me.rhunk.snapenhance.util.protobuf.ProtoEditor
+</a> import me.rhunk.snapenhance.util.protobuf.ProtoReader
+ 
+ class GalleryMediaSendOverride : Feature(&quot;Gallery Media Send Override&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+<a href="#h2-1" id="h2-1" class="h">@@ -19,6 +21,25 @@ class GalleryMediaSendOverride : Feature(&quot;Gallery Media Send Override&quot;, loadPara
+</a>            it
+         }
+ 
+<a href="#h2-1-3" id="h2-1-3" class="i">+        context.event.subscribe(UnaryCallEvent::class) { event -&gt;
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+            if (event.uri != &quot;/messagingcoreservice.MessagingCoreService/CreateContentMessage&quot;) return@subscribe
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+            event.buffer = ProtoEditor(event.buffer).apply {
+</a><a href="#h2-1-6" id="h2-1-6" class="i">+                //remove the mas view time
+</a><a href="#h2-1-7" id="h2-1-7" class="i">+                edit(4, 4, 11, 5, 2) {
+</a><a href="#h2-1-8" id="h2-1-8" class="i">+                    remove(8)
+</a><a href="#h2-1-9" id="h2-1-9" class="i">+                    addBuffer(6, byteArrayOf())
+</a><a href="#h2-1-10" id="h2-1-10" class="i">+                }
+</a><a href="#h2-1-11" id="h2-1-11" class="i">+                //make snaps savable in chat
+</a><a href="#h2-1-12" id="h2-1-12" class="i">+                edit(4) {
+</a><a href="#h2-1-13" id="h2-1-13" class="i">+                    val savableState = firstOrNull(7)?.value ?: return@edit
+</a><a href="#h2-1-14" id="h2-1-14" class="i">+                    if (savableState == 2L) {
+</a><a href="#h2-1-15" id="h2-1-15" class="i">+                        remove(7)
+</a><a href="#h2-1-16" id="h2-1-16" class="i">+                        addVarInt(7, 3)
+</a><a href="#h2-1-17" id="h2-1-17" class="i">+                    }
+</a><a href="#h2-1-18" id="h2-1-18" class="i">+                }
+</a><a href="#h2-1-19" id="h2-1-19" class="i">+            }.toByteArray()
+</a><a href="#h2-1-20" id="h2-1-20" class="i">+        }
+</a><a href="#h2-1-21" id="h2-1-21" class="i">+
+</a>         context.event.subscribe(SendMessageWithContentEvent::class, {
+             context.config.messaging.galleryMediaSendOverride.get()
+         }) { event -&gt;
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoEditor.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoEditor.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoEditor.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/util/protobuf/ProtoEditor.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -15,6 +15,7 @@ class EditorContext(
+</a>     fun addVarInt(id: Int, value: Int) = addVarInt(id, value.toLong())
+     fun addVarInt(id: Int, value: Long) = addWire(Wire(id, WireType.VARINT, value))
+     fun addBuffer(id: Int, value: ByteArray) = addWire(Wire(id, WireType.LENGTH_DELIMITED, value))
+<a href="#h3-0-3" id="h3-0-3" class="i">+    fun add(id: Int, content: ProtoWriter.() -&gt; Unit) = addBuffer(id, ProtoWriter().apply(content).toByteArray())
+</a>     fun addString(id: Int, value: String) = addBuffer(id, value.toByteArray())
+     fun addFixed64(id: Int, value: Long) = addWire(Wire(id, WireType.FIXED64, value))
+     fun addFixed32(id: Int, value: Int) = addWire(Wire(id, WireType.FIXED32, value))
+<b>diff --git a/<a id="h4" href="../file/native/jni/src/library.cpp.html">native/jni/src/library.cpp</a> b/<a href="../file/native/jni/src/library.cpp.html">native/jni/src/library.cpp</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -1,7 +1,6 @@
+</a> #include &lt;jni.h&gt;
+ #include &lt;string&gt;
+ #include &lt;dobby.h&gt;
+<a href="#h4-0-3" id="h4-0-3" class="d">-#include &lt;unistd.h&gt;
+</a> #include &lt;vector&gt;
+ 
+ #include &quot;logger.h&quot;
+<a href="#h4-1" id="h4-1" class="h">@@ -13,6 +12,7 @@ static native_config_t *native_config;
+</a> static JavaVM *java_vm;
+ 
+ static auto fstat_original = (int (*)(int, struct stat *)) nullptr;
+<a href="#h4-1-3" id="h4-1-3" class="i">+
+</a> static int fstat_hook(int fd, struct stat *buf) {
+     char name[256];
+     memset(name, 0, 256);
+<a href="#h4-2" id="h4-2" class="h">@@ -49,7 +49,7 @@ unaryCall_hook(void *unk1, const char *uri, grpc::grpc_byte_buffer **buffer_ptr,
+</a>                void *unk5, void *unk6) {
+     auto slice_buffer = (*buffer_ptr)-&gt;slice_buffer;
+     // request without reference counter can be hooked using xposed ig
+<a href="#h4-2-3" id="h4-2-3" class="d">-    if (slice_buffer-&gt;ref_counter == nullptr) {
+</a><a href="#h4-2-4" id="h4-2-4" class="i">+    if (slice_buffer-&gt;ref_counter == 0) {
+</a>         return unaryCall_original(unk1, uri, buffer_ptr, unk4, unk5, unk6);
+     }
+ 
+<a href="#h4-3" id="h4-3" class="h">@@ -70,8 +70,8 @@ unaryCall_hook(void *unk1, const char *uri, grpc::grpc_byte_buffer **buffer_ptr,
+</a>         auto is_canceled = env-&gt;GetBooleanField(native_request_data_object,
+                                                 env-&gt;GetFieldID(native_request_data_class,
+                                                                 &quot;canceled&quot;, &quot;Z&quot;));
+<a href="#h4-3-3" id="h4-3-3" class="d">-
+</a>         if (is_canceled) {
+<a href="#h4-3-5" id="h4-3-5" class="i">+            LOGD(&quot;canceled request for %s&quot;, uri);
+</a>             return nullptr;
+         }
+ 
+<a href="#h4-4" id="h4-4" class="h">@@ -81,34 +81,32 @@ unaryCall_hook(void *unk1, const char *uri, grpc::grpc_byte_buffer **buffer_ptr,
+</a>         auto new_buffer_length = env-&gt;GetArrayLength((jbyteArray) new_buffer);
+         auto new_buffer_data = env-&gt;GetByteArrayElements((jbyteArray) new_buffer, nullptr);
+ 
+<a href="#h4-4-3" id="h4-4-3" class="i">+        LOGD(&quot;rewrote request for %s (length: %d)&quot;, uri, new_buffer_length);
+</a>         //we need to allocate a new ref_counter struct and copy the old ref_counter and the new_buffer to it
+<a href="#h4-4-5" id="h4-4-5" class="d">-        const auto ref_counter_struct_size =
+</a><a href="#h4-4-6" id="h4-4-6" class="i">+        const static auto ref_counter_struct_size =
+</a>                 (uintptr_t) slice_buffer-&gt;data - (uintptr_t) slice_buffer-&gt;ref_counter;
+ 
+<a href="#h4-4-9" id="h4-4-9" class="d">-        auto new_ref_counter = (void *) malloc(ref_counter_struct_size + new_buffer_length);
+</a><a href="#h4-4-10" id="h4-4-10" class="i">+        auto new_ref_counter = malloc(ref_counter_struct_size + new_buffer_length);
+</a>         //copy the old ref_counter and the native_request_data_object
+         memcpy(new_ref_counter, slice_buffer-&gt;ref_counter, ref_counter_struct_size);
+         memcpy((void *) ((uintptr_t) new_ref_counter + ref_counter_struct_size), new_buffer_data,
+                new_buffer_length);
+ 
+         //free the old ref_counter
+<a href="#h4-4-17" id="h4-4-17" class="d">-        free((void *) slice_buffer-&gt;ref_counter);
+</a><a href="#h4-4-18" id="h4-4-18" class="i">+        free(slice_buffer-&gt;ref_counter);
+</a> 
+         //update the slice_buffer
+         slice_buffer-&gt;ref_counter = new_ref_counter;
+         slice_buffer-&gt;length = new_buffer_length;
+         slice_buffer-&gt;data = (uint8_t *) ((uintptr_t) new_ref_counter + ref_counter_struct_size);
+<a href="#h4-4-24" id="h4-4-24" class="d">-
+</a><a href="#h4-4-25" id="h4-4-25" class="d">-        env-&gt;ReleaseByteArrayElements((jbyteArray) native_request_data_object, new_buffer_data, 0);
+</a>     }
+ 
+     return unaryCall_original(unk1, uri, buffer_ptr, unk4, unk5, unk6);
+ }
+ 
+ 
+<a href="#h4-4-32" id="h4-4-32" class="d">-extern &quot;C&quot; JNIEXPORT void JNICALL
+</a><a href="#h4-4-33" id="h4-4-33" class="d">-init(JNIEnv *env, jobject clazz, jobject classloader) {
+</a><a href="#h4-4-34" id="h4-4-34" class="d">-    LOGD(&quot;initializing native&quot;);
+</a><a href="#h4-4-35" id="h4-4-35" class="i">+void JNICALL init(JNIEnv *env, jobject clazz, jobject classloader) {
+</a><a href="#h4-4-36" id="h4-4-36" class="i">+    LOGD(&quot;Initializing native&quot;);
+</a>     // config
+     native_config = new native_config_t;
+ 
+<a href="#h4-5" id="h4-5" class="h">@@ -125,34 +123,35 @@ init(JNIEnv *env, jobject clazz, jobject classloader) {
+</a>         LOGE(&quot;libclient not found&quot;);
+         return;
+     }
+<a href="#h4-5-3" id="h4-5-3" class="d">-    client_module.base -= 0x1000;
+</a><a href="#h4-5-4" id="h4-5-4" class="d">-    LOGD(&quot;libclient: offset: 0x%x size: 0x%x&quot;, client_module.base, client_module.size);
+</a><a href="#h4-5-5" id="h4-5-5" class="i">+    //client_module.base -= 0x1000; // debugging purposes
+</a><a href="#h4-5-6" id="h4-5-6" class="i">+    LOGD(&quot;libclient.so offset=%u, size=%u&quot;, client_module.base, client_module.size);
+</a> 
+     // hooks
+     DobbyHook((void *) DobbySymbolResolver(&quot;libc.so&quot;, &quot;fstat&quot;), (void *) fstat_hook,
+               (void **) &amp;fstat_original);
+<a href="#h4-5-11" id="h4-5-11" class="i">+
+</a>     //signature might change in the future (unstable for now)
+<a href="#h4-5-13" id="h4-5-13" class="d">-    DobbyHook((void *) util::find_signature(client_module.base, client_module.size,
+</a><a href="#h4-5-14" id="h4-5-14" class="d">-                                            &quot;FD 7B BA A9 FC 6F 01 A9 FA 67 02 A9 F8 5F 03 A9 F6 57 04 A9 F4 4F 05 A9 FD 03 00 91 FF 43 13 D1&quot;),
+</a><a href="#h4-5-15" id="h4-5-15" class="d">-              (void *) unaryCall_hook,
+</a><a href="#h4-5-16" id="h4-5-16" class="d">-              (void **) &amp;unaryCall_original);
+</a><a href="#h4-5-17" id="h4-5-17" class="i">+    auto unaryCall_func = util::find_signature(client_module.base, client_module.size,
+</a><a href="#h4-5-18" id="h4-5-18" class="i">+                                               &quot;FD 7B BA A9 FC 6F 01 A9 FA 67 02 A9 F8 5F 03 A9 F6 57 04 A9 F4 4F 05 A9 FD 03 00 91 FF 43 13 D1&quot;);
+</a><a href="#h4-5-19" id="h4-5-19" class="i">+    if (unaryCall_func != 0) {
+</a><a href="#h4-5-20" id="h4-5-20" class="i">+        DobbyHook((void *) unaryCall_func, (void *) unaryCall_hook, (void **) &amp;unaryCall_original);
+</a><a href="#h4-5-21" id="h4-5-21" class="i">+    } else {
+</a><a href="#h4-5-22" id="h4-5-22" class="i">+        LOGE(&quot;can&#39;t find unaryCall signature&quot;);
+</a><a href="#h4-5-23" id="h4-5-23" class="i">+    }
+</a> 
+<a href="#h4-5-25" id="h4-5-25" class="d">-    LOGD(&quot;native initialized&quot;);
+</a><a href="#h4-5-26" id="h4-5-26" class="i">+    LOGD(&quot;Native initialized&quot;);
+</a> }
+ 
+<a href="#h4-5-29" id="h4-5-29" class="d">-void JNICALL load_config(JNIEnv *env, jobject clazz, jobject config_object) {
+</a><a href="#h4-5-30" id="h4-5-30" class="i">+void JNICALL load_config(JNIEnv *env, jobject _, jobject config_object) {
+</a>     auto native_config_clazz = env-&gt;GetObjectClass(config_object);
+ #define GET_CONFIG_BOOL(name) env-&gt;GetBooleanField(config_object, env-&gt;GetFieldID(native_config_clazz, name, &quot;Z&quot;))
+ 
+     native_config-&gt;disable_bitmoji = GET_CONFIG_BOOL(&quot;disableBitmoji&quot;);
+     native_config-&gt;disable_metrics = GET_CONFIG_BOOL(&quot;disableMetrics&quot;);
+<a href="#h4-5-36" id="h4-5-36" class="d">-
+</a><a href="#h4-5-37" id="h4-5-37" class="d">-    LOGD(&quot;config loaded&quot;);
+</a> }
+ 
+<a href="#h4-5-40" id="h4-5-40" class="d">-//jni onload
+</a> extern &quot;C&quot; JNIEXPORT jint JNICALL
+<a href="#h4-5-42" id="h4-5-42" class="d">-JNI_OnLoad(JavaVM *vm, void *reserved) {
+</a><a href="#h4-5-43" id="h4-5-43" class="i">+JNI_OnLoad(JavaVM *vm, void *_) {
+</a>     java_vm = vm;
+     // register native methods
+     JNIEnv *env = nullptr;
+<b>diff --git a/<a id="h5" href="../file/native/jni/src/util.h.html">native/jni/src/util.h</a> b/<a href="../file/native/jni/src/util.h.html">native/jni/src/util.h</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -1,14 +1,12 @@
+</a> #pragma once
+ 
+ #include &lt;unistd.h&gt;
+<a href="#h5-0-3" id="h5-0-3" class="d">-#include &lt;dlfcn.h&gt;
+</a><a href="#h5-0-4" id="h5-0-4" class="d">-#include &lt;elf.h&gt;
+</a> 
+ namespace util {
+     typedef struct {
+         uintptr_t base;
+         size_t size;
+<a href="#h5-0-10" id="h5-0-10" class="d">-    } ModuleInfo;
+</a><a href="#h5-0-11" id="h5-0-11" class="i">+    } module_info_t;
+</a> 
+     static void hexDump(void *ptr, uint8_t line_length, uint32_t lines) {
+         auto *p = (unsigned char *) ptr;
+<a href="#h5-1" id="h5-1" class="h">@@ -24,16 +22,13 @@ namespace util {
+</a>         }
+     }
+ 
+<a href="#h5-1-3" id="h5-1-3" class="d">-    static ModuleInfo get_module(const char *libname) {
+</a><a href="#h5-1-4" id="h5-1-4" class="d">-        char path[256];
+</a><a href="#h5-1-5" id="h5-1-5" class="i">+    static module_info_t get_module(const char *libname) {
+</a>         char buff[256];
+         int len_libname = strlen(libname);
+<a href="#h5-1-8" id="h5-1-8" class="d">-        FILE *file;
+</a>         uintptr_t addr = 0;
+         size_t size = 0;
+ 
+<a href="#h5-1-12" id="h5-1-12" class="d">-        snprintf(path, sizeof path, &quot;/proc/%d/smaps&quot;, getpid());
+</a><a href="#h5-1-13" id="h5-1-13" class="d">-        file = fopen(path, &quot;rt&quot;);
+</a><a href="#h5-1-14" id="h5-1-14" class="i">+        auto file = fopen(&quot;/proc/self/smaps&quot;, &quot;rt&quot;);
+</a>         if (file == NULL)
+             return {0, 0};
+ 
+<b>diff --git a/<a id="h6" href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a> b/<a href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -12,7 +12,7 @@ class NativeLib {
+</a> 
+     @Suppress(&quot;unused&quot;)
+     private fun onNativeUnaryCall(uri: String, buffer: ByteArray): NativeRequestData? {
+<a href="#h6-0-3" id="h6-0-3" class="d">-        Log.d(&quot;SnapEnhance&quot;, &quot;onNativeUnaryCall: uri=$uri, bufferSize=${buffer.size}, buffer=${buffer.contentToString()}&quot;)
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+        // Log.d(&quot;SnapEnhance&quot;, &quot;onNativeUnaryCall: uri=$uri, bufferSize=${buffer.size}, buffer=${buffer.contentToString()}&quot;)
+</a>         val nativeRequestData = NativeRequestData(uri, buffer)
+         runCatching {
+             nativeUnaryCallCallback(nativeRequestData)
+</pre>
+</div>
+</body>
+</html>

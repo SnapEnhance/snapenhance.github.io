@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fea(scripting): networking - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/d7d3834f215bc28dd82bb58f2b8a19e40cef8de8.html">d7d3834f215bc28dd82bb58f2b8a19e40cef8de8</a>
+<b>parent</b> <a href="../commit/8f06688f55ef2aef6178d08c7a21722fbfef7db8.html">8f06688f55ef2aef6178d08c7a21722fbfef7db8</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu, 28 Dec 2023 23:11:17 +0100
+
+fea(scripting): networking
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/impl/Networking.kt</a></td><td> | </td><td class="num">163</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>2 files changed, 165 insertions(+), 0 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -4,6 +4,7 @@ import android.os.Handler
+</a> import android.widget.Toast
+ import me.rhunk.snapenhance.common.scripting.bindings.AbstractBinding
+ import me.rhunk.snapenhance.common.scripting.bindings.BindingsContext
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.common.scripting.impl.Networking
+</a> import me.rhunk.snapenhance.common.scripting.impl.JavaInterfaces
+ import me.rhunk.snapenhance.common.scripting.ktx.contextScope
+ import me.rhunk.snapenhance.common.scripting.ktx.putFunction
+<a href="#h0-1" id="h0-1" class="h">@@ -55,6 +56,7 @@ class JSModule(
+</a>             registerBindings(
+                 JavaInterfaces(),
+                 InterfaceManager(),
+<a href="#h0-1-3" id="h0-1-3" class="i">+                Networking(),
+</a>             )
+ 
+             moduleObject.putFunction(&quot;setField&quot;) { args -&gt;
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/impl/Networking.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/impl/Networking.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/impl/Networking.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/impl/Networking.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -0,0 +1,162 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="i">+package me.rhunk.snapenhance.common.scripting.impl
+</a><a href="#h1-0-1" id="h1-0-1" class="i">+
+</a><a href="#h1-0-2" id="h1-0-2" class="i">+import me.rhunk.snapenhance.common.scripting.bindings.AbstractBinding
+</a><a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.common.scripting.bindings.BindingSide
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import me.rhunk.snapenhance.common.scripting.ktx.contextScope
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+import okhttp3.OkHttpClient
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+import okhttp3.Request
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+import okhttp3.Response
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+import okhttp3.WebSocket
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+import okhttp3.WebSocketListener
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+import okio.ByteString
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+import okio.ByteString.Companion.toByteString
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+import org.mozilla.javascript.Function
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+import org.mozilla.javascript.Scriptable
+</a><a href="#h1-0-14" id="h1-0-14" class="i">+import org.mozilla.javascript.annotations.JSFunction
+</a><a href="#h1-0-15" id="h1-0-15" class="i">+import org.mozilla.javascript.annotations.JSGetter
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+
+</a><a href="#h1-0-18" id="h1-0-18" class="i">+class Networking : AbstractBinding(&quot;networking&quot;, BindingSide.COMMON) {
+</a><a href="#h1-0-19" id="h1-0-19" class="i">+    private val defaultHttpClient = OkHttpClient()
+</a><a href="#h1-0-20" id="h1-0-20" class="i">+
+</a><a href="#h1-0-21" id="h1-0-21" class="i">+    inner class RequestBuilderWrapper(
+</a><a href="#h1-0-22" id="h1-0-22" class="i">+        val requestBuilder: Request.Builder
+</a><a href="#h1-0-23" id="h1-0-23" class="i">+    ) {
+</a><a href="#h1-0-24" id="h1-0-24" class="i">+        @JSFunction
+</a><a href="#h1-0-25" id="h1-0-25" class="i">+        fun url(url: String) = requestBuilder.url(url).let { this }
+</a><a href="#h1-0-26" id="h1-0-26" class="i">+
+</a><a href="#h1-0-27" id="h1-0-27" class="i">+        @JSFunction
+</a><a href="#h1-0-28" id="h1-0-28" class="i">+        fun addHeader(name: String, value: String) = requestBuilder.addHeader(name, value).let { this }
+</a><a href="#h1-0-29" id="h1-0-29" class="i">+
+</a><a href="#h1-0-30" id="h1-0-30" class="i">+        @JSFunction
+</a><a href="#h1-0-31" id="h1-0-31" class="i">+        fun removeHeader(name: String) = requestBuilder.removeHeader(name).let { this }
+</a><a href="#h1-0-32" id="h1-0-32" class="i">+
+</a><a href="#h1-0-33" id="h1-0-33" class="i">+        @JSFunction
+</a><a href="#h1-0-34" id="h1-0-34" class="i">+        fun method(method: String, body: String) = requestBuilder.method(method, okhttp3.RequestBody.create(null, body)).let { this }
+</a><a href="#h1-0-35" id="h1-0-35" class="i">+
+</a><a href="#h1-0-36" id="h1-0-36" class="i">+        @JSFunction
+</a><a href="#h1-0-37" id="h1-0-37" class="i">+        fun method(method: String, body: java.io.InputStream) = requestBuilder.method(method, okhttp3.RequestBody.create(null, body.readBytes())).let { this }
+</a><a href="#h1-0-38" id="h1-0-38" class="i">+
+</a><a href="#h1-0-39" id="h1-0-39" class="i">+        @JSFunction
+</a><a href="#h1-0-40" id="h1-0-40" class="i">+        fun method(method: String, body: ByteArray) = requestBuilder.method(method, okhttp3.RequestBody.create(null, body)).let { this }
+</a><a href="#h1-0-41" id="h1-0-41" class="i">+    }
+</a><a href="#h1-0-42" id="h1-0-42" class="i">+
+</a><a href="#h1-0-43" id="h1-0-43" class="i">+    inner class ResponseWrapper(
+</a><a href="#h1-0-44" id="h1-0-44" class="i">+        private val response: Response
+</a><a href="#h1-0-45" id="h1-0-45" class="i">+    ) {
+</a><a href="#h1-0-46" id="h1-0-46" class="i">+        @get:JSGetter
+</a><a href="#h1-0-47" id="h1-0-47" class="i">+        val statusCode get() = response.code
+</a><a href="#h1-0-48" id="h1-0-48" class="i">+        @get:JSGetter
+</a><a href="#h1-0-49" id="h1-0-49" class="i">+        val statusMessage get() = response.message
+</a><a href="#h1-0-50" id="h1-0-50" class="i">+        @get:JSGetter
+</a><a href="#h1-0-51" id="h1-0-51" class="i">+        val headers get() = response.headers.toMultimap().mapValues { it.value.joinToString(&quot;, &quot;) }
+</a><a href="#h1-0-52" id="h1-0-52" class="i">+        @get:JSGetter
+</a><a href="#h1-0-53" id="h1-0-53" class="i">+        val bodyAsString get() = response.body.string()
+</a><a href="#h1-0-54" id="h1-0-54" class="i">+        @get:JSGetter
+</a><a href="#h1-0-55" id="h1-0-55" class="i">+        val bodyAsStream get() = response.body.byteStream()
+</a><a href="#h1-0-56" id="h1-0-56" class="i">+        @get:JSGetter
+</a><a href="#h1-0-57" id="h1-0-57" class="i">+        val bodyAsByteArray get() = response.body.bytes()
+</a><a href="#h1-0-58" id="h1-0-58" class="i">+        @get:JSGetter
+</a><a href="#h1-0-59" id="h1-0-59" class="i">+        val contentLength get() = response.body.contentLength()
+</a><a href="#h1-0-60" id="h1-0-60" class="i">+        @JSFunction fun getHeader(name: String) = response.header(name)
+</a><a href="#h1-0-61" id="h1-0-61" class="i">+        @JSFunction fun close() = response.close()
+</a><a href="#h1-0-62" id="h1-0-62" class="i">+    }
+</a><a href="#h1-0-63" id="h1-0-63" class="i">+
+</a><a href="#h1-0-64" id="h1-0-64" class="i">+    inner class WebsocketWrapper(
+</a><a href="#h1-0-65" id="h1-0-65" class="i">+        private val websocket: WebSocket
+</a><a href="#h1-0-66" id="h1-0-66" class="i">+    ) {
+</a><a href="#h1-0-67" id="h1-0-67" class="i">+        @JSFunction fun cancel() = websocket.cancel()
+</a><a href="#h1-0-68" id="h1-0-68" class="i">+        @JSFunction fun close(code: Int, reason: String) = websocket.close(code, reason)
+</a><a href="#h1-0-69" id="h1-0-69" class="i">+        @JSFunction fun queueSize() = websocket.queueSize()
+</a><a href="#h1-0-70" id="h1-0-70" class="i">+        @JSFunction fun send(bytes: ByteArray) = websocket.send(bytes.toByteString())
+</a><a href="#h1-0-71" id="h1-0-71" class="i">+        @JSFunction fun send(text: String) = websocket.send(text)
+</a><a href="#h1-0-72" id="h1-0-72" class="i">+    }
+</a><a href="#h1-0-73" id="h1-0-73" class="i">+
+</a><a href="#h1-0-74" id="h1-0-74" class="i">+    @JSFunction
+</a><a href="#h1-0-75" id="h1-0-75" class="i">+    fun getUrl(url: String, callback: (error: String?, response: String) -&gt; Unit) {
+</a><a href="#h1-0-76" id="h1-0-76" class="i">+        defaultHttpClient.newCall(Request.Builder().url(url).build()).enqueue(object : okhttp3.Callback {
+</a><a href="#h1-0-77" id="h1-0-77" class="i">+            override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+</a><a href="#h1-0-78" id="h1-0-78" class="i">+                callback(e.message, &quot;&quot;)
+</a><a href="#h1-0-79" id="h1-0-79" class="i">+            }
+</a><a href="#h1-0-80" id="h1-0-80" class="i">+
+</a><a href="#h1-0-81" id="h1-0-81" class="i">+            override fun onResponse(call: okhttp3.Call, response: Response) {
+</a><a href="#h1-0-82" id="h1-0-82" class="i">+                response.use {
+</a><a href="#h1-0-83" id="h1-0-83" class="i">+                    callback(null, it.body.string())
+</a><a href="#h1-0-84" id="h1-0-84" class="i">+                }
+</a><a href="#h1-0-85" id="h1-0-85" class="i">+            }
+</a><a href="#h1-0-86" id="h1-0-86" class="i">+        })
+</a><a href="#h1-0-87" id="h1-0-87" class="i">+    }
+</a><a href="#h1-0-88" id="h1-0-88" class="i">+
+</a><a href="#h1-0-89" id="h1-0-89" class="i">+    @JSFunction
+</a><a href="#h1-0-90" id="h1-0-90" class="i">+    fun getUrlAsStream(url: String, callback: (error: String?, response: java.io.InputStream) -&gt; Unit) {
+</a><a href="#h1-0-91" id="h1-0-91" class="i">+        defaultHttpClient.newCall(Request.Builder().url(url).build()).enqueue(object : okhttp3.Callback {
+</a><a href="#h1-0-92" id="h1-0-92" class="i">+            override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+</a><a href="#h1-0-93" id="h1-0-93" class="i">+                callback(e.message, java.io.ByteArrayInputStream(byteArrayOf()))
+</a><a href="#h1-0-94" id="h1-0-94" class="i">+            }
+</a><a href="#h1-0-95" id="h1-0-95" class="i">+
+</a><a href="#h1-0-96" id="h1-0-96" class="i">+            override fun onResponse(call: okhttp3.Call, response: Response) {
+</a><a href="#h1-0-97" id="h1-0-97" class="i">+                response.use {
+</a><a href="#h1-0-98" id="h1-0-98" class="i">+                    callback(null, it.body.byteStream())
+</a><a href="#h1-0-99" id="h1-0-99" class="i">+                }
+</a><a href="#h1-0-100" id="h1-0-100" class="i">+            }
+</a><a href="#h1-0-101" id="h1-0-101" class="i">+        })
+</a><a href="#h1-0-102" id="h1-0-102" class="i">+    }
+</a><a href="#h1-0-103" id="h1-0-103" class="i">+
+</a><a href="#h1-0-104" id="h1-0-104" class="i">+    @JSFunction
+</a><a href="#h1-0-105" id="h1-0-105" class="i">+    fun newRequest() = RequestBuilderWrapper(Request.Builder())
+</a><a href="#h1-0-106" id="h1-0-106" class="i">+
+</a><a href="#h1-0-107" id="h1-0-107" class="i">+    @JSFunction
+</a><a href="#h1-0-108" id="h1-0-108" class="i">+    fun newWebSocket(requestBuilder: RequestBuilderWrapper, listener: Scriptable): WebsocketWrapper {
+</a><a href="#h1-0-109" id="h1-0-109" class="i">+        return defaultHttpClient.newWebSocket(requestBuilder.requestBuilder.build(), object: WebSocketListener() {
+</a><a href="#h1-0-110" id="h1-0-110" class="i">+            private fun callListener(name: String, websocket: WebSocket, vararg args: Any?) {
+</a><a href="#h1-0-111" id="h1-0-111" class="i">+                contextScope {
+</a><a href="#h1-0-112" id="h1-0-112" class="i">+                    (listener.get(name, listener) as? Function)?.call(this, listener, listener, arrayOf(WebsocketWrapper(websocket), *args))
+</a><a href="#h1-0-113" id="h1-0-113" class="i">+                }
+</a><a href="#h1-0-114" id="h1-0-114" class="i">+            }
+</a><a href="#h1-0-115" id="h1-0-115" class="i">+
+</a><a href="#h1-0-116" id="h1-0-116" class="i">+            override fun onOpen(webSocket: WebSocket, response: Response) {
+</a><a href="#h1-0-117" id="h1-0-117" class="i">+                callListener(&quot;onOpen&quot;, webSocket, ResponseWrapper(response))
+</a><a href="#h1-0-118" id="h1-0-118" class="i">+            }
+</a><a href="#h1-0-119" id="h1-0-119" class="i">+
+</a><a href="#h1-0-120" id="h1-0-120" class="i">+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+</a><a href="#h1-0-121" id="h1-0-121" class="i">+                callListener(&quot;onClosed&quot;, webSocket, code, reason)
+</a><a href="#h1-0-122" id="h1-0-122" class="i">+            }
+</a><a href="#h1-0-123" id="h1-0-123" class="i">+
+</a><a href="#h1-0-124" id="h1-0-124" class="i">+            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+</a><a href="#h1-0-125" id="h1-0-125" class="i">+                callListener(&quot;onClosing&quot;, webSocket, code, reason)
+</a><a href="#h1-0-126" id="h1-0-126" class="i">+            }
+</a><a href="#h1-0-127" id="h1-0-127" class="i">+
+</a><a href="#h1-0-128" id="h1-0-128" class="i">+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+</a><a href="#h1-0-129" id="h1-0-129" class="i">+                callListener(&quot;onFailure&quot;, webSocket, t.message, response?.let { ResponseWrapper(it) })
+</a><a href="#h1-0-130" id="h1-0-130" class="i">+            }
+</a><a href="#h1-0-131" id="h1-0-131" class="i">+
+</a><a href="#h1-0-132" id="h1-0-132" class="i">+            override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+</a><a href="#h1-0-133" id="h1-0-133" class="i">+                callListener(&quot;onMessageBytes&quot;, webSocket, bytes.toByteArray())
+</a><a href="#h1-0-134" id="h1-0-134" class="i">+            }
+</a><a href="#h1-0-135" id="h1-0-135" class="i">+
+</a><a href="#h1-0-136" id="h1-0-136" class="i">+            override fun onMessage(webSocket: WebSocket, text: String) {
+</a><a href="#h1-0-137" id="h1-0-137" class="i">+                callListener(&quot;onMessageText&quot;, webSocket, text)
+</a><a href="#h1-0-138" id="h1-0-138" class="i">+            }
+</a><a href="#h1-0-139" id="h1-0-139" class="i">+        }).let { WebsocketWrapper(it) }
+</a><a href="#h1-0-140" id="h1-0-140" class="i">+    }
+</a><a href="#h1-0-141" id="h1-0-141" class="i">+
+</a><a href="#h1-0-142" id="h1-0-142" class="i">+    @JSFunction
+</a><a href="#h1-0-143" id="h1-0-143" class="i">+    fun enqueue(requestBuilder: RequestBuilderWrapper, callback: (error: String?, response: ResponseWrapper?) -&gt; Unit) {
+</a><a href="#h1-0-144" id="h1-0-144" class="i">+        defaultHttpClient.newCall(requestBuilder.requestBuilder.build()).enqueue(object : okhttp3.Callback {
+</a><a href="#h1-0-145" id="h1-0-145" class="i">+            override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+</a><a href="#h1-0-146" id="h1-0-146" class="i">+                callback(e.message, null)
+</a><a href="#h1-0-147" id="h1-0-147" class="i">+            }
+</a><a href="#h1-0-148" id="h1-0-148" class="i">+
+</a><a href="#h1-0-149" id="h1-0-149" class="i">+            override fun onResponse(call: okhttp3.Call, response: Response) {
+</a><a href="#h1-0-150" id="h1-0-150" class="i">+                response.use {
+</a><a href="#h1-0-151" id="h1-0-151" class="i">+                    callback(null, ResponseWrapper(it))
+</a><a href="#h1-0-152" id="h1-0-152" class="i">+                }
+</a><a href="#h1-0-153" id="h1-0-153" class="i">+            }
+</a><a href="#h1-0-154" id="h1-0-154" class="i">+        })
+</a><a href="#h1-0-155" id="h1-0-155" class="i">+    }
+</a><a href="#h1-0-156" id="h1-0-156" class="i">+
+</a><a href="#h1-0-157" id="h1-0-157" class="i">+    @JSFunction
+</a><a href="#h1-0-158" id="h1-0-158" class="i">+    fun execute(requestBuilder: RequestBuilderWrapper) = ResponseWrapper(defaultHttpClient.newCall(requestBuilder.requestBuilder.build()).execute())
+</a><a href="#h1-0-159" id="h1-0-159" class="i">+
+</a><a href="#h1-0-160" id="h1-0-160" class="i">+    override fun getObject() = this
+</a><a href="#h1-0-161" id="h1-0-161" class="i">+}</a><a href="#h1-0-162" id="h1-0-162" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

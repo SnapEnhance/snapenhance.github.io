@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(scplus): update mappings - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/95558ea1a19e5abba278d9018f80530e721bc8b5.html">95558ea1a19e5abba278d9018f80530e721bc8b5</a>
+<b>parent</b> <a href="../commit/43fce4e665d6559e57653183e34b593e512b80a9.html">43fce4e665d6559e57653183e34b593e512b80a9</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 28 May 2023 15:56:27 +0200
+
+fix(scplus): update mappings
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/SnapchatPlus.kt</a></td><td> | </td><td class="num">29</td><td><span class="i">++++++++++++</span><span class="d">-----------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/PlusSubscriptionMapper.kt</a></td><td> | </td><td class="num">38</td><td><span class="i">++++++++++++</span><span class="d">--------------------------</span></td></tr>
+</table></pre><pre>2 files changed, 24 insertions(+), 43 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/SnapchatPlus.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/SnapchatPlus.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/SnapchatPlus.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/SnapchatPlus.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -7,28 +7,23 @@ import me.rhunk.snapenhance.hook.HookStage
+</a> import me.rhunk.snapenhance.hook.Hooker
+ 
+ class SnapchatPlus: Feature(&quot;SnapchatPlus&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_ASYNC) {
+<a href="#h0-0-3" id="h0-0-3" class="i">+    private val originalSubscriptionTime = (System.currentTimeMillis() - 7776000000L)
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+    private val expirationTimeMillis = (System.currentTimeMillis() + 15552000000L)
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+
+</a>     override fun asyncOnActivityCreate() {
+         if (!context.config.bool(ConfigProperty.SNAPCHAT_PLUS)) return
+ 
+<a href="#h0-0-9" id="h0-0-9" class="d">-        val subscriptionInfoMembers = context.mappings.getMappedMap(&quot;SubscriptionInfoClassMembers&quot;)
+</a><a href="#h0-0-10" id="h0-0-10" class="d">-
+</a><a href="#h0-0-11" id="h0-0-11" class="d">-        Hooker.hookConstructor(context.mappings.getMappedClass(&quot;SubscriptionInfoClass&quot;), HookStage.AFTER) { param -&gt;
+</a><a href="#h0-0-12" id="h0-0-12" class="d">-            val getField = { key: String -&gt;  param.thisObject&lt;Any&gt;().javaClass.declaredFields.first {it.name == (subscriptionInfoMembers[key] as String)}.also { it.isAccessible = true }}
+</a><a href="#h0-0-13" id="h0-0-13" class="d">-
+</a><a href="#h0-0-14" id="h0-0-14" class="d">-            val subscriptionStatusField = getField(&quot;status&quot;)
+</a><a href="#h0-0-15" id="h0-0-15" class="d">-            val isSubscribedField = getField(&quot;isSubscribed&quot;)
+</a><a href="#h0-0-16" id="h0-0-16" class="d">-            val startTimeMsField = getField(&quot;startTimeMs&quot;)
+</a><a href="#h0-0-17" id="h0-0-17" class="d">-            val expireTimeMsField = getField(&quot;expireTimeMs&quot;)
+</a><a href="#h0-0-18" id="h0-0-18" class="i">+        val subscriptionInfoClass = context.mappings.getMappedClass(&quot;SubscriptionInfoClass&quot;)
+</a> 
+<a href="#h0-0-20" id="h0-0-20" class="d">-            //check if the user is already premium
+</a><a href="#h0-0-21" id="h0-0-21" class="d">-            if ((subscriptionStatusField[param.thisObject()] as Double).toInt() == 2) {
+</a><a href="#h0-0-22" id="h0-0-22" class="d">-                return@hookConstructor
+</a><a href="#h0-0-23" id="h0-0-23" class="d">-            }
+</a><a href="#h0-0-24" id="h0-0-24" class="i">+        Hooker.hookConstructor(subscriptionInfoClass, HookStage.BEFORE) { param -&gt;
+</a><a href="#h0-0-25" id="h0-0-25" class="i">+            if (param.arg&lt;Int&gt;(0) == 2) return@hookConstructor
+</a><a href="#h0-0-26" id="h0-0-26" class="i">+            //subscription tier
+</a><a href="#h0-0-27" id="h0-0-27" class="i">+            param.setArg(0, 2)
+</a><a href="#h0-0-28" id="h0-0-28" class="i">+            //subscription status
+</a><a href="#h0-0-29" id="h0-0-29" class="i">+            param.setArg(1, 2)
+</a> 
+<a href="#h0-0-31" id="h0-0-31" class="d">-            isSubscribedField.set(param.thisObject(), true)
+</a><a href="#h0-0-32" id="h0-0-32" class="d">-            startTimeMsField.set(param.thisObject(), (System.currentTimeMillis() - 7776000000L).toDouble())
+</a><a href="#h0-0-33" id="h0-0-33" class="d">-            expireTimeMsField.set(param.thisObject(), (System.currentTimeMillis() + 15552000000L).toDouble())
+</a><a href="#h0-0-34" id="h0-0-34" class="d">-            subscriptionStatusField.set(param.thisObject(), 2.toDouble())
+</a><a href="#h0-0-35" id="h0-0-35" class="i">+            param.setArg(2, originalSubscriptionTime)
+</a><a href="#h0-0-36" id="h0-0-36" class="i">+            param.setArg(3, expirationTimeMillis)
+</a>         }
+     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/PlusSubscriptionMapper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/PlusSubscriptionMapper.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/PlusSubscriptionMapper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/PlusSubscriptionMapper.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,41 +1,27 @@
+</a> package me.rhunk.snapenhance.mapping.impl
+ 
+ import me.rhunk.snapenhance.mapping.Mapper
+<a href="#h1-0-3" id="h1-0-3" class="d">-import java.lang.reflect.Field
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-import java.lang.reflect.Method
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+import java.lang.reflect.Modifier
+</a> 
+ 
+ class PlusSubscriptionMapper : Mapper() {
+<a href="#h1-0-9" id="h1-0-9" class="d">-    @Suppress(&quot;PLATFORM_CLASS_MAPPED_TO_KOTLIN&quot;)
+</a>     override fun useClasses(
+         classLoader: ClassLoader,
+         classes: List&lt;Class&lt;*&gt;&gt;,
+         mappings: MutableMap&lt;String, Any&gt;
+     ) {
+<a href="#h1-0-15" id="h1-0-15" class="d">-        //find a method that contains annotations with isSubscribed
+</a><a href="#h1-0-16" id="h1-0-16" class="d">-        val loadSubscriptionMethod = context.classCache.composerLocalSubscriptionStore.declaredMethods.first { method: Method -&gt;
+</a><a href="#h1-0-17" id="h1-0-17" class="d">-            val returnType = method.returnType
+</a><a href="#h1-0-18" id="h1-0-18" class="d">-            returnType.declaredFields.any { field: Field -&gt;
+</a><a href="#h1-0-19" id="h1-0-19" class="d">-                field.declaredAnnotations.any { annotation: Annotation -&gt;
+</a><a href="#h1-0-20" id="h1-0-20" class="d">-                    annotation.toString().contains(&quot;isSubscribed&quot;)
+</a><a href="#h1-0-21" id="h1-0-21" class="d">-                }
+</a><a href="#h1-0-22" id="h1-0-22" class="d">-            }
+</a><a href="#h1-0-23" id="h1-0-23" class="d">-        }
+</a><a href="#h1-0-24" id="h1-0-24" class="d">-        /*
+</a><a href="#h1-0-25" id="h1-0-25" class="d">-        //get the first param of the method which is the PlusSubscriptionState class
+</a><a href="#h1-0-26" id="h1-0-26" class="d">-        val plusSubscriptionStateClass = loadSubscriptionMethod.parameterTypes[0]
+</a><a href="#h1-0-27" id="h1-0-27" class="d">-        //get the first param of the constructor of PlusSubscriptionState which is the SubscriptionInfo class
+</a><a href="#h1-0-28" id="h1-0-28" class="d">-        val subscriptionInfoClass = plusSubscriptionStateClass.constructors[0].parameterTypes[0]
+</a><a href="#h1-0-29" id="h1-0-29" class="d">-        */
+</a><a href="#h1-0-30" id="h1-0-30" class="d">-        mappings[&quot;SubscriptionInfoClass&quot;] = loadSubscriptionMethod.returnType.name
+</a><a href="#h1-0-31" id="h1-0-31" class="i">+        for (clazz in classes) {
+</a><a href="#h1-0-32" id="h1-0-32" class="i">+            clazz.fields.firstOrNull {
+</a><a href="#h1-0-33" id="h1-0-33" class="i">+                it.type == clazz &amp;&amp;
+</a><a href="#h1-0-34" id="h1-0-34" class="i">+                Modifier.isFinal(it.modifiers) &amp;&amp;
+</a><a href="#h1-0-35" id="h1-0-35" class="i">+                Modifier.isStatic(it.modifiers) &amp;&amp;
+</a><a href="#h1-0-36" id="h1-0-36" class="i">+                runCatching {
+</a><a href="#h1-0-37" id="h1-0-37" class="i">+                    it?.get(null).toString().startsWith(&quot;PlusSubscriptionState&quot;)
+</a><a href="#h1-0-38" id="h1-0-38" class="i">+                }.getOrDefault(false)
+</a><a href="#h1-0-39" id="h1-0-39" class="i">+            } ?: continue
+</a> 
+<a href="#h1-0-41" id="h1-0-41" class="d">-        val members = mutableMapOf&lt;String, Any&gt;()
+</a><a href="#h1-0-42" id="h1-0-42" class="d">-        loadSubscriptionMethod.returnType.declaredFields.forEach { field -&gt;
+</a><a href="#h1-0-43" id="h1-0-43" class="d">-            val serializedNameAnnotation = (field.declaredAnnotations.first() as java.lang.annotation.Annotation)
+</a><a href="#h1-0-44" id="h1-0-44" class="d">-            val propertyName = serializedNameAnnotation.annotationType().getDeclaredMethod(&quot;name&quot;).also { it.isAccessible = true }.invoke(serializedNameAnnotation) as String
+</a><a href="#h1-0-45" id="h1-0-45" class="d">-            members[propertyName] = field.name
+</a><a href="#h1-0-46" id="h1-0-46" class="i">+            mappings[&quot;SubscriptionInfoClass&quot;] = clazz.constructors[0]!!.parameterTypes[0]!!.name
+</a><a href="#h1-0-47" id="h1-0-47" class="i">+            return
+</a>         }
+<a href="#h1-0-49" id="h1-0-49" class="d">-
+</a><a href="#h1-0-50" id="h1-0-50" class="d">-        mappings[&quot;SubscriptionInfoClassMembers&quot;] = members
+</a>     }
+ } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

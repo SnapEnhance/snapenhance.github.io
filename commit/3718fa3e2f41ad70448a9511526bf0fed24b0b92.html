@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: unlimited conversation pinning - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/3718fa3e2f41ad70448a9511526bf0fed24b0b92.html">3718fa3e2f41ad70448a9511526bf0fed24b0b92</a>
+<b>parent</b> <a href="../commit/a5cd9a0f8f4ecf12aaf03a0266c2c49528448098.html">a5cd9a0f8f4ecf12aaf03a0266c2c49528448098</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri,  3 May 2024 17:15:14 +0200
+
+feat: unlimited conversation pinning
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/PinConversations.kt</a></td><td> | </td><td class="num">13</td><td><span class="i">+++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/util/hook/Hooker.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">+++++</span><span class="d">--</span></td></tr>
+</table></pre><pre>4 files changed, 23 insertions(+), 2 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -558,6 +558,10 @@
+</a>                         &quot;name&quot;: &quot;Call Start Confirmation&quot;,
+                         &quot;description&quot;: &quot;Shows a confirmation dialog when starting a call&quot;
+                     },
+<a href="#h0-0-3" id="h0-0-3" class="i">+                    &quot;unlimited_conversation_pinning&quot;: {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                        &quot;name&quot;: &quot;Unlimited Conversation Pinning&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+                        &quot;description&quot;: &quot;Allows you to pin an unlimited amount of conversations locally&quot;
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                    },
+</a>                     &quot;prevent_message_sending&quot;: {
+                         &quot;name&quot;: &quot;Prevent Message Sending&quot;,
+                         &quot;description&quot;: &quot;Prevents sending certain types of messages&quot;
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -61,6 +61,7 @@ class MessagingTweaks : ConfigContainer() {
+</a>     val halfSwipeNotifier = container(&quot;half_swipe_notifier&quot;, HalfSwipeNotifierConfig()) { requireRestart()}
+     val messagePreviewLength = integer(&quot;message_preview_length&quot;, defaultValue = 20)
+     val callStartConfirmation = boolean(&quot;call_start_confirmation&quot;) { requireRestart() }
+<a href="#h1-0-3" id="h1-0-3" class="i">+    val unlimitedConversationPinning = boolean(&quot;unlimited_conversation_pinning&quot;) { requireRestart() }
+</a>     val autoSaveMessagesInConversations = multiple(&quot;auto_save_messages_in_conversations&quot;,
+         &quot;CHAT&quot;,
+         &quot;SNAP&quot;,
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/PinConversations.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/PinConversations.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/PinConversations.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/PinConversations.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -5,6 +5,7 @@ import me.rhunk.snapenhance.common.data.RuleState
+</a> import me.rhunk.snapenhance.core.features.FeatureLoadParams
+ import me.rhunk.snapenhance.core.features.MessagingRuleFeature
+ import me.rhunk.snapenhance.core.util.hook.HookStage
+<a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.core.util.hook.Hooker
+</a> import me.rhunk.snapenhance.core.util.hook.hook
+ import me.rhunk.snapenhance.core.util.hook.hookConstructor
+ import me.rhunk.snapenhance.core.util.ktx.getObjectField
+<a href="#h2-1" id="h2-1" class="h">@@ -13,10 +14,22 @@ import me.rhunk.snapenhance.core.wrapper.impl.SnapUUID
+</a> 
+ class PinConversations : MessagingRuleFeature(&quot;PinConversations&quot;, MessagingRuleType.PIN_CONVERSATION, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+     override fun onActivityCreate() {
+<a href="#h2-1-3" id="h2-1-3" class="i">+        if (!context.config.messaging.unlimitedConversationPinning.get()) return
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+
+</a>         context.classCache.feedManager.hook(&quot;setPinnedConversationStatus&quot;, HookStage.BEFORE) { param -&gt;
+             val conversationUUID = SnapUUID(param.arg(0))
+             val isPinned = param.arg&lt;Any&gt;(1).toString() == &quot;PINNED&quot;
+             setState(conversationUUID.toString(), isPinned)
+<a href="#h2-1-9" id="h2-1-9" class="i">+            val callback = param.arg&lt;Any&gt;(2)
+</a><a href="#h2-1-10" id="h2-1-10" class="i">+            mutableSetOf&lt;() -&gt; Unit&gt;().apply {
+</a><a href="#h2-1-11" id="h2-1-11" class="i">+                addAll(Hooker.ephemeralHookObjectMethod(callback::class.java, callback,&quot;onSuccess&quot;, HookStage.BEFORE) {
+</a><a href="#h2-1-12" id="h2-1-12" class="i">+                    forEach { it() }
+</a><a href="#h2-1-13" id="h2-1-13" class="i">+                })
+</a><a href="#h2-1-14" id="h2-1-14" class="i">+                addAll(Hooker.ephemeralHookObjectMethod(callback::class.java, callback,&quot;onError&quot;, HookStage.BEFORE) { methodParam -&gt;
+</a><a href="#h2-1-15" id="h2-1-15" class="i">+                    methodParam.setResult(null)
+</a><a href="#h2-1-16" id="h2-1-16" class="i">+                    callback::class.java.getDeclaredMethod(&quot;onSuccess&quot;).invoke(callback)
+</a><a href="#h2-1-17" id="h2-1-17" class="i">+                })
+</a><a href="#h2-1-18" id="h2-1-18" class="i">+            }
+</a>         }
+ 
+         context.classCache.conversation.hookConstructor(HookStage.AFTER) { param -&gt;
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/hook/Hooker.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/hook/Hooker.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/hook/Hooker.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/hook/Hooker.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -109,13 +109,16 @@ object Hooker {
+</a>         methodName: String,
+         stage: HookStage,
+         crossinline hookConsumer: (HookAdapter) -&gt; Unit
+<a href="#h3-0-3" id="h3-0-3" class="d">-    ) {
+</a><a href="#h3-0-4" id="h3-0-4" class="d">-        val unhooks: MutableSet&lt;XC_MethodHook.Unhook&gt; = HashSet()
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+    ): Set&lt;() -&gt; Unit&gt; {
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+        val unhooks = mutableSetOf&lt;XC_MethodHook.Unhook&gt;()
+</a>         hook(clazz, methodName, stage) { param-&gt;
+             if (param.nullableThisObject&lt;Any&gt;() != instance) return@hook
+             unhooks.forEach { it.unhook() }
+             hookConsumer(param)
+         }.also { unhooks.addAll(it) }
+<a href="#h3-0-12" id="h3-0-12" class="i">+        return unhooks.map {
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+            { it.unhook() }
+</a><a href="#h3-0-14" id="h3-0-14" class="i">+        }.toSet()
+</a>     }
+ 
+     inline fun ephemeralHookConstructor(
+</pre>
+</div>
+</body>
+</html>

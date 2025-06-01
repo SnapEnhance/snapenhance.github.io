@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(scripting): text input component - add visibility attribute - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/381b346c7a0a3d7b560e9bfa8452d5e0779258a7.html">381b346c7a0a3d7b560e9bfa8452d5e0779258a7</a>
+<b>parent</b> <a href="../commit/283f0266d9f4588d5242c719172e21cbef6eede8.html">283f0266d9f4588d5242c719172e21cbef6eede8</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun,  4 Feb 2024 16:01:30 +0100
+
+feat(scripting): text input component
+- add visibility attribute
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/InterfaceManager.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">+++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/ScriptInterface.kt</a></td><td> | </td><td class="num">171</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">---------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/components/Node.kt</a></td><td> | </td><td class="num">10</td><td><span class="i">++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/components/NodeType.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h4">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/components/impl/TextInputNode.kt</a></td><td> | </td><td class="num">37</td><td><span class="i">+++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>5 files changed, 155 insertions(+), 73 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/InterfaceManager.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/InterfaceManager.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/InterfaceManager.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/InterfaceManager.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -12,6 +12,7 @@ import me.rhunk.snapenhance.common.scripting.ui.components.NodeType
+</a> import me.rhunk.snapenhance.common.scripting.ui.components.impl.ActionNode
+ import me.rhunk.snapenhance.common.scripting.ui.components.impl.ActionType
+ import me.rhunk.snapenhance.common.scripting.ui.components.impl.RowColumnNode
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.common.scripting.ui.components.impl.TextInputNode
+</a> import me.rhunk.snapenhance.common.ui.createComposeAlertDialog
+ import org.mozilla.javascript.Function
+ import org.mozilla.javascript.annotations.JSFunction
+<a href="#h0-1" id="h0-1" class="h">@@ -74,6 +75,12 @@ class InterfaceBuilder {
+</a>         attributes[&quot;items&quot;] = items
+         attributes[&quot;callback&quot;] = callback
+     }
+<a href="#h0-1-3" id="h0-1-3" class="i">+
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+    fun textInput(placeholder: String, value: String, callback: (String) -&gt; Unit) = TextInputNode().apply {
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+        placeholder(placeholder)
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+        value(value)
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+        callback(callback)
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+    }.also { nodes.add(it) }
+</a> }
+ 
+ 
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/ScriptInterface.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/ScriptInterface.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/ScriptInterface.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/ScriptInterface.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,10 +1,12 @@
+</a> package me.rhunk.snapenhance.common.scripting.ui
+ 
+<a href="#h1-0-2" id="h1-0-2" class="i">+import androidx.compose.animation.AnimatedVisibility
+</a> import androidx.compose.foundation.layout.*
+ import androidx.compose.material3.OutlinedButton
+ import androidx.compose.material3.Slider
+ import androidx.compose.material3.Switch
+ import androidx.compose.material3.Text
+<a href="#h1-0-8" id="h1-0-8" class="i">+import androidx.compose.material3.TextField
+</a> import androidx.compose.runtime.*
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+<a href="#h1-1" id="h1-1" class="h">@@ -68,92 +70,117 @@ private fun DrawNode(node: Node) {
+</a>         )
+     }
+ 
+<a href="#h1-1-3" id="h1-1-3" class="d">-    when (node.type) {
+</a><a href="#h1-1-4" id="h1-1-4" class="d">-        NodeType.ACTION -&gt; {
+</a><a href="#h1-1-5" id="h1-1-5" class="d">-            when ((node as ActionNode).actionType) {
+</a><a href="#h1-1-6" id="h1-1-6" class="d">-                ActionType.LAUNCHED -&gt; {
+</a><a href="#h1-1-7" id="h1-1-7" class="d">-                    LaunchedEffect(node.key) {
+</a><a href="#h1-1-8" id="h1-1-8" class="d">-                        runCallbackSafe {
+</a><a href="#h1-1-9" id="h1-1-9" class="d">-                            node.callback()
+</a><a href="#h1-1-10" id="h1-1-10" class="i">+    if (cachedAttributes[&quot;visibility&quot;] != &quot;gone&quot;) {
+</a><a href="#h1-1-11" id="h1-1-11" class="i">+        AnimatedVisibility(
+</a><a href="#h1-1-12" id="h1-1-12" class="i">+            visible = cachedAttributes[&quot;visibility&quot;] != &quot;invisible&quot;,
+</a><a href="#h1-1-13" id="h1-1-13" class="i">+        ) {
+</a><a href="#h1-1-14" id="h1-1-14" class="i">+            when (node.type) {
+</a><a href="#h1-1-15" id="h1-1-15" class="i">+                NodeType.ACTION -&gt; {
+</a><a href="#h1-1-16" id="h1-1-16" class="i">+                    when ((node as ActionNode).actionType) {
+</a><a href="#h1-1-17" id="h1-1-17" class="i">+                        ActionType.LAUNCHED -&gt; {
+</a><a href="#h1-1-18" id="h1-1-18" class="i">+                            LaunchedEffect(node.key) {
+</a><a href="#h1-1-19" id="h1-1-19" class="i">+                                runCallbackSafe {
+</a><a href="#h1-1-20" id="h1-1-20" class="i">+                                    node.callback()
+</a><a href="#h1-1-21" id="h1-1-21" class="i">+                                }
+</a><a href="#h1-1-22" id="h1-1-22" class="i">+                            }
+</a><a href="#h1-1-23" id="h1-1-23" class="i">+                        }
+</a><a href="#h1-1-24" id="h1-1-24" class="i">+                        ActionType.DISPOSE -&gt; {
+</a><a href="#h1-1-25" id="h1-1-25" class="i">+                            DisposableEffect(Unit) {
+</a><a href="#h1-1-26" id="h1-1-26" class="i">+                                onDispose {
+</a><a href="#h1-1-27" id="h1-1-27" class="i">+                                    runCallbackSafe {
+</a><a href="#h1-1-28" id="h1-1-28" class="i">+                                        node.callback()
+</a><a href="#h1-1-29" id="h1-1-29" class="i">+                                    }
+</a><a href="#h1-1-30" id="h1-1-30" class="i">+                                }
+</a><a href="#h1-1-31" id="h1-1-31" class="i">+                            }
+</a>                         }
+                     }
+                 }
+<a href="#h1-1-35" id="h1-1-35" class="d">-                ActionType.DISPOSE -&gt; {
+</a><a href="#h1-1-36" id="h1-1-36" class="d">-                    DisposableEffect(Unit) {
+</a><a href="#h1-1-37" id="h1-1-37" class="d">-                        onDispose {
+</a><a href="#h1-1-38" id="h1-1-38" class="d">-                            runCallbackSafe {
+</a><a href="#h1-1-39" id="h1-1-39" class="d">-                                node.callback()
+</a><a href="#h1-1-40" id="h1-1-40" class="d">-                            }
+</a><a href="#h1-1-41" id="h1-1-41" class="i">+                NodeType.COLUMN -&gt; {
+</a><a href="#h1-1-42" id="h1-1-42" class="i">+                    Column(
+</a><a href="#h1-1-43" id="h1-1-43" class="i">+                        verticalArrangement = arrangement as? Arrangement.Vertical ?: spacing?.let { Arrangement.spacedBy(it.dp) } ?: Arrangement.Top,
+</a><a href="#h1-1-44" id="h1-1-44" class="i">+                        horizontalAlignment = alignment as? Alignment.Horizontal ?: Alignment.Start,
+</a><a href="#h1-1-45" id="h1-1-45" class="i">+                        modifier = rowColumnModifier
+</a><a href="#h1-1-46" id="h1-1-46" class="i">+                    ) {
+</a><a href="#h1-1-47" id="h1-1-47" class="i">+                        node.children.forEach { child -&gt;
+</a><a href="#h1-1-48" id="h1-1-48" class="i">+                            DrawNode(child)
+</a>                         }
+                     }
+                 }
+<a href="#h1-1-52" id="h1-1-52" class="d">-            }
+</a><a href="#h1-1-53" id="h1-1-53" class="d">-        }
+</a><a href="#h1-1-54" id="h1-1-54" class="d">-        NodeType.COLUMN -&gt; {
+</a><a href="#h1-1-55" id="h1-1-55" class="d">-            Column(
+</a><a href="#h1-1-56" id="h1-1-56" class="d">-                verticalArrangement = arrangement as? Arrangement.Vertical ?: spacing?.let { Arrangement.spacedBy(it.dp) } ?: Arrangement.Top,
+</a><a href="#h1-1-57" id="h1-1-57" class="d">-                horizontalAlignment = alignment as? Alignment.Horizontal ?: Alignment.Start,
+</a><a href="#h1-1-58" id="h1-1-58" class="d">-                modifier = rowColumnModifier
+</a><a href="#h1-1-59" id="h1-1-59" class="d">-            ) {
+</a><a href="#h1-1-60" id="h1-1-60" class="d">-                node.children.forEach { child -&gt;
+</a><a href="#h1-1-61" id="h1-1-61" class="d">-                    DrawNode(child)
+</a><a href="#h1-1-62" id="h1-1-62" class="i">+                NodeType.ROW -&gt; {
+</a><a href="#h1-1-63" id="h1-1-63" class="i">+                    Row(
+</a><a href="#h1-1-64" id="h1-1-64" class="i">+                        horizontalArrangement = arrangement as? Arrangement.Horizontal ?: spacing?.let { Arrangement.spacedBy(it.dp) } ?: Arrangement.SpaceBetween,
+</a><a href="#h1-1-65" id="h1-1-65" class="i">+                        verticalAlignment = alignment as? Alignment.Vertical ?: Alignment.CenterVertically,
+</a><a href="#h1-1-66" id="h1-1-66" class="i">+                        modifier = rowColumnModifier
+</a><a href="#h1-1-67" id="h1-1-67" class="i">+                    ) {
+</a><a href="#h1-1-68" id="h1-1-68" class="i">+                        node.children.forEach { child -&gt;
+</a><a href="#h1-1-69" id="h1-1-69" class="i">+                            DrawNode(child)
+</a><a href="#h1-1-70" id="h1-1-70" class="i">+                        }
+</a><a href="#h1-1-71" id="h1-1-71" class="i">+                    }
+</a>                 }
+<a href="#h1-1-73" id="h1-1-73" class="d">-            }
+</a><a href="#h1-1-74" id="h1-1-74" class="d">-        }
+</a><a href="#h1-1-75" id="h1-1-75" class="d">-        NodeType.ROW -&gt; {
+</a><a href="#h1-1-76" id="h1-1-76" class="d">-            Row(
+</a><a href="#h1-1-77" id="h1-1-77" class="d">-                horizontalArrangement = arrangement as? Arrangement.Horizontal ?: spacing?.let { Arrangement.spacedBy(it.dp) } ?: Arrangement.SpaceBetween,
+</a><a href="#h1-1-78" id="h1-1-78" class="d">-                verticalAlignment = alignment as? Alignment.Vertical ?: Alignment.CenterVertically,
+</a><a href="#h1-1-79" id="h1-1-79" class="d">-                modifier = rowColumnModifier
+</a><a href="#h1-1-80" id="h1-1-80" class="d">-            ) {
+</a><a href="#h1-1-81" id="h1-1-81" class="d">-                node.children.forEach { child -&gt;
+</a><a href="#h1-1-82" id="h1-1-82" class="d">-                    DrawNode(child)
+</a><a href="#h1-1-83" id="h1-1-83" class="i">+                NodeType.TEXT -&gt; NodeLabel()
+</a><a href="#h1-1-84" id="h1-1-84" class="i">+                NodeType.SWITCH -&gt; {
+</a><a href="#h1-1-85" id="h1-1-85" class="i">+                    var switchState by remember {
+</a><a href="#h1-1-86" id="h1-1-86" class="i">+                        mutableStateOf(cachedAttributes[&quot;state&quot;] as Boolean)
+</a><a href="#h1-1-87" id="h1-1-87" class="i">+                    }
+</a><a href="#h1-1-88" id="h1-1-88" class="i">+                    Switch(
+</a><a href="#h1-1-89" id="h1-1-89" class="i">+                        checked = switchState,
+</a><a href="#h1-1-90" id="h1-1-90" class="i">+                        onCheckedChange = { state -&gt;
+</a><a href="#h1-1-91" id="h1-1-91" class="i">+                            runCallbackSafe {
+</a><a href="#h1-1-92" id="h1-1-92" class="i">+                                switchState = state
+</a><a href="#h1-1-93" id="h1-1-93" class="i">+                                node.setAttribute(&quot;state&quot;, state)
+</a><a href="#h1-1-94" id="h1-1-94" class="i">+                                (cachedAttributes[&quot;callback&quot;] as? (Boolean) -&gt; Unit)?.let { it(state) }
+</a><a href="#h1-1-95" id="h1-1-95" class="i">+                            }
+</a><a href="#h1-1-96" id="h1-1-96" class="i">+                        }
+</a><a href="#h1-1-97" id="h1-1-97" class="i">+                    )
+</a>                 }
+<a href="#h1-1-99" id="h1-1-99" class="d">-            }
+</a><a href="#h1-1-100" id="h1-1-100" class="d">-        }
+</a><a href="#h1-1-101" id="h1-1-101" class="d">-        NodeType.TEXT -&gt; NodeLabel()
+</a><a href="#h1-1-102" id="h1-1-102" class="d">-        NodeType.SWITCH -&gt; {
+</a><a href="#h1-1-103" id="h1-1-103" class="d">-            var switchState by remember {
+</a><a href="#h1-1-104" id="h1-1-104" class="d">-                mutableStateOf(cachedAttributes[&quot;state&quot;] as Boolean)
+</a><a href="#h1-1-105" id="h1-1-105" class="d">-            }
+</a><a href="#h1-1-106" id="h1-1-106" class="d">-            Switch(
+</a><a href="#h1-1-107" id="h1-1-107" class="d">-                checked = switchState,
+</a><a href="#h1-1-108" id="h1-1-108" class="d">-                onCheckedChange = { state -&gt;
+</a><a href="#h1-1-109" id="h1-1-109" class="d">-                    runCallbackSafe {
+</a><a href="#h1-1-110" id="h1-1-110" class="d">-                        switchState = state
+</a><a href="#h1-1-111" id="h1-1-111" class="d">-                        node.setAttribute(&quot;state&quot;, state)
+</a><a href="#h1-1-112" id="h1-1-112" class="d">-                        (cachedAttributes[&quot;callback&quot;] as? (Boolean) -&gt; Unit)?.let { it(state) }
+</a><a href="#h1-1-113" id="h1-1-113" class="i">+                NodeType.SLIDER -&gt; {
+</a><a href="#h1-1-114" id="h1-1-114" class="i">+                    var sliderValue by remember {
+</a><a href="#h1-1-115" id="h1-1-115" class="i">+                        mutableFloatStateOf((cachedAttributes[&quot;value&quot;] as Int).toFloat())
+</a>                     }
+<a href="#h1-1-117" id="h1-1-117" class="i">+                    Slider(
+</a><a href="#h1-1-118" id="h1-1-118" class="i">+                        value = sliderValue,
+</a><a href="#h1-1-119" id="h1-1-119" class="i">+                        onValueChange = { value -&gt;
+</a><a href="#h1-1-120" id="h1-1-120" class="i">+                            runCallbackSafe {
+</a><a href="#h1-1-121" id="h1-1-121" class="i">+                                sliderValue = value
+</a><a href="#h1-1-122" id="h1-1-122" class="i">+                                node.setAttribute(&quot;value&quot;, value.toInt())
+</a><a href="#h1-1-123" id="h1-1-123" class="i">+                                (cachedAttributes[&quot;callback&quot;] as? (Int) -&gt; Unit)?.let { it(value.toInt()) }
+</a><a href="#h1-1-124" id="h1-1-124" class="i">+                            }
+</a><a href="#h1-1-125" id="h1-1-125" class="i">+                        },
+</a><a href="#h1-1-126" id="h1-1-126" class="i">+                        valueRange = (cachedAttributes[&quot;min&quot;] as Int).toFloat()..(cachedAttributes[&quot;max&quot;] as Int).toFloat(),
+</a><a href="#h1-1-127" id="h1-1-127" class="i">+                        steps = cachedAttributes[&quot;step&quot;] as Int,
+</a><a href="#h1-1-128" id="h1-1-128" class="i">+                    )
+</a>                 }
+<a href="#h1-1-130" id="h1-1-130" class="d">-            )
+</a><a href="#h1-1-131" id="h1-1-131" class="d">-        }
+</a><a href="#h1-1-132" id="h1-1-132" class="d">-        NodeType.SLIDER -&gt; {
+</a><a href="#h1-1-133" id="h1-1-133" class="d">-            var sliderValue by remember {
+</a><a href="#h1-1-134" id="h1-1-134" class="d">-                mutableFloatStateOf((cachedAttributes[&quot;value&quot;] as Int).toFloat())
+</a><a href="#h1-1-135" id="h1-1-135" class="d">-            }
+</a><a href="#h1-1-136" id="h1-1-136" class="d">-            Slider(
+</a><a href="#h1-1-137" id="h1-1-137" class="d">-                value = sliderValue,
+</a><a href="#h1-1-138" id="h1-1-138" class="d">-                onValueChange = { value -&gt;
+</a><a href="#h1-1-139" id="h1-1-139" class="d">-                    runCallbackSafe {
+</a><a href="#h1-1-140" id="h1-1-140" class="d">-                        sliderValue = value
+</a><a href="#h1-1-141" id="h1-1-141" class="d">-                        node.setAttribute(&quot;value&quot;, value.toInt())
+</a><a href="#h1-1-142" id="h1-1-142" class="d">-                        (cachedAttributes[&quot;callback&quot;] as? (Int) -&gt; Unit)?.let { it(value.toInt()) }
+</a><a href="#h1-1-143" id="h1-1-143" class="i">+                NodeType.BUTTON -&gt; {
+</a><a href="#h1-1-144" id="h1-1-144" class="i">+                    OutlinedButton(onClick = {
+</a><a href="#h1-1-145" id="h1-1-145" class="i">+                        runCallbackSafe {
+</a><a href="#h1-1-146" id="h1-1-146" class="i">+                            (cachedAttributes[&quot;callback&quot;] as? () -&gt; Unit)?.let { it() }
+</a><a href="#h1-1-147" id="h1-1-147" class="i">+                        }
+</a><a href="#h1-1-148" id="h1-1-148" class="i">+                    }) {
+</a><a href="#h1-1-149" id="h1-1-149" class="i">+                        NodeLabel()
+</a>                     }
+<a href="#h1-1-151" id="h1-1-151" class="d">-                },
+</a><a href="#h1-1-152" id="h1-1-152" class="d">-                valueRange = (cachedAttributes[&quot;min&quot;] as Int).toFloat()..(cachedAttributes[&quot;max&quot;] as Int).toFloat(),
+</a><a href="#h1-1-153" id="h1-1-153" class="d">-                steps = cachedAttributes[&quot;step&quot;] as Int,
+</a><a href="#h1-1-154" id="h1-1-154" class="d">-            )
+</a><a href="#h1-1-155" id="h1-1-155" class="d">-        }
+</a><a href="#h1-1-156" id="h1-1-156" class="d">-        NodeType.BUTTON -&gt; {
+</a><a href="#h1-1-157" id="h1-1-157" class="d">-            OutlinedButton(onClick = {
+</a><a href="#h1-1-158" id="h1-1-158" class="d">-                runCallbackSafe {
+</a><a href="#h1-1-159" id="h1-1-159" class="d">-                    (cachedAttributes[&quot;callback&quot;] as? () -&gt; Unit)?.let { it() }
+</a>                 }
+<a href="#h1-1-161" id="h1-1-161" class="d">-            }) {
+</a><a href="#h1-1-162" id="h1-1-162" class="d">-                NodeLabel()
+</a><a href="#h1-1-163" id="h1-1-163" class="i">+                NodeType.TEXT_INPUT -&gt; {
+</a><a href="#h1-1-164" id="h1-1-164" class="i">+                    var textInputValue by remember {
+</a><a href="#h1-1-165" id="h1-1-165" class="i">+                        mutableStateOf(cachedAttributes[&quot;value&quot;].toString())
+</a><a href="#h1-1-166" id="h1-1-166" class="i">+                    }
+</a><a href="#h1-1-167" id="h1-1-167" class="i">+                    TextField(
+</a><a href="#h1-1-168" id="h1-1-168" class="i">+                        value = textInputValue,
+</a><a href="#h1-1-169" id="h1-1-169" class="i">+                        readOnly = cachedAttributes[&quot;readonly&quot;] as? Boolean ?: false,
+</a><a href="#h1-1-170" id="h1-1-170" class="i">+                        singleLine = cachedAttributes[&quot;singleLine&quot;] as? Boolean ?: true,
+</a><a href="#h1-1-171" id="h1-1-171" class="i">+                        maxLines = cachedAttributes[&quot;maxLines&quot;] as? Int ?: 1,
+</a><a href="#h1-1-172" id="h1-1-172" class="i">+                        onValueChange = { value -&gt;
+</a><a href="#h1-1-173" id="h1-1-173" class="i">+                            runCallbackSafe {
+</a><a href="#h1-1-174" id="h1-1-174" class="i">+                                textInputValue = value
+</a><a href="#h1-1-175" id="h1-1-175" class="i">+                                node.setAttribute(&quot;value&quot;, value)
+</a><a href="#h1-1-176" id="h1-1-176" class="i">+                                (cachedAttributes[&quot;callback&quot;] as? (String) -&gt; Unit)?.let { it(value) }
+</a><a href="#h1-1-177" id="h1-1-177" class="i">+                            }
+</a><a href="#h1-1-178" id="h1-1-178" class="i">+                        },
+</a><a href="#h1-1-179" id="h1-1-179" class="i">+                        placeholder = { Text(cachedAttributes[&quot;placeholder&quot;].toString()) }
+</a><a href="#h1-1-180" id="h1-1-180" class="i">+                    )
+</a><a href="#h1-1-181" id="h1-1-181" class="i">+                }
+</a><a href="#h1-1-182" id="h1-1-182" class="i">+                else -&gt; {}
+</a>             }
+         }
+<a href="#h1-1-185" id="h1-1-185" class="d">-        else -&gt; {}
+</a>     }
+ }
+ 
+<b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/components/Node.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/components/Node.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/components/Node.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/components/Node.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,5 +1,6 @@
+</a> package me.rhunk.snapenhance.common.scripting.ui.components
+ 
+<a href="#h2-0-2" id="h2-0-2" class="i">+@Suppress(&quot;MemberVisibilityCanBePrivate&quot;)
+</a> open class Node(
+     val type: NodeType,
+ ) {
+<a href="#h2-1" id="h2-1" class="h">@@ -16,6 +17,10 @@ open class Node(
+</a>         }
+     }
+ 
+<a href="#h2-1-3" id="h2-1-3" class="i">+    init {
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+        visibility(&quot;visible&quot;)
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+    }
+</a><a href="#h2-1-6" id="h2-1-6" class="i">+
+</a>     fun setAttribute(key: String, value: Any?) {
+         attributes[key] = value
+     }
+<a href="#h2-2" id="h2-2" class="h">@@ -49,4 +54,9 @@ open class Node(
+</a>         attributes[&quot;color&quot;] = color
+         return this
+     }
+<a href="#h2-2-3" id="h2-2-3" class="i">+
+</a><a href="#h2-2-4" id="h2-2-4" class="i">+    fun visibility(state: String) {
+</a><a href="#h2-2-5" id="h2-2-5" class="i">+        assert(state == &quot;visible&quot; || state == &quot;invisible&quot; || state == &quot;gone&quot;) { &quot;Invalid visibility state. Must be one of: visible, invisible, gone&quot; }
+</a><a href="#h2-2-6" id="h2-2-6" class="i">+        attributes[&quot;visibility&quot;] = state
+</a><a href="#h2-2-7" id="h2-2-7" class="i">+    }
+</a> }
+<b>diff --git a/<a id="h3" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/components/NodeType.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/components/NodeType.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/components/NodeType.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/components/NodeType.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -8,5 +8,6 @@ enum class NodeType {
+</a>     BUTTON,
+     SLIDER,
+     LIST,
+<a href="#h3-0-3" id="h3-0-3" class="d">-    ACTION
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+    ACTION,
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+    TEXT_INPUT,
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h4" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/components/impl/TextInputNode.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/components/impl/TextInputNode.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/components/impl/TextInputNode.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ui/components/impl/TextInputNode.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -0,0 +1,36 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="i">+package me.rhunk.snapenhance.common.scripting.ui.components.impl
+</a><a href="#h4-0-1" id="h4-0-1" class="i">+
+</a><a href="#h4-0-2" id="h4-0-2" class="i">+import me.rhunk.snapenhance.common.scripting.ui.components.Node
+</a><a href="#h4-0-3" id="h4-0-3" class="i">+import me.rhunk.snapenhance.common.scripting.ui.components.NodeType
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+class TextInputNode : Node(NodeType.TEXT_INPUT) {
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+    fun placeholder(text: String): TextInputNode {
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+        attributes[&quot;placeholder&quot;] = text
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+        return this
+</a><a href="#h4-0-9" id="h4-0-9" class="i">+    }
+</a><a href="#h4-0-10" id="h4-0-10" class="i">+
+</a><a href="#h4-0-11" id="h4-0-11" class="i">+    fun value(text: String): TextInputNode {
+</a><a href="#h4-0-12" id="h4-0-12" class="i">+        attributes[&quot;value&quot;] = text
+</a><a href="#h4-0-13" id="h4-0-13" class="i">+        return this
+</a><a href="#h4-0-14" id="h4-0-14" class="i">+    }
+</a><a href="#h4-0-15" id="h4-0-15" class="i">+
+</a><a href="#h4-0-16" id="h4-0-16" class="i">+    fun callback(callback: (String) -&gt; Unit): TextInputNode {
+</a><a href="#h4-0-17" id="h4-0-17" class="i">+        attributes[&quot;callback&quot;] = callback
+</a><a href="#h4-0-18" id="h4-0-18" class="i">+        return this
+</a><a href="#h4-0-19" id="h4-0-19" class="i">+    }
+</a><a href="#h4-0-20" id="h4-0-20" class="i">+
+</a><a href="#h4-0-21" id="h4-0-21" class="i">+    fun readonly(state: Boolean): TextInputNode {
+</a><a href="#h4-0-22" id="h4-0-22" class="i">+        attributes[&quot;readonly&quot;] = state
+</a><a href="#h4-0-23" id="h4-0-23" class="i">+        return this
+</a><a href="#h4-0-24" id="h4-0-24" class="i">+    }
+</a><a href="#h4-0-25" id="h4-0-25" class="i">+
+</a><a href="#h4-0-26" id="h4-0-26" class="i">+    fun singleLine(state: Boolean): TextInputNode {
+</a><a href="#h4-0-27" id="h4-0-27" class="i">+        attributes[&quot;singleLine&quot;] = state
+</a><a href="#h4-0-28" id="h4-0-28" class="i">+        return this
+</a><a href="#h4-0-29" id="h4-0-29" class="i">+    }
+</a><a href="#h4-0-30" id="h4-0-30" class="i">+
+</a><a href="#h4-0-31" id="h4-0-31" class="i">+    fun maxLines(maxLines: Int): TextInputNode {
+</a><a href="#h4-0-32" id="h4-0-32" class="i">+        attributes[&quot;maxLines&quot;] = maxLines
+</a><a href="#h4-0-33" id="h4-0-33" class="i">+        return this
+</a><a href="#h4-0-34" id="h4-0-34" class="i">+    }
+</a><a href="#h4-0-35" id="h4-0-35" class="i">+}</a><a href="#h4-0-36" id="h4-0-36" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

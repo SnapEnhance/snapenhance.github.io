@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(scripting): setTimeout and setInterval support - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/8d2353bbbec41fe5ce286821a0fee55791eb933e.html">8d2353bbbec41fe5ce286821a0fee55791eb933e</a>
+<b>parent</b> <a href="../commit/7d06d1cc7221b1d84b296898b9f24a1706922d3e.html">7d06d1cc7221b1d84b296898b9f24a1706922d3e</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 21 Aug 2024 12:06:05 +0200
+
+feat(scripting): setTimeout and setInterval support
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a></td><td> | </td><td class="num">48</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/bindings/BindingsContext.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">+++</span><span class="d">-</span></td></tr>
+</table></pre><pre>2 files changed, 47 insertions(+), 5 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -2,6 +2,7 @@ package me.rhunk.snapenhance.common.scripting
+</a> 
+ import android.os.Handler
+ import android.widget.Toast
+<a href="#h0-0-3" id="h0-0-3" class="i">+import kotlinx.coroutines.*
+</a> import me.rhunk.snapenhance.common.scripting.bindings.AbstractBinding
+ import me.rhunk.snapenhance.common.scripting.bindings.BindingsContext
+ import me.rhunk.snapenhance.common.scripting.impl.JavaInterfaces
+<a href="#h0-1" id="h0-1" class="h">@@ -14,10 +15,8 @@ import me.rhunk.snapenhance.common.scripting.ktx.scriptableObject
+</a> import me.rhunk.snapenhance.common.scripting.type.ModuleInfo
+ import me.rhunk.snapenhance.common.scripting.type.Permissions
+ import me.rhunk.snapenhance.common.scripting.ui.InterfaceManager
+<a href="#h0-1-3" id="h0-1-3" class="i">+import org.mozilla.javascript.*
+</a> import org.mozilla.javascript.Function
+<a href="#h0-1-5" id="h0-1-5" class="d">-import org.mozilla.javascript.ScriptableObject
+</a><a href="#h0-1-6" id="h0-1-6" class="d">-import org.mozilla.javascript.Undefined
+</a><a href="#h0-1-7" id="h0-1-7" class="d">-import org.mozilla.javascript.Wrapper
+</a> import java.io.Reader
+ import java.lang.reflect.Modifier
+ import kotlin.reflect.KClass
+<a href="#h0-2" id="h0-2" class="h">@@ -27,13 +26,15 @@ class JSModule(
+</a>     val moduleInfo: ModuleInfo,
+     private val reader: Reader,
+ ) {
+<a href="#h0-2-3" id="h0-2-3" class="i">+    val coroutineScope = CoroutineScope(Dispatchers.IO)
+</a>     private val moduleBindings = mutableMapOf&lt;String, AbstractBinding&gt;()
+     private lateinit var moduleObject: ScriptableObject
+ 
+     private val moduleBindingContext by lazy {
+         BindingsContext(
+             moduleInfo = moduleInfo,
+<a href="#h0-2-10" id="h0-2-10" class="d">-            runtime = scriptRuntime
+</a><a href="#h0-2-11" id="h0-2-11" class="i">+            runtime = scriptRuntime,
+</a><a href="#h0-2-12" id="h0-2-12" class="i">+            module = this,
+</a>         )
+     }
+ 
+<a href="#h0-3" id="h0-3" class="h">@@ -158,6 +159,42 @@ class JSModule(
+</a>                 Undefined.instance
+             }
+ 
+<a href="#h0-3-3" id="h0-3-3" class="i">+            moduleObject.putFunction(&quot;setTimeout&quot;) {
+</a><a href="#h0-3-4" id="h0-3-4" class="i">+                val function = it?.get(0) as? Function ?: return@putFunction Undefined.instance
+</a><a href="#h0-3-5" id="h0-3-5" class="i">+                val time = it[1] as? Number ?: 0
+</a><a href="#h0-3-6" id="h0-3-6" class="i">+
+</a><a href="#h0-3-7" id="h0-3-7" class="i">+                return@putFunction coroutineScope.launch {
+</a><a href="#h0-3-8" id="h0-3-8" class="i">+                    delay(time.toLong())
+</a><a href="#h0-3-9" id="h0-3-9" class="i">+                    contextScope {
+</a><a href="#h0-3-10" id="h0-3-10" class="i">+                        function.call(this, this@putFunction, this@putFunction, emptyArray())
+</a><a href="#h0-3-11" id="h0-3-11" class="i">+                    }
+</a><a href="#h0-3-12" id="h0-3-12" class="i">+                }
+</a><a href="#h0-3-13" id="h0-3-13" class="i">+            }
+</a><a href="#h0-3-14" id="h0-3-14" class="i">+
+</a><a href="#h0-3-15" id="h0-3-15" class="i">+            moduleObject.putFunction(&quot;setInterval&quot;) {
+</a><a href="#h0-3-16" id="h0-3-16" class="i">+                val function = it?.get(0) as? Function ?: return@putFunction Undefined.instance
+</a><a href="#h0-3-17" id="h0-3-17" class="i">+                val time = it[1] as? Number ?: 0
+</a><a href="#h0-3-18" id="h0-3-18" class="i">+
+</a><a href="#h0-3-19" id="h0-3-19" class="i">+                return@putFunction coroutineScope.launch {
+</a><a href="#h0-3-20" id="h0-3-20" class="i">+                    while (true) {
+</a><a href="#h0-3-21" id="h0-3-21" class="i">+                        delay(time.toLong())
+</a><a href="#h0-3-22" id="h0-3-22" class="i">+                        contextScope {
+</a><a href="#h0-3-23" id="h0-3-23" class="i">+                            function.call(this, this@putFunction, this@putFunction, emptyArray())
+</a><a href="#h0-3-24" id="h0-3-24" class="i">+                        }
+</a><a href="#h0-3-25" id="h0-3-25" class="i">+                    }
+</a><a href="#h0-3-26" id="h0-3-26" class="i">+                }
+</a><a href="#h0-3-27" id="h0-3-27" class="i">+            }
+</a><a href="#h0-3-28" id="h0-3-28" class="i">+
+</a><a href="#h0-3-29" id="h0-3-29" class="i">+            arrayOf(&quot;clearInterval&quot;, &quot;clearTimeout&quot;).forEach {
+</a><a href="#h0-3-30" id="h0-3-30" class="i">+                moduleObject.putFunction(it) { args -&gt;
+</a><a href="#h0-3-31" id="h0-3-31" class="i">+                    val job = args?.get(0) as? Job ?: return@putFunction Undefined.instance
+</a><a href="#h0-3-32" id="h0-3-32" class="i">+                    runCatching {
+</a><a href="#h0-3-33" id="h0-3-33" class="i">+                        job.cancel()
+</a><a href="#h0-3-34" id="h0-3-34" class="i">+                    }
+</a><a href="#h0-3-35" id="h0-3-35" class="i">+                    Undefined.instance
+</a><a href="#h0-3-36" id="h0-3-36" class="i">+                }
+</a><a href="#h0-3-37" id="h0-3-37" class="i">+            }
+</a><a href="#h0-3-38" id="h0-3-38" class="i">+
+</a>             for (toastFunc in listOf(&quot;longToast&quot;, &quot;shortToast&quot;)) {
+                 moduleObject.putFunction(toastFunc) { args -&gt;
+                     Handler(scriptRuntime.androidContext.mainLooper).post {
+<a href="#h0-4" id="h0-4" class="h">@@ -205,6 +242,9 @@ class JSModule(
+</a> 
+     fun unload() {
+         callFunction(&quot;module.onUnload&quot;)
+<a href="#h0-4-3" id="h0-4-3" class="i">+        runCatching {
+</a><a href="#h0-4-4" id="h0-4-4" class="i">+            coroutineScope.cancel(&quot;Module unloaded&quot;)
+</a><a href="#h0-4-5" id="h0-4-5" class="i">+        }
+</a>         moduleBindings.entries.removeIf { (name, binding) -&gt;
+             runCatching {
+                 binding.onDispose()
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/bindings/BindingsContext.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/bindings/BindingsContext.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/bindings/BindingsContext.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/bindings/BindingsContext.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,9 +1,11 @@
+</a> package me.rhunk.snapenhance.common.scripting.bindings
+ 
+<a href="#h1-0-2" id="h1-0-2" class="i">+import me.rhunk.snapenhance.common.scripting.JSModule
+</a> import me.rhunk.snapenhance.common.scripting.ScriptRuntime
+ import me.rhunk.snapenhance.common.scripting.type.ModuleInfo
+ 
+ class BindingsContext(
+     val moduleInfo: ModuleInfo,
+<a href="#h1-0-8" id="h1-0-8" class="d">-    val runtime: ScriptRuntime
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+    val runtime: ScriptRuntime,
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+    val module: JSModule
+</a> ) 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

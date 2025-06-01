@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mapped_lib.rs - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../../../../logo.png"/>
+<link rel="alternate icon" href="../../../../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../../../../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../../../../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../../../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../../../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../../../../"><img src="../../../../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../../../../about.html">About</a> | <a href="../../../../log.html">Log</a> | <a href="../../../../files.html">Files</a> | <a href="../../../../refs.html">Refs</a> | <a href="../../../../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<p> mapped_lib.rs (1191B) - <a href="../../../../raw/native/rust/src/mapped_lib.rs">raw</a></p><hr/><pre id="blob">
+<a href="#l1" class="line" id="l1">      1</a> use std::error::Error;
+<a href="#l2" class="line" id="l2">      2</a> 
+<a href="#l3" class="line" id="l3">      3</a> use procfs::process::{MMPermissions, MMapPath};
+<a href="#l4" class="line" id="l4">      4</a> 
+<a href="#l5" class="line" id="l5">      5</a> #[derive(Debug)]
+<a href="#l6" class="line" id="l6">      6</a> pub(crate) struct MappedRegion {
+<a href="#l7" class="line" id="l7">      7</a>     pub start: u64,
+<a href="#l8" class="line" id="l8">      8</a>     pub end: u64,
+<a href="#l9" class="line" id="l9">      9</a>     pub perms: MMPermissions,
+<a href="#l10" class="line" id="l10">     10</a> }
+<a href="#l11" class="line" id="l11">     11</a> 
+<a href="#l12" class="line" id="l12">     12</a> #[derive(Debug)]
+<a href="#l13" class="line" id="l13">     13</a> pub(crate) struct MappedLib {
+<a href="#l14" class="line" id="l14">     14</a>     name: String,
+<a href="#l15" class="line" id="l15">     15</a>     pub regions: Vec&lt;MappedRegion&gt;,
+<a href="#l16" class="line" id="l16">     16</a> }
+<a href="#l17" class="line" id="l17">     17</a> 
+<a href="#l18" class="line" id="l18">     18</a> impl MappedLib {
+<a href="#l19" class="line" id="l19">     19</a>     pub fn new(name: String) -&gt; Self {
+<a href="#l20" class="line" id="l20">     20</a>         Self {
+<a href="#l21" class="line" id="l21">     21</a>             name,
+<a href="#l22" class="line" id="l22">     22</a>             regions: Vec::new(),
+<a href="#l23" class="line" id="l23">     23</a>         }
+<a href="#l24" class="line" id="l24">     24</a>     }
+<a href="#l25" class="line" id="l25">     25</a> 
+<a href="#l26" class="line" id="l26">     26</a>     pub fn search(&amp;mut self) -&gt; Result&lt;&amp;Self, Box&lt;dyn Error&gt;&gt; {
+<a href="#l27" class="line" id="l27">     27</a>         procfs::process::Process::myself()?.maps()?.iter().for_each(|map| {
+<a href="#l28" class="line" id="l28">     28</a>             let pathname = &amp;map.pathname;
+<a href="#l29" class="line" id="l29">     29</a> 
+<a href="#l30" class="line" id="l30">     30</a>             if let MMapPath::Path(path_buffer) = pathname {
+<a href="#l31" class="line" id="l31">     31</a>                 let path = path_buffer.to_string_lossy();
+<a href="#l32" class="line" id="l32">     32</a> 
+<a href="#l33" class="line" id="l33">     33</a>                 if path.contains(&amp;self.name) {
+<a href="#l34" class="line" id="l34">     34</a>                     self.regions.push(MappedRegion {
+<a href="#l35" class="line" id="l35">     35</a>                         start: map.address.0,
+<a href="#l36" class="line" id="l36">     36</a>                         end: map.address.1,
+<a href="#l37" class="line" id="l37">     37</a>                         perms: map.perms,
+<a href="#l38" class="line" id="l38">     38</a>                     });
+<a href="#l39" class="line" id="l39">     39</a>                 }
+<a href="#l40" class="line" id="l40">     40</a>             }
+<a href="#l41" class="line" id="l41">     41</a>         });
+<a href="#l42" class="line" id="l42">     42</a> 
+<a href="#l43" class="line" id="l43">     43</a>         if self.regions.is_empty() {
+<a href="#l44" class="line" id="l44">     44</a>             return Err(format!(&quot;No regions found for {}&quot;, self.name).into());
+<a href="#l45" class="line" id="l45">     45</a>         }
+<a href="#l46" class="line" id="l46">     46</a> 
+<a href="#l47" class="line" id="l47">     47</a>         Ok(self)
+<a href="#l48" class="line" id="l48">     48</a>     }
+<a href="#l49" class="line" id="l49">     49</a> }
+</pre>
+</div>
+</body>
+</html>

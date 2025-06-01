@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core): device spoofer - add lspatch install package name hook - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/cadcbc958e496e665eef185e936b646a4ec8c118.html">cadcbc958e496e665eef185e936b646a4ec8c118</a>
+<b>parent</b> <a href="../commit/abfbe86a917a51e2fcbf74ac2dfe500ce6892f30.html">abfbe86a917a51e2fcbf74ac2dfe500ce6892f30</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 15 Dec 2023 23:19:04 +0100
+
+fix(core): device spoofer
+- add lspatch install package name hook
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">52</td><td><span class="i">+++++++++++++++++++++++</span><span class="d">-----------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Spoof.kt</a></td><td> | </td><td class="num">20</td><td><span class="i">+++++++</span><span class="d">-------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/data/SnapClassCache.kt</a></td><td> | </td><td class="num">3</td><td><span class="i"></span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/DeviceSpooferHook.kt</a></td><td> | </td><td class="num">127</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++</span><span class="d">---------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/util/LSPatchUpdater.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+</table></pre><pre>6 files changed, 99 insertions(+), 109 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -567,35 +567,29 @@
+</a>                         &quot;name&quot;: &quot;Spoof&quot;,
+                         &quot;description&quot;: &quot;Spoof various information about you&quot;,
+                         &quot;properties&quot;: {
+<a href="#h0-0-3" id="h0-0-3" class="d">-                            &quot;device&quot;: {
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-                                &quot;name&quot;: &quot;Device&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-                                &quot;description&quot;: &quot;Spoof your device information&quot;,
+</a><a href="#h0-0-6" id="h0-0-6" class="d">-                                &quot;properties&quot;: {
+</a><a href="#h0-0-7" id="h0-0-7" class="d">-                                    &quot;fingerprint&quot;: {
+</a><a href="#h0-0-8" id="h0-0-8" class="d">-                                        &quot;name&quot;: &quot;Device Fingerprint&quot;,
+</a><a href="#h0-0-9" id="h0-0-9" class="d">-                                        &quot;description&quot;: &quot;Spoofs your device Fingerprint&quot;
+</a><a href="#h0-0-10" id="h0-0-10" class="d">-                                    },
+</a><a href="#h0-0-11" id="h0-0-11" class="d">-                                    &quot;android_id&quot;: {
+</a><a href="#h0-0-12" id="h0-0-12" class="d">-                                        &quot;name&quot;: &quot;Android ID&quot;,
+</a><a href="#h0-0-13" id="h0-0-13" class="d">-                                        &quot;description&quot;: &quot;Spoofs your Android ID to the specified value&quot;
+</a><a href="#h0-0-14" id="h0-0-14" class="d">-                                    },
+</a><a href="#h0-0-15" id="h0-0-15" class="d">-                                    &quot;installer_package_name&quot;: {
+</a><a href="#h0-0-16" id="h0-0-16" class="d">-                                        &quot;name&quot;: &quot;Installer Package name&quot;,
+</a><a href="#h0-0-17" id="h0-0-17" class="d">-                                        &quot;description&quot;: &quot;Spoofs the installers Package name&quot;
+</a><a href="#h0-0-18" id="h0-0-18" class="d">-                                    },
+</a><a href="#h0-0-19" id="h0-0-19" class="d">-                                    &quot;debug_flag&quot;: {
+</a><a href="#h0-0-20" id="h0-0-20" class="d">-                                        &quot;name&quot;: &quot;Debug Flag&quot;,
+</a><a href="#h0-0-21" id="h0-0-21" class="d">-                                        &quot;description&quot;: &quot;Makes Snapchat debuggable&quot;
+</a><a href="#h0-0-22" id="h0-0-22" class="d">-                                    },
+</a><a href="#h0-0-23" id="h0-0-23" class="d">-                                    &quot;mock_location&quot;: {
+</a><a href="#h0-0-24" id="h0-0-24" class="d">-                                        &quot;name&quot;: &quot;Mock location&quot;,
+</a><a href="#h0-0-25" id="h0-0-25" class="d">-                                        &quot;description&quot;: &quot;Spoofs the Mock Location device state&quot;
+</a><a href="#h0-0-26" id="h0-0-26" class="d">-                                    },
+</a><a href="#h0-0-27" id="h0-0-27" class="d">-                                    &quot;split_classloader&quot;: {
+</a><a href="#h0-0-28" id="h0-0-28" class="d">-                                        &quot;name&quot;: &quot;Split Classloader&quot;,
+</a><a href="#h0-0-29" id="h0-0-29" class="d">-                                        &quot;description&quot;: &quot;Spoofs splitClassloader\nRequested by org.chromium.base.JNIUtils&quot;
+</a><a href="#h0-0-30" id="h0-0-30" class="d">-                                    }
+</a><a href="#h0-0-31" id="h0-0-31" class="d">-                                }
+</a><a href="#h0-0-32" id="h0-0-32" class="i">+                            &quot;play_store_installer_package_name&quot;: {
+</a><a href="#h0-0-33" id="h0-0-33" class="i">+                                &quot;name&quot;: &quot;Play Store Installer Package Name&quot;,
+</a><a href="#h0-0-34" id="h0-0-34" class="i">+                                &quot;description&quot;: &quot;Overrides the installer package name to com.android.vending&quot;
+</a><a href="#h0-0-35" id="h0-0-35" class="i">+                            },
+</a><a href="#h0-0-36" id="h0-0-36" class="i">+                            &quot;fingerprint&quot;: {
+</a><a href="#h0-0-37" id="h0-0-37" class="i">+                                &quot;name&quot;: &quot;Device Fingerprint&quot;,
+</a><a href="#h0-0-38" id="h0-0-38" class="i">+                                &quot;description&quot;: &quot;Spoofs your device Fingerprint&quot;
+</a><a href="#h0-0-39" id="h0-0-39" class="i">+                            },
+</a><a href="#h0-0-40" id="h0-0-40" class="i">+                            &quot;android_id&quot;: {
+</a><a href="#h0-0-41" id="h0-0-41" class="i">+                                &quot;name&quot;: &quot;Android ID&quot;,
+</a><a href="#h0-0-42" id="h0-0-42" class="i">+                                &quot;description&quot;: &quot;Spoofs your Android ID to the specified value&quot;
+</a><a href="#h0-0-43" id="h0-0-43" class="i">+                            },
+</a><a href="#h0-0-44" id="h0-0-44" class="i">+                            &quot;remove_vpn_transport_flag&quot;: {
+</a><a href="#h0-0-45" id="h0-0-45" class="i">+                                &quot;name&quot;: &quot;Remove VPN Transport Flag&quot;,
+</a><a href="#h0-0-46" id="h0-0-46" class="i">+                                &quot;description&quot;: &quot;Prevents Snapchat from detecting VPNs&quot;
+</a><a href="#h0-0-47" id="h0-0-47" class="i">+                            },
+</a><a href="#h0-0-48" id="h0-0-48" class="i">+                            &quot;remove_mock_location_flag&quot;: {
+</a><a href="#h0-0-49" id="h0-0-49" class="i">+                                &quot;name&quot;: &quot;Remove Mock Location Flag&quot;,
+</a><a href="#h0-0-50" id="h0-0-50" class="i">+                                &quot;description&quot;: &quot;Prevents Snapchat from detecting Mock location&quot;
+</a><a href="#h0-0-51" id="h0-0-51" class="i">+                            },
+</a><a href="#h0-0-52" id="h0-0-52" class="i">+                            &quot;randomize_persistent_device_token&quot;: {
+</a><a href="#h0-0-53" id="h0-0-53" class="i">+                                &quot;name&quot;: &quot;Randomize Persistent Device Token&quot;,
+</a><a href="#h0-0-54" id="h0-0-54" class="i">+                                &quot;description&quot;: &quot;Generates a random device token after each login&quot;
+</a>                             }
+                         }
+                     },
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -9,7 +9,7 @@ class Experimental : ConfigContainer() {
+</a>     }
+ 
+     val nativeHooks = container(&quot;native_hooks&quot;, NativeHooks()) { icon = &quot;Memory&quot;; requireRestart() }
+<a href="#h1-0-3" id="h1-0-3" class="d">-    val spoof = container(&quot;spoof&quot;, Spoof()) { icon = &quot;Fingerprint&quot; }
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    val spoof = container(&quot;spoof&quot;, Spoof()) { icon = &quot;Fingerprint&quot; ; addNotices(FeatureNotice.BAN_RISK); requireRestart() }
+</a>     val convertMessageLocally = boolean(&quot;convert_message_locally&quot;) { requireRestart() }
+     val appPasscode = string(&quot;app_passcode&quot;)
+     val appLockOnResume = boolean(&quot;app_lock_on_resume&quot;)
+<b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Spoof.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Spoof.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Spoof.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Spoof.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,18 +1,12 @@
+</a> package me.rhunk.snapenhance.common.config.impl
+ 
+ import me.rhunk.snapenhance.common.config.ConfigContainer
+<a href="#h2-0-3" id="h2-0-3" class="d">-import me.rhunk.snapenhance.common.config.FeatureNotice
+</a> 
+<a href="#h2-0-5" id="h2-0-5" class="d">-class Spoof : ConfigContainer() {
+</a><a href="#h2-0-6" id="h2-0-6" class="d">-    inner class Device : ConfigContainer(hasGlobalState = true) {
+</a><a href="#h2-0-7" id="h2-0-7" class="d">-        val fingerprint = string(&quot;fingerprint&quot;)
+</a><a href="#h2-0-8" id="h2-0-8" class="d">-        val androidId = string(&quot;android_id&quot;)
+</a><a href="#h2-0-9" id="h2-0-9" class="d">-        val getInstallerPackageName = string(&quot;installer_package_name&quot;)
+</a><a href="#h2-0-10" id="h2-0-10" class="d">-        val debugFlag = boolean(&quot;debug_flag&quot;)
+</a><a href="#h2-0-11" id="h2-0-11" class="d">-        val mockLocationState = boolean(&quot;mock_location&quot;)
+</a><a href="#h2-0-12" id="h2-0-12" class="d">-        val splitClassLoader = string(&quot;split_classloader&quot;)
+</a><a href="#h2-0-13" id="h2-0-13" class="d">-        val isLowEndDevice = string(&quot;low_end_device&quot;)
+</a><a href="#h2-0-14" id="h2-0-14" class="d">-        val getDataDirectory = string(&quot;get_data_directory&quot;)
+</a><a href="#h2-0-15" id="h2-0-15" class="d">-    }
+</a><a href="#h2-0-16" id="h2-0-16" class="d">-    val device = container(&quot;device&quot;, Device()) { addNotices(FeatureNotice.BAN_RISK) }
+</a><a href="#h2-0-17" id="h2-0-17" class="i">+class Spoof : ConfigContainer(hasGlobalState = true) {
+</a><a href="#h2-0-18" id="h2-0-18" class="i">+    val overridePlayStoreInstallerPackageName = boolean(&quot;play_store_installer_package_name&quot;)
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+    val fingerprint = string(&quot;fingerprint&quot;)
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+    val androidId = string(&quot;android_id&quot;)
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+    val removeVpnTransportFlag = boolean(&quot;remove_vpn_transport_flag&quot;)
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+    val removeMockLocationFlag = boolean(&quot;remove_mock_location_flag&quot;)
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+    val randomizePersistentDeviceToken = boolean(&quot;randomize_persistent_device_token&quot;)
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/data/SnapClassCache.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/data/SnapClassCache.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/data/SnapClassCache.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/data/SnapClassCache.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -17,9 +17,6 @@ class SnapClassCache (
+</a>     val feedEntry by lazy { findClass(&quot;com.snapchat.client.messaging.FeedEntry&quot;) }
+     val conversation by lazy { findClass(&quot;com.snapchat.client.messaging.Conversation&quot;) }
+     val feedManager by lazy { findClass(&quot;com.snapchat.client.messaging.FeedManager\$CppProxy&quot;) }
+<a href="#h3-0-3" id="h3-0-3" class="d">-    val chromiumJNIUtils by lazy { findClass(&quot;org.chromium.base.JNIUtils&quot;)}
+</a><a href="#h3-0-4" id="h3-0-4" class="d">-    val chromiumBuildInfo by lazy { findClass(&quot;org.chromium.base.BuildInfo&quot;)}
+</a><a href="#h3-0-5" id="h3-0-5" class="d">-    val chromiumPathUtils by lazy { findClass(&quot;org.chromium.base.PathUtils&quot;)}
+</a> 
+     private fun findClass(className: String): Class&lt;*&gt; {
+         return try {
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/DeviceSpooferHook.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/DeviceSpooferHook.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/DeviceSpooferHook.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/DeviceSpooferHook.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -1,93 +1,94 @@
+</a> package me.rhunk.snapenhance.core.features.impl.experiments
+ 
+<a href="#h4-0-2" id="h4-0-2" class="i">+import android.annotation.SuppressLint
+</a><a href="#h4-0-3" id="h4-0-3" class="i">+import android.location.Location
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+import android.net.ConnectivityManager
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+import android.net.Network
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+import android.net.NetworkCapabilities
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+import android.os.Build
+</a> import me.rhunk.snapenhance.core.features.Feature
+ import me.rhunk.snapenhance.core.features.FeatureLoadParams
+<a href="#h4-0-10" id="h4-0-10" class="i">+import me.rhunk.snapenhance.core.util.LSPatchUpdater
+</a> import me.rhunk.snapenhance.core.util.hook.HookStage
+<a href="#h4-0-12" id="h4-0-12" class="d">-import me.rhunk.snapenhance.core.util.hook.Hooker
+</a><a href="#h4-0-13" id="h4-0-13" class="i">+import me.rhunk.snapenhance.core.util.hook.hook
+</a> 
+ class DeviceSpooferHook: Feature(&quot;device_spoofer&quot;, loadParams = FeatureLoadParams.INIT_SYNC)  {
+<a href="#h4-0-16" id="h4-0-16" class="i">+	private fun hookInstallerPackageName() {
+</a><a href="#h4-0-17" id="h4-0-17" class="i">+		context.androidContext.packageManager::class.java.hook(&quot;getInstallerPackageName&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h4-0-18" id="h4-0-18" class="i">+			param.setResult(&quot;com.android.vending&quot;)
+</a><a href="#h4-0-19" id="h4-0-19" class="i">+		}
+</a><a href="#h4-0-20" id="h4-0-20" class="i">+	}
+</a><a href="#h4-0-21" id="h4-0-21" class="i">+
+</a><a href="#h4-0-22" id="h4-0-22" class="i">+	@SuppressLint(&quot;MissingPermission&quot;)
+</a> 	override fun init() {
+<a href="#h4-0-24" id="h4-0-24" class="d">-		if (context.config.experimental.spoof.globalState != true) return
+</a><a href="#h4-0-25" id="h4-0-25" class="i">+		// force installer package name for lspatch users
+</a><a href="#h4-0-26" id="h4-0-26" class="i">+		if (LSPatchUpdater.HAS_LSPATCH) {
+</a><a href="#h4-0-27" id="h4-0-27" class="i">+			hookInstallerPackageName()
+</a><a href="#h4-0-28" id="h4-0-28" class="i">+		}
+</a> 
+<a href="#h4-0-30" id="h4-0-30" class="d">-		val fingerprint by context.config.experimental.spoof.device.fingerprint
+</a><a href="#h4-0-31" id="h4-0-31" class="d">-		val androidId by context.config.experimental.spoof.device.androidId
+</a><a href="#h4-0-32" id="h4-0-32" class="d">-		val getInstallerPackageName by context.config.experimental.spoof.device.getInstallerPackageName
+</a><a href="#h4-0-33" id="h4-0-33" class="d">-		val debugFlag by context.config.experimental.spoof.device.debugFlag
+</a><a href="#h4-0-34" id="h4-0-34" class="d">-		val mockLocationState by context.config.experimental.spoof.device.mockLocationState
+</a><a href="#h4-0-35" id="h4-0-35" class="d">-		val splitClassLoader by context.config.experimental.spoof.device.splitClassLoader
+</a><a href="#h4-0-36" id="h4-0-36" class="d">-		val isLowEndDevice by context.config.experimental.spoof.device.isLowEndDevice
+</a><a href="#h4-0-37" id="h4-0-37" class="d">-		val getDataDirectory by context.config.experimental.spoof.device.getDataDirectory
+</a><a href="#h4-0-38" id="h4-0-38" class="i">+		if (context.config.experimental.spoof.globalState != true) return
+</a> 
+<a href="#h4-0-40" id="h4-0-40" class="d">-		val settingsSecureClass = android.provider.Settings.Secure::class.java
+</a><a href="#h4-0-41" id="h4-0-41" class="d">-		val fingerprintClass = android.os.Build::class.java
+</a><a href="#h4-0-42" id="h4-0-42" class="d">-		val packageManagerClass = android.content.pm.PackageManager::class.java
+</a><a href="#h4-0-43" id="h4-0-43" class="d">-		val applicationInfoClass = android.content.pm.ApplicationInfo::class.java
+</a><a href="#h4-0-44" id="h4-0-44" class="i">+		val fingerprint by context.config.experimental.spoof.fingerprint
+</a><a href="#h4-0-45" id="h4-0-45" class="i">+		val androidId by context.config.experimental.spoof.androidId
+</a><a href="#h4-0-46" id="h4-0-46" class="i">+		val removeMockLocationFlag by context.config.experimental.spoof.removeMockLocationFlag
+</a><a href="#h4-0-47" id="h4-0-47" class="i">+		val overridePlayStoreInstallerPackageName by context.config.experimental.spoof.overridePlayStoreInstallerPackageName
+</a><a href="#h4-0-48" id="h4-0-48" class="i">+		val removeVpnTransportFlag by context.config.experimental.spoof.removeVpnTransportFlag
+</a><a href="#h4-0-49" id="h4-0-49" class="i">+		val randomizePersistentDeviceToken by context.config.experimental.spoof.randomizePersistentDeviceToken
+</a> 
+<a href="#h4-0-51" id="h4-0-51" class="d">-		//FINGERPRINT
+</a><a href="#h4-0-52" id="h4-0-52" class="d">-		if (fingerprint.isNotEmpty()) {
+</a><a href="#h4-0-53" id="h4-0-53" class="d">-			Hooker.hook(fingerprintClass, &quot;FINGERPRINT&quot;, HookStage.BEFORE) { hookAdapter -&gt;
+</a><a href="#h4-0-54" id="h4-0-54" class="d">-				hookAdapter.setResult(fingerprint)
+</a><a href="#h4-0-55" id="h4-0-55" class="d">-				context.log.verbose(&quot;Fingerprint spoofed to $fingerprint&quot;)
+</a><a href="#h4-0-56" id="h4-0-56" class="d">-			}
+</a><a href="#h4-0-57" id="h4-0-57" class="d">-			Hooker.hook(fingerprintClass, &quot;deriveFingerprint&quot;, HookStage.BEFORE) { hookAdapter -&gt;
+</a><a href="#h4-0-58" id="h4-0-58" class="d">-				hookAdapter.setResult(fingerprint)
+</a><a href="#h4-0-59" id="h4-0-59" class="d">-				context.log.verbose(&quot;Fingerprint spoofed to $fingerprint&quot;)
+</a><a href="#h4-0-60" id="h4-0-60" class="d">-			}
+</a><a href="#h4-0-61" id="h4-0-61" class="i">+		//Installer package name
+</a><a href="#h4-0-62" id="h4-0-62" class="i">+		if(overridePlayStoreInstallerPackageName) {
+</a><a href="#h4-0-63" id="h4-0-63" class="i">+			hookInstallerPackageName()
+</a> 		}
+ 
+<a href="#h4-0-66" id="h4-0-66" class="d">-		//ANDROID ID
+</a><a href="#h4-0-67" id="h4-0-67" class="d">-		if (androidId.isNotEmpty()) {
+</a><a href="#h4-0-68" id="h4-0-68" class="d">-			Hooker.hook(settingsSecureClass, &quot;getString&quot;, HookStage.BEFORE) { hookAdapter -&gt;
+</a><a href="#h4-0-69" id="h4-0-69" class="d">-				if(hookAdapter.args()[1] == &quot;android_id&quot;) {
+</a><a href="#h4-0-70" id="h4-0-70" class="d">-					hookAdapter.setResult(androidId)
+</a><a href="#h4-0-71" id="h4-0-71" class="d">-					context.log.verbose(&quot;Android ID spoofed to $androidId&quot;)
+</a><a href="#h4-0-72" id="h4-0-72" class="i">+		findClass(&quot;android.provider.Settings\$NameValueCache&quot;).apply {
+</a><a href="#h4-0-73" id="h4-0-73" class="i">+			hook(&quot;getStringForUser&quot;, HookStage.BEFORE) { hookAdapter -&gt;
+</a><a href="#h4-0-74" id="h4-0-74" class="i">+				val key = hookAdapter.argNullable&lt;String&gt;(1) ?: return@hook
+</a><a href="#h4-0-75" id="h4-0-75" class="i">+				when (key) {
+</a><a href="#h4-0-76" id="h4-0-76" class="i">+					&quot;android_id&quot; -&gt; {
+</a><a href="#h4-0-77" id="h4-0-77" class="i">+						if (androidId.isNotEmpty()) {
+</a><a href="#h4-0-78" id="h4-0-78" class="i">+							hookAdapter.setResult(androidId)
+</a><a href="#h4-0-79" id="h4-0-79" class="i">+						}
+</a><a href="#h4-0-80" id="h4-0-80" class="i">+					}
+</a><a href="#h4-0-81" id="h4-0-81" class="i">+					&quot;ALLOW_MOCK_LOCATION&quot; -&gt; {
+</a><a href="#h4-0-82" id="h4-0-82" class="i">+						if (removeMockLocationFlag) {
+</a><a href="#h4-0-83" id="h4-0-83" class="i">+							hookAdapter.setResult(&quot;0&quot;)
+</a><a href="#h4-0-84" id="h4-0-84" class="i">+						}
+</a><a href="#h4-0-85" id="h4-0-85" class="i">+					}
+</a> 				}
+ 			}
+ 		}
+ 
+<a href="#h4-0-90" id="h4-0-90" class="d">-		//TODO: org.chromium.base.BuildInfo, org.chromium.base.PathUtils getDataDirectory, MushroomDeviceTokenManager(?), TRANSPORT_VPN FLAG, isFromMockProvider, nativeLibraryDir, sourceDir, network capabilities, query all jvm properties
+</a><a href="#h4-0-91" id="h4-0-91" class="d">-
+</a><a href="#h4-0-92" id="h4-0-92" class="d">-		//INSTALLER PACKAGE NAME
+</a><a href="#h4-0-93" id="h4-0-93" class="d">-		if(getInstallerPackageName.isNotEmpty()) {
+</a><a href="#h4-0-94" id="h4-0-94" class="d">-			Hooker.hook(packageManagerClass, &quot;getInstallerPackageName&quot;, HookStage.BEFORE) { hookAdapter -&gt;
+</a><a href="#h4-0-95" id="h4-0-95" class="d">-				hookAdapter.setResult(getInstallerPackageName)
+</a><a href="#h4-0-96" id="h4-0-96" class="i">+		if (removeMockLocationFlag) {
+</a><a href="#h4-0-97" id="h4-0-97" class="i">+			Location::class.java.hook(&quot;isMock&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h4-0-98" id="h4-0-98" class="i">+				param.setResult(false)
+</a> 			}
+ 		}
+ 
+<a href="#h4-0-102" id="h4-0-102" class="d">-		//DEBUG FLAG
+</a><a href="#h4-0-103" id="h4-0-103" class="d">-		Hooker.hook(applicationInfoClass, &quot;FLAG_DEBUGGABLE&quot;, HookStage.BEFORE) { hookAdapter -&gt;
+</a><a href="#h4-0-104" id="h4-0-104" class="d">-			hookAdapter.setResult(debugFlag)
+</a><a href="#h4-0-105" id="h4-0-105" class="d">-		}
+</a><a href="#h4-0-106" id="h4-0-106" class="d">-
+</a><a href="#h4-0-107" id="h4-0-107" class="d">-		//MOCK LOCATION
+</a><a href="#h4-0-108" id="h4-0-108" class="d">-		Hooker.hook(settingsSecureClass, &quot;getString&quot;, HookStage.BEFORE) { hookAdapter -&gt;
+</a><a href="#h4-0-109" id="h4-0-109" class="d">-			if(hookAdapter.args()[1] == &quot;ALLOW_MOCK_LOCATION&quot;) {
+</a><a href="#h4-0-110" id="h4-0-110" class="d">-				hookAdapter.setResult(mockLocationState)
+</a><a href="#h4-0-111" id="h4-0-111" class="d">-			}
+</a><a href="#h4-0-112" id="h4-0-112" class="i">+		if (randomizePersistentDeviceToken) {
+</a><a href="#h4-0-113" id="h4-0-113" class="i">+			context.androidContext.filesDir.resolve(&quot;Snapchat&quot;).listFiles()?.firstOrNull {
+</a><a href="#h4-0-114" id="h4-0-114" class="i">+				it.name.startsWith(&quot;device_token&quot;)
+</a><a href="#h4-0-115" id="h4-0-115" class="i">+			}?.delete()
+</a> 		}
+ 
+<a href="#h4-0-118" id="h4-0-118" class="d">-		//GET SPLIT CLASSLOADER
+</a><a href="#h4-0-119" id="h4-0-119" class="d">-		if(splitClassLoader.isNotEmpty()) {
+</a><a href="#h4-0-120" id="h4-0-120" class="d">-			Hooker.hook(context.classCache.chromiumJNIUtils, &quot;getSplitClassLoader&quot;, HookStage.BEFORE) { hookAdapter -&gt;
+</a><a href="#h4-0-121" id="h4-0-121" class="d">-				hookAdapter.setResult(splitClassLoader)
+</a><a href="#h4-0-122" id="h4-0-122" class="d">-			}
+</a><a href="#h4-0-123" id="h4-0-123" class="d">-		}
+</a><a href="#h4-0-124" id="h4-0-124" class="i">+		if (removeVpnTransportFlag) {
+</a><a href="#h4-0-125" id="h4-0-125" class="i">+			ConnectivityManager::class.java.hook(&quot;getAllNetworks&quot;, HookStage.AFTER) { param -&gt;
+</a><a href="#h4-0-126" id="h4-0-126" class="i">+				val instance = param.thisObject() as? ConnectivityManager ?: return@hook
+</a><a href="#h4-0-127" id="h4-0-127" class="i">+				val networks = param.getResult() as? Array&lt;*&gt; ?: return@hook
+</a> 
+<a href="#h4-0-129" id="h4-0-129" class="d">-		//ISLOWENDDEVICE
+</a><a href="#h4-0-130" id="h4-0-130" class="d">-		if(isLowEndDevice.isNotEmpty()) {
+</a><a href="#h4-0-131" id="h4-0-131" class="d">-			Hooker.hook(context.classCache.chromiumBuildInfo, &quot;getAll&quot;, HookStage.BEFORE) { hookAdapter -&gt;
+</a><a href="#h4-0-132" id="h4-0-132" class="d">-				hookAdapter.setResult(isLowEndDevice)
+</a><a href="#h4-0-133" id="h4-0-133" class="i">+				param.setResult(networks.filterIsInstance&lt;Network&gt;().filter { network -&gt;
+</a><a href="#h4-0-134" id="h4-0-134" class="i">+					val capabilities = instance.getNetworkCapabilities(network) ?: return@filter false
+</a><a href="#h4-0-135" id="h4-0-135" class="i">+					!capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+</a><a href="#h4-0-136" id="h4-0-136" class="i">+				}.toTypedArray())
+</a> 			}
+ 		}
+ 
+<a href="#h4-0-140" id="h4-0-140" class="d">-		//GETDATADIRECTORY
+</a><a href="#h4-0-141" id="h4-0-141" class="d">-		if(getDataDirectory.isNotEmpty()) {
+</a><a href="#h4-0-142" id="h4-0-142" class="d">-			Hooker.hook(context.classCache.chromiumPathUtils, &quot;getDataDirectory&quot;, HookStage.BEFORE) { hookAdapter -&gt;
+</a><a href="#h4-0-143" id="h4-0-143" class="d">-				hookAdapter.setResult(getDataDirectory)
+</a><a href="#h4-0-144" id="h4-0-144" class="i">+		if (fingerprint.isNotEmpty()) {
+</a><a href="#h4-0-145" id="h4-0-145" class="i">+			Build.FINGERPRINT // init fingerprint field
+</a><a href="#h4-0-146" id="h4-0-146" class="i">+			Build::class.java.getField(&quot;FINGERPRINT&quot;).apply {
+</a><a href="#h4-0-147" id="h4-0-147" class="i">+				isAccessible = true
+</a><a href="#h4-0-148" id="h4-0-148" class="i">+				set(null, fingerprint)
+</a><a href="#h4-0-149" id="h4-0-149" class="i">+				isAccessible = false
+</a> 			}
+ 		}
+<a href="#h4-0-152" id="h4-0-152" class="d">-
+</a><a href="#h4-0-153" id="h4-0-153" class="d">-		//accessibility_enabled
+</a><a href="#h4-0-154" id="h4-0-154" class="d">-		
+</a> 	}
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/LSPatchUpdater.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/LSPatchUpdater.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/LSPatchUpdater.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/LSPatchUpdater.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -9,6 +9,9 @@ import java.util.zip.ZipFile
+</a> object LSPatchUpdater {
+     private const val TAG = &quot;LSPatchUpdater&quot;
+ 
+<a href="#h5-0-3" id="h5-0-3" class="i">+    var HAS_LSPATCH = false
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+        private set
+</a><a href="#h5-0-5" id="h5-0-5" class="i">+
+</a>     private fun getModuleUniqueHash(module: ZipFile): String {
+         return module.entries().asSequence()
+             .filter { !it.isDirectory }
+<a href="#h5-1" id="h5-1" class="h">@@ -38,6 +41,7 @@ object LSPatchUpdater {
+</a>                 } ?: return
+             } ?: return
+ 
+<a href="#h5-1-3" id="h5-1-3" class="i">+        HAS_LSPATCH = true
+</a>         context.log.verbose(&quot;Found embedded SE at ${embeddedModule.absolutePath}&quot;, TAG)
+ 
+         val seAppApk = File(bridgeClient.getApplicationApkPath()).also {
+</pre>
+</div>
+</body>
+</html>

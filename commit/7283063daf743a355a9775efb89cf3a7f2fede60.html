@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(app/logged_stories): save from cache - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/7283063daf743a355a9775efb89cf3a7f2fede60.html">7283063daf743a355a9775efb89cf3a7f2fede60</a>
+<b>parent</b> <a href="../commit/b0434f44f437162979785dc1fc0bc1c033825812.html">b0434f44f437162979785dc1fc0bc1c033825812</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun,  3 Mar 2024 22:02:37 +0100
+
+feat(app/logged_stories): save from cache
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/LoggedStories.kt</a></td><td> | </td><td class="num">145</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">------------------------------</span></td></tr>
+</table></pre><pre>1 file changed, 91 insertions(+), 54 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/LoggedStories.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/LoggedStories.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/LoggedStories.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/LoggedStories.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -9,9 +9,12 @@ import androidx.compose.foundation.layout.*
+</a> import androidx.compose.foundation.lazy.grid.GridCells
+ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+ import androidx.compose.foundation.lazy.grid.items
+<a href="#h0-0-3" id="h0-0-3" class="i">+import androidx.compose.material.icons.Icons
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+import androidx.compose.material.icons.filled.ErrorOutline
+</a> import androidx.compose.material3.Button
+ import androidx.compose.material3.Card
+ import androidx.compose.material3.CircularProgressIndicator
+<a href="#h0-0-8" id="h0-0-8" class="i">+import androidx.compose.material3.Icon
+</a> import androidx.compose.material3.Text
+ import androidx.compose.runtime.*
+ import androidx.compose.ui.Alignment
+<a href="#h0-1" id="h0-1" class="h">@@ -51,7 +54,7 @@ import javax.crypto.spec.SecretKeySpec
+</a> import kotlin.math.absoluteValue
+ 
+ class LoggedStories : Routes.Route() {
+<a href="#h0-1-3" id="h0-1-3" class="d">-    @OptIn(ExperimentalCoilApi::class)
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+    @OptIn(ExperimentalCoilApi::class, ExperimentalLayoutApi::class)
+</a>     override val content: @Composable (NavBackStackEntry) -&gt; Unit = content@{ navBackStackEntry -&gt;
+         val userId = navBackStackEntry.arguments?.getString(&quot;id&quot;) ?: return@content
+ 
+<a href="#h0-2" id="h0-2" class="h">@@ -65,9 +68,43 @@ class LoggedStories : Routes.Route() {
+</a>         var lastStoryTimestamp by remember { mutableLongStateOf(Long.MAX_VALUE) }
+ 
+         var selectedStory by remember { mutableStateOf&lt;StoryData?&gt;(null) }
+<a href="#h0-2-3" id="h0-2-3" class="d">-        var coilCacheFile by remember { mutableStateOf&lt;File?&gt;(null) }
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+        var coilCachedFile by remember { mutableStateOf&lt;File?&gt;(null) }
+</a> 
+         selectedStory?.let { story -&gt;
+<a href="#h0-2-7" id="h0-2-7" class="i">+            fun downloadSelectedStory(
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+                inputMedia: InputMedia,
+</a><a href="#h0-2-9" id="h0-2-9" class="i">+            ) {
+</a><a href="#h0-2-10" id="h0-2-10" class="i">+                val mediaAuthor = friendInfo?.mutableUsername ?: userId
+</a><a href="#h0-2-11" id="h0-2-11" class="i">+                val uniqueHash = (selectedStory?.url ?: UUID.randomUUID().toString()).longHashCode().absoluteValue.toString(16)
+</a><a href="#h0-2-12" id="h0-2-12" class="i">+
+</a><a href="#h0-2-13" id="h0-2-13" class="i">+                DownloadProcessor(
+</a><a href="#h0-2-14" id="h0-2-14" class="i">+                    remoteSideContext = context,
+</a><a href="#h0-2-15" id="h0-2-15" class="i">+                    callback = object: DownloadCallback.Default() {
+</a><a href="#h0-2-16" id="h0-2-16" class="i">+                        override fun onSuccess(outputPath: String?) {
+</a><a href="#h0-2-17" id="h0-2-17" class="i">+                            context.shortToast(&quot;Downloaded to $outputPath&quot;)
+</a><a href="#h0-2-18" id="h0-2-18" class="i">+                        }
+</a><a href="#h0-2-19" id="h0-2-19" class="i">+
+</a><a href="#h0-2-20" id="h0-2-20" class="i">+                        override fun onFailure(message: String?, throwable: String?) {
+</a><a href="#h0-2-21" id="h0-2-21" class="i">+                            context.shortToast(&quot;Failed to download $message&quot;)
+</a><a href="#h0-2-22" id="h0-2-22" class="i">+                        }
+</a><a href="#h0-2-23" id="h0-2-23" class="i">+                    }
+</a><a href="#h0-2-24" id="h0-2-24" class="i">+                ).enqueue(DownloadRequest(
+</a><a href="#h0-2-25" id="h0-2-25" class="i">+                    inputMedias = arrayOf(inputMedia)
+</a><a href="#h0-2-26" id="h0-2-26" class="i">+                ), DownloadMetadata(
+</a><a href="#h0-2-27" id="h0-2-27" class="i">+                    mediaIdentifier = uniqueHash,
+</a><a href="#h0-2-28" id="h0-2-28" class="i">+                    outputPath = createNewFilePath(
+</a><a href="#h0-2-29" id="h0-2-29" class="i">+                        context.config.root,
+</a><a href="#h0-2-30" id="h0-2-30" class="i">+                        uniqueHash,
+</a><a href="#h0-2-31" id="h0-2-31" class="i">+                        MediaDownloadSource.STORY_LOGGER,
+</a><a href="#h0-2-32" id="h0-2-32" class="i">+                        mediaAuthor,
+</a><a href="#h0-2-33" id="h0-2-33" class="i">+                        story.createdAt
+</a><a href="#h0-2-34" id="h0-2-34" class="i">+                    ),
+</a><a href="#h0-2-35" id="h0-2-35" class="i">+                    iconUrl = null,
+</a><a href="#h0-2-36" id="h0-2-36" class="i">+                    mediaAuthor = friendInfo?.mutableUsername ?: userId,
+</a><a href="#h0-2-37" id="h0-2-37" class="i">+                    downloadSource = MediaDownloadSource.STORY_LOGGER.translate(context.translation),
+</a><a href="#h0-2-38" id="h0-2-38" class="i">+                ))
+</a><a href="#h0-2-39" id="h0-2-39" class="i">+            }
+</a><a href="#h0-2-40" id="h0-2-40" class="i">+
+</a>             Dialog(onDismissRequest = {
+                 selectedStory = null
+             }) {
+<a href="#h0-3" id="h0-3" class="h">@@ -88,13 +125,13 @@ class LoggedStories : Routes.Route() {
+</a>                             DateFormat.getDateTimeInstance().format(Date(it))
+                         }}&quot;)
+ 
+<a href="#h0-3-3" id="h0-3-3" class="d">-                        Row(
+</a><a href="#h0-3-4" id="h0-3-4" class="i">+                        FlowRow(
+</a>                             modifier = Modifier.fillMaxWidth(),
+                             horizontalArrangement = Arrangement.SpaceEvenly,
+                         ) {
+                             Button(onClick = {
+                                 context.androidContext.externalCacheDir?.let { cacheDir -&gt;
+<a href="#h0-3-10" id="h0-3-10" class="d">-                                    val cacheFile = coilCacheFile ?: run {
+</a><a href="#h0-3-11" id="h0-3-11" class="i">+                                    val cacheFile = coilCachedFile ?: run {
+</a>                                         context.shortToast(&quot;Failed to get file&quot;)
+                                         return@Button
+                                     }
+<a href="#h0-4" id="h0-4" class="h">@@ -118,43 +155,31 @@ class LoggedStories : Routes.Route() {
+</a>                             }
+ 
+                             Button(onClick = {
+<a href="#h0-4-3" id="h0-4-3" class="d">-                                val mediaAuthor = friendInfo?.mutableUsername ?: userId
+</a><a href="#h0-4-4" id="h0-4-4" class="d">-                                val uniqueHash = (selectedStory?.url ?: UUID.randomUUID().toString()).longHashCode().absoluteValue.toString(16)
+</a><a href="#h0-4-5" id="h0-4-5" class="d">-
+</a><a href="#h0-4-6" id="h0-4-6" class="d">-                                DownloadProcessor(
+</a><a href="#h0-4-7" id="h0-4-7" class="d">-                                    remoteSideContext = context,
+</a><a href="#h0-4-8" id="h0-4-8" class="d">-                                    callback = object: DownloadCallback.Default() {
+</a><a href="#h0-4-9" id="h0-4-9" class="d">-                                        override fun onSuccess(outputPath: String?) {
+</a><a href="#h0-4-10" id="h0-4-10" class="d">-                                            context.shortToast(&quot;Downloaded to $outputPath&quot;)
+</a><a href="#h0-4-11" id="h0-4-11" class="d">-                                        }
+</a><a href="#h0-4-12" id="h0-4-12" class="i">+                                downloadSelectedStory(
+</a><a href="#h0-4-13" id="h0-4-13" class="i">+                                    InputMedia(
+</a><a href="#h0-4-14" id="h0-4-14" class="i">+                                        content = story.url,
+</a><a href="#h0-4-15" id="h0-4-15" class="i">+                                        type = DownloadMediaType.REMOTE_MEDIA,
+</a><a href="#h0-4-16" id="h0-4-16" class="i">+                                        encryption = story.key?.let { it to story.iv!! }?.toKeyPair()
+</a><a href="#h0-4-17" id="h0-4-17" class="i">+                                    )
+</a><a href="#h0-4-18" id="h0-4-18" class="i">+                                )
+</a><a href="#h0-4-19" id="h0-4-19" class="i">+                            }) {
+</a><a href="#h0-4-20" id="h0-4-20" class="i">+                                Text(text = &quot;Download&quot;)
+</a><a href="#h0-4-21" id="h0-4-21" class="i">+                            }
+</a> 
+<a href="#h0-4-23" id="h0-4-23" class="d">-                                        override fun onFailure(message: String?, throwable: String?) {
+</a><a href="#h0-4-24" id="h0-4-24" class="d">-                                            context.shortToast(&quot;Failed to download $message&quot;)
+</a><a href="#h0-4-25" id="h0-4-25" class="d">-                                        }
+</a><a href="#h0-4-26" id="h0-4-26" class="d">-                                    }
+</a><a href="#h0-4-27" id="h0-4-27" class="d">-                                ).enqueue(DownloadRequest(
+</a><a href="#h0-4-28" id="h0-4-28" class="d">-                                    inputMedias = arrayOf(
+</a><a href="#h0-4-29" id="h0-4-29" class="i">+                            if (coilCachedFile != null) {
+</a><a href="#h0-4-30" id="h0-4-30" class="i">+                                Button(onClick = {
+</a><a href="#h0-4-31" id="h0-4-31" class="i">+                                    downloadSelectedStory(
+</a>                                         InputMedia(
+<a href="#h0-4-33" id="h0-4-33" class="d">-                                            content = story.url,
+</a><a href="#h0-4-34" id="h0-4-34" class="d">-                                            type = DownloadMediaType.REMOTE_MEDIA,
+</a><a href="#h0-4-35" id="h0-4-35" class="d">-                                            encryption = story.key?.let { it to story.iv!! }?.toKeyPair()
+</a><a href="#h0-4-36" id="h0-4-36" class="i">+                                            content = coilCachedFile?.absolutePath ?: run {
+</a><a href="#h0-4-37" id="h0-4-37" class="i">+                                                context.shortToast(&quot;Failed to get file from cache&quot;)
+</a><a href="#h0-4-38" id="h0-4-38" class="i">+                                                return@Button
+</a><a href="#h0-4-39" id="h0-4-39" class="i">+                                            },
+</a><a href="#h0-4-40" id="h0-4-40" class="i">+                                            type = DownloadMediaType.LOCAL_MEDIA
+</a>                                         )
+                                     )
+<a href="#h0-4-43" id="h0-4-43" class="d">-                                ), DownloadMetadata(
+</a><a href="#h0-4-44" id="h0-4-44" class="d">-                                    mediaIdentifier = uniqueHash,
+</a><a href="#h0-4-45" id="h0-4-45" class="d">-                                    outputPath = createNewFilePath(
+</a><a href="#h0-4-46" id="h0-4-46" class="d">-                                        context.config.root,
+</a><a href="#h0-4-47" id="h0-4-47" class="d">-                                        uniqueHash,
+</a><a href="#h0-4-48" id="h0-4-48" class="d">-                                        MediaDownloadSource.STORY_LOGGER,
+</a><a href="#h0-4-49" id="h0-4-49" class="d">-                                        mediaAuthor,
+</a><a href="#h0-4-50" id="h0-4-50" class="d">-                                        story.createdAt
+</a><a href="#h0-4-51" id="h0-4-51" class="d">-                                    ),
+</a><a href="#h0-4-52" id="h0-4-52" class="d">-                                    iconUrl = null,
+</a><a href="#h0-4-53" id="h0-4-53" class="d">-                                    mediaAuthor = friendInfo?.mutableUsername ?: userId,
+</a><a href="#h0-4-54" id="h0-4-54" class="d">-                                    downloadSource = MediaDownloadSource.STORY_LOGGER.translate(context.translation),
+</a><a href="#h0-4-55" id="h0-4-55" class="d">-                                ))
+</a><a href="#h0-4-56" id="h0-4-56" class="d">-                            }) {
+</a><a href="#h0-4-57" id="h0-4-57" class="d">-                                Text(text = &quot;Download&quot;)
+</a><a href="#h0-4-58" id="h0-4-58" class="i">+                                }) {
+</a><a href="#h0-4-59" id="h0-4-59" class="i">+                                    Text(text = &quot;Save from cache&quot;)
+</a><a href="#h0-4-60" id="h0-4-60" class="i">+                                }
+</a>                             }
+                         }
+                     }
+<a href="#h0-5" id="h0-5" class="h">@@ -171,6 +196,7 @@ class LoggedStories : Routes.Route() {
+</a>             contentPadding = PaddingValues(8.dp),
+         ) {
+             items(stories) { story -&gt;
+<a href="#h0-5-3" id="h0-5-3" class="i">+                var isFailed by remember { mutableStateOf(false) }
+</a>                 var imageBitmap by remember { mutableStateOf&lt;ImageBitmap?&gt;(null) }
+                 val uniqueHash = remember { story.url.hashCode().absoluteValue.toString(16) }
+ 
+<a href="#h0-6" id="h0-6" class="h">@@ -195,6 +221,8 @@ class LoggedStories : Routes.Route() {
+</a> 
+                         imageBitmap = bitmap?.asImageBitmap()
+                         return true
+<a href="#h0-6-3" id="h0-6-3" class="i">+                    }.onFailure {
+</a><a href="#h0-6-4" id="h0-6-4" class="i">+                        context.log.error(&quot;Failed to open disk cache snapshot&quot;, it)
+</a>                     }
+                     return false
+                 }
+<a href="#h0-7" id="h0-7" class="h">@@ -202,9 +230,8 @@ class LoggedStories : Routes.Route() {
+</a>                 LaunchedEffect(Unit) {
+                     withContext(Dispatchers.IO) {
+                         withTimeout(10000L) {
+<a href="#h0-7-3" id="h0-7-3" class="d">-                            context.imageLoader.diskCache?.openSnapshot(uniqueHash)?.let {
+</a><a href="#h0-7-4" id="h0-7-4" class="d">-                                openDiskCacheSnapshot(it)
+</a><a href="#h0-7-5" id="h0-7-5" class="d">-                                it.close()
+</a><a href="#h0-7-6" id="h0-7-6" class="i">+                            context.imageLoader.diskCache?.openSnapshot(uniqueHash)?.use {
+</a><a href="#h0-7-7" id="h0-7-7" class="i">+                                if (!openDiskCacheSnapshot(it)) isFailed = true
+</a>                                 return@withTimeout
+                             }
+ 
+<a href="#h0-8" id="h0-8" class="h">@@ -224,12 +251,12 @@ class LoggedStories : Routes.Route() {
+</a>                                             decrypted.copyTo(fos)
+                                         }
+                                         commitAndOpenSnapshot()?.use { snapshot -&gt;
+<a href="#h0-8-3" id="h0-8-3" class="d">-                                            openDiskCacheSnapshot(snapshot)
+</a><a href="#h0-8-4" id="h0-8-4" class="d">-                                            snapshot.close()
+</a><a href="#h0-8-5" id="h0-8-5" class="i">+                                            if (!openDiskCacheSnapshot(snapshot)) isFailed = true
+</a>                                         }
+                                     }
+                                 }
+                             }.onFailure {
+<a href="#h0-8-10" id="h0-8-10" class="i">+                                isFailed = true
+</a>                                 context.log.error(&quot;Failed to load story&quot;, it)
+                             }
+                         }
+<a href="#h0-9" id="h0-9" class="h">@@ -241,24 +268,34 @@ class LoggedStories : Routes.Route() {
+</a>                         .padding(8.dp)
+                         .clickable {
+                             selectedStory = story
+<a href="#h0-9-3" id="h0-9-3" class="d">-                            coilCacheFile = context.imageLoader.diskCache?.openSnapshot(uniqueHash).use {
+</a><a href="#h0-9-4" id="h0-9-4" class="d">-                                it?.data?.toFile()
+</a><a href="#h0-9-5" id="h0-9-5" class="d">-                            }
+</a><a href="#h0-9-6" id="h0-9-6" class="i">+                            coilCachedFile = context.imageLoader.diskCache
+</a><a href="#h0-9-7" id="h0-9-7" class="i">+                                ?.openSnapshot(uniqueHash)
+</a><a href="#h0-9-8" id="h0-9-8" class="i">+                                .use {
+</a><a href="#h0-9-9" id="h0-9-9" class="i">+                                    it?.data?.toFile()
+</a><a href="#h0-9-10" id="h0-9-10" class="i">+                                }
+</a>                         }
+                         .heightIn(min = 128.dp),
+                     horizontalAlignment = Alignment.CenterHorizontally,
+                     verticalArrangement = Arrangement.Center,
+                 ) {
+<a href="#h0-9-16" id="h0-9-16" class="d">-                    imageBitmap?.let {
+</a><a href="#h0-9-17" id="h0-9-17" class="d">-                        Card {
+</a><a href="#h0-9-18" id="h0-9-18" class="d">-                            Image(
+</a><a href="#h0-9-19" id="h0-9-19" class="d">-                                bitmap = it,
+</a><a href="#h0-9-20" id="h0-9-20" class="d">-                                modifier = Modifier.fillMaxSize(),
+</a><a href="#h0-9-21" id="h0-9-21" class="d">-                                contentDescription = null,
+</a><a href="#h0-9-22" id="h0-9-22" class="d">-                            )
+</a><a href="#h0-9-23" id="h0-9-23" class="i">+                    if (isFailed) {
+</a><a href="#h0-9-24" id="h0-9-24" class="i">+                        Icon(
+</a><a href="#h0-9-25" id="h0-9-25" class="i">+                            imageVector = Icons.Default.ErrorOutline,
+</a><a href="#h0-9-26" id="h0-9-26" class="i">+                            contentDescription = &quot;&quot;,
+</a><a href="#h0-9-27" id="h0-9-27" class="i">+                            modifier = Modifier.size(48.dp)
+</a><a href="#h0-9-28" id="h0-9-28" class="i">+                        )
+</a><a href="#h0-9-29" id="h0-9-29" class="i">+                    } else {
+</a><a href="#h0-9-30" id="h0-9-30" class="i">+                        imageBitmap?.let {
+</a><a href="#h0-9-31" id="h0-9-31" class="i">+                            Card {
+</a><a href="#h0-9-32" id="h0-9-32" class="i">+                                Image(
+</a><a href="#h0-9-33" id="h0-9-33" class="i">+                                    bitmap = it,
+</a><a href="#h0-9-34" id="h0-9-34" class="i">+                                    modifier = Modifier.fillMaxSize(),
+</a><a href="#h0-9-35" id="h0-9-35" class="i">+                                    contentDescription = null,
+</a><a href="#h0-9-36" id="h0-9-36" class="i">+                                )
+</a><a href="#h0-9-37" id="h0-9-37" class="i">+                            }
+</a><a href="#h0-9-38" id="h0-9-38" class="i">+                        } ?: run {
+</a><a href="#h0-9-39" id="h0-9-39" class="i">+                            CircularProgressIndicator()
+</a>                         }
+<a href="#h0-9-41" id="h0-9-41" class="d">-                    } ?: run {
+</a><a href="#h0-9-42" id="h0-9-42" class="d">-                        CircularProgressIndicator()
+</a>                     }
+                 }
+             }
+</pre>
+</div>
+</body>
+</html>

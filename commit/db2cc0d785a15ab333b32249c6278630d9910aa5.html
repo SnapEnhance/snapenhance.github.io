@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(experimental): audio call recorder - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/db2cc0d785a15ab333b32249c6278630d9910aa5.html">db2cc0d785a15ab333b32249c6278630d9910aa5</a>
+<b>parent</b> <a href="../commit/ec12980571f5e53aa503d2a49f41a48f260351a5.html">ec12980571f5e53aa503d2a49f41a48f260351a5</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri,  8 Mar 2024 17:49:53 +0100
+
+feat(experimental): audio call recorder
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a></td><td> | </td><td class="num">22</td><td><span class="i">+++++++++++++++++++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt</a></td><td> | </td><td class="num">30</td><td><span class="i">+++++++++++++++++++++++</span><span class="d">-------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/TasksRoot.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">7</td><td><span class="i">++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/DownloadRequest.kt</a></td><td> | </td><td class="num">11</td><td><span class="i">+++++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/MediaDownloadSource.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/core/DownloadManagerClient.kt</a></td><td> | </td><td class="num">20</td><td><span class="i">+++++++++++++++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h9">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/CallRecorder.kt</a></td><td> | </td><td class="num">134</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h11">core/src/main/kotlin/me/rhunk/snapenhance/core/util/media/HttpServer.kt</a></td><td> | </td><td class="num">79</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-------</span></td></tr>
+</table></pre><pre>12 files changed, 288 insertions(+), 24 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/DownloadProcessor.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -254,7 +254,7 @@ class DownloadProcessor (
+</a>                         val outputFile = File.createTempFile(&quot;voice_note&quot;, &quot;.$format&quot;)
+                         newFFMpegProcessor(pendingTask).execute(FFMpegProcessor.Request(
+                             action = FFMpegProcessor.Action.AUDIO_CONVERSION,
+<a href="#h0-0-3" id="h0-0-3" class="d">-                            inputs = listOf(media.file),
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                            inputs = listOf(media.file.absolutePath),
+</a>                             output = outputFile
+                         ))
+                         media.file.delete()
+<a href="#h0-1" id="h0-1" class="h">@@ -291,7 +291,7 @@ class DownloadProcessor (
+</a>             runCatching {
+                 newFFMpegProcessor(pendingTask).execute(FFMpegProcessor.Request(
+                     action = FFMpegProcessor.Action.DOWNLOAD_DASH,
+<a href="#h0-1-3" id="h0-1-3" class="d">-                    inputs = listOf(dashPlaylistFile),
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+                    inputs = listOf(dashPlaylistFile.absolutePath),
+</a>                     output = outputFile,
+                     startTime = dashOptions.offsetTime,
+                     duration = dashOptions.duration
+<a href="#h0-2" id="h0-2" class="h">@@ -357,6 +357,22 @@ class DownloadProcessor (
+</a>             }
+ 
+             runCatching {
+<a href="#h0-2-3" id="h0-2-3" class="i">+                if (downloadRequest.isAudioStream) {
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+                    val streamUrl = downloadRequest.inputMedias.first().content
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+                    val outputFile = File.createTempFile(&quot;audio_stream&quot;, &quot;.mp3&quot;)
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+
+</a><a href="#h0-2-7" id="h0-2-7" class="i">+                    callbackOnProgress(&quot;Downloading audio stream&quot;)
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+                    pendingTask.updateProgress(&quot;Downloading audio stream&quot;)
+</a><a href="#h0-2-9" id="h0-2-9" class="i">+                    newFFMpegProcessor(pendingTask).execute(FFMpegProcessor.Request(
+</a><a href="#h0-2-10" id="h0-2-10" class="i">+                        action = FFMpegProcessor.Action.DOWNLOAD_AUDIO_STREAM,
+</a><a href="#h0-2-11" id="h0-2-11" class="i">+                        inputs = listOf(streamUrl),
+</a><a href="#h0-2-12" id="h0-2-12" class="i">+                        output = outputFile,
+</a><a href="#h0-2-13" id="h0-2-13" class="i">+                        audioStreamFormat = downloadRequest.audioStreamFormat
+</a><a href="#h0-2-14" id="h0-2-14" class="i">+                    ))
+</a><a href="#h0-2-15" id="h0-2-15" class="i">+                    saveMediaToGallery(pendingTask, outputFile, downloadMetadata)
+</a><a href="#h0-2-16" id="h0-2-16" class="i">+                    return@launch
+</a><a href="#h0-2-17" id="h0-2-17" class="i">+                }
+</a><a href="#h0-2-18" id="h0-2-18" class="i">+
+</a>                 //first download all input medias into cache
+                 val downloadedMedias = downloadInputMedias(pendingTask, downloadRequest).map {
+                     it.key to DownloadedFile(it.value, FileType.fromFile(it.value))
+<a href="#h0-3" id="h0-3" class="h">@@ -406,7 +422,7 @@ class DownloadProcessor (
+</a> 
+                         newFFMpegProcessor(pendingTask).execute(FFMpegProcessor.Request(
+                             action = FFMpegProcessor.Action.MERGE_OVERLAY,
+<a href="#h0-3-3" id="h0-3-3" class="d">-                            inputs = listOf(renamedMedia),
+</a><a href="#h0-3-4" id="h0-3-4" class="i">+                            inputs = listOf(renamedMedia.absolutePath),
+</a>                             output = mergedOverlay,
+                             overlay = renamedOverlayMedia
+                         ))
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/download/FFMpegProcessor.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,5 +1,6 @@
+</a> package me.rhunk.snapenhance.download
+ 
+<a href="#h1-0-2" id="h1-0-2" class="i">+import android.media.AudioFormat
+</a> import android.media.MediaMetadataRetriever
+ import com.arthenica.ffmpegkit.FFmpegKit
+ import com.arthenica.ffmpegkit.FFmpegSession
+<a href="#h1-1" id="h1-1" class="h">@@ -9,6 +10,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
+</a> import me.rhunk.snapenhance.LogManager
+ import me.rhunk.snapenhance.RemoteSideContext
+ import me.rhunk.snapenhance.common.config.impl.DownloaderConfig
+<a href="#h1-1-3" id="h1-1-3" class="i">+import me.rhunk.snapenhance.common.data.download.AudioStreamFormat
+</a> import me.rhunk.snapenhance.common.logger.LogLevel
+ import me.rhunk.snapenhance.task.PendingTask
+ import java.io.File
+<a href="#h1-2" id="h1-2" class="h">@@ -62,16 +64,18 @@ class FFMpegProcessor(
+</a>         DOWNLOAD_DASH,
+         MERGE_OVERLAY,
+         AUDIO_CONVERSION,
+<a href="#h1-2-3" id="h1-2-3" class="d">-        MERGE_MEDIA
+</a><a href="#h1-2-4" id="h1-2-4" class="i">+        MERGE_MEDIA,
+</a><a href="#h1-2-5" id="h1-2-5" class="i">+        DOWNLOAD_AUDIO_STREAM,
+</a>     }
+ 
+     data class Request(
+         val action: Action,
+<a href="#h1-2-10" id="h1-2-10" class="d">-        val inputs: List&lt;File&gt;,
+</a><a href="#h1-2-11" id="h1-2-11" class="i">+        val inputs: List&lt;String&gt;,
+</a>         val output: File,
+         val overlay: File? = null, //only for MERGE_OVERLAY
+         val startTime: Long? = null, //only for DOWNLOAD_DASH
+<a href="#h1-2-15" id="h1-2-15" class="d">-        val duration: Long? = null //only for DOWNLOAD_DASH
+</a><a href="#h1-2-16" id="h1-2-16" class="i">+        val duration: Long? = null, //only for DOWNLOAD_DASH
+</a><a href="#h1-2-17" id="h1-2-17" class="i">+        val audioStreamFormat: AudioStreamFormat? = null, //only for DOWNLOAD_AUDIO_STREAM
+</a>     )
+ 
+ 
+<a href="#h1-3" id="h1-3" class="h">@@ -113,8 +117,8 @@ class FFMpegProcessor(
+</a>         }
+ 
+         val inputArguments = ArgumentList().apply {
+<a href="#h1-3-3" id="h1-3-3" class="d">-            args.inputs.forEach { file -&gt;
+</a><a href="#h1-3-4" id="h1-3-4" class="d">-                this += &quot;-i&quot; to file.absolutePath
+</a><a href="#h1-3-5" id="h1-3-5" class="i">+            args.inputs.forEach { path -&gt;
+</a><a href="#h1-3-6" id="h1-3-6" class="i">+                this += &quot;-i&quot; to path
+</a>             }
+         }
+ 
+<a href="#h1-4" id="h1-4" class="h">@@ -150,7 +154,7 @@ class FFMpegProcessor(
+</a>                 inputArguments.clear()
+                 val filesInfo = args.inputs.mapNotNull { file -&gt;
+                     runCatching {
+<a href="#h1-4-3" id="h1-4-3" class="d">-                        MediaMetadataRetriever().apply { setDataSource(file.absolutePath) }
+</a><a href="#h1-4-4" id="h1-4-4" class="i">+                        MediaMetadataRetriever().apply { setDataSource(file) }
+</a>                     }.getOrNull()?.let { file to it }
+                 }
+ 
+<a href="#h1-5" id="h1-5" class="h">@@ -173,7 +177,7 @@ class FFMpegProcessor(
+</a>                         containsNoSound = true
+                         filterSecondPart.append(&quot;[v$index][${filesInfo.size}]&quot;)
+                     }
+<a href="#h1-5-3" id="h1-5-3" class="d">-                    inputArguments += &quot;-i&quot; to file.absolutePath
+</a><a href="#h1-5-4" id="h1-5-4" class="i">+                    inputArguments += &quot;-i&quot; to file
+</a>                 }
+ 
+                 if (containsNoSound) {
+<a href="#h1-6" id="h1-6" class="h">@@ -194,6 +198,18 @@ class FFMpegProcessor(
+</a> 
+                 filesInfo.forEach { it.second.close() }
+             }
+<a href="#h1-6-3" id="h1-6-3" class="i">+            Action.DOWNLOAD_AUDIO_STREAM -&gt; {
+</a><a href="#h1-6-4" id="h1-6-4" class="i">+                outputArguments.clear()
+</a><a href="#h1-6-5" id="h1-6-5" class="i">+                globalArguments += &quot;-f&quot; to when (args.audioStreamFormat!!.encoding) {
+</a><a href="#h1-6-6" id="h1-6-6" class="i">+                    AudioFormat.ENCODING_PCM_8BIT -&gt; &quot;u8&quot;
+</a><a href="#h1-6-7" id="h1-6-7" class="i">+                    AudioFormat.ENCODING_PCM_16BIT -&gt; &quot;s16le&quot;
+</a><a href="#h1-6-8" id="h1-6-8" class="i">+                    AudioFormat.ENCODING_PCM_FLOAT -&gt; &quot;f32le&quot;
+</a><a href="#h1-6-9" id="h1-6-9" class="i">+                    AudioFormat.ENCODING_PCM_32BIT -&gt; &quot;s32le&quot;
+</a><a href="#h1-6-10" id="h1-6-10" class="i">+                    else -&gt; throw IllegalArgumentException(&quot;Unsupported audio encoding&quot;)
+</a><a href="#h1-6-11" id="h1-6-11" class="i">+                }
+</a><a href="#h1-6-12" id="h1-6-12" class="i">+                globalArguments += &quot;-ar&quot; to args.audioStreamFormat!!.sampleRate.toString()
+</a><a href="#h1-6-13" id="h1-6-13" class="i">+                globalArguments += &quot;-ac&quot; to args.audioStreamFormat!!.channels.toString()
+</a><a href="#h1-6-14" id="h1-6-14" class="i">+            }
+</a>         }
+         outputArguments += args.output.absolutePath
+         newFFMpegTask(globalArguments, inputArguments, outputArguments)
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/TasksRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/TasksRoot.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/TasksRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/TasksRoot.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -101,7 +101,7 @@ class TasksRoot : Routes.Route() {
+</a>             runCatching {
+                 context.shortToast(&quot;Merging ${filesToMerge.size} files&quot;)
+                 FFMpegProcessor.newFFMpegProcessor(context, pendingTask).execute(
+<a href="#h2-0-3" id="h2-0-3" class="d">-                    FFMpegProcessor.Request(FFMpegProcessor.Action.MERGE_MEDIA, filesToMerge, mergedFile)
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+                    FFMpegProcessor.Request(FFMpegProcessor.Action.MERGE_MEDIA, filesToMerge.map { it.absolutePath }, mergedFile)
+</a>                 )
+                 DownloadProcessor(context, object: DownloadCallback.Default() {
+                     override fun onSuccess(outputPath: String) {
+<b>diff --git a/<a id="h3" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -686,6 +686,10 @@
+</a>                         &quot;name&quot;: &quot;Story Logger&quot;,
+                         &quot;description&quot;: &quot;Provides a history of friends stories&quot;
+                     },
+<a href="#h3-0-3" id="h3-0-3" class="i">+                    &quot;call_recorder&quot;: {
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+                        &quot;name&quot;: &quot;Call Recorder&quot;,
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+                        &quot;description&quot;: &quot;Automatically records audio calls&quot;
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+                    },
+</a>                     &quot;app_passcode&quot;: {
+                         &quot;name&quot;: &quot;App Passcode&quot;,
+                         &quot;description&quot;: &quot;Sets a passcode to lock the app&quot;
+<a href="#h3-1" id="h3-1" class="h">@@ -969,7 +973,8 @@
+</a>         &quot;profile_picture&quot;: &quot;Profile Picture&quot;,
+         &quot;story_logger&quot;: &quot;Story Logger&quot;,
+         &quot;message_logger&quot;: &quot;Message Logger&quot;,
+<a href="#h3-1-3" id="h3-1-3" class="d">-        &quot;merged&quot;: &quot;Merged&quot;
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+        &quot;merged&quot;: &quot;Merged&quot;,
+</a><a href="#h3-1-5" id="h3-1-5" class="i">+        &quot;voice_call&quot;: &quot;Voice Call&quot;
+</a>     },
+ 
+     &quot;chat_action_menu&quot;: {
+<b>diff --git a/<a id="h4" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -24,6 +24,7 @@ class Experimental : ConfigContainer() {
+</a>     val convertMessageLocally = boolean(&quot;convert_message_locally&quot;) { requireRestart() }
+     val newChatActionMenu = boolean(&quot;new_chat_action_menu&quot;) { requireRestart() }
+     val storyLogger = boolean(&quot;story_logger&quot;) { requireRestart(); addNotices(FeatureNotice.UNSTABLE); }
+<a href="#h4-0-3" id="h4-0-3" class="i">+    val callRecorder = boolean(&quot;call_recorder&quot;) { requireRestart(); addNotices(FeatureNotice.UNSTABLE); }
+</a>     val appPasscode = string(&quot;app_passcode&quot;)
+     val appLockOnResume = boolean(&quot;app_lock_on_resume&quot;)
+     val infiniteStoryBoost = boolean(&quot;infinite_story_boost&quot;)
+<b>diff --git a/<a id="h5" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/DownloadRequest.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/DownloadRequest.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/DownloadRequest.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/DownloadRequest.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -6,6 +6,8 @@ import java.util.Locale
+</a> 
+ 
+ data class DashOptions(val offsetTime: Long, val duration: Long?)
+<a href="#h5-0-3" id="h5-0-3" class="i">+data class AudioStreamFormat(val channels: Int, val sampleRate: Int, val encoding: Int)
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+
+</a> data class InputMedia(
+     val content: String,
+     val type: DownloadMediaType,
+<a href="#h5-1" id="h5-1" class="h">@@ -17,18 +19,23 @@ data class InputMedia(
+</a> class DownloadRequest(
+     val inputMedias: Array&lt;InputMedia&gt;,
+     val dashOptions: DashOptions? = null,
+<a href="#h5-1-3" id="h5-1-3" class="i">+    val audioStreamFormat: AudioStreamFormat? = null,
+</a>     private val flags: Int = 0,
+ ) {
+     object Flags {
+         const val MERGE_OVERLAY = 1
+<a href="#h5-1-8" id="h5-1-8" class="d">-        const val IS_DASH_PLAYLIST = 2
+</a><a href="#h5-1-9" id="h5-1-9" class="i">+        const val DASH_PLAYLIST = 2
+</a><a href="#h5-1-10" id="h5-1-10" class="i">+        const val AUDIO_STREAM = 4
+</a>     }
+ 
+     val isDashPlaylist: Boolean
+<a href="#h5-1-14" id="h5-1-14" class="d">-        get() = flags and Flags.IS_DASH_PLAYLIST != 0
+</a><a href="#h5-1-15" id="h5-1-15" class="i">+        get() = flags and Flags.DASH_PLAYLIST != 0
+</a> 
+     val shouldMergeOverlay: Boolean
+         get() = flags and Flags.MERGE_OVERLAY != 0
+<a href="#h5-1-19" id="h5-1-19" class="i">+
+</a><a href="#h5-1-20" id="h5-1-20" class="i">+    val isAudioStream: Boolean
+</a><a href="#h5-1-21" id="h5-1-21" class="i">+        get() = flags and Flags.AUDIO_STREAM != 0
+</a> }
+ 
+ fun String.sanitizeForPath(): String {
+<b>diff --git a/<a id="h6" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/MediaDownloadSource.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/MediaDownloadSource.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/MediaDownloadSource.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/download/MediaDownloadSource.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -16,7 +16,8 @@ enum class MediaDownloadSource(
+</a>     PROFILE_PICTURE(&quot;profile_picture&quot;, &quot;profile_picture&quot;),
+     STORY_LOGGER(&quot;story_logger&quot;, &quot;story_logger&quot;),
+     MESSAGE_LOGGER(&quot;message_logger&quot;, &quot;message_logger&quot;),
+<a href="#h6-0-3" id="h6-0-3" class="d">-    MERGED(&quot;merged&quot;, &quot;merged&quot;);
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+    MERGED(&quot;merged&quot;, &quot;merged&quot;),
+</a><a href="#h6-0-5" id="h6-0-5" class="i">+    VOICE_CALL(&quot;voice_call&quot;, &quot;voice_call&quot;);
+</a> 
+     fun matches(source: String?): Boolean {
+         if (source == null) return false
+<b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/DownloadManagerClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/DownloadManagerClient.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/DownloadManagerClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/DownloadManagerClient.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -31,7 +31,7 @@ class DownloadManagerClient (
+</a>                     )
+                 ),
+                 dashOptions = DashOptions(offsetTime, duration),
+<a href="#h7-0-3" id="h7-0-3" class="d">-                flags = DownloadRequest.Flags.IS_DASH_PLAYLIST
+</a><a href="#h7-0-4" id="h7-0-4" class="i">+                flags = DownloadRequest.Flags.DASH_PLAYLIST
+</a>             )
+         )
+     }
+<a href="#h7-1" id="h7-1" class="h">@@ -67,4 +67,22 @@ class DownloadManagerClient (
+</a>             )
+         )
+     }
+<a href="#h7-1-3" id="h7-1-3" class="i">+
+</a><a href="#h7-1-4" id="h7-1-4" class="i">+    fun downloadStream(
+</a><a href="#h7-1-5" id="h7-1-5" class="i">+        streamUrl: String,
+</a><a href="#h7-1-6" id="h7-1-6" class="i">+        audioStreamFormat: AudioStreamFormat
+</a><a href="#h7-1-7" id="h7-1-7" class="i">+    ) {
+</a><a href="#h7-1-8" id="h7-1-8" class="i">+        enqueueDownloadRequest(
+</a><a href="#h7-1-9" id="h7-1-9" class="i">+            DownloadRequest(
+</a><a href="#h7-1-10" id="h7-1-10" class="i">+                inputMedias = arrayOf(
+</a><a href="#h7-1-11" id="h7-1-11" class="i">+                    InputMedia(
+</a><a href="#h7-1-12" id="h7-1-12" class="i">+                        content = streamUrl,
+</a><a href="#h7-1-13" id="h7-1-13" class="i">+                        type = DownloadMediaType.REMOTE_MEDIA
+</a><a href="#h7-1-14" id="h7-1-14" class="i">+                    )
+</a><a href="#h7-1-15" id="h7-1-15" class="i">+                ),
+</a><a href="#h7-1-16" id="h7-1-16" class="i">+                flags = DownloadRequest.Flags.AUDIO_STREAM,
+</a><a href="#h7-1-17" id="h7-1-17" class="i">+                audioStreamFormat = audioStreamFormat
+</a><a href="#h7-1-18" id="h7-1-18" class="i">+            )
+</a><a href="#h7-1-19" id="h7-1-19" class="i">+        )
+</a><a href="#h7-1-20" id="h7-1-20" class="i">+    }
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -76,7 +76,7 @@ class MediaDownloader : MessagingRuleFeature(&quot;MediaDownloader&quot;, MessagingRuleTyp
+</a>         context.translation.getCategory(&quot;download_processor&quot;)
+     }
+ 
+<a href="#h8-0-3" id="h8-0-3" class="d">-    private fun provideDownloadManagerClient(
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+    fun provideDownloadManagerClient(
+</a>         mediaIdentifier: String,
+         mediaAuthor: String,
+         creationTimestamp: Long? = null,
+<b>diff --git a/<a id="h9" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/CallRecorder.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/CallRecorder.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/CallRecorder.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/CallRecorder.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -0,0 +1,133 @@
+</a><a href="#h9-0-0" id="h9-0-0" class="i">+package me.rhunk.snapenhance.core.features.impl.experiments
+</a><a href="#h9-0-1" id="h9-0-1" class="i">+
+</a><a href="#h9-0-2" id="h9-0-2" class="i">+import android.media.AudioAttributes
+</a><a href="#h9-0-3" id="h9-0-3" class="i">+import android.media.AudioFormat
+</a><a href="#h9-0-4" id="h9-0-4" class="i">+import android.media.AudioTrack
+</a><a href="#h9-0-5" id="h9-0-5" class="i">+import kotlinx.coroutines.runBlocking
+</a><a href="#h9-0-6" id="h9-0-6" class="i">+import kotlinx.coroutines.withTimeoutOrNull
+</a><a href="#h9-0-7" id="h9-0-7" class="i">+import me.rhunk.snapenhance.common.data.download.AudioStreamFormat
+</a><a href="#h9-0-8" id="h9-0-8" class="i">+import me.rhunk.snapenhance.common.data.download.MediaDownloadSource
+</a><a href="#h9-0-9" id="h9-0-9" class="i">+import me.rhunk.snapenhance.core.features.Feature
+</a><a href="#h9-0-10" id="h9-0-10" class="i">+import me.rhunk.snapenhance.core.features.FeatureLoadParams
+</a><a href="#h9-0-11" id="h9-0-11" class="i">+import me.rhunk.snapenhance.core.features.impl.downloader.MediaDownloader
+</a><a href="#h9-0-12" id="h9-0-12" class="i">+import me.rhunk.snapenhance.core.util.hook.HookStage
+</a><a href="#h9-0-13" id="h9-0-13" class="i">+import me.rhunk.snapenhance.core.util.hook.hook
+</a><a href="#h9-0-14" id="h9-0-14" class="i">+import me.rhunk.snapenhance.core.util.hook.hookConstructor
+</a><a href="#h9-0-15" id="h9-0-15" class="i">+import me.rhunk.snapenhance.core.util.ktx.getObjectField
+</a><a href="#h9-0-16" id="h9-0-16" class="i">+import me.rhunk.snapenhance.core.util.ktx.getObjectFieldOrNull
+</a><a href="#h9-0-17" id="h9-0-17" class="i">+import me.rhunk.snapenhance.core.util.media.HttpServer
+</a><a href="#h9-0-18" id="h9-0-18" class="i">+import java.io.PipedInputStream
+</a><a href="#h9-0-19" id="h9-0-19" class="i">+import java.io.PipedOutputStream
+</a><a href="#h9-0-20" id="h9-0-20" class="i">+import java.nio.ByteBuffer
+</a><a href="#h9-0-21" id="h9-0-21" class="i">+import java.util.UUID
+</a><a href="#h9-0-22" id="h9-0-22" class="i">+import java.util.concurrent.ConcurrentHashMap
+</a><a href="#h9-0-23" id="h9-0-23" class="i">+import java.util.concurrent.CopyOnWriteArrayList
+</a><a href="#h9-0-24" id="h9-0-24" class="i">+
+</a><a href="#h9-0-25" id="h9-0-25" class="i">+class CallRecorder : Feature(&quot;Call Recorder&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+</a><a href="#h9-0-26" id="h9-0-26" class="i">+    private val httpServer = HttpServer(
+</a><a href="#h9-0-27" id="h9-0-27" class="i">+        timeout = Integer.MAX_VALUE
+</a><a href="#h9-0-28" id="h9-0-28" class="i">+    )
+</a><a href="#h9-0-29" id="h9-0-29" class="i">+
+</a><a href="#h9-0-30" id="h9-0-30" class="i">+    override fun init() {
+</a><a href="#h9-0-31" id="h9-0-31" class="i">+        if (!context.config.experimental.callRecorder.get()) return
+</a><a href="#h9-0-32" id="h9-0-32" class="i">+
+</a><a href="#h9-0-33" id="h9-0-33" class="i">+        val streamHandlers = ConcurrentHashMap&lt;Int, MutableList&lt;(data: ByteArray) -&gt; Unit&gt;&gt;() // audioTrack -&gt; handlers
+</a><a href="#h9-0-34" id="h9-0-34" class="i">+        val participants = CopyOnWriteArrayList&lt;String&gt;()
+</a><a href="#h9-0-35" id="h9-0-35" class="i">+
+</a><a href="#h9-0-36" id="h9-0-36" class="i">+        findClass(&quot;com.snapchat.talkcorev3.CallingSessionState&quot;).hookConstructor(HookStage.AFTER) { param -&gt;
+</a><a href="#h9-0-37" id="h9-0-37" class="i">+            val instance = param.thisObject&lt;Any&gt;()
+</a><a href="#h9-0-38" id="h9-0-38" class="i">+            val callingState = instance.getObjectFieldOrNull(&quot;mLocalUser&quot;)?.getObjectField(&quot;mCallingState&quot;)
+</a><a href="#h9-0-39" id="h9-0-39" class="i">+
+</a><a href="#h9-0-40" id="h9-0-40" class="i">+            if (callingState.toString() == &quot;IN_CALL&quot;) {
+</a><a href="#h9-0-41" id="h9-0-41" class="i">+                participants.clear()
+</a><a href="#h9-0-42" id="h9-0-42" class="i">+                participants.addAll((instance.getObjectField(&quot;mParticipants&quot;) as Map&lt;*, *&gt;).keys.map { it.toString() })
+</a><a href="#h9-0-43" id="h9-0-43" class="i">+            }
+</a><a href="#h9-0-44" id="h9-0-44" class="i">+        }
+</a><a href="#h9-0-45" id="h9-0-45" class="i">+
+</a><a href="#h9-0-46" id="h9-0-46" class="i">+        AudioTrack::class.java.apply {
+</a><a href="#h9-0-47" id="h9-0-47" class="i">+            getConstructor(
+</a><a href="#h9-0-48" id="h9-0-48" class="i">+                AudioAttributes::class.java,
+</a><a href="#h9-0-49" id="h9-0-49" class="i">+                AudioFormat::class.java,
+</a><a href="#h9-0-50" id="h9-0-50" class="i">+                Int::class.javaPrimitiveType,
+</a><a href="#h9-0-51" id="h9-0-51" class="i">+                Int::class.javaPrimitiveType,
+</a><a href="#h9-0-52" id="h9-0-52" class="i">+                Int::class.javaPrimitiveType,
+</a><a href="#h9-0-53" id="h9-0-53" class="i">+            ).hook(HookStage.BEFORE) { param -&gt;
+</a><a href="#h9-0-54" id="h9-0-54" class="i">+                val audioAttributes = param.arg&lt;AudioAttributes&gt;(0)
+</a><a href="#h9-0-55" id="h9-0-55" class="i">+                if (audioAttributes.usage != AudioAttributes.USAGE_VOICE_COMMUNICATION) return@hook
+</a><a href="#h9-0-56" id="h9-0-56" class="i">+                val audioFormat = param.arg&lt;AudioFormat&gt;(1)
+</a><a href="#h9-0-57" id="h9-0-57" class="i">+                val hashCode = param.thisObject&lt;Any&gt;().hashCode()
+</a><a href="#h9-0-58" id="h9-0-58" class="i">+
+</a><a href="#h9-0-59" id="h9-0-59" class="i">+                lateinit var streamUrl: String
+</a><a href="#h9-0-60" id="h9-0-60" class="i">+                streamUrl = httpServer.ensureServerStarted()?.putContent(
+</a><a href="#h9-0-61" id="h9-0-61" class="i">+                    object: HttpServer.HttpContent() {
+</a><a href="#h9-0-62" id="h9-0-62" class="i">+                        override val contentType: String = &quot;audio/wav&quot;
+</a><a href="#h9-0-63" id="h9-0-63" class="i">+                        override val chunked: Boolean = true
+</a><a href="#h9-0-64" id="h9-0-64" class="i">+                        override val contentLength: Long? = null
+</a><a href="#h9-0-65" id="h9-0-65" class="i">+                        override val newBody: () -&gt; HttpServer.HttpBody = {
+</a><a href="#h9-0-66" id="h9-0-66" class="i">+                            object: HttpServer.HttpBody() {
+</a><a href="#h9-0-67" id="h9-0-67" class="i">+                                val outputStream = PipedOutputStream()
+</a><a href="#h9-0-68" id="h9-0-68" class="i">+                                val inputStream = PipedInputStream(outputStream)
+</a><a href="#h9-0-69" id="h9-0-69" class="i">+
+</a><a href="#h9-0-70" id="h9-0-70" class="i">+                                val handler: (byteArray: ByteArray) -&gt; Unit = handler@{ byteArray -&gt;
+</a><a href="#h9-0-71" id="h9-0-71" class="i">+                                    if (byteArray.isEmpty()) {
+</a><a href="#h9-0-72" id="h9-0-72" class="i">+                                        httpServer.removeUrl(streamUrl)
+</a><a href="#h9-0-73" id="h9-0-73" class="i">+                                        return@handler
+</a><a href="#h9-0-74" id="h9-0-74" class="i">+                                    }
+</a><a href="#h9-0-75" id="h9-0-75" class="i">+                                    runCatching {
+</a><a href="#h9-0-76" id="h9-0-76" class="i">+                                        outputStream.write(byteArray)
+</a><a href="#h9-0-77" id="h9-0-77" class="i">+                                        outputStream.flush()
+</a><a href="#h9-0-78" id="h9-0-78" class="i">+                                    }.onFailure {
+</a><a href="#h9-0-79" id="h9-0-79" class="i">+                                        context.log.warn(&quot;Failed to write to streaming url ${it.localizedMessage}&quot;)
+</a><a href="#h9-0-80" id="h9-0-80" class="i">+                                    }
+</a><a href="#h9-0-81" id="h9-0-81" class="i">+                                }
+</a><a href="#h9-0-82" id="h9-0-82" class="i">+
+</a><a href="#h9-0-83" id="h9-0-83" class="i">+                                override val onOpen: () -&gt; Unit = {
+</a><a href="#h9-0-84" id="h9-0-84" class="i">+                                    streamHandlers.getOrPut(hashCode) { CopyOnWriteArrayList() }.add(handler)
+</a><a href="#h9-0-85" id="h9-0-85" class="i">+                                }
+</a><a href="#h9-0-86" id="h9-0-86" class="i">+
+</a><a href="#h9-0-87" id="h9-0-87" class="i">+                                override val readBytes: (byteArray: ByteArray) -&gt; Int = { byteArray -&gt;
+</a><a href="#h9-0-88" id="h9-0-88" class="i">+                                    runBlocking {
+</a><a href="#h9-0-89" id="h9-0-89" class="i">+                                        withTimeoutOrNull(3000L) {
+</a><a href="#h9-0-90" id="h9-0-90" class="i">+                                            inputStream.read(byteArray)
+</a><a href="#h9-0-91" id="h9-0-91" class="i">+                                        } ?: -1
+</a><a href="#h9-0-92" id="h9-0-92" class="i">+                                    }
+</a><a href="#h9-0-93" id="h9-0-93" class="i">+                                }
+</a><a href="#h9-0-94" id="h9-0-94" class="i">+
+</a><a href="#h9-0-95" id="h9-0-95" class="i">+                                override val onClose: () -&gt; Unit = {
+</a><a href="#h9-0-96" id="h9-0-96" class="i">+                                    context.log.verbose(&quot;Streaming url closed&quot;)
+</a><a href="#h9-0-97" id="h9-0-97" class="i">+                                    streamHandlers[hashCode]?.remove(handler)
+</a><a href="#h9-0-98" id="h9-0-98" class="i">+                                    outputStream.close()
+</a><a href="#h9-0-99" id="h9-0-99" class="i">+                                    inputStream.close()
+</a><a href="#h9-0-100" id="h9-0-100" class="i">+                                }
+</a><a href="#h9-0-101" id="h9-0-101" class="i">+                            }
+</a><a href="#h9-0-102" id="h9-0-102" class="i">+                        }
+</a><a href="#h9-0-103" id="h9-0-103" class="i">+                    }
+</a><a href="#h9-0-104" id="h9-0-104" class="i">+                ) ?: return@hook
+</a><a href="#h9-0-105" id="h9-0-105" class="i">+
+</a><a href="#h9-0-106" id="h9-0-106" class="i">+                context.log.verbose(&quot;streaming url = $streamUrl, sampleRate = ${audioFormat.sampleRate}, audioFormat = ${audioFormat.encoding}&quot;)
+</a><a href="#h9-0-107" id="h9-0-107" class="i">+
+</a><a href="#h9-0-108" id="h9-0-108" class="i">+                context.feature(MediaDownloader::class).provideDownloadManagerClient(
+</a><a href="#h9-0-109" id="h9-0-109" class="i">+                    UUID.randomUUID().toString(),
+</a><a href="#h9-0-110" id="h9-0-110" class="i">+                    participants.mapNotNull { context.database.getFriendInfo(it)?.mutableUsername }.joinToString(&quot;-&quot;),
+</a><a href="#h9-0-111" id="h9-0-111" class="i">+                    System.currentTimeMillis(),
+</a><a href="#h9-0-112" id="h9-0-112" class="i">+                    MediaDownloadSource.VOICE_CALL
+</a><a href="#h9-0-113" id="h9-0-113" class="i">+                ).downloadStream(streamUrl, AudioStreamFormat(audioFormat.channelCount, audioFormat.sampleRate, audioFormat.encoding))
+</a><a href="#h9-0-114" id="h9-0-114" class="i">+            }
+</a><a href="#h9-0-115" id="h9-0-115" class="i">+
+</a><a href="#h9-0-116" id="h9-0-116" class="i">+            getMethod(&quot;write&quot;, ByteBuffer::class.java, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType).hook(HookStage.BEFORE) { param -&gt;
+</a><a href="#h9-0-117" id="h9-0-117" class="i">+                streamHandlers[param.thisObject&lt;Any&gt;().hashCode()]?.let { handlers -&gt;
+</a><a href="#h9-0-118" id="h9-0-118" class="i">+                    val byteBuffer = param.arg&lt;ByteBuffer&gt;(0)
+</a><a href="#h9-0-119" id="h9-0-119" class="i">+                    val position = byteBuffer.position()
+</a><a href="#h9-0-120" id="h9-0-120" class="i">+                    val buffer = ByteArray(param.arg(1))
+</a><a href="#h9-0-121" id="h9-0-121" class="i">+                    byteBuffer.get(buffer)
+</a><a href="#h9-0-122" id="h9-0-122" class="i">+                    byteBuffer.position(position)
+</a><a href="#h9-0-123" id="h9-0-123" class="i">+                    handlers.forEach { it(buffer) }
+</a><a href="#h9-0-124" id="h9-0-124" class="i">+                }
+</a><a href="#h9-0-125" id="h9-0-125" class="i">+            }
+</a><a href="#h9-0-126" id="h9-0-126" class="i">+
+</a><a href="#h9-0-127" id="h9-0-127" class="i">+            hook(&quot;release&quot;, HookStage.BEFORE) {
+</a><a href="#h9-0-128" id="h9-0-128" class="i">+                streamHandlers.remove(it.thisObject&lt;Any&gt;().hashCode())?.forEach { it(ByteArray(0)) }
+</a><a href="#h9-0-129" id="h9-0-129" class="i">+            }
+</a><a href="#h9-0-130" id="h9-0-130" class="i">+        }
+</a><a href="#h9-0-131" id="h9-0-131" class="i">+    }
+</a><a href="#h9-0-132" id="h9-0-132" class="i">+}</a><a href="#h9-0-133" id="h9-0-133" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h10" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -120,6 +120,7 @@ class FeatureManager(
+</a>             DisablePermissionRequests(),
+             SessionEvents(),
+             DefaultVolumeControls(),
+<a href="#h10-0-3" id="h10-0-3" class="i">+            CallRecorder(),
+</a>         )
+ 
+         initializeFeatures()
+<b>diff --git a/<a id="h11" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/media/HttpServer.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/media/HttpServer.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/media/HttpServer.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/media/HttpServer.kt</a></b>
+<a href="#h11-0" id="h11-0" class="h">@@ -27,7 +27,20 @@ class HttpServer(
+</a>     private var timeoutJob: Job? = null
+     private var socketJob: Job? = null
+ 
+<a href="#h11-0-3" id="h11-0-3" class="d">-    private val cachedData = ConcurrentHashMap&lt;String, Pair&lt;InputStream, Long&gt;&gt;()
+</a><a href="#h11-0-4" id="h11-0-4" class="i">+    abstract class HttpBody {
+</a><a href="#h11-0-5" id="h11-0-5" class="i">+        abstract val readBytes: (byteArray: ByteArray) -&gt; Int
+</a><a href="#h11-0-6" id="h11-0-6" class="i">+        open val onOpen: () -&gt; Unit = {}
+</a><a href="#h11-0-7" id="h11-0-7" class="i">+        open val onClose: () -&gt; Unit = {}
+</a><a href="#h11-0-8" id="h11-0-8" class="i">+    }
+</a><a href="#h11-0-9" id="h11-0-9" class="i">+
+</a><a href="#h11-0-10" id="h11-0-10" class="i">+    abstract class HttpContent {
+</a><a href="#h11-0-11" id="h11-0-11" class="i">+        abstract val contentType: String
+</a><a href="#h11-0-12" id="h11-0-12" class="i">+        abstract val chunked: Boolean
+</a><a href="#h11-0-13" id="h11-0-13" class="i">+        abstract val contentLength: Long?
+</a><a href="#h11-0-14" id="h11-0-14" class="i">+        abstract val newBody: () -&gt; HttpBody
+</a><a href="#h11-0-15" id="h11-0-15" class="i">+    }
+</a><a href="#h11-0-16" id="h11-0-16" class="i">+
+</a><a href="#h11-0-17" id="h11-0-17" class="i">+    private val cachedData = ConcurrentHashMap&lt;String, HttpContent&gt;()
+</a>     private var serverSocket: ServerSocket? = null
+ 
+     fun ensureServerStarted(): HttpServer? {
+<a href="#h11-1" id="h11-1" class="h">@@ -83,15 +96,39 @@ class HttpServer(
+</a>     }
+ 
+     fun close() {
+<a href="#h11-1-3" id="h11-1-3" class="d">-        serverSocket?.close()
+</a><a href="#h11-1-4" id="h11-1-4" class="i">+        runCatching {
+</a><a href="#h11-1-5" id="h11-1-5" class="i">+            serverSocket?.close()
+</a><a href="#h11-1-6" id="h11-1-6" class="i">+        }
+</a>     }
+ 
+     fun putDownloadableContent(inputStream: InputStream, size: Long): String {
+         val key = System.nanoTime().toString(16)
+<a href="#h11-1-11" id="h11-1-11" class="d">-        cachedData[key] = inputStream to size
+</a><a href="#h11-1-12" id="h11-1-12" class="i">+        cachedData[key] = object : HttpContent() {
+</a><a href="#h11-1-13" id="h11-1-13" class="i">+            override val contentType: String = &quot;application/octet-stream&quot;
+</a><a href="#h11-1-14" id="h11-1-14" class="i">+            override val chunked: Boolean = false
+</a><a href="#h11-1-15" id="h11-1-15" class="i">+            override val contentLength: Long = size
+</a><a href="#h11-1-16" id="h11-1-16" class="i">+            override val newBody: () -&gt; HttpBody = {
+</a><a href="#h11-1-17" id="h11-1-17" class="i">+                object : HttpBody() {
+</a><a href="#h11-1-18" id="h11-1-18" class="i">+                    override val readBytes: (byteArray: ByteArray) -&gt; Int = { byteArray -&gt;
+</a><a href="#h11-1-19" id="h11-1-19" class="i">+                        inputStream.read(byteArray)
+</a><a href="#h11-1-20" id="h11-1-20" class="i">+                    }
+</a><a href="#h11-1-21" id="h11-1-21" class="i">+                }
+</a><a href="#h11-1-22" id="h11-1-22" class="i">+            }
+</a><a href="#h11-1-23" id="h11-1-23" class="i">+        }
+</a><a href="#h11-1-24" id="h11-1-24" class="i">+        return &quot;http://127.0.0.1:$port/$key&quot;
+</a><a href="#h11-1-25" id="h11-1-25" class="i">+    }
+</a><a href="#h11-1-26" id="h11-1-26" class="i">+
+</a><a href="#h11-1-27" id="h11-1-27" class="i">+    fun putContent(httpContent: HttpContent): String {
+</a><a href="#h11-1-28" id="h11-1-28" class="i">+        val key = System.nanoTime().toString(16)
+</a><a href="#h11-1-29" id="h11-1-29" class="i">+        cachedData[key] = httpContent
+</a>         return &quot;http://127.0.0.1:$port/$key&quot;
+     }
+ 
+<a href="#h11-1-33" id="h11-1-33" class="i">+    fun removeUrl(url: String) {
+</a><a href="#h11-1-34" id="h11-1-34" class="i">+        val key = url.substringAfterLast(&#39;/&#39;)
+</a><a href="#h11-1-35" id="h11-1-35" class="i">+        cachedData.remove(key)
+</a><a href="#h11-1-36" id="h11-1-36" class="i">+    }
+</a><a href="#h11-1-37" id="h11-1-37" class="i">+
+</a>     private fun handleRequest(socket: Socket) {
+         val reader = BufferedReader(InputStreamReader(socket.getInputStream()))
+         val outputStream = socket.getOutputStream()
+<a href="#h11-2" id="h11-2" class="h">@@ -138,13 +175,41 @@ class HttpServer(
+</a>         with(writer) {
+             println(&quot;HTTP/1.1 200 OK&quot;)
+             println(&quot;Content-type: &quot; + &quot;application/octet-stream&quot;)
+<a href="#h11-2-3" id="h11-2-3" class="d">-            println(&quot;Content-length: &quot; + requestedData.second)
+</a><a href="#h11-2-4" id="h11-2-4" class="i">+            if (requestedData.chunked) println(&quot;Transfer-encoding: chunked&quot;)
+</a><a href="#h11-2-5" id="h11-2-5" class="i">+            else println(&quot;Content-length: &quot; + requestedData.contentLength)
+</a>             println()
+             flush()
+         }
+<a href="#h11-2-9" id="h11-2-9" class="d">-        cachedData.remove(fileRequested)
+</a><a href="#h11-2-10" id="h11-2-10" class="d">-        requestedData.first.use {
+</a><a href="#h11-2-11" id="h11-2-11" class="d">-            it.copyTo(outputStream)
+</a><a href="#h11-2-12" id="h11-2-12" class="i">+
+</a><a href="#h11-2-13" id="h11-2-13" class="i">+        val responseBody = requestedData.newBody()
+</a><a href="#h11-2-14" id="h11-2-14" class="i">+        responseBody.onOpen()
+</a><a href="#h11-2-15" id="h11-2-15" class="i">+        try {
+</a><a href="#h11-2-16" id="h11-2-16" class="i">+            if (requestedData.chunked) {
+</a><a href="#h11-2-17" id="h11-2-17" class="i">+                val buffer = ByteArray(32768)
+</a><a href="#h11-2-18" id="h11-2-18" class="i">+                while (true) {
+</a><a href="#h11-2-19" id="h11-2-19" class="i">+                    val read = responseBody.readBytes(buffer)
+</a><a href="#h11-2-20" id="h11-2-20" class="i">+                    if (read == -1) break
+</a><a href="#h11-2-21" id="h11-2-21" class="i">+                    outputStream.write(Integer.toHexString(read).toByteArray())
+</a><a href="#h11-2-22" id="h11-2-22" class="i">+                    outputStream.write(&quot;\r\n&quot;.toByteArray())
+</a><a href="#h11-2-23" id="h11-2-23" class="i">+                    outputStream.write(buffer, 0, read)
+</a><a href="#h11-2-24" id="h11-2-24" class="i">+                    outputStream.write(&quot;\r\n&quot;.toByteArray())
+</a><a href="#h11-2-25" id="h11-2-25" class="i">+                    outputStream.flush()
+</a><a href="#h11-2-26" id="h11-2-26" class="i">+                }
+</a><a href="#h11-2-27" id="h11-2-27" class="i">+            } else {
+</a><a href="#h11-2-28" id="h11-2-28" class="i">+                cachedData.remove(fileRequested)
+</a><a href="#h11-2-29" id="h11-2-29" class="i">+                val buffer = ByteArray(4096)
+</a><a href="#h11-2-30" id="h11-2-30" class="i">+                while (true) {
+</a><a href="#h11-2-31" id="h11-2-31" class="i">+                    val read = responseBody.readBytes(buffer)
+</a><a href="#h11-2-32" id="h11-2-32" class="i">+                    if (read == -1) break
+</a><a href="#h11-2-33" id="h11-2-33" class="i">+                    outputStream.write(buffer, 0, read)
+</a><a href="#h11-2-34" id="h11-2-34" class="i">+                    outputStream.flush()
+</a><a href="#h11-2-35" id="h11-2-35" class="i">+                }
+</a><a href="#h11-2-36" id="h11-2-36" class="i">+            }
+</a><a href="#h11-2-37" id="h11-2-37" class="i">+        } catch (t: Throwable) {
+</a><a href="#h11-2-38" id="h11-2-38" class="i">+            AbstractLogger.directDebug(&quot;failed to write to socket ${t.localizedMessage}&quot;)
+</a><a href="#h11-2-39" id="h11-2-39" class="i">+        } finally {
+</a><a href="#h11-2-40" id="h11-2-40" class="i">+            if (requestedData.chunked) runCatching { outputStream.write(&quot;0\r\n\r\n&quot;.toByteArray()) }
+</a><a href="#h11-2-41" id="h11-2-41" class="i">+            responseBody.onClose()
+</a>         }
+         outputStream.flush()
+         close()
+</pre>
+</div>
+</body>
+</html>

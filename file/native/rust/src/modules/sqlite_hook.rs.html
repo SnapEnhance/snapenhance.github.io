@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sqlite_hook.rs - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../../../../../logo.png"/>
+<link rel="alternate icon" href="../../../../../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../../../../../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../../../../../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../../../../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../../../../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../../../../../"><img src="../../../../../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../../../../../about.html">About</a> | <a href="../../../../../log.html">Log</a> | <a href="../../../../../files.html">Files</a> | <a href="../../../../../refs.html">Refs</a> | <a href="../../../../../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<p> sqlite_hook.rs (2641B) - <a href="../../../../../raw/native/rust/src/modules/sqlite_hook.rs">raw</a></p><hr/><pre id="blob">
+<a href="#l1" class="line" id="l1">      1</a> use std::{collections::HashMap, ffi::{c_void, CStr}, mem::size_of, ptr::addr_of_mut, sync::Mutex};
+<a href="#l2" class="line" id="l2">      2</a> 
+<a href="#l3" class="line" id="l3">      3</a> use jni::{objects::{JObject, JString}, JNIEnv};
+<a href="#l4" class="line" id="l4">      4</a> use nix::libc::{self, pthread_mutex_t};
+<a href="#l5" class="line" id="l5">      5</a> use once_cell::sync::Lazy;
+<a href="#l6" class="line" id="l6">      6</a> 
+<a href="#l7" class="line" id="l7">      7</a> use crate::{common, def_hook, dobby_hook, sig, util::get_jni_string};
+<a href="#l8" class="line" id="l8">      8</a> 
+<a href="#l9" class="line" id="l9">      9</a> 
+<a href="#l10" class="line" id="l10">     10</a> #[repr(C)]
+<a href="#l11" class="line" id="l11">     11</a> #[derive(Clone, Copy, Debug)]
+<a href="#l12" class="line" id="l12">     12</a> struct Sqlite3Mutex {
+<a href="#l13" class="line" id="l13">     13</a>     mutex: pthread_mutex_t
+<a href="#l14" class="line" id="l14">     14</a> }
+<a href="#l15" class="line" id="l15">     15</a> 
+<a href="#l16" class="line" id="l16">     16</a> #[repr(C)]
+<a href="#l17" class="line" id="l17">     17</a> struct Sqlite3 {
+<a href="#l18" class="line" id="l18">     18</a>     pad: [u8; 3 * size_of::&lt;usize&gt;()],
+<a href="#l19" class="line" id="l19">     19</a>     mutex: *mut Sqlite3Mutex
+<a href="#l20" class="line" id="l20">     20</a> }
+<a href="#l21" class="line" id="l21">     21</a> 
+<a href="#l22" class="line" id="l22">     22</a> static SQLITE3_MUTEX_MAP: Lazy&lt;Mutex&lt;HashMap&lt;String, pthread_mutex_t&gt;&gt;&gt; = Lazy::new(|| Mutex::new(HashMap::new()));
+<a href="#l23" class="line" id="l23">     23</a> 
+<a href="#l24" class="line" id="l24">     24</a> def_hook!(
+<a href="#l25" class="line" id="l25">     25</a>     sqlite3_open,
+<a href="#l26" class="line" id="l26">     26</a>     i32,
+<a href="#l27" class="line" id="l27">     27</a>     |filename: *const u8, pp_db: *mut *mut Sqlite3, flags: u32, z_vfs: *const i8| {
+<a href="#l28" class="line" id="l28">     28</a>         let result = sqlite3_open_original.unwrap()(filename, pp_db, flags, z_vfs);
+<a href="#l29" class="line" id="l29">     29</a> 
+<a href="#l30" class="line" id="l30">     30</a>         if result == 0 {
+<a href="#l31" class="line" id="l31">     31</a>             let sqlite3_mutex = (**pp_db).mutex;
+<a href="#l32" class="line" id="l32">     32</a> 
+<a href="#l33" class="line" id="l33">     33</a>             if sqlite3_mutex != std::ptr::null_mut() {
+<a href="#l34" class="line" id="l34">     34</a>                 let filename = CStr::from_ptr(filename).to_string_lossy().to_string().split(&quot;/&quot;).last().expect(&quot;Failed to get filename&quot;).to_string();
+<a href="#l35" class="line" id="l35">     35</a>                 debug!(&quot;sqlite3_open hook {:?}&quot;, filename);
+<a href="#l36" class="line" id="l36">     36</a> 
+<a href="#l37" class="line" id="l37">     37</a>                 SQLITE3_MUTEX_MAP.lock().unwrap().insert(
+<a href="#l38" class="line" id="l38">     38</a>                     filename,
+<a href="#l39" class="line" id="l39">     39</a>                     (*sqlite3_mutex).mutex
+<a href="#l40" class="line" id="l40">     40</a>                 );
+<a href="#l41" class="line" id="l41">     41</a>             }
+<a href="#l42" class="line" id="l42">     42</a>         }
+<a href="#l43" class="line" id="l43">     43</a> 
+<a href="#l44" class="line" id="l44">     44</a>         result
+<a href="#l45" class="line" id="l45">     45</a>     }  
+<a href="#l46" class="line" id="l46">     46</a> );
+<a href="#l47" class="line" id="l47">     47</a> 
+<a href="#l48" class="line" id="l48">     48</a> 
+<a href="#l49" class="line" id="l49">     49</a> pub fn lock_database(mut env: JNIEnv, _: *mut c_void, filename: JString, runnable: JObject) {
+<a href="#l50" class="line" id="l50">     50</a>     let database_filename = get_jni_string(&amp;mut env, filename).expect(&quot;Failed to get database filename&quot;);
+<a href="#l51" class="line" id="l51">     51</a>     let mutex = SQLITE3_MUTEX_MAP.lock().unwrap().get(&amp;database_filename).map(|mutex| *mutex);
+<a href="#l52" class="line" id="l52">     52</a> 
+<a href="#l53" class="line" id="l53">     53</a>     let call_runnable = || {
+<a href="#l54" class="line" id="l54">     54</a>         env.call_method(runnable, &quot;run&quot;, &quot;()V&quot;, &amp;[]).expect(&quot;Failed to call run method&quot;);
+<a href="#l55" class="line" id="l55">     55</a>     };
+<a href="#l56" class="line" id="l56">     56</a> 
+<a href="#l57" class="line" id="l57">     57</a>     if let Some(mut mutex) = mutex {
+<a href="#l58" class="line" id="l58">     58</a>         if unsafe { libc::pthread_mutex_lock(addr_of_mut!(mutex)) } != 0 {
+<a href="#l59" class="line" id="l59">     59</a>             error!(&quot;pthread_mutex_lock failed&quot;);
+<a href="#l60" class="line" id="l60">     60</a>             return;
+<a href="#l61" class="line" id="l61">     61</a>         }
+<a href="#l62" class="line" id="l62">     62</a> 
+<a href="#l63" class="line" id="l63">     63</a>         call_runnable();
+<a href="#l64" class="line" id="l64">     64</a> 
+<a href="#l65" class="line" id="l65">     65</a>         if unsafe { libc::pthread_mutex_unlock(addr_of_mut!(mutex)) } != 0 {
+<a href="#l66" class="line" id="l66">     66</a>             error!(&quot;pthread_mutex_unlock failed&quot;);
+<a href="#l67" class="line" id="l67">     67</a>         }
+<a href="#l68" class="line" id="l68">     68</a>     } else {
+<a href="#l69" class="line" id="l69">     69</a>         warn!(&quot;No mutex found for database: {}&quot;, database_filename);
+<a href="#l70" class="line" id="l70">     70</a>         call_runnable();
+<a href="#l71" class="line" id="l71">     71</a>     }
+<a href="#l72" class="line" id="l72">     72</a> }
+<a href="#l73" class="line" id="l73">     73</a> 
+<a href="#l74" class="line" id="l74">     74</a> 
+<a href="#l75" class="line" id="l75">     75</a> pub fn init() {
+<a href="#l76" class="line" id="l76">     76</a>     if let Some(signature) = sig::find_signature(
+<a href="#l77" class="line" id="l77">     77</a>         &amp;common::CLIENT_MODULE, 
+<a href="#l78" class="line" id="l78">     78</a>         &quot;FF FF 00 A9 3F 00 00 F9&quot;, -0x3C,
+<a href="#l79" class="line" id="l79">     79</a>         &quot;9A 46 90 46 78 44 89 46 05 68&quot;,-0xd
+<a href="#l80" class="line" id="l80">     80</a>     ) {
+<a href="#l81" class="line" id="l81">     81</a>         debug!(&quot;Found sqlite3_open signature: {:#x}&quot;, signature);
+<a href="#l82" class="line" id="l82">     82</a>         dobby_hook!(signature as *mut c_void, sqlite3_open);
+<a href="#l83" class="line" id="l83">     83</a>     } else {
+<a href="#l84" class="line" id="l84">     84</a>         warn!(&quot;Failed to find sqlite3_open signature&quot;);
+<a href="#l85" class="line" id="l85">     85</a>     }
+<a href="#l86" class="line" id="l86">     86</a> }</pre>
+</div>
+</body>
+</html>

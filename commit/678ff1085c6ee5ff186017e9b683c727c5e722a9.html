@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: unlimited conversation pinning - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/678ff1085c6ee5ff186017e9b683c727c5e722a9.html">678ff1085c6ee5ff186017e9b683c727c5e722a9</a>
+<b>parent</b> <a href="../commit/c6c1df45472116de94bc8417b151e7dd3270ae06.html">c6c1df45472116de94bc8417b151e7dd3270ae06</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 11 Jun 2023 21:28:41 +0200
+
+feat: unlimited conversation pinning
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/file/BridgeFileType.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/data/SnapClassCache.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">+++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h4">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/PinConversations.kt</a></td><td> | </td><td class="num">40</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+</table></pre><pre>6 files changed, 55 insertions(+), 2 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/assets/lang/en_US.json.html">app/src/main/assets/lang/en_US.json</a> b/<a href="../file/app/src/main/assets/lang/en_US.json.html">app/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -72,7 +72,8 @@
+</a>         &quot;amoled_dark_mode&quot;: &quot;AMOLED Dark Mode&quot;,
+         &quot;enable_friend_feed_menu_bar&quot;: &quot;Enable New Friend Feed Menu Bar&quot;,
+         &quot;friend_feed_menu_buttons&quot;: &quot;Friend Feed Menu Buttons&quot;,
+<a href="#h0-0-3" id="h0-0-3" class="d">-        &quot;friend_feed_menu_buttons_position&quot;: &quot;Friend Feed Buttons Position Index&quot;
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        &quot;friend_feed_menu_buttons_position&quot;: &quot;Friend Feed Buttons Position Index&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+        &quot;unlimited_conversation_pinning&quot;: &quot;Unlimited Conversation Pinning&quot;
+</a>     },
+ 
+     &quot;option&quot;: {
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/file/BridgeFileType.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/file/BridgeFileType.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/file/BridgeFileType.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/bridge/common/impl/file/BridgeFileType.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -8,7 +8,8 @@ enum class BridgeFileType(val value: Int, val fileName: String, val isDatabase: 
+</a>     STEALTH(3, &quot;stealth.txt&quot;),
+     ANTI_AUTO_DOWNLOAD(4, &quot;anti_auto_download.txt&quot;),
+     ANTI_AUTO_SAVE(5, &quot;anti_auto_save.txt&quot;),
+<a href="#h1-0-3" id="h1-0-3" class="d">-    AUTO_UPDATER_TIMESTAMP(6, &quot;auto_updater_timestamp.txt&quot;);
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    AUTO_UPDATER_TIMESTAMP(6, &quot;auto_updater_timestamp.txt&quot;),
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+    PINNED_CONVERSATIONS(7, &quot;pinned_conversations.txt&quot;);
+</a> 
+     companion object {
+         fun fromValue(value: Int): BridgeFileType? {
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/config/ConfigProperty.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -265,6 +265,12 @@ enum class ConfigProperty(
+</a>         ConfigCategory.UI_TWEAKS,
+         ConfigIntegerValue(20)
+     ),
+<a href="#h2-0-3" id="h2-0-3" class="i">+    UNLIMITED_CONVERSATION_PINNING(
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+        &quot;property.unlimited_conversation_pinning&quot;,
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+        &quot;description.unlimited_conversation_pinning&quot;,
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+        ConfigCategory.UI_TWEAKS,
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+        ConfigStateValue(false)
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+    ),
+</a>     DISABLE_SPOTLIGHT(
+         &quot;property.disable_spotlight&quot;,
+         &quot;description.disable_spotlight&quot;,
+<b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/data/SnapClassCache.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/data/SnapClassCache.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/data/SnapClassCache.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/data/SnapClassCache.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -14,6 +14,9 @@ class SnapClassCache (
+</a>     val networkApi by lazy { findClass(&quot;com.snapchat.client.network_api.NetworkApi\$CppProxy&quot;) }
+     val messageDestinations by lazy { findClass(&quot;com.snapchat.client.messaging.MessageDestinations&quot;) }
+     val localMessageContent by lazy { findClass(&quot;com.snapchat.client.messaging.LocalMessageContent&quot;) }
+<a href="#h3-0-3" id="h3-0-3" class="i">+    val feedEntry by lazy { findClass(&quot;com.snapchat.client.messaging.FeedEntry&quot;) }
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+    val conversation by lazy { findClass(&quot;com.snapchat.client.messaging.Conversation&quot;) }
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+    val feedManager by lazy { findClass(&quot;com.snapchat.client.messaging.FeedManager\$CppProxy&quot;) }
+</a> 
+     private fun findClass(className: String): Class&lt;*&gt; {
+         return try {
+<b>diff --git a/<a id="h4" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/PinConversations.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/PinConversations.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/PinConversations.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/PinConversations.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -0,0 +1,39 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="i">+package me.rhunk.snapenhance.features.impl.ui
+</a><a href="#h4-0-1" id="h4-0-1" class="i">+
+</a><a href="#h4-0-2" id="h4-0-2" class="i">+import me.rhunk.snapenhance.bridge.common.impl.file.BridgeFileType
+</a><a href="#h4-0-3" id="h4-0-3" class="i">+import me.rhunk.snapenhance.data.wrapper.impl.SnapUUID
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+import me.rhunk.snapenhance.features.BridgeFileFeature
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+import me.rhunk.snapenhance.features.FeatureLoadParams
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+import me.rhunk.snapenhance.hook.HookStage
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+import me.rhunk.snapenhance.hook.hook
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+import me.rhunk.snapenhance.hook.hookConstructor
+</a><a href="#h4-0-9" id="h4-0-9" class="i">+import me.rhunk.snapenhance.util.getObjectField
+</a><a href="#h4-0-10" id="h4-0-10" class="i">+import me.rhunk.snapenhance.util.setObjectField
+</a><a href="#h4-0-11" id="h4-0-11" class="i">+
+</a><a href="#h4-0-12" id="h4-0-12" class="i">+class PinConversations : BridgeFileFeature(&quot;PinConversations&quot;, BridgeFileType.PINNED_CONVERSATIONS, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+</a><a href="#h4-0-13" id="h4-0-13" class="i">+    override fun onActivityCreate() {
+</a><a href="#h4-0-14" id="h4-0-14" class="i">+        context.classCache.feedManager.hook(&quot;setPinnedConversationStatus&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h4-0-15" id="h4-0-15" class="i">+            val conversationUUID = SnapUUID(param.arg(0))
+</a><a href="#h4-0-16" id="h4-0-16" class="i">+            val isPinned = param.arg&lt;Any&gt;(1).toString() == &quot;PINNED&quot;
+</a><a href="#h4-0-17" id="h4-0-17" class="i">+
+</a><a href="#h4-0-18" id="h4-0-18" class="i">+            setState(conversationUUID.toString(), isPinned)
+</a><a href="#h4-0-19" id="h4-0-19" class="i">+        }
+</a><a href="#h4-0-20" id="h4-0-20" class="i">+
+</a><a href="#h4-0-21" id="h4-0-21" class="i">+        context.classCache.conversation.hookConstructor(HookStage.AFTER) { param -&gt;
+</a><a href="#h4-0-22" id="h4-0-22" class="i">+            val instance = param.thisObject&lt;Any&gt;()
+</a><a href="#h4-0-23" id="h4-0-23" class="i">+            val conversationUUID = SnapUUID(instance.getObjectField(&quot;mConversationId&quot;))
+</a><a href="#h4-0-24" id="h4-0-24" class="i">+            if (exists(conversationUUID.toString())) {
+</a><a href="#h4-0-25" id="h4-0-25" class="i">+                instance.setObjectField(&quot;mPinnedTimestampMs&quot;, 1L)
+</a><a href="#h4-0-26" id="h4-0-26" class="i">+            }
+</a><a href="#h4-0-27" id="h4-0-27" class="i">+        }
+</a><a href="#h4-0-28" id="h4-0-28" class="i">+
+</a><a href="#h4-0-29" id="h4-0-29" class="i">+        context.classCache.feedEntry.hookConstructor(HookStage.AFTER) { param -&gt;
+</a><a href="#h4-0-30" id="h4-0-30" class="i">+            val instance = param.thisObject&lt;Any&gt;()
+</a><a href="#h4-0-31" id="h4-0-31" class="i">+            val conversationUUID = SnapUUID(instance.getObjectField(&quot;mConversationId&quot;))
+</a><a href="#h4-0-32" id="h4-0-32" class="i">+            val isPinned = exists(conversationUUID.toString())
+</a><a href="#h4-0-33" id="h4-0-33" class="i">+            if (isPinned) {
+</a><a href="#h4-0-34" id="h4-0-34" class="i">+                instance.setObjectField(&quot;mPinnedTimestampMs&quot;, 1L)
+</a><a href="#h4-0-35" id="h4-0-35" class="i">+            }
+</a><a href="#h4-0-36" id="h4-0-36" class="i">+        }
+</a><a href="#h4-0-37" id="h4-0-37" class="i">+    }
+</a><a href="#h4-0-38" id="h4-0-38" class="i">+}</a><a href="#h4-0-39" id="h4-0-39" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h5" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -29,6 +29,7 @@ import me.rhunk.snapenhance.features.impl.spying.MessageLogger
+</a> import me.rhunk.snapenhance.features.impl.spying.PreventReadReceipts
+ import me.rhunk.snapenhance.features.impl.spying.StealthMode
+ import me.rhunk.snapenhance.features.impl.tweaks.CameraTweaks
+<a href="#h5-0-3" id="h5-0-3" class="i">+import me.rhunk.snapenhance.features.impl.ui.PinConversations
+</a> import me.rhunk.snapenhance.features.impl.ui.UITweaks
+ import me.rhunk.snapenhance.features.impl.ui.menus.MenuViewInjector
+ import me.rhunk.snapenhance.manager.Manager
+<a href="#h5-1" id="h5-1" class="h">@@ -83,6 +84,7 @@ class FeatureManager(private val context: ModContext) : Manager {
+</a>         register(CameraTweaks::class)
+         register(InfiniteStoryBoost::class)
+         register(AmoledDarkMode::class)
+<a href="#h5-1-3" id="h5-1-3" class="i">+        register(PinConversations::class)
+</a> 
+         initializeFeatures()
+     }
+</pre>
+</div>
+</body>
+</html>

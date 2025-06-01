@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix: export chat messages crash - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/3c13f14c07e3a95d2aef66d954c69e733b260cfd.html">3c13f14c07e3a95d2aef66d954c69e733b260cfd</a>
+<b>parent</b> <a href="../commit/13d6ae75542e0e29c41e8ba0c35d913f5ecde95c.html">13d6ae75542e0e29c41e8ba0c35d913f5ecde95c</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 11 Oct 2023 16:09:32 +0200
+
+fix: export chat messages crash
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt</a></td><td> | </td><td class="num">18</td><td><span class="i">+++++++++</span><span class="d">---------</span></td></tr>
+</table></pre><pre>1 file changed, 9 insertions(+), 9 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -188,7 +188,7 @@ class ExportChatMessages : AbstractAction() {
+</a>         }
+     }
+ 
+<a href="#h0-0-3" id="h0-0-3" class="d">-    private suspend fun fetchMessagesPaginated(conversationId: String, lastMessageId: Long) = suspendCancellableCoroutine { continuation -&gt;
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+    private suspend fun fetchMessagesPaginated(conversationId: String, lastMessageId: Long, amount: Int) = suspendCancellableCoroutine { continuation -&gt;
+</a>         val callback = CallbackBuilder(fetchConversationWithMessagesCallbackClass)
+             .override(&quot;onFetchConversationWithMessagesComplete&quot;) { param -&gt;
+                 val messagesList = param.arg&lt;List&lt;*&gt;&gt;(1).map { Message(it) }
+<a href="#h0-1" id="h0-1" class="h">@@ -203,7 +203,7 @@ class ExportChatMessages : AbstractAction() {
+</a>             conversationManagerInstance,
+             SnapUUID.fromString(conversationId).instanceNonNull(),
+             lastMessageId,
+<a href="#h0-1-3" id="h0-1-3" class="d">-            500,
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+            amount,
+</a>             callback
+         )
+     }
+<a href="#h0-2" id="h0-2" class="h">@@ -219,23 +219,23 @@ class ExportChatMessages : AbstractAction() {
+</a> 
+         logDialog(context.translation.format(&quot;chat_export.exporting_message&quot;, &quot;conversation&quot; to conversationName))
+ 
+<a href="#h0-2-3" id="h0-2-3" class="d">-        val foundMessages = fetchMessagesPaginated(conversationId, Long.MAX_VALUE).toMutableList()
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+        val foundMessages = fetchMessagesPaginated(conversationId, Long.MAX_VALUE, amount = 1).toMutableList()
+</a>         var lastMessageId = foundMessages.firstOrNull()?.messageDescriptor?.messageId ?: run {
+             logDialog(context.translation[&quot;chat_export.no_messages_found&quot;])
+             return
+         }
+ 
+         while (true) {
+<a href="#h0-2-11" id="h0-2-11" class="d">-            val messages = fetchMessagesPaginated(conversationId, lastMessageId)
+</a><a href="#h0-2-12" id="h0-2-12" class="d">-            if (messages.isEmpty()) break
+</a><a href="#h0-2-13" id="h0-2-13" class="i">+            val fetchedMessages = fetchMessagesPaginated(conversationId, lastMessageId, amount = 500)
+</a><a href="#h0-2-14" id="h0-2-14" class="i">+            if (fetchedMessages.isEmpty()) break
+</a> 
+<a href="#h0-2-16" id="h0-2-16" class="d">-            if (amountOfMessages != null &amp;&amp; messages.size + foundMessages.size &gt;= amountOfMessages!!) {
+</a><a href="#h0-2-17" id="h0-2-17" class="d">-                foundMessages.addAll(messages.take(amountOfMessages!! - foundMessages.size))
+</a><a href="#h0-2-18" id="h0-2-18" class="i">+            foundMessages.addAll(fetchedMessages)
+</a><a href="#h0-2-19" id="h0-2-19" class="i">+            if (amountOfMessages != null &amp;&amp; foundMessages.size &gt;= amountOfMessages!!) {
+</a><a href="#h0-2-20" id="h0-2-20" class="i">+                foundMessages.subList(amountOfMessages!!, foundMessages.size).clear()
+</a>                 break
+             }
+ 
+<a href="#h0-2-24" id="h0-2-24" class="d">-            foundMessages.addAll(messages)
+</a><a href="#h0-2-25" id="h0-2-25" class="d">-            messages.firstOrNull()?.let {
+</a><a href="#h0-2-26" id="h0-2-26" class="i">+            fetchedMessages.firstOrNull()?.let {
+</a>                 lastMessageId = it.messageDescriptor.messageId
+             }
+             setStatus(&quot;Exporting (${foundMessages.size} / ${foundMessages.firstOrNull()?.orderKey})&quot;)
+</pre>
+</div>
+</body>
+</html>

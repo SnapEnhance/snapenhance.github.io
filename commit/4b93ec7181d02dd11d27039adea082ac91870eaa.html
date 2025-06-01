@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(core): enhanced transcript in notifications - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/4b93ec7181d02dd11d27039adea082ac91870eaa.html">4b93ec7181d02dd11d27039adea082ac91870eaa</a>
+<b>parent</b> <a href="../commit/95eb350066c6087eb77c860e78e6505df7fafab2.html">95eb350066c6087eb77c860e78e6505df7fafab2</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu, 27 Jun 2024 15:41:08 +0200
+
+feat(core): enhanced transcript in notifications
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/util/snap/RemoteMediaResolver.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/decoder/MessageDecoder.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterTranscript.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt</a></td><td> | </td><td class="num">51</td><td><span class="i">++++++++++++++++++++++++++++++++++++++</span><span class="d">-------------</span></td></tr>
+</table></pre><pre>6 files changed, 49 insertions(+), 18 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1074,6 +1074,10 @@
+</a>                             &quot;enhanced_transcript&quot;: {
+                                 &quot;name&quot;: &quot;Enhanced Transcript&quot;,
+                                 &quot;description&quot;: &quot;Improves the voice note transcript using DeepL.\nBefore using this feature, please ensure that you have read their privacy policy.&quot;
+<a href="#h0-0-3" id="h0-0-3" class="i">+                            },
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                            &quot;enhanced_transcript_in_notifications&quot;: {
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+                                &quot;name&quot;: &quot;Enhanced Transcript in Notifications&quot;,
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                                &quot;description&quot;: &quot;Transcribes voice notes in notifications using DeepL. This requires the Chat Preview feature to be enabled in Better Notifications&quot;
+</a>                             }
+                         }
+                     },
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -21,6 +21,7 @@ class Experimental : ConfigContainer() {
+</a>         val forceTranscription = boolean(&quot;force_transcription&quot;) { requireRestart() }
+         val preferredTranscriptionLang = string(&quot;preferred_transcription_lang&quot;) { requireRestart() }
+         val enhancedTranscript = boolean(&quot;enhanced_transcript&quot;) { requireRestart(); addNotices(FeatureNotice.UNSTABLE) }
+<a href="#h1-0-3" id="h1-0-3" class="i">+        val enhancedTranscriptInNotifications = boolean(&quot;enhanced_transcript_in_notifications&quot;) { requireRestart(); addNotices(FeatureNotice.UNSTABLE) }
+</a>     }
+ 
+     class ComposerHooksConfig: ConfigContainer(hasGlobalState = true) {
+<b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/snap/RemoteMediaResolver.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/snap/RemoteMediaResolver.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/snap/RemoteMediaResolver.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/snap/RemoteMediaResolver.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -14,7 +14,7 @@ object RemoteMediaResolver {
+</a> 
+     private val urlCache = mutableMapOf&lt;String, String&gt;()
+ 
+<a href="#h2-0-3" id="h2-0-3" class="d">-    private val okHttpClient = OkHttpClient.Builder()
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+    val okHttpClient = OkHttpClient.Builder()
+</a>         .followRedirects(true)
+         .retryOnConnectionFailure(true)
+         .readTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+<a href="#h2-1" id="h2-1" class="h">@@ -36,7 +36,7 @@ object RemoteMediaResolver {
+</a>         }
+         .build()
+ 
+<a href="#h2-1-3" id="h2-1-3" class="d">-    private fun newResolveRequest(protoKey: ByteArray) = Request.Builder()
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+    fun newResolveRequest(protoKey: ByteArray) = Request.Builder()
+</a>         .url(BOLT_HTTP_RESOLVER_URL + &quot;/resolve?co=&quot; + Base64.getUrlEncoder().encodeToString(protoKey))
+         .addHeader(&quot;User-Agent&quot;, Constants.USER_AGENT)
+         .build()
+<a href="#h2-2" id="h2-2" class="h">@@ -54,7 +54,7 @@ object RemoteMediaResolver {
+</a>         }
+     }
+     
+<a href="#h2-2-3" id="h2-2-3" class="d">-    fun downloadBoltMedia(protoKey: ByteArray, decryptionCallback: (InputStream) -&gt; InputStream = { it }, resultCallback: (stream: InputStream, length: Long) -&gt; Unit) {
+</a><a href="#h2-2-4" id="h2-2-4" class="i">+    inline fun downloadBoltMedia(protoKey: ByteArray, decryptionCallback: (InputStream) -&gt; InputStream = { it }, resultCallback: (stream: InputStream, length: Long) -&gt; Unit) {
+</a>         okHttpClient.newCall(newResolveRequest(protoKey)).execute().use { response -&gt;
+             if (!response.isSuccessful) {
+                 throw Throwable(&quot;invalid response ${response.code}&quot;)
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/decoder/MessageDecoder.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/decoder/MessageDecoder.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/decoder/MessageDecoder.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/downloader/decoder/MessageDecoder.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -31,7 +31,7 @@ data class DecodedAttachment(
+</a>     }
+ 
+     @OptIn(ExperimentalEncodingApi::class)
+<a href="#h3-0-3" id="h3-0-3" class="d">-    inline fun openStream(crossinline callback: (mediaStream: InputStream?, length: Long) -&gt; Unit) {
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+    inline fun openStream(callback: (mediaStream: InputStream?, length: Long) -&gt; Unit) {
+</a>         boltKey?.let { mediaUrlKey -&gt;
+             RemoteMediaResolver.downloadBoltMedia(Base64.UrlSafe.decode(mediaUrlKey), decryptionCallback = {
+                 attachmentInfo?.encryption?.decryptInputStream(it) ?: it
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterTranscript.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterTranscript.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterTranscript.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterTranscript.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -16,13 +16,14 @@ import java.lang.reflect.Method
+</a> import java.nio.ByteBuffer
+ 
+ class BetterTranscript: Feature(&quot;Better Transcript&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+<a href="#h4-0-3" id="h4-0-3" class="i">+    val transcriptApi by lazy { TranscriptApi() }
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+
+</a>     override fun onActivityCreate() {
+         if (context.config.experimental.betterTranscript.globalState != true) return
+         val config = context.config.experimental.betterTranscript
+         val preferredTranscriptionLang = config.preferredTranscriptionLang.getNullable()?.takeIf {
+             it.isNotBlank()
+         }
+<a href="#h4-0-11" id="h4-0-11" class="d">-        val transcriptApi by lazy { TranscriptApi() }
+</a> 
+         if (config.forceTranscription.get()) {
+             context.event.subscribe(BuildMessageEvent::class, priority = 104) { event -&gt;
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -26,7 +26,9 @@ import me.rhunk.snapenhance.core.features.Feature
+</a> import me.rhunk.snapenhance.core.features.FeatureLoadParams
+ import me.rhunk.snapenhance.core.features.impl.FriendMutationObserver
+ import me.rhunk.snapenhance.core.features.impl.downloader.MediaDownloader
+<a href="#h5-0-3" id="h5-0-3" class="i">+import me.rhunk.snapenhance.core.features.impl.downloader.decoder.AttachmentType
+</a> import me.rhunk.snapenhance.core.features.impl.downloader.decoder.MessageDecoder
+<a href="#h5-0-5" id="h5-0-5" class="i">+import me.rhunk.snapenhance.core.features.impl.experiments.BetterTranscript
+</a> import me.rhunk.snapenhance.core.features.impl.spying.StealthMode
+ import me.rhunk.snapenhance.core.util.hook.HookStage
+ import me.rhunk.snapenhance.core.util.hook.hook
+<a href="#h5-1" id="h5-1" class="h">@@ -34,6 +36,7 @@ import me.rhunk.snapenhance.core.util.ktx.setObjectField
+</a> import me.rhunk.snapenhance.core.util.media.PreviewUtils
+ import me.rhunk.snapenhance.core.wrapper.impl.Message
+ import me.rhunk.snapenhance.core.wrapper.impl.SnapUUID
+<a href="#h5-1-3" id="h5-1-3" class="i">+import okhttp3.RequestBody.Companion.toRequestBody
+</a> import kotlin.coroutines.suspendCoroutine
+ 
+ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+<a href="#h5-2" id="h5-2" class="h">@@ -384,23 +387,45 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>         }
+ 
+         if (config.chatPreview.get()) {
+<a href="#h5-2-3" id="h5-2-3" class="d">-            if (contentType == ContentType.CHAT) {
+</a><a href="#h5-2-4" id="h5-2-4" class="d">-                setNotificationText(message.serialize() ?: &quot;[Failed to parse message]&quot;)
+</a><a href="#h5-2-5" id="h5-2-5" class="i">+            var isChatMessage = contentType == ContentType.CHAT
+</a><a href="#h5-2-6" id="h5-2-6" class="i">+            var serializedMessage = if (isChatMessage) {
+</a><a href="#h5-2-7" id="h5-2-7" class="i">+                message.serialize() ?: &quot;[Failed to parse message]&quot;
+</a>             } else {
+<a href="#h5-2-9" id="h5-2-9" class="d">-                if (config.stackedMediaMessages.get()) {
+</a><a href="#h5-2-10" id="h5-2-10" class="d">-                    setNotificationText(buildString {
+</a><a href="#h5-2-11" id="h5-2-11" class="d">-                        append(&quot;[&quot;)
+</a><a href="#h5-2-12" id="h5-2-12" class="d">-                        append(context.translation.getCategory(&quot;content_type&quot;)[contentType.name])
+</a><a href="#h5-2-13" id="h5-2-13" class="d">-                        append(&quot;]&quot;)
+</a><a href="#h5-2-14" id="h5-2-14" class="d">-                        if (config.mediaCaption.get()) {
+</a><a href="#h5-2-15" id="h5-2-15" class="d">-                            message.serialize()?.let { append(&quot; $it&quot;) }
+</a><a href="#h5-2-16" id="h5-2-16" class="i">+                &quot;[${context.translation.getCategory(&quot;content_type&quot;)[contentType.name]}]${
+</a><a href="#h5-2-17" id="h5-2-17" class="i">+                    if (config.mediaCaption.get()) {
+</a><a href="#h5-2-18" id="h5-2-18" class="i">+                        message.serialize() ?: &quot;&quot;
+</a><a href="#h5-2-19" id="h5-2-19" class="i">+                    } else &quot;&quot;
+</a><a href="#h5-2-20" id="h5-2-20" class="i">+                }&quot;
+</a><a href="#h5-2-21" id="h5-2-21" class="i">+            }
+</a><a href="#h5-2-22" id="h5-2-22" class="i">+
+</a><a href="#h5-2-23" id="h5-2-23" class="i">+            if (contentType == ContentType.NOTE &amp;&amp; context.config.experimental.betterTranscript.takeIf { it.globalState == true }?.enhancedTranscriptInNotifications?.get() == true) {
+</a><a href="#h5-2-24" id="h5-2-24" class="i">+                val transcriptApi = context.feature(BetterTranscript::class).transcriptApi
+</a><a href="#h5-2-25" id="h5-2-25" class="i">+                MessageDecoder.decode(message.messageContent!!).firstOrNull { it.type == AttachmentType.NOTE  }?.also { media -&gt;
+</a><a href="#h5-2-26" id="h5-2-26" class="i">+                    runCatching {
+</a><a href="#h5-2-27" id="h5-2-27" class="i">+                        media.openStream { mediaStream, length -&gt;
+</a><a href="#h5-2-28" id="h5-2-28" class="i">+                            if (mediaStream == null || length &gt; 25 * 1024 * 1024) {
+</a><a href="#h5-2-29" id="h5-2-29" class="i">+                                context.log.error(&quot;Failed to open media stream or media is too large&quot;)
+</a><a href="#h5-2-30" id="h5-2-30" class="i">+                                return@openStream
+</a><a href="#h5-2-31" id="h5-2-31" class="i">+                            }
+</a><a href="#h5-2-32" id="h5-2-32" class="i">+                            val text = transcriptApi.transcribe(
+</a><a href="#h5-2-33" id="h5-2-33" class="i">+                                mediaStream.readBytes().toRequestBody(),
+</a><a href="#h5-2-34" id="h5-2-34" class="i">+                                lang = context.config.experimental.betterTranscript.preferredTranscriptionLang.getNullable()?.takeIf { it.isNotBlank() }
+</a><a href="#h5-2-35" id="h5-2-35" class="i">+                            )?.takeIf { it.isNotBlank() } ?: return@openStream
+</a><a href="#h5-2-36" id="h5-2-36" class="i">+                            serializedMessage = &quot;\uD83C\uDFA4 $text&quot;
+</a><a href="#h5-2-37" id="h5-2-37" class="i">+                            isChatMessage = true
+</a>                         }
+<a href="#h5-2-39" id="h5-2-39" class="d">-                    })
+</a><a href="#h5-2-40" id="h5-2-40" class="d">-                } else {
+</a><a href="#h5-2-41" id="h5-2-41" class="d">-                    sendNotification(message, data, true)
+</a><a href="#h5-2-42" id="h5-2-42" class="d">-                    return
+</a><a href="#h5-2-43" id="h5-2-43" class="i">+                    }.onFailure {
+</a><a href="#h5-2-44" id="h5-2-44" class="i">+                        context.log.error(&quot;Failed to transcribe message&quot;, it)
+</a><a href="#h5-2-45" id="h5-2-45" class="i">+                    }
+</a>                 }
+             }
+<a href="#h5-2-48" id="h5-2-48" class="i">+
+</a><a href="#h5-2-49" id="h5-2-49" class="i">+            if (isChatMessage || config.stackedMediaMessages.get()) {
+</a><a href="#h5-2-50" id="h5-2-50" class="i">+                setNotificationText(serializedMessage)
+</a><a href="#h5-2-51" id="h5-2-51" class="i">+            } else {
+</a><a href="#h5-2-52" id="h5-2-52" class="i">+                sendNotification(message, data, true)
+</a><a href="#h5-2-53" id="h5-2-53" class="i">+                return
+</a><a href="#h5-2-54" id="h5-2-54" class="i">+            }
+</a>             computeMessages()
+         }
+ 
+</pre>
+</div>
+</body>
+</html>

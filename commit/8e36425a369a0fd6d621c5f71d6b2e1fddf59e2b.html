@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix: hide streak restore - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/8e36425a369a0fd6d621c5f71d6b2e1fddf59e2b.html">8e36425a369a0fd6d621c5f71d6b2e1fddf59e2b</a>
+<b>parent</b> <a href="../commit/93490c323c7f39a0945f3aa1b325c0c76d484292.html">93490c323c7f39a0945f3aa1b325c0c76d484292</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 17 Jan 2024 15:28:51 +0100
+
+fix: hide streak restore
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideStreakRestore.kt</a></td><td> | </td><td class="num">17</td><td><span class="i">++++++++++++</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/util/DataClassBuilder.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">++++++++</span><span class="d">-</span></td></tr>
+</table></pre><pre>2 files changed, 20 insertions(+), 6 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideStreakRestore.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideStreakRestore.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideStreakRestore.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/HideStreakRestore.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -2,16 +2,23 @@ package me.rhunk.snapenhance.core.features.impl.ui
+</a> 
+ import me.rhunk.snapenhance.core.features.Feature
+ import me.rhunk.snapenhance.core.features.FeatureLoadParams
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.core.util.dataBuilder
+</a> import me.rhunk.snapenhance.core.util.hook.HookStage
+ import me.rhunk.snapenhance.core.util.hook.hookConstructor
+<a href="#h0-0-6" id="h0-0-6" class="d">-import me.rhunk.snapenhance.core.util.ktx.setObjectField
+</a> 
+<a href="#h0-0-8" id="h0-0-8" class="d">-class HideStreakRestore : Feature(&quot;HideStreakRestore&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+</a><a href="#h0-0-9" id="h0-0-9" class="d">-    override fun onActivityCreate() {
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+class HideStreakRestore : Feature(&quot;HideStreakRestore&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+    override fun init() {
+</a>         if (!context.config.userInterface.hideStreakRestore.get()) return
+ 
+<a href="#h0-0-14" id="h0-0-14" class="d">-        findClass(&quot;com.snapchat.client.messaging.ExpiredStreakMetadata&quot;).hookConstructor(HookStage.AFTER) { param -&gt;
+</a><a href="#h0-0-15" id="h0-0-15" class="d">-            param.thisObject&lt;Any&gt;().setObjectField(&quot;mIsRestorable&quot;, false)
+</a><a href="#h0-0-16" id="h0-0-16" class="i">+        findClass(&quot;com.snapchat.client.messaging.StreakMetadata&quot;).hookConstructor(HookStage.AFTER) { param -&gt;
+</a><a href="#h0-0-17" id="h0-0-17" class="i">+            param.thisObject&lt;Any&gt;().dataBuilder {
+</a><a href="#h0-0-18" id="h0-0-18" class="i">+                val currentTimeMillis = System.currentTimeMillis()
+</a><a href="#h0-0-19" id="h0-0-19" class="i">+                val expiration = get&lt;Long&gt;(&quot;mExpirationTimestampMs&quot;) ?: return@hookConstructor
+</a><a href="#h0-0-20" id="h0-0-20" class="i">+                set(&quot;mExpiredStreak&quot;, null)
+</a><a href="#h0-0-21" id="h0-0-21" class="i">+                if (expiration &lt; currentTimeMillis) {
+</a><a href="#h0-0-22" id="h0-0-22" class="i">+                    set(&quot;mExpirationTimestampMs&quot;, currentTimeMillis + 60000L)
+</a><a href="#h0-0-23" id="h0-0-23" class="i">+                }
+</a><a href="#h0-0-24" id="h0-0-24" class="i">+            }
+</a>         }
+     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/DataClassBuilder.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/DataClassBuilder.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/DataClassBuilder.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/DataClassBuilder.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,7 +1,7 @@
+</a> package me.rhunk.snapenhance.core.util
+ 
+ 
+<a href="#h1-0-3" id="h1-0-3" class="d">-fun Any?.dataBuilder(dataClassBuilder: DataClassBuilder.() -&gt; Unit): Any? {
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+inline fun Any?.dataBuilder(dataClassBuilder: DataClassBuilder.() -&gt; Unit): Any? {
+</a>     return DataClassBuilder(
+         when (this) {
+             is Class&lt;*&gt; -&gt; CallbackBuilder.createEmptyObject(
+<a href="#h1-1" id="h1-1" class="h">@@ -44,6 +44,13 @@ class DataClassBuilder(
+</a> 
+     fun set(vararg fields: Pair&lt;String, Any?&gt;) = fields.forEach { set(it.first, it.second) }
+ 
+<a href="#h1-1-3" id="h1-1-3" class="i">+    @Suppress(&quot;UNCHECKED_CAST&quot;)
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+    fun &lt;T&gt; get(fieldName: String): T? {
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+        val field = instance::class.java.declaredFields.firstOrNull { it.name == fieldName } ?: return null
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+        field.isAccessible = true
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+        return field.get(instance) as? T
+</a><a href="#h1-1-8" id="h1-1-8" class="i">+    }
+</a><a href="#h1-1-9" id="h1-1-9" class="i">+
+</a>     fun from(fieldName: String, new: Boolean = false, callback: DataClassBuilder.() -&gt; Unit) {
+         val field = instance::class.java.declaredFields.firstOrNull { it.name == fieldName } ?: return
+         field.isAccessible = true
+</pre>
+</div>
+</body>
+</html>

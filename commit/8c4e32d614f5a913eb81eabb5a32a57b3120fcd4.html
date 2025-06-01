@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(native): pre init - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/8c4e32d614f5a913eb81eabb5a32a57b3120fcd4.html">8c4e32d614f5a913eb81eabb5a32a57b3120fcd4</a>
+<b>parent</b> <a href="../commit/d3f9d03dcfd8631d79903abe46b1dc93c46e79b6.html">d3f9d03dcfd8631d79903abe46b1dc93c46e79b6</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 28 Jul 2024 19:39:57 +0200
+
+feat(native): pre init
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">native/rust/src/lib.rs</a></td><td> | </td><td class="num">14</td><td><span class="i">+++++++++</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+</table></pre><pre>2 files changed, 11 insertions(+), 5 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/native/rust/src/lib.rs.html">native/rust/src/lib.rs</a> b/<a href="../file/native/rust/src/lib.rs.html">native/rust/src/lib.rs</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -24,7 +24,10 @@ use std::ffi::c_void;
+</a> use std::thread::JoinHandle;
+ 
+ fn pre_init() {
+<a href="#h0-0-3" id="h0-0-3" class="i">+    debug!(&quot;Pre init&quot;);
+</a>     linker_hook::init();
+<a href="#h0-0-5" id="h0-0-5" class="i">+    custom_font_hook::init();
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+    fstat_hook::init();
+</a> }
+ 
+ fn init(mut env: JNIEnv, _class: JObject, signature_cache: JString) -&gt; jstring {
+<a href="#h0-1" id="h0-1" class="h">@@ -66,9 +69,7 @@ fn init(mut env: JNIEnv, _class: JObject, signature_cache: JString) -&gt; jstring {
+</a>         duplex_hook::init(),
+         unary_call_hook::init(),
+         composer_hook::init(),
+<a href="#h0-1-3" id="h0-1-3" class="d">-        fstat_hook::init(),
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-        sqlite_hook::init(),
+</a><a href="#h0-1-5" id="h0-1-5" class="d">-        custom_font_hook::init()
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+        sqlite_hook::init()
+</a>     );
+     
+     threads.into_iter().for_each(|t| t.join().unwrap());
+<a href="#h0-2" id="h0-2" class="h">@@ -109,6 +110,11 @@ pub extern &quot;system&quot; fn JNI_OnLoad(_vm: JavaVM, _: *mut c_void) -&gt; jint {
+</a>         native_lib_class,
+         &amp;[
+             NativeMethod {
+<a href="#h0-2-3" id="h0-2-3" class="i">+                name: &quot;preInit&quot;.into(),
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+                sig: &quot;()V&quot;.into(),
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+                fn_ptr: pre_init as *mut c_void,
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+            },
+</a><a href="#h0-2-7" id="h0-2-7" class="i">+            NativeMethod {
+</a>                 name: &quot;init&quot;.into(),
+                 sig: &quot;(Ljava/lang/String;)Ljava/lang/String;&quot;.into(),
+                 fn_ptr: init as *mut c_void,
+<a href="#h0-3" id="h0-3" class="h">@@ -141,7 +147,5 @@ pub extern &quot;system&quot; fn JNI_OnLoad(_vm: JavaVM, _: *mut c_void) -&gt; jint {
+</a>         ]
+     ).expect(&quot;Failed to register native methods&quot;);
+ 
+<a href="#h0-3-3" id="h0-3-3" class="d">-    pre_init();
+</a><a href="#h0-3-4" id="h0-3-4" class="d">-
+</a>     JNI_VERSION_1_6
+ }
+<b>diff --git a/<a id="h1" href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a> b/<a href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -20,6 +20,7 @@ class NativeLib {
+</a>             System.loadLibrary(BuildConfig.NATIVE_NAME)
+             initialized = true
+             callback(this)
+<a href="#h1-0-3" id="h1-0-3" class="i">+            preInit()
+</a>             return@runCatching {
+                 signatureCache = init(signatureCache) ?: throw IllegalStateException(&quot;NativeLib init failed. Check logcat for more info&quot;)
+             }
+<a href="#h1-1" id="h1-1" class="h">@@ -65,6 +66,7 @@ class NativeLib {
+</a>         System.load(generatedPath)
+     }
+ 
+<a href="#h1-1-3" id="h1-1-3" class="i">+    private external fun preInit()
+</a>     private external fun init(signatureCache: String?): String?
+     private external fun loadConfig(config: NativeConfig)
+     private external fun lockDatabase(name: String, callback: Runnable)
+</pre>
+</div>
+</body>
+</html>

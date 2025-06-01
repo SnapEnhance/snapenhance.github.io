@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(e2ee): bind view foreground - fix MessagingRuleType npe - fix ProtoReader exception - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/476de8dc38b04fef5435d5e4c1559e52a26c0793.html">476de8dc38b04fef5435d5e4c1559e52a26c0793</a>
+<b>parent</b> <a href="../commit/2749b734e4343269752590a41c32cc62870ccc1d.html">2749b734e4343269752590a41c32cc62870ccc1d</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 30 Sep 2023 01:32:20 +0200
+
+fix(e2ee): bind view foreground
+- fix MessagingRuleType npe
+- fix ProtoReader exception
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">18</td><td><span class="i">++++++++++++</span><span class="d">------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/E2EEConfig.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">+++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Experimental.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">+</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventDispatcher.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">+++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/core/event/events/AbstractHookEvent.kt</a></td><td> | </td><td class="num">1</td><td><span class="i"></span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/MessagingCoreObjects.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoReader.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/EndToEndEncryption.kt</a></td><td> | </td><td class="num">64</td><td><span class="i">+++++++++++++++++++++++++++++++++</span><span class="d">-------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt</a></td><td> | </td><td class="num">21</td><td><span class="i">+++++++++++++++</span><span class="d">------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h11">core/src/main/kotlin/me/rhunk/snapenhance/ui/ViewAppearanceHelper.kt</a></td><td> | </td><td class="num">36</td><td><span class="i">++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>12 files changed, 115 insertions(+), 53 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -159,7 +159,7 @@ class ModDatabase(
+</a>             val rules = mutableListOf&lt;MessagingRuleType&gt;()
+             while (cursor.moveToNext()) {
+                 runCatching {
+<a href="#h0-0-3" id="h0-0-3" class="d">-                    rules.add(MessagingRuleType.getByName(cursor.getStringOrNull(&quot;type&quot;)!!))
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                    rules.add(MessagingRuleType.getByName(cursor.getStringOrNull(&quot;type&quot;)!!) ?: return@runCatching)
+</a>                 }.onFailure {
+                     context.log.error(&quot;Failed to parse rule&quot;, it)
+                 }
+<b>diff --git a/<a id="h1" href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a> b/<a href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -520,13 +520,19 @@
+</a>                         &quot;name&quot;: &quot;No Friend Score Delay&quot;,
+                         &quot;description&quot;: &quot;Removes the delay when viewing a Friends Score&quot;
+                     },
+<a href="#h1-0-3" id="h1-0-3" class="d">-                    &quot;e2e_encryption&quot;: {
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+                    &quot;e2ee&quot;: {
+</a>                         &quot;name&quot;: &quot;End-To-End Encryption&quot;,
+<a href="#h1-0-6" id="h1-0-6" class="d">-                        &quot;description&quot;: &quot;Encrypts your messages with AES using a shared secret key\nMake sure to save your key somewhere safe!&quot;
+</a><a href="#h1-0-7" id="h1-0-7" class="d">-                    },
+</a><a href="#h1-0-8" id="h1-0-8" class="d">-                    &quot;encrypted_message_indicator&quot;: {
+</a><a href="#h1-0-9" id="h1-0-9" class="d">-                        &quot;name&quot;: &quot;Encrypted Message Indicator&quot;,
+</a><a href="#h1-0-10" id="h1-0-10" class="d">-                        &quot;description&quot;: &quot;Adds a \uD83D\uDD12 emoji next to encrypted messages&quot;
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+                        &quot;description&quot;: &quot;Encrypts your messages with AES using a shared secret key\nMake sure to save your key somewhere safe!&quot;,
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+                        &quot;properties&quot;: {
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+                            &quot;encrypted_message_indicator&quot;: {
+</a><a href="#h1-0-14" id="h1-0-14" class="i">+                                &quot;name&quot;: &quot;Encrypted Message Indicator&quot;,
+</a><a href="#h1-0-15" id="h1-0-15" class="i">+                                &quot;description&quot;: &quot;Adds a \uD83D\uDD12 emoji next to encrypted messages&quot;
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+                            },
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+                            &quot;force_message_encryption&quot;: {
+</a><a href="#h1-0-18" id="h1-0-18" class="i">+                                &quot;name&quot;: &quot;Force Message Encryption&quot;,
+</a><a href="#h1-0-19" id="h1-0-19" class="i">+                                &quot;description&quot;: &quot;Prevents sending encrypted messages to people who don&#39;t have E2E Encryption enabled only when multiple conversations are selected&quot;
+</a><a href="#h1-0-20" id="h1-0-20" class="i">+                            }
+</a><a href="#h1-0-21" id="h1-0-21" class="i">+                        }
+</a>                     },
+                     &quot;add_friend_source_spoof&quot;: {
+                         &quot;name&quot;: &quot;Add Friend Source Spoof&quot;,
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/bridge/BridgeClient.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -134,7 +134,7 @@ class BridgeClient(
+</a>     fun passGroupsAndFriends(groups: List&lt;String&gt;, friends: List&lt;String&gt;) = service.passGroupsAndFriends(groups, friends)
+ 
+     fun getRules(targetUuid: String): List&lt;MessagingRuleType&gt; {
+<a href="#h2-0-3" id="h2-0-3" class="d">-        return service.getRules(targetUuid).map { MessagingRuleType.getByName(it) }
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+        return service.getRules(targetUuid).mapNotNull { MessagingRuleType.getByName(it) }
+</a>     }
+ 
+     fun getRuleIds(ruleType: MessagingRuleType): List&lt;String&gt; {
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/E2EEConfig.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/E2EEConfig.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/E2EEConfig.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/E2EEConfig.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -0,0 +1,8 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="i">+package me.rhunk.snapenhance.core.config.impl
+</a><a href="#h3-0-1" id="h3-0-1" class="i">+
+</a><a href="#h3-0-2" id="h3-0-2" class="i">+import me.rhunk.snapenhance.core.config.ConfigContainer
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+class E2EEConfig : ConfigContainer(hasGlobalState = true) {
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+    val encryptedMessageIndicator = boolean(&quot;encrypted_message_indicator&quot;)
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+    val forceMessageEncryption = boolean(&quot;force_message_encryption&quot;)
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+}</a><a href="#h3-0-8" id="h3-0-8" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Experimental.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Experimental.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Experimental.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/config/impl/Experimental.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -12,8 +12,7 @@ class Experimental : ConfigContainer() {
+</a>     val meoPasscodeBypass = boolean(&quot;meo_passcode_bypass&quot;)
+     val unlimitedMultiSnap = boolean(&quot;unlimited_multi_snap&quot;) { addNotices(FeatureNotice.BAN_RISK)}
+     val noFriendScoreDelay = boolean(&quot;no_friend_score_delay&quot;)
+<a href="#h4-0-3" id="h4-0-3" class="d">-    val useE2EEncryption = boolean(&quot;e2e_encryption&quot;)
+</a><a href="#h4-0-4" id="h4-0-4" class="d">-    val encryptedMessageIndicator = boolean(&quot;encrypted_message_indicator&quot;) { addNotices(FeatureNotice.UNSTABLE) }
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+    val e2eEncryption = container(&quot;e2ee&quot;, E2EEConfig())
+</a>     val hiddenSnapchatPlusFeatures = boolean(&quot;hidden_snapchat_plus_features&quot;) { addNotices(FeatureNotice.BAN_RISK, FeatureNotice.UNSTABLE) }
+     val addFriendSourceSpoof = unique(&quot;add_friend_source_spoof&quot;,
+         &quot;added_by_username&quot;,
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventDispatcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventDispatcher.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventDispatcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/EventDispatcher.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -76,7 +76,9 @@ class EventDispatcher(
+</a>                     interactionType = interactionType,
+                     conversationId = conversationId,
+                     messageId = messageId
+<a href="#h5-0-3" id="h5-0-3" class="d">-                )
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+                ).apply {
+</a><a href="#h5-0-5" id="h5-0-5" class="i">+                    adapter = param
+</a><a href="#h5-0-6" id="h5-0-6" class="i">+                }
+</a>             ) {
+                 postHookEvent()
+             }
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/events/AbstractHookEvent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/events/AbstractHookEvent.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/event/events/AbstractHookEvent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/event/events/AbstractHookEvent.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -23,7 +23,6 @@ abstract class AbstractHookEvent : Event() {
+</a>     }
+ 
+     fun invokeOriginal() {
+<a href="#h6-0-3" id="h6-0-3" class="d">-        canceled = true
+</a>         invokeLater()
+         adapter.invokeOriginal()
+     }
+<b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/MessagingCoreObjects.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/MessagingCoreObjects.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/MessagingCoreObjects.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/MessagingCoreObjects.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -43,7 +43,7 @@ enum class MessagingRuleType(
+</a>     }
+ 
+     companion object {
+<a href="#h7-0-3" id="h7-0-3" class="d">-        fun getByName(name: String) = values().first { it.key == name }
+</a><a href="#h7-0-4" id="h7-0-4" class="i">+        fun getByName(name: String) = values().firstOrNull { it.key == name }
+</a>     }
+ }
+ 
+<b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoReader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoReader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoReader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/protobuf/ProtoReader.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -32,10 +32,10 @@ class ProtoReader(private val buffer: ByteArray) {
+</a> 
+     private fun read() {
+         while (offset &lt; buffer.size) {
+<a href="#h8-0-3" id="h8-0-3" class="d">-            val tag = readVarInt().toInt()
+</a><a href="#h8-0-4" id="h8-0-4" class="d">-            val id = tag ushr 3
+</a><a href="#h8-0-5" id="h8-0-5" class="d">-            val type = WireType.fromValue(tag and 0x7) ?: break
+</a>             try {
+<a href="#h8-0-7" id="h8-0-7" class="i">+                val tag = readVarInt().toInt()
+</a><a href="#h8-0-8" id="h8-0-8" class="i">+                val id = tag ushr 3
+</a><a href="#h8-0-9" id="h8-0-9" class="i">+                val type = WireType.fromValue(tag and 0x7) ?: break
+</a>                 val value = when (type) {
+                     WireType.VARINT -&gt; readVarInt()
+                     WireType.FIXED64 -&gt; {
+<b>diff --git a/<a id="h9" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/EndToEndEncryption.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/EndToEndEncryption.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/EndToEndEncryption.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/experiments/EndToEndEncryption.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -1,13 +1,16 @@
+</a> package me.rhunk.snapenhance.features.impl.experiments
+ 
+ import android.annotation.SuppressLint
+<a href="#h9-0-3" id="h9-0-3" class="i">+import android.graphics.Canvas
+</a><a href="#h9-0-4" id="h9-0-4" class="i">+import android.graphics.Paint
+</a><a href="#h9-0-5" id="h9-0-5" class="i">+import android.graphics.Rect
+</a><a href="#h9-0-6" id="h9-0-6" class="i">+import android.graphics.drawable.ShapeDrawable
+</a><a href="#h9-0-7" id="h9-0-7" class="i">+import android.graphics.drawable.shapes.Shape
+</a> import android.view.View
+ import android.view.ViewGroup
+ import android.view.ViewGroup.LayoutParams
+ import android.view.ViewGroup.MarginLayoutParams
+ import android.widget.Button
+<a href="#h9-0-13" id="h9-0-13" class="d">-import android.widget.LinearLayout
+</a><a href="#h9-0-14" id="h9-0-14" class="d">-import android.widget.RelativeLayout
+</a> import android.widget.TextView
+ import me.rhunk.snapenhance.core.event.events.impl.AddViewEvent
+ import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+<a href="#h9-1" id="h9-1" class="h">@@ -29,6 +32,8 @@ import me.rhunk.snapenhance.features.impl.Messaging
+</a> import me.rhunk.snapenhance.hook.HookStage
+ import me.rhunk.snapenhance.hook.hookConstructor
+ import me.rhunk.snapenhance.ui.ViewAppearanceHelper
+<a href="#h9-1-3" id="h9-1-3" class="i">+import me.rhunk.snapenhance.ui.addForegroundDrawable
+</a><a href="#h9-1-4" id="h9-1-4" class="i">+import me.rhunk.snapenhance.ui.removeForegroundDrawable
+</a> import java.security.MessageDigest
+ import kotlin.random.Random
+ 
+<a href="#h9-2" id="h9-2" class="h">@@ -37,7 +42,7 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>     MessagingRuleType.E2E_ENCRYPTION,
+     loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC or FeatureLoadParams.INIT_SYNC or FeatureLoadParams.INIT_ASYNC
+ ) {
+<a href="#h9-2-3" id="h9-2-3" class="d">-    private val isEnabled get() = context.config.experimental.useE2EEncryption.get()
+</a><a href="#h9-2-4" id="h9-2-4" class="i">+    private val isEnabled get() = context.config.experimental.e2eEncryption.globalState == true
+</a>     private val e2eeInterface by lazy { context.bridgeClient.getE2eeInterface() }
+ 
+     companion object {
+<a href="#h9-3" id="h9-3" class="h">@@ -185,13 +190,11 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>             }
+         }
+ 
+<a href="#h9-3-3" id="h9-3-3" class="d">-        val encryptedMessageIndicator by context.config.experimental.encryptedMessageIndicator
+</a><a href="#h9-3-4" id="h9-3-4" class="d">-        val chatMessageContentContainerId = context.resources.getIdentifier(&quot;chat_message_content_container&quot;, &quot;id&quot;, context.androidContext.packageName)
+</a><a href="#h9-3-5" id="h9-3-5" class="i">+        val encryptedMessageIndicator by context.config.experimental.e2eEncryption.encryptedMessageIndicator
+</a> 
+         // hook view binder to add special buttons
+         val receivePublicKeyTag = Random.nextLong().toString(16)
+         val receiveSecretTag = Random.nextLong().toString(16)
+<a href="#h9-3-10" id="h9-3-10" class="d">-        val encryptedMessageTag = Random.nextLong().toString(16)
+</a> 
+         context.event.subscribe(BindViewEvent::class) { event -&gt;
+             event.chatMessage { conversationId, messageId -&gt;
+<a href="#h9-4" id="h9-4" class="h">@@ -206,28 +209,15 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>                 }
+ 
+                 if (encryptedMessageIndicator) {
+<a href="#h9-4-3" id="h9-4-3" class="d">-                    viewGroup.findViewWithTag&lt;ViewGroup&gt;(encryptedMessageTag)?.also {
+</a><a href="#h9-4-4" id="h9-4-4" class="d">-                        val chatMessageContentContainer = viewGroup.findViewById&lt;View&gt;(chatMessageContentContainerId) as? LinearLayout ?: return@chatMessage
+</a><a href="#h9-4-5" id="h9-4-5" class="d">-                        it.removeView(chatMessageContentContainer)
+</a><a href="#h9-4-6" id="h9-4-6" class="d">-                        viewGroup.removeView(it)
+</a><a href="#h9-4-7" id="h9-4-7" class="d">-                        viewGroup.addView(chatMessageContentContainer, 0)
+</a><a href="#h9-4-8" id="h9-4-8" class="d">-                    }
+</a><a href="#h9-4-9" id="h9-4-9" class="i">+                    viewGroup.removeForegroundDrawable(&quot;encryptedMessage&quot;)
+</a> 
+                     if (encryptedMessages.contains(messageId.toLong())) {
+<a href="#h9-4-12" id="h9-4-12" class="d">-                        val chatMessageContentContainer = viewGroup.findViewById&lt;View&gt;(chatMessageContentContainerId) as? LinearLayout ?: return@chatMessage
+</a><a href="#h9-4-13" id="h9-4-13" class="d">-                        viewGroup.removeView(chatMessageContentContainer)
+</a><a href="#h9-4-14" id="h9-4-14" class="d">-
+</a><a href="#h9-4-15" id="h9-4-15" class="d">-                        viewGroup.addView(RelativeLayout(viewGroup.context).apply {
+</a><a href="#h9-4-16" id="h9-4-16" class="d">-                            tag = encryptedMessageTag
+</a><a href="#h9-4-17" id="h9-4-17" class="d">-                            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+</a><a href="#h9-4-18" id="h9-4-18" class="d">-                            addView(chatMessageContentContainer)
+</a><a href="#h9-4-19" id="h9-4-19" class="d">-                            addView(TextView(viewGroup.context).apply {
+</a><a href="#h9-4-20" id="h9-4-20" class="d">-                                text = &quot;\uD83D\uDD12&quot;
+</a><a href="#h9-4-21" id="h9-4-21" class="d">-                                textAlignment = View.TEXT_ALIGNMENT_TEXT_END
+</a><a href="#h9-4-22" id="h9-4-22" class="d">-                                layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+</a><a href="#h9-4-23" id="h9-4-23" class="d">-                                setPadding(20, 0, 20, 0)
+</a><a href="#h9-4-24" id="h9-4-24" class="d">-                            })
+</a><a href="#h9-4-25" id="h9-4-25" class="d">-                        }, 0)
+</a><a href="#h9-4-26" id="h9-4-26" class="i">+                        viewGroup.addForegroundDrawable(&quot;encryptedMessage&quot;, ShapeDrawable(object: Shape() {
+</a><a href="#h9-4-27" id="h9-4-27" class="i">+                            override fun draw(canvas: Canvas, paint: Paint) {
+</a><a href="#h9-4-28" id="h9-4-28" class="i">+                                paint.textSize = 20f
+</a><a href="#h9-4-29" id="h9-4-29" class="i">+                                canvas.drawText(&quot;\uD83D\uDD12&quot;, 0f, canvas.height / 2f, paint)
+</a><a href="#h9-4-30" id="h9-4-30" class="i">+                            }
+</a><a href="#h9-4-31" id="h9-4-31" class="i">+                        }))
+</a>                     }
+                 }
+ 
+<a href="#h9-5" id="h9-5" class="h">@@ -355,13 +345,25 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a> 
+     override fun asyncInit() {
+         if (!isEnabled) return
+<a href="#h9-5-3" id="h9-5-3" class="i">+        val forceMessageEncryption by context.config.experimental.e2eEncryption.forceMessageEncryption
+</a><a href="#h9-5-4" id="h9-5-4" class="i">+
+</a>         // trick to disable fidelius encryption
+<a href="#h9-5-6" id="h9-5-6" class="d">-        context.event.subscribe(SendMessageWithContentEvent::class) { param -&gt;
+</a><a href="#h9-5-7" id="h9-5-7" class="d">-            val messageContent = param.messageContent
+</a><a href="#h9-5-8" id="h9-5-8" class="d">-            val destinations = param.destinations
+</a><a href="#h9-5-9" id="h9-5-9" class="d">-            if (destinations.conversations.none { getState(it.toString()) }) return@subscribe
+</a><a href="#h9-5-10" id="h9-5-10" class="i">+        context.event.subscribe(SendMessageWithContentEvent::class) { event -&gt;
+</a><a href="#h9-5-11" id="h9-5-11" class="i">+            val messageContent = event.messageContent
+</a><a href="#h9-5-12" id="h9-5-12" class="i">+            val destinations = event.destinations
+</a><a href="#h9-5-13" id="h9-5-13" class="i">+
+</a><a href="#h9-5-14" id="h9-5-14" class="i">+            val e2eeConversations = destinations.conversations.filter { getState(it.toString()) }
+</a><a href="#h9-5-15" id="h9-5-15" class="i">+
+</a><a href="#h9-5-16" id="h9-5-16" class="i">+            if (e2eeConversations.isEmpty()) return@subscribe
+</a><a href="#h9-5-17" id="h9-5-17" class="i">+
+</a><a href="#h9-5-18" id="h9-5-18" class="i">+            if (e2eeConversations.size != destinations.conversations.size) {
+</a><a href="#h9-5-19" id="h9-5-19" class="i">+                if (!forceMessageEncryption) return@subscribe
+</a><a href="#h9-5-20" id="h9-5-20" class="i">+                context.longToast(&quot;You can&#39;t send encrypted content to both encrypted and unencrypted conversations!&quot;)
+</a><a href="#h9-5-21" id="h9-5-21" class="i">+                event.canceled = true
+</a><a href="#h9-5-22" id="h9-5-22" class="i">+                return@subscribe
+</a><a href="#h9-5-23" id="h9-5-23" class="i">+            }
+</a> 
+<a href="#h9-5-25" id="h9-5-25" class="d">-            param.addInvokeLater {
+</a><a href="#h9-5-26" id="h9-5-26" class="i">+            event.addInvokeLater {
+</a>                 if (messageContent.contentType == ContentType.SNAP) {
+                     messageContent.contentType = ContentType.EXTERNAL_MEDIA
+                 }
+<b>diff --git a/<a id="h10" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/spying/MessageLogger.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -1,6 +1,9 @@
+</a> package me.rhunk.snapenhance.features.impl.spying
+ 
+<a href="#h10-0-2" id="h10-0-2" class="d">-import android.graphics.drawable.ColorDrawable
+</a><a href="#h10-0-3" id="h10-0-3" class="i">+import android.graphics.Canvas
+</a><a href="#h10-0-4" id="h10-0-4" class="i">+import android.graphics.Paint
+</a><a href="#h10-0-5" id="h10-0-5" class="i">+import android.graphics.drawable.ShapeDrawable
+</a><a href="#h10-0-6" id="h10-0-6" class="i">+import android.graphics.drawable.shapes.Shape
+</a> import android.os.DeadObjectException
+ import com.google.gson.JsonObject
+ import com.google.gson.JsonParser
+<a href="#h10-1" id="h10-1" class="h">@@ -12,6 +15,8 @@ import me.rhunk.snapenhance.features.Feature
+</a> import me.rhunk.snapenhance.features.FeatureLoadParams
+ import me.rhunk.snapenhance.hook.HookStage
+ import me.rhunk.snapenhance.hook.Hooker
+<a href="#h10-1-3" id="h10-1-3" class="i">+import me.rhunk.snapenhance.ui.addForegroundDrawable
+</a><a href="#h10-1-4" id="h10-1-4" class="i">+import me.rhunk.snapenhance.ui.removeForegroundDrawable
+</a> import java.util.concurrent.Executors
+ import kotlin.time.ExperimentalTime
+ import kotlin.time.measureTime
+<a href="#h10-2" id="h10-2" class="h">@@ -155,14 +160,18 @@ class MessageLogger : Feature(&quot;MessageLogger&quot;,
+</a> 
+         context.event.subscribe(BindViewEvent::class) { event -&gt;
+             event.chatMessage { conversationId, messageId -&gt;
+<a href="#h10-2-3" id="h10-2-3" class="d">-                val foreground = event.view.foreground
+</a><a href="#h10-2-4" id="h10-2-4" class="d">-                if (foreground is ColorDrawable &amp;&amp; foreground.color == DELETED_MESSAGE_COLOR) {
+</a><a href="#h10-2-5" id="h10-2-5" class="d">-                    event.view.foreground = null
+</a><a href="#h10-2-6" id="h10-2-6" class="d">-                }
+</a><a href="#h10-2-7" id="h10-2-7" class="i">+                event.view.removeForegroundDrawable(&quot;deletedMessage&quot;)
+</a>                 getServerMessageIdentifier(conversationId, messageId.toLong())?.let { serverMessageId -&gt;
+                     if (!deletedMessageCache.contains(serverMessageId)) return@chatMessage
+                 } ?: return@chatMessage
+<a href="#h10-2-11" id="h10-2-11" class="d">-                event.view.foreground = ColorDrawable(DELETED_MESSAGE_COLOR) // red with alpha
+</a><a href="#h10-2-12" id="h10-2-12" class="i">+
+</a><a href="#h10-2-13" id="h10-2-13" class="i">+                event.view.addForegroundDrawable(&quot;deletedMessage&quot;, ShapeDrawable(object: Shape() {
+</a><a href="#h10-2-14" id="h10-2-14" class="i">+                    override fun draw(canvas: Canvas, paint: Paint) {
+</a><a href="#h10-2-15" id="h10-2-15" class="i">+                        canvas.drawRect(0f, 0f, canvas.width.toFloat(), canvas.height.toFloat(), Paint().apply {
+</a><a href="#h10-2-16" id="h10-2-16" class="i">+                            color = DELETED_MESSAGE_COLOR
+</a><a href="#h10-2-17" id="h10-2-17" class="i">+                        })
+</a><a href="#h10-2-18" id="h10-2-18" class="i">+                    }
+</a><a href="#h10-2-19" id="h10-2-19" class="i">+                }))
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h11" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ui/ViewAppearanceHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ui/ViewAppearanceHelper.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/ui/ViewAppearanceHelper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/ui/ViewAppearanceHelper.kt</a></b>
+<a href="#h11-0" id="h11-0" class="h">@@ -4,21 +4,57 @@ import android.annotation.SuppressLint
+</a> import android.app.AlertDialog
+ import android.content.Context
+ import android.content.res.ColorStateList
+<a href="#h11-0-3" id="h11-0-3" class="i">+import android.graphics.Canvas
+</a> import android.graphics.Color
+<a href="#h11-0-5" id="h11-0-5" class="i">+import android.graphics.Paint
+</a> import android.graphics.drawable.ColorDrawable
+ import android.graphics.drawable.Drawable
+ import android.graphics.drawable.ShapeDrawable
+ import android.graphics.drawable.StateListDrawable
+<a href="#h11-0-10" id="h11-0-10" class="i">+import android.graphics.drawable.shapes.Shape
+</a> import android.view.Gravity
+ import android.view.View
+ import android.widget.Switch
+ import android.widget.TextView
+ import me.rhunk.snapenhance.Constants
+<a href="#h11-0-16" id="h11-0-16" class="i">+import kotlin.random.Random
+</a> 
+ fun View.applyTheme(componentWidth: Int? = null, hasRadius: Boolean = false, isAmoled: Boolean = true) {
+     ViewAppearanceHelper.applyTheme(this, componentWidth, hasRadius, isAmoled)
+ }
+ 
+<a href="#h11-0-22" id="h11-0-22" class="i">+private val foregroundDrawableListTag = Random.nextInt(0x7000000, 0x7FFFFFFF)
+</a><a href="#h11-0-23" id="h11-0-23" class="i">+
+</a><a href="#h11-0-24" id="h11-0-24" class="i">+@Suppress(&quot;UNCHECKED_CAST&quot;)
+</a><a href="#h11-0-25" id="h11-0-25" class="i">+private fun View.getForegroundDrawables(): MutableMap&lt;String, Drawable&gt; {
+</a><a href="#h11-0-26" id="h11-0-26" class="i">+    return getTag(foregroundDrawableListTag) as? MutableMap&lt;String, Drawable&gt;
+</a><a href="#h11-0-27" id="h11-0-27" class="i">+        ?: mutableMapOf&lt;String, Drawable&gt;().also {
+</a><a href="#h11-0-28" id="h11-0-28" class="i">+        setTag(foregroundDrawableListTag, it)
+</a><a href="#h11-0-29" id="h11-0-29" class="i">+    }
+</a><a href="#h11-0-30" id="h11-0-30" class="i">+}
+</a><a href="#h11-0-31" id="h11-0-31" class="i">+
+</a><a href="#h11-0-32" id="h11-0-32" class="i">+private fun View.updateForegroundDrawable() {
+</a><a href="#h11-0-33" id="h11-0-33" class="i">+    foreground = ShapeDrawable(object: Shape() {
+</a><a href="#h11-0-34" id="h11-0-34" class="i">+        override fun draw(canvas: Canvas, paint: Paint) {
+</a><a href="#h11-0-35" id="h11-0-35" class="i">+            getForegroundDrawables().forEach { (_, drawable) -&gt;
+</a><a href="#h11-0-36" id="h11-0-36" class="i">+                drawable.draw(canvas)
+</a><a href="#h11-0-37" id="h11-0-37" class="i">+            }
+</a><a href="#h11-0-38" id="h11-0-38" class="i">+        }
+</a><a href="#h11-0-39" id="h11-0-39" class="i">+    })
+</a><a href="#h11-0-40" id="h11-0-40" class="i">+}
+</a><a href="#h11-0-41" id="h11-0-41" class="i">+
+</a><a href="#h11-0-42" id="h11-0-42" class="i">+fun View.removeForegroundDrawable(tag: String) {
+</a><a href="#h11-0-43" id="h11-0-43" class="i">+    getForegroundDrawables().remove(tag)?.let {
+</a><a href="#h11-0-44" id="h11-0-44" class="i">+        updateForegroundDrawable()
+</a><a href="#h11-0-45" id="h11-0-45" class="i">+    }
+</a><a href="#h11-0-46" id="h11-0-46" class="i">+}
+</a><a href="#h11-0-47" id="h11-0-47" class="i">+
+</a><a href="#h11-0-48" id="h11-0-48" class="i">+fun View.addForegroundDrawable(tag: String, drawable: Drawable) {
+</a><a href="#h11-0-49" id="h11-0-49" class="i">+    getForegroundDrawables()[tag] = drawable
+</a><a href="#h11-0-50" id="h11-0-50" class="i">+    updateForegroundDrawable()
+</a><a href="#h11-0-51" id="h11-0-51" class="i">+}
+</a><a href="#h11-0-52" id="h11-0-52" class="i">+
+</a><a href="#h11-0-53" id="h11-0-53" class="i">+
+</a> object ViewAppearanceHelper {
+     @SuppressLint(&quot;UseSwitchCompatOrMaterialCode&quot;, &quot;RtlHardcoded&quot;, &quot;DiscouragedApi&quot;,
+         &quot;ClickableViewAccessibility&quot;
+</pre>
+</div>
+</body>
+</html>

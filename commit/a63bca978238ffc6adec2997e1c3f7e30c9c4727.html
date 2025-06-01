@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: instant delete - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/a63bca978238ffc6adec2997e1c3f7e30c9c4727.html">a63bca978238ffc6adec2997e1c3f7e30c9c4727</a>
+<b>parent</b> <a href="../commit/17f81eb6827e1a966cd6dd19b9d0d6ced095b3e0.html">17f81eb6827e1a966cd6dd19b9d0d6ced095b3e0</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu,  2 Nov 2023 14:51:19 +0100
+
+feat: instant delete
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/InstantDelete.kt</a></td><td> | </td><td class="num">106</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">+</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/MessageContent.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/QuotedMessage.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">+++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/QuotedMessageContent.kt</a></td><td> | </td><td class="num">11</td><td><span class="i">+++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>8 files changed, 135 insertions(+), 4 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -344,6 +344,10 @@
+</a>                         &quot;name&quot;: &quot;Prevent Message Sending&quot;,
+                         &quot;description&quot;: &quot;Prevents sending certain types of messages&quot;
+                     },
+<a href="#h0-0-3" id="h0-0-3" class="i">+                    &quot;instant_delete&quot;: {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                        &quot;name&quot;: &quot;Instant Delete&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+                        &quot;description&quot;: &quot;Removes the confirmation dialog when deleting messages&quot;
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                    },
+</a>                     &quot;better_notifications&quot;: {
+                         &quot;name&quot;: &quot;Better Notifications&quot;,
+                         &quot;description&quot;: &quot;Adds more information in received notifications&quot;
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/MessagingTweaks.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -23,6 +23,7 @@ class MessagingTweaks : ConfigContainer() {
+</a>         customOptionTranslationPath = &quot;features.options.notifications&quot;
+         nativeHooks()
+     }
+<a href="#h1-0-3" id="h1-0-3" class="i">+    val instantDelete = boolean(&quot;instant_delete&quot;) { requireRestart() }
+</a>     val betterNotifications = multiple(&quot;better_notifications&quot;, &quot;snap&quot;, &quot;chat&quot;, &quot;reply_button&quot;, &quot;download_button&quot;, &quot;mark_as_read_button&quot;, &quot;group&quot;) { requireRestart() }
+     val notificationBlacklist = multiple(&quot;notification_blacklist&quot;, *NotificationType.getIncomingValues().map { it.key }.toTypedArray()) {
+         customOptionTranslationPath = &quot;features.options.notifications&quot;
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/InstantDelete.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/InstantDelete.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/InstantDelete.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/InstantDelete.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -0,0 +1,105 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="i">+package me.rhunk.snapenhance.core.features.impl.messaging
+</a><a href="#h2-0-1" id="h2-0-1" class="i">+
+</a><a href="#h2-0-2" id="h2-0-2" class="i">+import android.view.View
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+import android.widget.TextView
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import me.rhunk.snapenhance.common.data.MessageUpdate
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+import me.rhunk.snapenhance.core.features.Feature
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+import me.rhunk.snapenhance.core.features.FeatureLoadParams
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+import me.rhunk.snapenhance.core.ui.iterateParent
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+import me.rhunk.snapenhance.core.ui.triggerCloseTouchEvent
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+import me.rhunk.snapenhance.core.util.ktx.getId
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+import me.rhunk.snapenhance.core.util.ktx.getIdentifier
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+import me.rhunk.snapenhance.core.util.ktx.setObjectField
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+import me.rhunk.snapenhance.core.wrapper.impl.CallbackResult
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+import java.lang.reflect.Modifier
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+
+</a><a href="#h2-0-16" id="h2-0-16" class="i">+class InstantDelete : Feature(&quot;InstantDelete&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_ASYNC) {
+</a><a href="#h2-0-17" id="h2-0-17" class="i">+    override fun asyncOnActivityCreate() {
+</a><a href="#h2-0-18" id="h2-0-18" class="i">+        if (!context.config.messaging.instantDelete.get()) return
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+        val chatActionMenuOptions = listOf(
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+            &quot;chat_action_menu_erase_messages&quot;,
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+            &quot;chat_action_menu_erase_quote&quot;,
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+            &quot;chat_action_menu_erase_reply&quot;,
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+        ).associateWith { context.resources.getString(context.resources.getIdentifier(it, &quot;string&quot;)) }
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+        val chatActionMenuContainerID = context.resources.getId(&quot;chat_action_menu_container&quot;)
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+        val actionMenuOptionId = context.resources.getId(&quot;action_menu_option&quot;)
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+        val actionMenuOptionTextId = context.resources.getId(&quot;action_menu_option_text&quot;)
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+        context.event.subscribe(BindViewEvent::class) { event -&gt;
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+            if (event.view.id != actionMenuOptionId) return@subscribe
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+            val menuOptionText = event.view.findViewById&lt;TextView&gt;(actionMenuOptionTextId) ?: return@subscribe
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+            if (!chatActionMenuOptions.values.contains(menuOptionText.text)) return@subscribe
+</a><a href="#h2-0-34" id="h2-0-34" class="i">+
+</a><a href="#h2-0-35" id="h2-0-35" class="i">+            val viewModel = event.prevModel
+</a><a href="#h2-0-36" id="h2-0-36" class="i">+
+</a><a href="#h2-0-37" id="h2-0-37" class="i">+            val nestedViewOnClickListenerField = viewModel::class.java.fields.find {
+</a><a href="#h2-0-38" id="h2-0-38" class="i">+                it.type == View.OnClickListener::class.java
+</a><a href="#h2-0-39" id="h2-0-39" class="i">+            } ?: return@subscribe
+</a><a href="#h2-0-40" id="h2-0-40" class="i">+
+</a><a href="#h2-0-41" id="h2-0-41" class="i">+            val nestedViewOnClickListener = nestedViewOnClickListenerField.get(viewModel) as? View.OnClickListener ?: return@subscribe
+</a><a href="#h2-0-42" id="h2-0-42" class="i">+
+</a><a href="#h2-0-43" id="h2-0-43" class="i">+            val chatViewModel = nestedViewOnClickListener::class.java.fields.find {
+</a><a href="#h2-0-44" id="h2-0-44" class="i">+                Modifier.isAbstract(it.type.modifiers) &amp;&amp; runCatching {
+</a><a href="#h2-0-45" id="h2-0-45" class="i">+                    it.get(nestedViewOnClickListener)
+</a><a href="#h2-0-46" id="h2-0-46" class="i">+                }.getOrNull().toString().startsWith(&quot;ChatViewModel&quot;)
+</a><a href="#h2-0-47" id="h2-0-47" class="i">+            }?.get(nestedViewOnClickListener) ?: return@subscribe
+</a><a href="#h2-0-48" id="h2-0-48" class="i">+
+</a><a href="#h2-0-49" id="h2-0-49" class="i">+            //[convId]:arroyo-id:[messageId]
+</a><a href="#h2-0-50" id="h2-0-50" class="i">+            val (conversationId, messageId) = chatViewModel.toString().substringAfter(&quot;messageId=&quot;).substringBefore(&quot;,&quot;).split(&quot;:&quot;).let {
+</a><a href="#h2-0-51" id="h2-0-51" class="i">+                if (it.size != 3) return@let null
+</a><a href="#h2-0-52" id="h2-0-52" class="i">+                it[0] to it[2]
+</a><a href="#h2-0-53" id="h2-0-53" class="i">+            } ?: return@subscribe
+</a><a href="#h2-0-54" id="h2-0-54" class="i">+
+</a><a href="#h2-0-55" id="h2-0-55" class="i">+            viewModel.setObjectField(nestedViewOnClickListenerField.name, View.OnClickListener { view -&gt;
+</a><a href="#h2-0-56" id="h2-0-56" class="i">+                val onCallbackResult: CallbackResult = callbackResult@{
+</a><a href="#h2-0-57" id="h2-0-57" class="i">+                    if (it == null || it == &quot;DUPLICATEREQUEST&quot;) return@callbackResult
+</a><a href="#h2-0-58" id="h2-0-58" class="i">+                    context.log.error(&quot;Error deleting message $messageId: $it&quot;)
+</a><a href="#h2-0-59" id="h2-0-59" class="i">+                    context.shortToast(&quot;Error deleting message $messageId: $it. Using fallback method&quot;)
+</a><a href="#h2-0-60" id="h2-0-60" class="i">+                    context.runOnUiThread {
+</a><a href="#h2-0-61" id="h2-0-61" class="i">+                        nestedViewOnClickListener.onClick(view)
+</a><a href="#h2-0-62" id="h2-0-62" class="i">+                    }
+</a><a href="#h2-0-63" id="h2-0-63" class="i">+                }
+</a><a href="#h2-0-64" id="h2-0-64" class="i">+
+</a><a href="#h2-0-65" id="h2-0-65" class="i">+                runCatching {
+</a><a href="#h2-0-66" id="h2-0-66" class="i">+                    val conversationManager = context.feature(Messaging::class).conversationManager ?: return@runCatching
+</a><a href="#h2-0-67" id="h2-0-67" class="i">+
+</a><a href="#h2-0-68" id="h2-0-68" class="i">+                    if (chatActionMenuOptions[&quot;chat_action_menu_erase_quote&quot;] == menuOptionText.text) {
+</a><a href="#h2-0-69" id="h2-0-69" class="i">+                        conversationManager.fetchMessage(conversationId, messageId.toLong(), onSuccess = { message -&gt;
+</a><a href="#h2-0-70" id="h2-0-70" class="i">+                            val quotedMessage = message.messageContent.quotedMessage.takeIf { it.isPresent() }!!
+</a><a href="#h2-0-71" id="h2-0-71" class="i">+
+</a><a href="#h2-0-72" id="h2-0-72" class="i">+                            conversationManager.updateMessage(
+</a><a href="#h2-0-73" id="h2-0-73" class="i">+                                conversationId,
+</a><a href="#h2-0-74" id="h2-0-74" class="i">+                                quotedMessage.content.messageId,
+</a><a href="#h2-0-75" id="h2-0-75" class="i">+                                MessageUpdate.ERASE,
+</a><a href="#h2-0-76" id="h2-0-76" class="i">+                                onResult = onCallbackResult
+</a><a href="#h2-0-77" id="h2-0-77" class="i">+                            )
+</a><a href="#h2-0-78" id="h2-0-78" class="i">+                        }, onError = {
+</a><a href="#h2-0-79" id="h2-0-79" class="i">+                            onCallbackResult(it)
+</a><a href="#h2-0-80" id="h2-0-80" class="i">+                        })
+</a><a href="#h2-0-81" id="h2-0-81" class="i">+                        return@runCatching
+</a><a href="#h2-0-82" id="h2-0-82" class="i">+                    }
+</a><a href="#h2-0-83" id="h2-0-83" class="i">+
+</a><a href="#h2-0-84" id="h2-0-84" class="i">+                    conversationManager.updateMessage(
+</a><a href="#h2-0-85" id="h2-0-85" class="i">+                        conversationId,
+</a><a href="#h2-0-86" id="h2-0-86" class="i">+                        messageId.toLong(),
+</a><a href="#h2-0-87" id="h2-0-87" class="i">+                        MessageUpdate.ERASE,
+</a><a href="#h2-0-88" id="h2-0-88" class="i">+                        onResult = onCallbackResult
+</a><a href="#h2-0-89" id="h2-0-89" class="i">+                    )
+</a><a href="#h2-0-90" id="h2-0-90" class="i">+                }.onFailure {
+</a><a href="#h2-0-91" id="h2-0-91" class="i">+                    context.log.error(&quot;Error deleting message $messageId&quot;, it)
+</a><a href="#h2-0-92" id="h2-0-92" class="i">+                    onCallbackResult(it.message)
+</a><a href="#h2-0-93" id="h2-0-93" class="i">+                    return@OnClickListener
+</a><a href="#h2-0-94" id="h2-0-94" class="i">+                }
+</a><a href="#h2-0-95" id="h2-0-95" class="i">+
+</a><a href="#h2-0-96" id="h2-0-96" class="i">+                view.iterateParent {
+</a><a href="#h2-0-97" id="h2-0-97" class="i">+                    if (it.id != chatActionMenuContainerID) return@iterateParent false
+</a><a href="#h2-0-98" id="h2-0-98" class="i">+                    it.triggerCloseTouchEvent()
+</a><a href="#h2-0-99" id="h2-0-99" class="i">+                    true
+</a><a href="#h2-0-100" id="h2-0-100" class="i">+                }
+</a><a href="#h2-0-101" id="h2-0-101" class="i">+            })
+</a><a href="#h2-0-102" id="h2-0-102" class="i">+        }
+</a><a href="#h2-0-103" id="h2-0-103" class="i">+    }
+</a><a href="#h2-0-104" id="h2-0-104" class="i">+}</a><a href="#h2-0-105" id="h2-0-105" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/FeatureManager.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -15,7 +15,6 @@ import me.rhunk.snapenhance.core.features.impl.experiments.*
+</a> import me.rhunk.snapenhance.core.features.impl.global.*
+ import me.rhunk.snapenhance.core.features.impl.messaging.*
+ import me.rhunk.snapenhance.core.features.impl.spying.MessageLogger
+<a href="#h3-0-3" id="h3-0-3" class="d">-import me.rhunk.snapenhance.core.features.impl.experiments.SnapToChatMedia
+</a> import me.rhunk.snapenhance.core.features.impl.spying.StealthMode
+ import me.rhunk.snapenhance.core.features.impl.tweaks.CameraTweaks
+ import me.rhunk.snapenhance.core.features.impl.ui.*
+<a href="#h3-1" id="h3-1" class="h">@@ -103,6 +102,7 @@ class FeatureManager(
+</a>             HideQuickAddFriendFeed::class,
+             CallStartConfirmation::class,
+             SnapPreview::class,
+<a href="#h3-1-3" id="h3-1-3" class="i">+            InstantDelete::class,
+</a>         )
+ 
+         initializeFeatures()
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/ConversationManager.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -74,10 +74,9 @@ class ConversationManager(val context: ModContext, obj: Any) : AbstractWrapper(o
+</a>             conversationId.toSnapUUID().instanceNonNull(),
+             messageId,
+             CallbackBuilder(context.mappings.getMappedClass(&quot;callbacks&quot;, &quot;FetchMessageCallback&quot;))
+<a href="#h4-0-3" id="h4-0-3" class="d">-                .override(&quot;onSuccess&quot;) { param -&gt;
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+                .override(&quot;onFetchMessageComplete&quot;) { param -&gt;
+</a>                     onSuccess(Message(param.arg(0)))
+                 }
+<a href="#h4-0-7" id="h4-0-7" class="d">-                .override(&quot;onServerRequest&quot;, shouldUnhook = false) {}
+</a>                 .override(&quot;onError&quot;) {
+                     onError(it.arg&lt;Any&gt;(0).toString())
+                 }.build()
+<a href="#h4-1" id="h4-1" class="h">@@ -96,7 +95,6 @@ class ConversationManager(val context: ModContext, obj: Any) : AbstractWrapper(o
+</a>                 .override(&quot;onFetchMessageComplete&quot;) { param -&gt;
+                     onSuccess(Message(param.arg(1)))
+                 }
+<a href="#h4-1-3" id="h4-1-3" class="d">-                .override(&quot;onServerRequest&quot;, shouldUnhook = false) {}
+</a>                 .override(&quot;onError&quot;) {
+                     onError(it.arg&lt;Any&gt;(0).toString())
+                 }.build()
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/MessageContent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/MessageContent.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/MessageContent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/MessageContent.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -9,5 +9,7 @@ class MessageContent(obj: Any?) : AbstractWrapper(obj) {
+</a>     var content
+         get() = instanceNonNull().getObjectField(&quot;mContent&quot;) as ByteArray
+         set(value) = instanceNonNull().setObjectField(&quot;mContent&quot;, value)
+<a href="#h5-0-3" id="h5-0-3" class="i">+    val quotedMessage
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+        get() = QuotedMessage(instanceNonNull().getObjectField(&quot;mQuotedMessage&quot;))
+</a>     var contentType by enum(&quot;mContentType&quot;, ContentType.UNKNOWN)
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/QuotedMessage.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/QuotedMessage.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/QuotedMessage.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/QuotedMessage.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -0,0 +1,8 @@
+</a><a href="#h6-0-0" id="h6-0-0" class="i">+package me.rhunk.snapenhance.core.wrapper.impl
+</a><a href="#h6-0-1" id="h6-0-1" class="i">+
+</a><a href="#h6-0-2" id="h6-0-2" class="i">+import me.rhunk.snapenhance.core.util.ktx.getObjectField
+</a><a href="#h6-0-3" id="h6-0-3" class="i">+import me.rhunk.snapenhance.core.wrapper.AbstractWrapper
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+
+</a><a href="#h6-0-5" id="h6-0-5" class="i">+class QuotedMessage(obj: Any?) : AbstractWrapper(obj) {
+</a><a href="#h6-0-6" id="h6-0-6" class="i">+    val content get() = QuotedMessageContent(instanceNonNull().getObjectField(&quot;mContent&quot;))
+</a><a href="#h6-0-7" id="h6-0-7" class="i">+}</a><a href="#h6-0-8" id="h6-0-8" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/QuotedMessageContent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/QuotedMessageContent.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/QuotedMessageContent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/QuotedMessageContent.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -0,0 +1,10 @@
+</a><a href="#h7-0-0" id="h7-0-0" class="i">+package me.rhunk.snapenhance.core.wrapper.impl
+</a><a href="#h7-0-1" id="h7-0-1" class="i">+
+</a><a href="#h7-0-2" id="h7-0-2" class="i">+import me.rhunk.snapenhance.core.util.ktx.getObjectField
+</a><a href="#h7-0-3" id="h7-0-3" class="i">+import me.rhunk.snapenhance.core.util.ktx.setObjectField
+</a><a href="#h7-0-4" id="h7-0-4" class="i">+import me.rhunk.snapenhance.core.wrapper.AbstractWrapper
+</a><a href="#h7-0-5" id="h7-0-5" class="i">+
+</a><a href="#h7-0-6" id="h7-0-6" class="i">+class QuotedMessageContent(obj: Any?) : AbstractWrapper(obj) {
+</a><a href="#h7-0-7" id="h7-0-7" class="i">+    var messageId get() = instanceNonNull().getObjectField(&quot;mMessageId&quot;) as Long
+</a><a href="#h7-0-8" id="h7-0-8" class="i">+        set(value) = instanceNonNull().setObjectField(&quot;mMessageId&quot;, value)
+</a><a href="#h7-0-9" id="h7-0-9" class="i">+}</a><a href="#h7-0-10" id="h7-0-10" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>refactor(native): hook def - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/ba655a0e671ba7aee9fd22397bc1db1cb96ec41f.html">ba655a0e671ba7aee9fd22397bc1db1cb96ec41f</a>
+<b>parent</b> <a href="../commit/2b85856be024eb1943821c1351ab9c072d0df32e.html">2b85856be024eb1943821c1351ab9c072d0df32e</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Tue, 13 Feb 2024 13:21:51 +0100
+
+refactor(native): hook def
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">native/jni/src/hooks/asset_hook.h</a></td><td> | </td><td class="num">8</td><td><span class="i">++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">native/jni/src/hooks/fstat_hook.h</a></td><td> | </td><td class="num">8</td><td><span class="i">+++</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">native/jni/src/hooks/sqlite_mutex.h</a></td><td> | </td><td class="num">7</td><td><span class="i">+++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">native/jni/src/hooks/unary_call.h</a></td><td> | </td><td class="num">11</td><td><span class="i">+++++</span><span class="d">------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">native/jni/src/library.cpp</a></td><td> | </td><td class="num">3</td><td><span class="i">+</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">native/jni/src/logger.h</a></td><td> | </td><td class="num">2</td><td><span class="i"></span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">native/jni/src/util.h</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+</table></pre><pre>7 files changed, 18 insertions(+), 23 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/native/jni/src/hooks/asset_hook.h.html">native/jni/src/hooks/asset_hook.h</a> b/<a href="../file/native/jni/src/hooks/asset_hook.h.html">native/jni/src/hooks/asset_hook.h</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,11 +1,11 @@
+</a> #pragma once
+ 
+<a href="#h0-0-2" id="h0-0-2" class="i">+#include &lt;android/asset_manager.h&gt;
+</a> 
+ namespace AssetHook {
+     jmethodID native_lib_on_asset_load;
+<a href="#h0-0-6" id="h0-0-6" class="d">-    AAsset* (*AAssetManager_open_original)(AAssetManager*, const char*, int) = nullptr;
+</a> 
+<a href="#h0-0-8" id="h0-0-8" class="d">-    AAsset* AAssetManager_open_hook(AAssetManager* mgr, const char* filename, int mode) {
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+    HOOK_DEF(AAsset*, AAssetManager_open_hook, AAssetManager* mgr, const char* filename, int mode) {
+</a>         if (common::native_config-&gt;hook_asset_open) {
+             JNIEnv *env = nullptr;
+             common::java_vm-&gt;GetEnv((void **)&amp;env, JNI_VERSION_1_6);
+<a href="#h0-1" id="h0-1" class="h">@@ -15,11 +15,11 @@ namespace AssetHook {
+</a>             }
+         }
+ 
+<a href="#h0-1-3" id="h0-1-3" class="d">-        return AAssetManager_open_original(mgr, filename, mode);
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+        return AAssetManager_open_hook_original(mgr, filename, mode);
+</a>     }
+ 
+     void init(JNIEnv *env) {
+         native_lib_on_asset_load = env-&gt;GetMethodID(env-&gt;GetObjectClass(common::native_lib_object), &quot;shouldLoadAsset&quot;, &quot;(Ljava/lang/String;)Z&quot;);
+<a href="#h0-1-9" id="h0-1-9" class="d">-        DobbyHook((void *) AAssetManager_open, (void *) AAssetManager_open_hook, (void **) &amp;AAssetManager_open_original);
+</a><a href="#h0-1-10" id="h0-1-10" class="i">+        DobbyHook((void *) AAssetManager_open, (void *) AAssetManager_open_hook, (void **) &amp;AAssetManager_open_hook_original);
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h1" href="../file/native/jni/src/hooks/fstat_hook.h.html">native/jni/src/hooks/fstat_hook.h</a> b/<a href="../file/native/jni/src/hooks/fstat_hook.h.html">native/jni/src/hooks/fstat_hook.h</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,9 +1,7 @@
+</a> #pragma once
+ 
+ namespace FstatHook {
+<a href="#h1-0-3" id="h1-0-3" class="d">-    auto fstat_original = (int (*)(int, struct stat *)) nullptr;
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-
+</a><a href="#h1-0-5" id="h1-0-5" class="d">-    int fstat_hook(int fd, struct stat *buf) {
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+    HOOK_DEF(int, fstat_hook, int fd, struct stat *buf) {
+</a>         char name[256];
+         memset(name, 0, sizeof(name));
+         snprintf(name, sizeof(name), &quot;/proc/self/fd/%d&quot;, fd);
+<a href="#h1-1" id="h1-1" class="h">@@ -20,10 +18,10 @@ namespace FstatHook {
+</a>             return -1;
+         }
+ 
+<a href="#h1-1-3" id="h1-1-3" class="d">-        return fstat_original(fd, buf);
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+        return fstat_hook_original(fd, buf);
+</a>     }
+ 
+     void init() {
+<a href="#h1-1-8" id="h1-1-8" class="d">-        DobbyHook((void *)DobbySymbolResolver(&quot;libc.so&quot;, &quot;fstat&quot;), (void *)fstat_hook, (void **)&amp;fstat_original);
+</a><a href="#h1-1-9" id="h1-1-9" class="i">+        DobbyHook((void *)DobbySymbolResolver(&quot;libc.so&quot;, &quot;fstat&quot;), (void *)fstat_hook, (void **)&amp;fstat_hook_original);
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h2" href="../file/native/jni/src/hooks/sqlite_mutex.h.html">native/jni/src/hooks/sqlite_mutex.h</a> b/<a href="../file/native/jni/src/hooks/sqlite_mutex.h.html">native/jni/src/hooks/sqlite_mutex.h</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -15,10 +15,9 @@ namespace SqliteMutexHook {
+</a>     } sqlite3;
+ 
+     static std::map&lt;std::string, sqlite3_mutex *&gt; mutex_map = {};
+<a href="#h2-0-3" id="h2-0-3" class="d">-    static int (*sqlite3_open_original)(const char *, sqlite3 **, unsigned int, const char *) = nullptr;
+</a> 
+<a href="#h2-0-5" id="h2-0-5" class="d">-    int sqlite3_open_hook(const char *filename, sqlite3 **ppDb, unsigned int flags, const char *zVfs) {
+</a><a href="#h2-0-6" id="h2-0-6" class="d">-        auto result = sqlite3_open_original(filename, ppDb, flags, zVfs);
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+    HOOK_DEF(int, sqlite3_open_hook, const char *filename, sqlite3 **ppDb, unsigned int flags, const char *zVfs) {
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+        auto result = sqlite3_open_hook_original(filename, ppDb, flags, zVfs);
+</a>         if (result == 0) {
+             auto mutex = (*ppDb)-&gt;mutex;
+             if (mutex == nullptr) return result;
+<a href="#h2-1" id="h2-1" class="h">@@ -42,6 +41,6 @@ namespace SqliteMutexHook {
+</a>             LOGE(&quot;sqlite3 openDatabase sig not found&quot;);
+             return;
+         }
+<a href="#h2-1-3" id="h2-1-3" class="d">-        DobbyHook((void *) open_database_sig, (void *) sqlite3_open_hook, (void **) &amp;sqlite3_open_original);
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+        DobbyHook((void *) open_database_sig, (void *) sqlite3_open_hook, (void **) &amp;sqlite3_open_hook_original);
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h3" href="../file/native/jni/src/hooks/unary_call.h.html">native/jni/src/hooks/unary_call.h</a> b/<a href="../file/native/jni/src/hooks/unary_call.h.html">native/jni/src/hooks/unary_call.h</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -19,14 +19,13 @@ namespace UnaryCallHook {
+</a>         } grpc_byte_buffer;
+     }
+ 
+<a href="#h3-0-3" id="h3-0-3" class="d">-    static void *(*unaryCall_original)(void *, const char *, grpc::grpc_byte_buffer **, void *, void *, void *);
+</a>     static jmethodID native_lib_on_unary_call_method;
+ 
+<a href="#h3-0-6" id="h3-0-6" class="d">-    void *unaryCall_hook(void *unk1, const char *uri, grpc::grpc_byte_buffer **buffer_ptr, void *unk4, void *unk5, void *unk6) {
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+    HOOK_DEF(void *, unaryCall_hook, void *unk1, const char *uri, grpc::grpc_byte_buffer **buffer_ptr, void *unk4, void *unk5, void *unk6) {
+</a>         // request without reference counter can be hooked using xposed ig
+         auto slice_buffer = (*buffer_ptr)-&gt;slice_buffer;
+         if (slice_buffer-&gt;ref_counter == 0) {
+<a href="#h3-0-11" id="h3-0-11" class="d">-            return unaryCall_original(unk1, uri, buffer_ptr, unk4, unk5, unk6);
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+            return unaryCall_hook_original(unk1, uri, buffer_ptr, unk4, unk5, unk6);
+</a>         }
+ 
+         JNIEnv *env = nullptr;
+<a href="#h3-1" id="h3-1" class="h">@@ -67,7 +66,7 @@ namespace UnaryCallHook {
+</a>             slice_buffer-&gt;data = (uint8_t *)((uintptr_t)new_ref_counter + ref_counter_struct_size);
+         }
+ 
+<a href="#h3-1-3" id="h3-1-3" class="d">-        return unaryCall_original(unk1, uri, buffer_ptr, unk4, unk5, unk6);
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+        return unaryCall_hook_original(unk1, uri, buffer_ptr, unk4, unk5, unk6);
+</a>     }
+ 
+     void init(JNIEnv *env) {
+<a href="#h3-2" id="h3-2" class="h">@@ -80,9 +79,9 @@ namespace UnaryCallHook {
+</a>         native_lib_on_unary_call_method = env-&gt;GetMethodID(env-&gt;GetObjectClass(common::native_lib_object), &quot;onNativeUnaryCall&quot;, &quot;(Ljava/lang/String;[B)L&quot; BUILD_NAMESPACE &quot;/NativeRequestData;&quot;);
+ 
+         if (unaryCall_func != 0) {
+<a href="#h3-2-3" id="h3-2-3" class="d">-            DobbyHook((void *)unaryCall_func, (void *)unaryCall_hook, (void **)&amp;unaryCall_original);
+</a><a href="#h3-2-4" id="h3-2-4" class="i">+            DobbyHook((void *)unaryCall_func, (void *)unaryCall_hook, (void **)&amp;unaryCall_hook_original);
+</a>         } else {
+<a href="#h3-2-6" id="h3-2-6" class="d">-            LOGE(&quot;can&#39;t find unaryCall signature&quot;);
+</a><a href="#h3-2-7" id="h3-2-7" class="i">+            LOGE(&quot;Can&#39;t find unaryCall signature&quot;);
+</a>         }
+     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h4" href="../file/native/jni/src/library.cpp.html">native/jni/src/library.cpp</a> b/<a href="../file/native/jni/src/library.cpp.html">native/jni/src/library.cpp</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -2,7 +2,6 @@
+</a> #include &lt;string&gt;
+ #include &lt;dobby.h&gt;
+ #include &lt;vector&gt;
+<a href="#h4-0-3" id="h4-0-3" class="d">-#include &lt;android/asset_manager.h&gt;
+</a> 
+ #include &quot;logger.h&quot;
+ #include &quot;common.h&quot;
+<a href="#h4-1" id="h4-1" class="h">@@ -24,7 +23,7 @@ void JNICALL init(JNIEnv *env, jobject clazz) {
+</a>         return;
+     }
+ 
+<a href="#h4-1-3" id="h4-1-3" class="d">-    LOGD(&quot;libclient.so base=0x%0lx, size=0x%0lx&quot;, client_module.base, client_module.size);
+</a><a href="#h4-1-4" id="h4-1-4" class="i">+    LOGD(&quot;libclient.so base=0x%lx, size=0x%zx&quot;, client_module.base, client_module.size);
+</a> 
+     AssetHook::init(env);
+     UnaryCallHook::init(env);
+<b>diff --git a/<a id="h5" href="../file/native/jni/src/logger.h.html">native/jni/src/logger.h</a> b/<a href="../file/native/jni/src/logger.h.html">native/jni/src/logger.h</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -5,7 +5,5 @@
+</a> #define LOG_TAG &quot;SnapEnhanceNative&quot;
+ 
+ #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
+<a href="#h5-0-3" id="h5-0-3" class="d">-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, __VA_ARGS__)
+</a><a href="#h5-0-4" id="h5-0-4" class="d">-#define LOGW(...) __android_log_print(ANDROID_LOG_WARN,  LOG_TAG, __VA_ARGS__)
+</a> #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR,  LOG_TAG, __VA_ARGS__)
+ 
+<b>diff --git a/<a id="h6" href="../file/native/jni/src/util.h.html">native/jni/src/util.h</a> b/<a href="../file/native/jni/src/util.h.html">native/jni/src/util.h</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -2,6 +2,8 @@
+</a> 
+ #include &lt;unistd.h&gt;
+ 
+<a href="#h6-0-3" id="h6-0-3" class="i">+#define HOOK_DEF(ret, func, ...) ret (*func##_original)(__VA_ARGS__); ret func(__VA_ARGS__)
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+
+</a> namespace util {
+     typedef struct {
+         uintptr_t base;
+</pre>
+</div>
+</body>
+</html>

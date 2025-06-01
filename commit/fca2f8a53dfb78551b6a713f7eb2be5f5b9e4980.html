@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix: ff menu injection - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/fca2f8a53dfb78551b6a713f7eb2be5f5b9e4980.html">fca2f8a53dfb78551b6a713f7eb2be5f5b9e4980</a>
+<b>parent</b> <a href="../commit/9e02806f959de91f4c3188105536e4a8f724026b.html">9e02806f959de91f4c3188105536e4a8f724026b</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Mon, 12 Jun 2023 00:47:46 +0200
+
+fix: ff menu injection
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/MenuViewInjector.kt</a></td><td> | </td><td class="num">14</td><td><span class="i">+++++++++++</span><span class="d">---</span></td></tr>
+</table></pre><pre>1 file changed, 11 insertions(+), 3 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/MenuViewInjector.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/MenuViewInjector.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/MenuViewInjector.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/MenuViewInjector.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -43,6 +43,8 @@ class MenuViewInjector : Feature(&quot;MenuViewInjector&quot;, loadParams = FeatureLoadPar
+</a>         chatActionMenu.context = context
+         settingMenu.context = context
+ 
+<a href="#h0-0-3" id="h0-0-3" class="i">+        val messaging = context.feature(Messaging::class)
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+
+</a>         val actionSheetItemsContainerLayoutId = context.resources.getIdentifier(&quot;action_sheet_items_container&quot;, &quot;id&quot;, Constants.SNAPCHAT_PACKAGE_NAME)
+         val actionSheetContainer = context.resources.getIdentifier(&quot;action_sheet_container&quot;, &quot;id&quot;, Constants.SNAPCHAT_PACKAGE_NAME)
+         val actionMenu = context.resources.getIdentifier(&quot;action_menu&quot;, &quot;id&quot;, Constants.SNAPCHAT_PACKAGE_NAME)
+<a href="#h0-1" id="h0-1" class="h">@@ -76,7 +78,7 @@ class MenuViewInjector : Feature(&quot;MenuViewInjector&quot;, loadParams = FeatureLoadPar
+</a>             }
+ 
+             //inject in group chat menus
+<a href="#h0-1-3" id="h0-1-3" class="d">-            if (viewGroup.id == actionSheetContainer &amp;&amp; childView.id == actionMenu) {
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+            if (viewGroup.id == actionSheetContainer &amp;&amp; childView.id == actionMenu &amp;&amp; messaging.lastFetchConversationUserUUID == null) {
+</a>                 val injectedLayout = LinearLayout(childView.context).apply {
+                     orientation = LinearLayout.VERTICAL
+                     gravity = Gravity.BOTTOM
+<a href="#h0-2" id="h0-2" class="h">@@ -86,7 +88,6 @@ class MenuViewInjector : Feature(&quot;MenuViewInjector&quot;, loadParams = FeatureLoadPar
+</a> 
+                 Hooker.ephemeralHook(context.classCache.conversationManager, &quot;fetchConversation&quot;, HookStage.AFTER) {
+                     if (wasInjectedView(injectedLayout)) return@ephemeralHook
+<a href="#h0-2-3" id="h0-2-3" class="d">-                    context.feature(Messaging::class).lastFetchConversationUserUUID = null
+</a> 
+                     context.runOnUiThread {
+                         val viewList = mutableListOf&lt;View&gt;()
+<a href="#h0-3" id="h0-3" class="h">@@ -126,11 +127,18 @@ class MenuViewInjector : Feature(&quot;MenuViewInjector&quot;, loadParams = FeatureLoadPar
+</a>                     })
+                     return@hook
+                 }
+<a href="#h0-3-3" id="h0-3-3" class="d">-                if (context.feature(Messaging::class).lastFetchConversationUserUUID == null) return@hook
+</a><a href="#h0-3-4" id="h0-3-4" class="i">+                if (messaging.lastFetchConversationUserUUID == null) return@hook
+</a> 
+                 //filter by the slot index
+                 if (viewGroup.getChildCount() != context.config.int(ConfigProperty.MENU_SLOT_ID)) return@hook
+                 friendFeedInfoMenu.inject(viewGroup, originalAddView)
+<a href="#h0-3-9" id="h0-3-9" class="i">+
+</a><a href="#h0-3-10" id="h0-3-10" class="i">+                viewGroup.addOnAttachStateChangeListener(object: View.OnAttachStateChangeListener {
+</a><a href="#h0-3-11" id="h0-3-11" class="i">+                    override fun onViewAttachedToWindow(v: View) {}
+</a><a href="#h0-3-12" id="h0-3-12" class="i">+                    override fun onViewDetachedFromWindow(v: View) {
+</a><a href="#h0-3-13" id="h0-3-13" class="i">+                        messaging.lastFetchConversationUserUUID = null
+</a><a href="#h0-3-14" id="h0-3-14" class="i">+                    }
+</a><a href="#h0-3-15" id="h0-3-15" class="i">+                })
+</a>             }
+ 
+         }
+</pre>
+</div>
+</body>
+</html>

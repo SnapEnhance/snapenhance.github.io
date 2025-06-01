@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mod database exp - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/f0df0045d6195b0f850439b646f9d9009dc1c125.html">f0df0045d6195b0f850439b646f9d9009dc1c125</a>
+<b>parent</b> <a href="../commit/a8c4c1ce3eaf3b548a8bf88f567b66c5cb5efa45.html">a8c4c1ce3eaf3b548a8bf88f567b66c5cb5efa45</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 18 Aug 2023 00:55:30 +0200
+
+mod database exp
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">+++</span><span class="d"></span></td></tr>
+<tr><td class="D">D</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/friends/FriendDatabase.kt</a></td><td> | </td><td class="num">49</td><td><span class="i"></span><span class="d">-------------------------------------------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a></td><td> | </td><td class="num">119</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="D">D</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/friends/FriendFeature.kt</a></td><td> | </td><td class="num">10</td><td><span class="i"></span><span class="d">----------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/EnumConversationFeature.kt</a></td><td> | </td><td class="num">11</td><td><span class="i">+++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/ManagementObjects.kt</a></td><td> | </td><td class="num">29</td><td><span class="i">+++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>6 files changed, 162 insertions(+), 59 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -9,6 +9,7 @@ import me.rhunk.snapenhance.bridge.wrapper.LocaleWrapper
+</a> import me.rhunk.snapenhance.bridge.wrapper.MappingsWrapper
+ import me.rhunk.snapenhance.core.config.ModConfig
+ import me.rhunk.snapenhance.download.DownloadTaskManager
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.messaging.ModDatabase
+</a> import me.rhunk.snapenhance.ui.manager.data.InstallationSummary
+ import me.rhunk.snapenhance.ui.manager.data.ModMappingsInfo
+ import me.rhunk.snapenhance.ui.manager.data.SnapchatAppInfo
+<a href="#h0-1" id="h0-1" class="h">@@ -30,6 +31,7 @@ class RemoteSideContext(
+</a>     val translation = LocaleWrapper()
+     val mappings = MappingsWrapper()
+     val downloadTaskManager = DownloadTaskManager()
+<a href="#h0-1-3" id="h0-1-3" class="i">+    val modDatabase = ModDatabase(this)
+</a> 
+     init {
+         runCatching {
+<a href="#h0-2" id="h0-2" class="h">@@ -41,6 +43,7 @@ class RemoteSideContext(
+</a>                 init(androidContext)
+             }
+             downloadTaskManager.init(androidContext)
+<a href="#h0-2-3" id="h0-2-3" class="i">+            modDatabase.init()
+</a>         }.onFailure {
+             Logger.error(&quot;Failed to initialize RemoteSideContext&quot;, it)
+         }
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/friends/FriendDatabase.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/friends/FriendDatabase.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/friends/FriendDatabase.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/friends/FriendDatabase.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,48 +0,0 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="d">-package me.rhunk.snapenhance.friends
+</a><a href="#h1-0-1" id="h1-0-1" class="d">-
+</a><a href="#h1-0-2" id="h1-0-2" class="d">-import android.database.sqlite.SQLiteDatabase
+</a><a href="#h1-0-3" id="h1-0-3" class="d">-import me.rhunk.snapenhance.RemoteSideContext
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-import me.rhunk.snapenhance.util.SQLiteDatabaseHelper
+</a><a href="#h1-0-5" id="h1-0-5" class="d">-
+</a><a href="#h1-0-6" id="h1-0-6" class="d">-class FriendDatabase(
+</a><a href="#h1-0-7" id="h1-0-7" class="d">-    private val context: RemoteSideContext,
+</a><a href="#h1-0-8" id="h1-0-8" class="d">-) {
+</a><a href="#h1-0-9" id="h1-0-9" class="d">-    private lateinit var database: SQLiteDatabase
+</a><a href="#h1-0-10" id="h1-0-10" class="d">-
+</a><a href="#h1-0-11" id="h1-0-11" class="d">-    fun init() {
+</a><a href="#h1-0-12" id="h1-0-12" class="d">-        database = context.androidContext.openOrCreateDatabase(&quot;friends.db&quot;, 0, null)
+</a><a href="#h1-0-13" id="h1-0-13" class="d">-        SQLiteDatabaseHelper.createTablesFromSchema(database, mapOf(
+</a><a href="#h1-0-14" id="h1-0-14" class="d">-            &quot;friends&quot; to listOf(
+</a><a href="#h1-0-15" id="h1-0-15" class="d">-                &quot;userId VARCHAR PRIMARY KEY&quot;,
+</a><a href="#h1-0-16" id="h1-0-16" class="d">-                &quot;displayName VARCHAR&quot;,
+</a><a href="#h1-0-17" id="h1-0-17" class="d">-                &quot;mutable_username VARCHAR&quot;,
+</a><a href="#h1-0-18" id="h1-0-18" class="d">-                &quot;bitmojiId VARCHAR&quot;,
+</a><a href="#h1-0-19" id="h1-0-19" class="d">-                &quot;selfieId VARCHAR&quot;
+</a><a href="#h1-0-20" id="h1-0-20" class="d">-            ),
+</a><a href="#h1-0-21" id="h1-0-21" class="d">-            &quot;rules&quot; to listOf(
+</a><a href="#h1-0-22" id="h1-0-22" class="d">-                &quot;userId VARCHAR PRIMARY KEY&quot;,
+</a><a href="#h1-0-23" id="h1-0-23" class="d">-                &quot;enabled BOOLEAN&quot;,
+</a><a href="#h1-0-24" id="h1-0-24" class="d">-                &quot;mode VARCHAR&quot;,
+</a><a href="#h1-0-25" id="h1-0-25" class="d">-                &quot;type VARCHAR&quot;
+</a><a href="#h1-0-26" id="h1-0-26" class="d">-            ),
+</a><a href="#h1-0-27" id="h1-0-27" class="d">-            &quot;streaks&quot; to listOf(
+</a><a href="#h1-0-28" id="h1-0-28" class="d">-                &quot;userId VARCHAR PRIMARY KEY&quot;,
+</a><a href="#h1-0-29" id="h1-0-29" class="d">-                &quot;notify BOOLEAN&quot;,
+</a><a href="#h1-0-30" id="h1-0-30" class="d">-                &quot;expirationTimestamp BIGINT&quot;,
+</a><a href="#h1-0-31" id="h1-0-31" class="d">-                &quot;count INTEGER&quot;
+</a><a href="#h1-0-32" id="h1-0-32" class="d">-            ),
+</a><a href="#h1-0-33" id="h1-0-33" class="d">-            &quot;analytics_config&quot; to listOf(
+</a><a href="#h1-0-34" id="h1-0-34" class="d">-                &quot;userId VARCHAR PRIMARY KEY&quot;,
+</a><a href="#h1-0-35" id="h1-0-35" class="d">-                &quot;modes VARCHAR&quot;
+</a><a href="#h1-0-36" id="h1-0-36" class="d">-            ),
+</a><a href="#h1-0-37" id="h1-0-37" class="d">-            &quot;analytics&quot; to listOf(
+</a><a href="#h1-0-38" id="h1-0-38" class="d">-                &quot;hash VARCHAR PRIMARY KEY&quot;,
+</a><a href="#h1-0-39" id="h1-0-39" class="d">-                &quot;userId VARCHAR&quot;,
+</a><a href="#h1-0-40" id="h1-0-40" class="d">-                &quot;conversationId VARCHAR&quot;,
+</a><a href="#h1-0-41" id="h1-0-41" class="d">-                &quot;timestamp BIGINT&quot;,
+</a><a href="#h1-0-42" id="h1-0-42" class="d">-                &quot;eventName VARCHAR&quot;,
+</a><a href="#h1-0-43" id="h1-0-43" class="d">-                &quot;eventData VARCHAR&quot;
+</a><a href="#h1-0-44" id="h1-0-44" class="d">-            )
+</a><a href="#h1-0-45" id="h1-0-45" class="d">-        ))
+</a><a href="#h1-0-46" id="h1-0-46" class="d">-    }
+</a><a href="#h1-0-47" id="h1-0-47" class="d">-}</a><a href="#h1-0-48" id="h1-0-48" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -0,0 +1,118 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="i">+package me.rhunk.snapenhance.messaging
+</a><a href="#h2-0-1" id="h2-0-1" class="i">+
+</a><a href="#h2-0-2" id="h2-0-2" class="i">+import android.database.sqlite.SQLiteDatabase
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.RemoteSideContext
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import me.rhunk.snapenhance.core.messaging.FriendStreaks
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+import me.rhunk.snapenhance.core.messaging.MessagingRule
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+import me.rhunk.snapenhance.core.messaging.Mode
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+import me.rhunk.snapenhance.core.messaging.ObjectType
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+import me.rhunk.snapenhance.database.objects.FriendInfo
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+import me.rhunk.snapenhance.util.SQLiteDatabaseHelper
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+import me.rhunk.snapenhance.util.getInteger
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+import me.rhunk.snapenhance.util.getLongOrNull
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+import me.rhunk.snapenhance.util.getStringOrNull
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+import java.util.concurrent.Executors
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+
+</a><a href="#h2-0-16" id="h2-0-16" class="i">+class ModDatabase(
+</a><a href="#h2-0-17" id="h2-0-17" class="i">+    private val context: RemoteSideContext,
+</a><a href="#h2-0-18" id="h2-0-18" class="i">+) {
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+    private val executor = Executors.newSingleThreadExecutor()
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+    private lateinit var database: SQLiteDatabase
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+    fun init() {
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+        database = context.androidContext.openOrCreateDatabase(&quot;main.db&quot;, 0, null)
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+        SQLiteDatabaseHelper.createTablesFromSchema(database, mapOf(
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+            &quot;friends&quot; to listOf(
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+                &quot;userId VARCHAR PRIMARY KEY&quot;,
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+                &quot;displayName VARCHAR&quot;,
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+                &quot;mutable_username VARCHAR&quot;,
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+                &quot;bitmojiId VARCHAR&quot;,
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+                &quot;selfieId VARCHAR&quot;
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+            ),
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+            &quot;rules&quot; to listOf(
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+                &quot;id INTEGER PRIMARY KEY AUTOINCREMENT&quot;,
+</a><a href="#h2-0-34" id="h2-0-34" class="i">+                &quot;objectType VARCHAR&quot;,
+</a><a href="#h2-0-35" id="h2-0-35" class="i">+                &quot;targetUuid VARCHAR&quot;,
+</a><a href="#h2-0-36" id="h2-0-36" class="i">+                &quot;enabled BOOLEAN&quot;,
+</a><a href="#h2-0-37" id="h2-0-37" class="i">+                &quot;mode VARCHAR&quot;,
+</a><a href="#h2-0-38" id="h2-0-38" class="i">+                &quot;subject VARCHAR&quot;
+</a><a href="#h2-0-39" id="h2-0-39" class="i">+            ),
+</a><a href="#h2-0-40" id="h2-0-40" class="i">+            &quot;streaks&quot; to listOf(
+</a><a href="#h2-0-41" id="h2-0-41" class="i">+                &quot;userId VARCHAR PRIMARY KEY&quot;,
+</a><a href="#h2-0-42" id="h2-0-42" class="i">+                &quot;notify BOOLEAN&quot;,
+</a><a href="#h2-0-43" id="h2-0-43" class="i">+                &quot;expirationTimestamp BIGINT&quot;,
+</a><a href="#h2-0-44" id="h2-0-44" class="i">+                &quot;count INTEGER&quot;
+</a><a href="#h2-0-45" id="h2-0-45" class="i">+            ),
+</a><a href="#h2-0-46" id="h2-0-46" class="i">+            &quot;analytics_config&quot; to listOf(
+</a><a href="#h2-0-47" id="h2-0-47" class="i">+                &quot;userId VARCHAR PRIMARY KEY&quot;,
+</a><a href="#h2-0-48" id="h2-0-48" class="i">+                &quot;modes VARCHAR&quot;
+</a><a href="#h2-0-49" id="h2-0-49" class="i">+            ),
+</a><a href="#h2-0-50" id="h2-0-50" class="i">+            &quot;analytics&quot; to listOf(
+</a><a href="#h2-0-51" id="h2-0-51" class="i">+                &quot;hash VARCHAR PRIMARY KEY&quot;,
+</a><a href="#h2-0-52" id="h2-0-52" class="i">+                &quot;userId VARCHAR&quot;,
+</a><a href="#h2-0-53" id="h2-0-53" class="i">+                &quot;conversationId VARCHAR&quot;,
+</a><a href="#h2-0-54" id="h2-0-54" class="i">+                &quot;timestamp BIGINT&quot;,
+</a><a href="#h2-0-55" id="h2-0-55" class="i">+                &quot;eventName VARCHAR&quot;,
+</a><a href="#h2-0-56" id="h2-0-56" class="i">+                &quot;eventData VARCHAR&quot;
+</a><a href="#h2-0-57" id="h2-0-57" class="i">+            )
+</a><a href="#h2-0-58" id="h2-0-58" class="i">+        ))
+</a><a href="#h2-0-59" id="h2-0-59" class="i">+    }
+</a><a href="#h2-0-60" id="h2-0-60" class="i">+
+</a><a href="#h2-0-61" id="h2-0-61" class="i">+    fun syncFriends(friends: List&lt;FriendInfo&gt;) {
+</a><a href="#h2-0-62" id="h2-0-62" class="i">+        executor.execute {
+</a><a href="#h2-0-63" id="h2-0-63" class="i">+            try {
+</a><a href="#h2-0-64" id="h2-0-64" class="i">+                friends.forEach { friend -&gt;
+</a><a href="#h2-0-65" id="h2-0-65" class="i">+                    database.execSQL(&quot;INSERT OR REPLACE INTO friends VALUES (?, ?, ?, ?, ?)&quot;, arrayOf(
+</a><a href="#h2-0-66" id="h2-0-66" class="i">+                        friend.userId,
+</a><a href="#h2-0-67" id="h2-0-67" class="i">+                        friend.displayName,
+</a><a href="#h2-0-68" id="h2-0-68" class="i">+                        friend.username,
+</a><a href="#h2-0-69" id="h2-0-69" class="i">+                        friend.bitmojiAvatarId,
+</a><a href="#h2-0-70" id="h2-0-70" class="i">+                        friend.bitmojiSelfieId
+</a><a href="#h2-0-71" id="h2-0-71" class="i">+                    ))
+</a><a href="#h2-0-72" id="h2-0-72" class="i">+                    //sync streaks
+</a><a href="#h2-0-73" id="h2-0-73" class="i">+                    if (friend.streakLength &gt; 0) {
+</a><a href="#h2-0-74" id="h2-0-74" class="i">+                        database.execSQL(&quot;INSERT OR REPLACE INTO streaks (userId, expirationTimestamp, count) VALUES (?, ?, ?)&quot;, arrayOf(
+</a><a href="#h2-0-75" id="h2-0-75" class="i">+                            friend.userId,
+</a><a href="#h2-0-76" id="h2-0-76" class="i">+                            friend.streakExpirationTimestamp,
+</a><a href="#h2-0-77" id="h2-0-77" class="i">+                            friend.streakLength
+</a><a href="#h2-0-78" id="h2-0-78" class="i">+                        ))
+</a><a href="#h2-0-79" id="h2-0-79" class="i">+                    } else {
+</a><a href="#h2-0-80" id="h2-0-80" class="i">+                        database.execSQL(&quot;DELETE FROM streaks WHERE userId = ?&quot;, arrayOf(friend.userId))
+</a><a href="#h2-0-81" id="h2-0-81" class="i">+                    }
+</a><a href="#h2-0-82" id="h2-0-82" class="i">+                }
+</a><a href="#h2-0-83" id="h2-0-83" class="i">+            } catch (e: Exception) {
+</a><a href="#h2-0-84" id="h2-0-84" class="i">+                throw e
+</a><a href="#h2-0-85" id="h2-0-85" class="i">+            }
+</a><a href="#h2-0-86" id="h2-0-86" class="i">+        }
+</a><a href="#h2-0-87" id="h2-0-87" class="i">+    }
+</a><a href="#h2-0-88" id="h2-0-88" class="i">+
+</a><a href="#h2-0-89" id="h2-0-89" class="i">+    fun getRulesFromId(type: ObjectType, targetUuid: String): List&lt;MessagingRule&gt; {
+</a><a href="#h2-0-90" id="h2-0-90" class="i">+        return database.rawQuery(&quot;SELECT * FROM rules WHERE objectType = ? AND targetUuid = ?&quot;, arrayOf(type.name, targetUuid)).use { cursor -&gt;
+</a><a href="#h2-0-91" id="h2-0-91" class="i">+            val rules = mutableListOf&lt;MessagingRule&gt;()
+</a><a href="#h2-0-92" id="h2-0-92" class="i">+            while (cursor.moveToNext()) {
+</a><a href="#h2-0-93" id="h2-0-93" class="i">+                rules.add(MessagingRule(
+</a><a href="#h2-0-94" id="h2-0-94" class="i">+                    id = cursor.getInteger(&quot;id&quot;),
+</a><a href="#h2-0-95" id="h2-0-95" class="i">+                    objectType = ObjectType.valueOf(cursor.getStringOrNull(&quot;objectType&quot;)!!),
+</a><a href="#h2-0-96" id="h2-0-96" class="i">+                    targetUuid = cursor.getStringOrNull(&quot;targetUuid&quot;)!!,
+</a><a href="#h2-0-97" id="h2-0-97" class="i">+                    enabled = cursor.getInteger(&quot;enabled&quot;) == 1,
+</a><a href="#h2-0-98" id="h2-0-98" class="i">+                    mode = Mode.valueOf(cursor.getStringOrNull(&quot;mode&quot;)!!),
+</a><a href="#h2-0-99" id="h2-0-99" class="i">+                    subject = cursor.getStringOrNull(&quot;subject&quot;)!!
+</a><a href="#h2-0-100" id="h2-0-100" class="i">+                ))
+</a><a href="#h2-0-101" id="h2-0-101" class="i">+            }
+</a><a href="#h2-0-102" id="h2-0-102" class="i">+            rules
+</a><a href="#h2-0-103" id="h2-0-103" class="i">+        }
+</a><a href="#h2-0-104" id="h2-0-104" class="i">+    }
+</a><a href="#h2-0-105" id="h2-0-105" class="i">+
+</a><a href="#h2-0-106" id="h2-0-106" class="i">+    fun getFriendStreaks(userId: String): FriendStreaks? {
+</a><a href="#h2-0-107" id="h2-0-107" class="i">+        return database.rawQuery(&quot;SELECT * FROM streaks WHERE userId = ?&quot;, arrayOf(userId)).use { cursor -&gt;
+</a><a href="#h2-0-108" id="h2-0-108" class="i">+            if (!cursor.moveToFirst()) return@use null
+</a><a href="#h2-0-109" id="h2-0-109" class="i">+            FriendStreaks(
+</a><a href="#h2-0-110" id="h2-0-110" class="i">+                userId = cursor.getStringOrNull(&quot;userId&quot;)!!,
+</a><a href="#h2-0-111" id="h2-0-111" class="i">+                notify = cursor.getInteger(&quot;notify&quot;) == 1,
+</a><a href="#h2-0-112" id="h2-0-112" class="i">+                expirationTimestamp = cursor.getLongOrNull(&quot;expirationTimestamp&quot;) ?: 0L,
+</a><a href="#h2-0-113" id="h2-0-113" class="i">+                count = cursor.getInteger(&quot;count&quot;)
+</a><a href="#h2-0-114" id="h2-0-114" class="i">+            )
+</a><a href="#h2-0-115" id="h2-0-115" class="i">+        }
+</a><a href="#h2-0-116" id="h2-0-116" class="i">+    }
+</a><a href="#h2-0-117" id="h2-0-117" class="i">+}</a><a href="#h2-0-118" id="h2-0-118" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/friends/FriendFeature.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/friends/FriendFeature.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/friends/FriendFeature.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/friends/FriendFeature.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -1,9 +0,0 @@
+</a><a href="#h3-0-0" id="h3-0-0" class="d">-package me.rhunk.snapenhance.core.friends
+</a><a href="#h3-0-1" id="h3-0-1" class="d">-
+</a><a href="#h3-0-2" id="h3-0-2" class="d">-enum class FriendFeature(
+</a><a href="#h3-0-3" id="h3-0-3" class="d">-    val value: String,
+</a><a href="#h3-0-4" id="h3-0-4" class="d">-) {
+</a><a href="#h3-0-5" id="h3-0-5" class="d">-    DOWNLOAD(&quot;download&quot;),
+</a><a href="#h3-0-6" id="h3-0-6" class="d">-    STEALTH(&quot;stealth&quot;),
+</a><a href="#h3-0-7" id="h3-0-7" class="d">-    AUTO_SAVE(&quot;auto_save&quot;);
+</a><a href="#h3-0-8" id="h3-0-8" class="d">-}</a><a href="#h3-0-9" id="h3-0-9" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/EnumConversationFeature.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/EnumConversationFeature.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/EnumConversationFeature.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/EnumConversationFeature.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -0,0 +1,10 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="i">+package me.rhunk.snapenhance.core.messaging
+</a><a href="#h4-0-1" id="h4-0-1" class="i">+
+</a><a href="#h4-0-2" id="h4-0-2" class="i">+enum class EnumConversationFeature(
+</a><a href="#h4-0-3" id="h4-0-3" class="i">+    val value: String,
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+    val objectType: ObjectType,
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+) {
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+    DOWNLOAD(&quot;download&quot;, ObjectType.USER),
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+    STEALTH(&quot;stealth&quot;, ObjectType.CONVERSATION),
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+    AUTO_SAVE(&quot;auto_save&quot;, ObjectType.CONVERSATION);
+</a><a href="#h4-0-9" id="h4-0-9" class="i">+}</a><a href="#h4-0-10" id="h4-0-10" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/ManagementObjects.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/ManagementObjects.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/ManagementObjects.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/ManagementObjects.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -0,0 +1,28 @@
+</a><a href="#h5-0-0" id="h5-0-0" class="i">+package me.rhunk.snapenhance.core.messaging
+</a><a href="#h5-0-1" id="h5-0-1" class="i">+
+</a><a href="#h5-0-2" id="h5-0-2" class="i">+
+</a><a href="#h5-0-3" id="h5-0-3" class="i">+enum class Mode {
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+    BLACKLIST,
+</a><a href="#h5-0-5" id="h5-0-5" class="i">+    WHITELIST
+</a><a href="#h5-0-6" id="h5-0-6" class="i">+}
+</a><a href="#h5-0-7" id="h5-0-7" class="i">+
+</a><a href="#h5-0-8" id="h5-0-8" class="i">+enum class ObjectType {
+</a><a href="#h5-0-9" id="h5-0-9" class="i">+    USER,
+</a><a href="#h5-0-10" id="h5-0-10" class="i">+    CONVERSATION
+</a><a href="#h5-0-11" id="h5-0-11" class="i">+}
+</a><a href="#h5-0-12" id="h5-0-12" class="i">+
+</a><a href="#h5-0-13" id="h5-0-13" class="i">+data class FriendStreaks(
+</a><a href="#h5-0-14" id="h5-0-14" class="i">+    val userId: String,
+</a><a href="#h5-0-15" id="h5-0-15" class="i">+    val notify: Boolean,
+</a><a href="#h5-0-16" id="h5-0-16" class="i">+    val expirationTimestamp: Long,
+</a><a href="#h5-0-17" id="h5-0-17" class="i">+    val count: Int
+</a><a href="#h5-0-18" id="h5-0-18" class="i">+)
+</a><a href="#h5-0-19" id="h5-0-19" class="i">+
+</a><a href="#h5-0-20" id="h5-0-20" class="i">+data class MessagingRule(
+</a><a href="#h5-0-21" id="h5-0-21" class="i">+    val id: Int,
+</a><a href="#h5-0-22" id="h5-0-22" class="i">+    val objectType: ObjectType,
+</a><a href="#h5-0-23" id="h5-0-23" class="i">+    val targetUuid: String,
+</a><a href="#h5-0-24" id="h5-0-24" class="i">+    val enabled: Boolean,
+</a><a href="#h5-0-25" id="h5-0-25" class="i">+    val mode: Mode?,
+</a><a href="#h5-0-26" id="h5-0-26" class="i">+    val subject: String
+</a><a href="#h5-0-27" id="h5-0-27" class="i">+)</a><a href="#h5-0-28" id="h5-0-28" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core): inapp overlay - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/5d2277db7c9d070ce47fa470231f84c41dcd41aa.html">5d2277db7c9d070ce47fa470231f84c41dcd41aa</a>
+<b>parent</b> <a href="../commit/029850abcc07f6b646f08358bc910b84712ef1e0.html">029850abcc07f6b646f08358bc910b84712ef1e0</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 21 Jun 2024 20:58:48 +0200
+
+fix(core): inapp overlay
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/InAppOverlay.kt</a></td><td> | </td><td class="num">21</td><td><span class="i">+++++++++++++++++</span><span class="d">----</span></td></tr>
+</table></pre><pre>2 files changed, 18 insertions(+), 5 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -68,7 +68,7 @@ class ModContext(
+</a>     val native = NativeLib()
+     val scriptRuntime by lazy { CoreScriptRuntime(this, log) }
+     val messagingBridge = CoreMessagingBridge(this)
+<a href="#h0-0-3" id="h0-0-3" class="d">-    val inAppOverlay = InAppOverlay()
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+    val inAppOverlay = InAppOverlay(this)
+</a> 
+     val isDeveloper by lazy { config.scripting.developerMode.get() }
+ 
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/InAppOverlay.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/InAppOverlay.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/InAppOverlay.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/InAppOverlay.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -33,12 +33,16 @@ import kotlinx.coroutines.delay
+</a> import me.rhunk.snapenhance.common.ui.AppMaterialTheme
+ import me.rhunk.snapenhance.common.ui.createComposeView
+ import me.rhunk.snapenhance.common.util.ktx.copyToClipboard
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.core.ModContext
+</a> import me.rhunk.snapenhance.core.util.hook.HookStage
+ import me.rhunk.snapenhance.core.util.hook.Hooker
+ import me.rhunk.snapenhance.core.util.ktx.isDarkTheme
+ import kotlin.math.roundToInt
+<a href="#h1-0-8" id="h1-0-8" class="i">+import kotlin.random.Random
+</a> 
+<a href="#h1-0-10" id="h1-0-10" class="d">-class InAppOverlay {
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+class InAppOverlay(
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+    private val context: ModContext
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+) {
+</a>     companion object {
+         fun showCrashOverlay(content: String, throwable: Throwable? = null) {
+             Hooker.ephemeralHook(Activity::class.java, &quot;onPostCreate&quot;, HookStage.AFTER) { param -&gt;
+<a href="#h1-1" id="h1-1" class="h">@@ -179,19 +183,27 @@ class InAppOverlay {
+</a>         }
+     }
+ 
+<a href="#h1-1-3" id="h1-1-3" class="d">-    fun onActivityCreate(activity: Activity) {
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+    private val overlayTag = Random.nextLong()
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+    private fun injectOverlay(activity: Activity) {
+</a>         val root = activity.findViewById&lt;FrameLayout&gt;(android.R.id.content)
+<a href="#h1-1-8" id="h1-1-8" class="d">-        root.post {
+</a><a href="#h1-1-9" id="h1-1-9" class="i">+        activity.runOnUiThread {
+</a><a href="#h1-1-10" id="h1-1-10" class="i">+            if (root.findViewWithTag&lt;View&gt;(overlayTag) != null) return@runOnUiThread
+</a>             root.addView(createComposeView(activity) {
+                 AppMaterialTheme(isDarkTheme = remember { activity.isDarkTheme() }) {
+                     OverlayContent()
+                 }
+             }.apply {
+<a href="#h1-1-16" id="h1-1-16" class="i">+                tag = overlayTag
+</a>                 layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+             })
+         }
+     }
+ 
+<a href="#h1-1-22" id="h1-1-22" class="i">+    fun onActivityCreate(activity: Activity) {
+</a><a href="#h1-1-23" id="h1-1-23" class="i">+        injectOverlay(activity)
+</a><a href="#h1-1-24" id="h1-1-24" class="i">+    }
+</a><a href="#h1-1-25" id="h1-1-25" class="i">+
+</a>     @Composable
+     private fun DurationProgress(
+         duration: Int,
+<a href="#h1-2" id="h1-2" class="h">@@ -228,7 +240,7 @@ class InAppOverlay {
+</a>         )
+     }
+ 
+<a href="#h1-2-3" id="h1-2-3" class="d">-    fun showToast(
+</a><a href="#h1-2-4" id="h1-2-4" class="i">+    private fun showToast(
+</a>         icon: @Composable () -&gt; Unit = {
+             Icon(Icons.Outlined.Warning, contentDescription = &quot;icon&quot;, modifier = Modifier.size(32.dp))
+         },
+<a href="#h1-3" id="h1-3" class="h">@@ -236,6 +248,7 @@ class InAppOverlay {
+</a>         durationMs: Int = 3000,
+         showDuration: Boolean = true,
+     ) {
+<a href="#h1-3-3" id="h1-3-3" class="i">+        injectOverlay(context.mainActivity!!)
+</a>         toasts.add(Toast(
+             composable = {
+                 ElevatedCard(
+</pre>
+</div>
+</body>
+</html>

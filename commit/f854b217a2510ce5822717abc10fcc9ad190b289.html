@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core): feed entry table - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/f854b217a2510ce5822717abc10fcc9ad190b289.html">f854b217a2510ce5822717abc10fcc9ad190b289</a>
+<b>parent</b> <a href="../commit/bf5d57758c330c4a05cf1b1e0bbb081e71d1289b.html">bf5d57758c330c4a05cf1b1e0bbb081e71d1289b</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu,  2 Jan 2025 17:41:50 +0100
+
+fix(core): feed entry table
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/AddFriendDialog.kt</a></td><td> | </td><td class="num">22</td><td><span class="i">++++++++++++++++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendFeedEntry.kt</a></td><td> | </td><td class="num">25</td><td><span class="i">+++++++++++++++</span><span class="d">----------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></td><td> | </td><td class="num">23</td><td><span class="i">+++++++++++++</span><span class="d">----------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt</a></td><td> | </td><td class="num">34</td><td><span class="i">+++++++++++++++++++++++++++</span><span class="d">-------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a></td><td> | </td><td class="num">42</td><td><span class="i">++++++++++++++++++++++++++</span><span class="d">----------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/HalfSwipeNotifier.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++</span><span class="d">----</span></td></tr>
+</table></pre><pre>7 files changed, 105 insertions(+), 52 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/AddFriendDialog.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/AddFriendDialog.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/AddFriendDialog.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/social/AddFriendDialog.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -45,6 +45,7 @@ class AddFriendDialog(
+</a>         id: String,
+         bitmoji: String? = null,
+         name: String,
+<a href="#h0-0-3" id="h0-0-3" class="i">+        participantsCount: Int? = null,
+</a>         getCurrentState: () -&gt; Boolean,
+         onState: (Boolean) -&gt; Unit = {},
+     ) {
+<a href="#h0-1" id="h0-1" class="h">@@ -74,12 +75,24 @@ class AddFriendDialog(
+</a>                 size = 32,
+             )
+ 
+<a href="#h0-1-3" id="h0-1-3" class="d">-            Text(
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-                text = name,
+</a><a href="#h0-1-5" id="h0-1-5" class="d">-                fontSize = 15.sp,
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+            Column(
+</a>                 modifier = Modifier
+                     .weight(1f)
+<a href="#h0-1-9" id="h0-1-9" class="d">-            )
+</a><a href="#h0-1-10" id="h0-1-10" class="i">+            ) {
+</a><a href="#h0-1-11" id="h0-1-11" class="i">+                Text(
+</a><a href="#h0-1-12" id="h0-1-12" class="i">+                    text = name,
+</a><a href="#h0-1-13" id="h0-1-13" class="i">+                    fontSize = 15.sp,
+</a><a href="#h0-1-14" id="h0-1-14" class="i">+                )
+</a><a href="#h0-1-15" id="h0-1-15" class="i">+
+</a><a href="#h0-1-16" id="h0-1-16" class="i">+                participantsCount?.let {
+</a><a href="#h0-1-17" id="h0-1-17" class="i">+                    Text(
+</a><a href="#h0-1-18" id="h0-1-18" class="i">+                        text = translation.format(&quot;participants_text&quot;, &quot;count&quot; to it.toString()),
+</a><a href="#h0-1-19" id="h0-1-19" class="i">+                        fontSize = 12.sp,
+</a><a href="#h0-1-20" id="h0-1-20" class="i">+                        lineHeight = 12.sp,
+</a><a href="#h0-1-21" id="h0-1-21" class="i">+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+</a><a href="#h0-1-22" id="h0-1-22" class="i">+                    )
+</a><a href="#h0-1-23" id="h0-1-23" class="i">+                }
+</a><a href="#h0-1-24" id="h0-1-24" class="i">+            }
+</a> 
+             Checkbox(
+                 checked = currentState,
+<a href="#h0-2" id="h0-2" class="h">@@ -249,6 +262,7 @@ class AddFriendDialog(
+</a>                         ListCardEntry(
+                             id = group.conversationId,
+                             name = group.name,
+<a href="#h0-2-3" id="h0-2-3" class="i">+                            participantsCount = group.participantsCount,
+</a>                             getCurrentState = { actionHandler.getGroupState(group) }
+                         ) { state -&gt;
+                             actionHandler.onGroupState(group, state)
+<b>diff --git a/<a id="h1" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -198,7 +198,8 @@
+</a>                 &quot;search_hint&quot;: &quot;Search&quot;,
+                 &quot;fetch_error&quot;: &quot;Failed to fetch data&quot;,
+                 &quot;category_groups&quot;: &quot;Groups&quot;,
+<a href="#h1-0-3" id="h1-0-3" class="d">-                &quot;category_friends&quot;: &quot;Friends&quot;
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+                &quot;category_friends&quot;: &quot;Friends&quot;,
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+                &quot;participants_text&quot;: &quot;{count} participants&quot;
+</a>             },
+             &quot;scripting_warning&quot;: {
+                 &quot;title&quot;: &quot;Warning&quot;,
+<b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendFeedEntry.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendFeedEntry.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendFeedEntry.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendFeedEntry.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -3,13 +3,14 @@ package me.rhunk.snapenhance.common.database.impl
+</a> import android.annotation.SuppressLint
+ import android.database.Cursor
+ import me.rhunk.snapenhance.common.database.DatabaseObject
+<a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.common.util.ktx.getBlobOrNull
+</a> import me.rhunk.snapenhance.common.util.ktx.getIntOrNull
+<a href="#h2-0-5" id="h2-0-5" class="d">-import me.rhunk.snapenhance.common.util.ktx.getInteger
+</a><a href="#h2-0-6" id="h2-0-6" class="d">-import me.rhunk.snapenhance.common.util.ktx.getLong
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+import me.rhunk.snapenhance.common.util.ktx.getLongOrNull
+</a> import me.rhunk.snapenhance.common.util.ktx.getStringOrNull
+<a href="#h2-0-9" id="h2-0-9" class="i">+import java.nio.ByteBuffer
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+import java.util.UUID
+</a> 
+ data class FriendFeedEntry(
+<a href="#h2-0-13" id="h2-0-13" class="d">-    var id: Int = 0,
+</a>     var feedDisplayName: String? = null,
+     var participantsSize: Int = 0,
+     var lastInteractionTimestamp: Long = 0,
+<a href="#h2-1" id="h2-1" class="h">@@ -18,24 +19,28 @@ data class FriendFeedEntry(
+</a>     var lastInteractionUserId: Int? = null,
+     var key: String? = null,
+     var friendUserId: String? = null,
+<a href="#h2-1-3" id="h2-1-3" class="i">+    var participants: List&lt;String&gt;? = null,
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+    var conversationType: Int? = null,
+</a>     var friendDisplayName: String? = null,
+     var friendDisplayUsername: String? = null,
+     var friendLinkType: Int? = null,
+     var bitmojiAvatarId: String? = null,
+     var bitmojiSelfieId: String? = null,
+ ) : DatabaseObject {
+<a href="#h2-1-11" id="h2-1-11" class="d">-
+</a>     @SuppressLint(&quot;Range&quot;)
+     override fun write(cursor: Cursor) {
+         with(cursor) {
+<a href="#h2-1-15" id="h2-1-15" class="d">-            id = getInteger(&quot;_id&quot;)
+</a><a href="#h2-1-16" id="h2-1-16" class="d">-            feedDisplayName = getStringOrNull(&quot;feedDisplayName&quot;)
+</a><a href="#h2-1-17" id="h2-1-17" class="d">-            participantsSize = getInteger(&quot;participantsSize&quot;)
+</a><a href="#h2-1-18" id="h2-1-18" class="d">-            lastInteractionTimestamp = getLong(&quot;lastInteractionTimestamp&quot;)
+</a><a href="#h2-1-19" id="h2-1-19" class="d">-            displayTimestamp = getLong(&quot;displayTimestamp&quot;)
+</a><a href="#h2-1-20" id="h2-1-20" class="i">+            key = getStringOrNull(&quot;client_conversation_id&quot;) ?: getStringOrNull(&quot;key&quot;)
+</a><a href="#h2-1-21" id="h2-1-21" class="i">+            feedDisplayName = (getStringOrNull(&quot;conversation_title&quot;) ?: getStringOrNull(&quot;feedDisplayName&quot;))?.takeIf { it.isNotBlank() }
+</a><a href="#h2-1-22" id="h2-1-22" class="i">+            lastInteractionTimestamp = getLongOrNull(&quot;last_updated_timestamp&quot;) ?: getLongOrNull(&quot;lastInteractionTimestamp&quot;) ?:  0L
+</a><a href="#h2-1-23" id="h2-1-23" class="i">+
+</a><a href="#h2-1-24" id="h2-1-24" class="i">+            participants = getBlobOrNull(&quot;participants&quot;)?.toList()?.chunked(16)?.map { ByteBuffer.wrap(it.toByteArray()).run { UUID(long, long) }.toString() } ?: emptyList()
+</a><a href="#h2-1-25" id="h2-1-25" class="i">+            participantsSize = getIntOrNull(&quot;participantsSize&quot;) ?: participants?.size ?: 0
+</a><a href="#h2-1-26" id="h2-1-26" class="i">+            conversationType = getIntOrNull(&quot;conversation_type&quot;) ?: getIntOrNull(&quot;kind&quot;)
+</a><a href="#h2-1-27" id="h2-1-27" class="i">+
+</a><a href="#h2-1-28" id="h2-1-28" class="i">+            displayTimestamp = getLongOrNull(&quot;displayTimestamp&quot;) ?: 0L
+</a>             displayInteractionType = getStringOrNull(&quot;displayInteractionType&quot;)
+             lastInteractionUserId = getIntOrNull(&quot;lastInteractionUserId&quot;)
+<a href="#h2-1-31" id="h2-1-31" class="d">-            key = getStringOrNull(&quot;key&quot;)
+</a>             friendUserId = getStringOrNull(&quot;friendUserId&quot;)
+             friendDisplayName = getStringOrNull(&quot;friendDisplayName&quot;)
+             friendDisplayUsername = getStringOrNull(&quot;friendDisplayUsername&quot;)
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -330,22 +330,25 @@ class SnapEnhance {
+</a>             event.canceled = true
+             val feedEntries = appContext.database.getFeedEntries(Int.MAX_VALUE)
+ 
+<a href="#h3-0-3" id="h3-0-3" class="d">-            val groups = feedEntries.filter { it.friendUserId == null }.map {
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+            val groups = feedEntries.filter { it.conversationType == 1 }.map {
+</a>                 MessagingGroupInfo(
+                     it.key!!,
+<a href="#h3-0-7" id="h3-0-7" class="d">-                    it.feedDisplayName!!,
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+                    it.feedDisplayName ?: &quot;&quot;,
+</a>                     it.participantsSize
+                 )
+             }
+ 
+<a href="#h3-0-13" id="h3-0-13" class="d">-            val friends = feedEntries.filter { it.friendUserId != null }.map {
+</a><a href="#h3-0-14" id="h3-0-14" class="i">+            val friends = feedEntries.filter { it.conversationType == 0 }.mapNotNull {
+</a><a href="#h3-0-15" id="h3-0-15" class="i">+                val friendUserId = it.friendUserId ?: it.participants?.filter { it != appContext.database.myUserId }?.firstOrNull() ?: return@mapNotNull null
+</a><a href="#h3-0-16" id="h3-0-16" class="i">+                val friend = appContext.database.getFriendInfo(friendUserId) ?: return@mapNotNull null
+</a><a href="#h3-0-17" id="h3-0-17" class="i">+
+</a>                 MessagingFriendInfo(
+<a href="#h3-0-19" id="h3-0-19" class="d">-                    it.friendUserId!!,
+</a><a href="#h3-0-20" id="h3-0-20" class="d">-                    appContext.database.getConversationLinkFromUserId(it.friendUserId!!)?.clientConversationId,
+</a><a href="#h3-0-21" id="h3-0-21" class="d">-                    it.friendDisplayName,
+</a><a href="#h3-0-22" id="h3-0-22" class="d">-                    it.friendDisplayUsername!!.split(&quot;|&quot;)[1],
+</a><a href="#h3-0-23" id="h3-0-23" class="d">-                    it.bitmojiAvatarId,
+</a><a href="#h3-0-24" id="h3-0-24" class="d">-                    it.bitmojiSelfieId,
+</a><a href="#h3-0-25" id="h3-0-25" class="i">+                    friendUserId,
+</a><a href="#h3-0-26" id="h3-0-26" class="i">+                    appContext.database.getConversationLinkFromUserId(friendUserId)?.clientConversationId,
+</a><a href="#h3-0-27" id="h3-0-27" class="i">+                    friend.displayName,
+</a><a href="#h3-0-28" id="h3-0-28" class="i">+                    friend.mutableUsername ?: friend.usernameForSorting!!,
+</a><a href="#h3-0-29" id="h3-0-29" class="i">+                    friend.bitmojiAvatarId,
+</a><a href="#h3-0-30" id="h3-0-30" class="i">+                    friend.bitmojiSelfieId,
+</a>                     streaks = null
+                 )
+             }
+<a href="#h3-1" id="h3-1" class="h">@@ -379,7 +382,7 @@ class SnapEnhance {
+</a>                 return appContext.database.getFeedEntryByConversationId(uuid)?.let {
+                     MessagingGroupInfo(
+                         it.key!!,
+<a href="#h3-1-3" id="h3-1-3" class="d">-                        it.feedDisplayName!!,
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+                        it.feedDisplayName ?: &quot;&quot;,
+</a>                         it.participantsSize
+                     ).toSerialized()
+                 }
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/ExportChatMessages.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -22,10 +22,12 @@ import androidx.compose.ui.text.input.ImeAction
+</a> import androidx.compose.ui.text.input.KeyboardType
+ import androidx.compose.ui.text.style.TextOverflow
+ import androidx.compose.ui.unit.dp
+<a href="#h4-0-3" id="h4-0-3" class="i">+import androidx.compose.ui.unit.sp
+</a> import kotlinx.coroutines.*
+ import me.rhunk.snapenhance.common.data.ContentType
+ import me.rhunk.snapenhance.common.database.impl.FriendFeedEntry
+ import me.rhunk.snapenhance.common.ui.createComposeAlertDialog
+<a href="#h4-0-8" id="h4-0-8" class="i">+import me.rhunk.snapenhance.common.ui.rememberAsyncMutableState
+</a> import me.rhunk.snapenhance.core.action.AbstractAction
+ import me.rhunk.snapenhance.core.features.impl.messaging.Messaging
+ import me.rhunk.snapenhance.core.logger.CoreLogger
+<a href="#h4-1" id="h4-1" class="h">@@ -72,6 +74,8 @@ class ExportChatMessages : AbstractAction() {
+</a>         val messageTypeFilter = remember { mutableStateListOf&lt;ContentType&gt;() }
+         var amountOfMessages by remember { mutableIntStateOf(-1) }
+         var downloadMedias by remember { mutableStateOf(false) }
+<a href="#h4-1-3" id="h4-1-3" class="i">+        val allFriends by rememberAsyncMutableState(null) { context.database.getAllFriends().associateBy { it.userId!! } }
+</a><a href="#h4-1-4" id="h4-1-4" class="i">+        val myUserId = context.database.myUserId
+</a> 
+         Column(
+             modifier = Modifier
+<a href="#h4-2" id="h4-2" class="h">@@ -102,7 +106,7 @@ class ExportChatMessages : AbstractAction() {
+</a>                         LazyColumn(
+                             modifier = Modifier.size(LocalConfiguration.current.screenWidthDp.dp, 300.dp)
+                         ) {
+<a href="#h4-2-3" id="h4-2-3" class="d">-                            items(feedEntries) { feedEntry -&gt;
+</a><a href="#h4-2-4" id="h4-2-4" class="i">+                            items(feedEntries, key = { it.key!! }) { feedEntry -&gt;
+</a>                                 DropdownMenuItem(
+                                     modifier = Modifier.fillMaxWidth(),
+                                     onClick = {
+<a href="#h4-3" id="h4-3" class="h">@@ -114,11 +118,26 @@ class ExportChatMessages : AbstractAction() {
+</a>                                             verticalAlignment = Alignment.CenterVertically
+                                         ) {
+                                             Checkbox(checked = selectedFeedEntries.contains(feedEntry), onCheckedChange = null)
+<a href="#h4-3-3" id="h4-3-3" class="d">-                                            Text(
+</a><a href="#h4-3-4" id="h4-3-4" class="d">-                                                text = feedEntry.feedDisplayName ?: feedEntry.friendDisplayName ?: &quot;unknown&quot;,
+</a><a href="#h4-3-5" id="h4-3-5" class="d">-                                                overflow = TextOverflow.Ellipsis,
+</a><a href="#h4-3-6" id="h4-3-6" class="d">-                                                maxLines = 1
+</a><a href="#h4-3-7" id="h4-3-7" class="d">-                                            )
+</a><a href="#h4-3-8" id="h4-3-8" class="i">+                                            Column {
+</a><a href="#h4-3-9" id="h4-3-9" class="i">+                                                Text(
+</a><a href="#h4-3-10" id="h4-3-10" class="i">+                                                    text = remember(feedEntry) {
+</a><a href="#h4-3-11" id="h4-3-11" class="i">+                                                        (if (feedEntry.conversationType == 1) feedEntry.feedDisplayName else feedEntry.participants?.filter { it != myUserId }?.firstOrNull()?.let { userId -&gt;
+</a><a href="#h4-3-12" id="h4-3-12" class="i">+                                                            allFriends?.get(userId)?.let { friend -&gt; friend.displayName?.let { &quot;$it (${friend.mutableUsername})&quot; } ?: friend.mutableUsername }
+</a><a href="#h4-3-13" id="h4-3-13" class="i">+                                                        }) ?: &quot;Unknown&quot;
+</a><a href="#h4-3-14" id="h4-3-14" class="i">+                                                    },
+</a><a href="#h4-3-15" id="h4-3-15" class="i">+                                                    overflow = TextOverflow.Ellipsis,
+</a><a href="#h4-3-16" id="h4-3-16" class="i">+                                                    lineHeight = 15.sp,
+</a><a href="#h4-3-17" id="h4-3-17" class="i">+                                                    maxLines = 1
+</a><a href="#h4-3-18" id="h4-3-18" class="i">+                                                )
+</a><a href="#h4-3-19" id="h4-3-19" class="i">+                                                if (feedEntry.conversationType == 1) {
+</a><a href="#h4-3-20" id="h4-3-20" class="i">+                                                    Text(
+</a><a href="#h4-3-21" id="h4-3-21" class="i">+                                                        text = &quot;${feedEntry.participantsSize} participants&quot;,
+</a><a href="#h4-3-22" id="h4-3-22" class="i">+                                                        fontSize = 10.sp,
+</a><a href="#h4-3-23" id="h4-3-23" class="i">+                                                        lineHeight = 15.sp,
+</a><a href="#h4-3-24" id="h4-3-24" class="i">+                                                        overflow = TextOverflow.Ellipsis,
+</a><a href="#h4-3-25" id="h4-3-25" class="i">+                                                    )
+</a><a href="#h4-3-26" id="h4-3-26" class="i">+                                                }
+</a><a href="#h4-3-27" id="h4-3-27" class="i">+                                            }
+</a>                                         }
+                                     }
+                                 )
+<a href="#h4-4" id="h4-4" class="h">@@ -332,12 +351,13 @@ class ExportChatMessages : AbstractAction() {
+</a>     ) {
+         //first fetch the first message
+         val conversationId = feedEntry.key!!
+<a href="#h4-4-3" id="h4-4-3" class="d">-        val conversationName = feedEntry.feedDisplayName ?: feedEntry.friendDisplayName!!.split(&quot;|&quot;).lastOrNull() ?: &quot;unknown&quot;
+</a>         val conversationParticipants = context.database.getConversationParticipants(feedEntry.key!!, useCache = false)
+             ?.mapNotNull {
+                 context.database.getFriendInfo(it)
+             }?.associateBy { it.userId!! } ?: emptyMap()
+ 
+<a href="#h4-4-9" id="h4-4-9" class="i">+        val conversationName = feedEntry.feedDisplayName ?: conversationParticipants.values.take(3).joinToString(&quot;_&quot;) { it.mutableUsername ?: &quot;&quot; }
+</a><a href="#h4-4-10" id="h4-4-10" class="i">+
+</a>         val publicFolder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), &quot;SnapEnhance&quot;).also { if (!it.exists()) it.mkdirs() }
+         val outputFile = publicFolder.resolve(&quot;conversation_${conversationName}_${System.currentTimeMillis()}.${exportParams.exportFormat.extension}&quot;)
+ 
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -152,17 +152,6 @@ class DatabaseAccess(
+</a>         obj
+     }
+ 
+<a href="#h5-0-3" id="h5-0-3" class="d">-    fun getFeedEntryByUserId(userId: String): FriendFeedEntry? {
+</a><a href="#h5-0-4" id="h5-0-4" class="d">-        return useDatabase(DatabaseType.MAIN)?.performOperation {
+</a><a href="#h5-0-5" id="h5-0-5" class="d">-            readDatabaseObject(
+</a><a href="#h5-0-6" id="h5-0-6" class="d">-                FriendFeedEntry(),
+</a><a href="#h5-0-7" id="h5-0-7" class="d">-                &quot;FriendsFeedView&quot;,
+</a><a href="#h5-0-8" id="h5-0-8" class="d">-                &quot;friendUserId = ?&quot;,
+</a><a href="#h5-0-9" id="h5-0-9" class="d">-                arrayOf(userId)
+</a><a href="#h5-0-10" id="h5-0-10" class="d">-            )
+</a><a href="#h5-0-11" id="h5-0-11" class="d">-        }
+</a><a href="#h5-0-12" id="h5-0-12" class="d">-    }
+</a><a href="#h5-0-13" id="h5-0-13" class="d">-
+</a>     val myUserId by lazy {
+         context.androidContext.getSharedPreferences(&quot;user_session_shared_pref&quot;, 0).getString(&quot;key_user_id&quot;, null) ?:
+         useDatabase(DatabaseType.ARROYO)?.performOperation {
+<a href="#h5-1" id="h5-1" class="h">@@ -178,7 +167,14 @@ class DatabaseAccess(
+</a>     }
+ 
+     fun getFeedEntryByConversationId(conversationId: String): FriendFeedEntry? {
+<a href="#h5-1-3" id="h5-1-3" class="d">-        return useDatabase(DatabaseType.MAIN)?.performOperation {
+</a><a href="#h5-1-4" id="h5-1-4" class="i">+        return useDatabase(DatabaseType.ARROYO)?.performOperation {
+</a><a href="#h5-1-5" id="h5-1-5" class="i">+            readDatabaseObject(
+</a><a href="#h5-1-6" id="h5-1-6" class="i">+                FriendFeedEntry(),
+</a><a href="#h5-1-7" id="h5-1-7" class="i">+                &quot;feed_entry&quot;,
+</a><a href="#h5-1-8" id="h5-1-8" class="i">+                &quot;client_conversation_id = ?&quot;,
+</a><a href="#h5-1-9" id="h5-1-9" class="i">+                arrayOf(conversationId)
+</a><a href="#h5-1-10" id="h5-1-10" class="i">+            )
+</a><a href="#h5-1-11" id="h5-1-11" class="i">+        } ?: useDatabase(DatabaseType.MAIN)?.performOperation {
+</a>             readDatabaseObject(
+                 FriendFeedEntry(),
+                 &quot;FriendsFeedView&quot;,
+<a href="#h5-2" id="h5-2" class="h">@@ -230,20 +226,34 @@ class DatabaseAccess(
+</a>     }
+ 
+     fun getFeedEntries(limit: Int): List&lt;FriendFeedEntry&gt; {
+<a href="#h5-2-3" id="h5-2-3" class="d">-        return useDatabase(DatabaseType.MAIN)?.performOperation {
+</a><a href="#h5-2-4" id="h5-2-4" class="i">+        val entries = mutableListOf&lt;FriendFeedEntry&gt;()
+</a><a href="#h5-2-5" id="h5-2-5" class="i">+        return useDatabase(DatabaseType.ARROYO)?.performOperation {
+</a><a href="#h5-2-6" id="h5-2-6" class="i">+            safeRawQuery(
+</a><a href="#h5-2-7" id="h5-2-7" class="i">+                &quot;SELECT * FROM feed_entry ORDER BY last_updated_timestamp DESC LIMIT ?&quot;,
+</a><a href="#h5-2-8" id="h5-2-8" class="i">+                arrayOf(limit.toString())
+</a><a href="#h5-2-9" id="h5-2-9" class="i">+            )?.use { query -&gt;
+</a><a href="#h5-2-10" id="h5-2-10" class="i">+                while (query.moveToNext()) {
+</a><a href="#h5-2-11" id="h5-2-11" class="i">+                    val friendFeedEntry = FriendFeedEntry()
+</a><a href="#h5-2-12" id="h5-2-12" class="i">+                    try {
+</a><a href="#h5-2-13" id="h5-2-13" class="i">+                        friendFeedEntry.write(query)
+</a><a href="#h5-2-14" id="h5-2-14" class="i">+                    } catch (_: Throwable) {}
+</a><a href="#h5-2-15" id="h5-2-15" class="i">+                    entries.add(friendFeedEntry)
+</a><a href="#h5-2-16" id="h5-2-16" class="i">+                }
+</a><a href="#h5-2-17" id="h5-2-17" class="i">+                entries
+</a><a href="#h5-2-18" id="h5-2-18" class="i">+            }
+</a><a href="#h5-2-19" id="h5-2-19" class="i">+        }?.takeIf { it.isNotEmpty() } ?: useDatabase(DatabaseType.MAIN)?.performOperation {
+</a>             safeRawQuery(
+                 &quot;SELECT * FROM FriendsFeedView ORDER BY _id LIMIT ?&quot;,
+                 arrayOf(limit.toString())
+             )?.use { query -&gt;
+<a href="#h5-2-24" id="h5-2-24" class="d">-                val list = mutableListOf&lt;FriendFeedEntry&gt;()
+</a>                 while (query.moveToNext()) {
+                     val friendFeedEntry = FriendFeedEntry()
+                     try {
+                         friendFeedEntry.write(query)
+                     } catch (_: Throwable) {}
+<a href="#h5-2-30" id="h5-2-30" class="d">-                    list.add(friendFeedEntry)
+</a><a href="#h5-2-31" id="h5-2-31" class="i">+                    entries.add(friendFeedEntry)
+</a>                 }
+<a href="#h5-2-33" id="h5-2-33" class="d">-                list
+</a><a href="#h5-2-34" id="h5-2-34" class="i">+                entries
+</a>             }
+         } ?: emptyList()
+     }
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/HalfSwipeNotifier.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/HalfSwipeNotifier.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/HalfSwipeNotifier.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/HalfSwipeNotifier.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -91,15 +91,15 @@ class HalfSwipeNotifier : Feature(&quot;Half Swipe Notifier&quot;) {
+</a> 
+             if (minDuration &gt; peekingDuration || maxDuration &lt; peekingDuration) return
+ 
+<a href="#h6-0-3" id="h6-0-3" class="d">-            val groupName = context.database.getFeedEntryByConversationId(conversationId)?.feedDisplayName
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+            val feedEntry = context.database.getFeedEntryByConversationId(conversationId)
+</a>             val friendInfo = context.database.getFriendInfo(userId) ?: return
+ 
+             Notification.Builder(context.androidContext, channelId)
+<a href="#h6-0-8" id="h6-0-8" class="d">-                .setContentTitle(groupName ?: friendInfo.displayName ?: friendInfo.mutableUsername)
+</a><a href="#h6-0-9" id="h6-0-9" class="d">-                .setContentText(if (groupName != null) {
+</a><a href="#h6-0-10" id="h6-0-10" class="i">+                .setContentTitle(feedEntry?.feedDisplayName ?: friendInfo.displayName ?: friendInfo.mutableUsername)
+</a><a href="#h6-0-11" id="h6-0-11" class="i">+                .setContentText(if (feedEntry?.conversationType == 1) {
+</a>                     translation.format(&quot;notification_content_group&quot;,
+                         &quot;friend&quot; to (friendInfo.displayName ?: friendInfo.mutableUsername).toString(),
+<a href="#h6-0-14" id="h6-0-14" class="d">-                        &quot;group&quot; to groupName,
+</a><a href="#h6-0-15" id="h6-0-15" class="i">+                        &quot;group&quot; to (feedEntry.feedDisplayName ?: &quot;Group&quot;),
+</a>                         &quot;duration&quot; to peekingDuration.toString()
+                     )
+                 } else {
+</pre>
+</div>
+</body>
+</html>

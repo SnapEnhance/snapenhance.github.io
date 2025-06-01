@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(core): compose bulk messaging action - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/fa7071284ff012f831818fd668c06552d9bbb6bd.html">fa7071284ff012f831818fd668c06552d9bbb6bd</a>
+<b>parent</b> <a href="../commit/edda0d1488990bbaaa2bacb77f7b2310ef47d6be.html">edda0d1488990bbaaa2bacb77f7b2310ef47d6be</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 17 Feb 2024 17:58:37 +0100
+
+feat(core): compose bulk messaging action
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendInfo.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">+++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/util/snap/BitmojiSelfie.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">+++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a></td><td> | </td><td class="num">457</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">--------------</span></td></tr>
+</table></pre><pre>4 files changed, 386 insertions(+), 86 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/data/SnapEnums.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -145,7 +145,7 @@ enum class FriendLinkType(val value: Int, val shortName: String) {
+</a> 
+     companion object {
+         fun fromValue(value: Int): FriendLinkType {
+<a href="#h0-0-3" id="h0-0-3" class="d">-            return entries.firstOrNull { it.value == value } ?: MUTUAL
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+            return entries.firstOrNull { it.value == value } ?: SUGGESTED
+</a>         }
+     }
+ }
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendInfo.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendInfo.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendInfo.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendInfo.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -3,6 +3,7 @@ package me.rhunk.snapenhance.common.database.impl
+</a> import android.annotation.SuppressLint
+ import android.database.Cursor
+ import me.rhunk.snapenhance.common.database.DatabaseObject
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.common.util.ktx.getIntOrNull
+</a> import me.rhunk.snapenhance.common.util.ktx.getInteger
+ import me.rhunk.snapenhance.common.util.ktx.getLong
+ import me.rhunk.snapenhance.common.util.ktx.getStringOrNull
+<a href="#h1-1" id="h1-1" class="h">@@ -32,6 +33,7 @@ data class FriendInfo(
+</a>     var usernameForSorting: String? = null,
+     var friendLinkType: Int = 0,
+     var postViewEmoji: String? = null,
+<a href="#h1-1-3" id="h1-1-3" class="i">+    var businessCategory: Int = 0,
+</a> ) : DatabaseObject {
+     val mutableUsername get() = username?.split(&quot;|&quot;)?.last()
+     val firstCreatedUsername get() = username?.split(&quot;|&quot;)?.first()
+<a href="#h1-2" id="h1-2" class="h">@@ -61,10 +63,9 @@ data class FriendInfo(
+</a>             usernameForSorting = getStringOrNull(&quot;usernameForSorting&quot;)
+             friendLinkType = getInteger(&quot;friendLinkType&quot;)
+             postViewEmoji = getStringOrNull(&quot;postViewEmoji&quot;)
+<a href="#h1-2-3" id="h1-2-3" class="d">-            if (getColumnIndex(&quot;isPinnedBestFriend&quot;) != -1) isPinnedBestFriend =
+</a><a href="#h1-2-4" id="h1-2-4" class="d">-                getInteger(&quot;isPinnedBestFriend&quot;)
+</a><a href="#h1-2-5" id="h1-2-5" class="d">-            if (getColumnIndex(&quot;plusBadgeVisibility&quot;) != -1) plusBadgeVisibility =
+</a><a href="#h1-2-6" id="h1-2-6" class="d">-                getInteger(&quot;plusBadgeVisibility&quot;)
+</a><a href="#h1-2-7" id="h1-2-7" class="i">+            businessCategory = getIntOrNull(&quot;businessCategory&quot;) ?: 0
+</a><a href="#h1-2-8" id="h1-2-8" class="i">+            isPinnedBestFriend = getIntOrNull(&quot;isPinnedBestFriend&quot;) ?: 0
+</a><a href="#h1-2-9" id="h1-2-9" class="i">+            plusBadgeVisibility = getIntOrNull(&quot;plusBadgeVisibility&quot;) ?: 0
+</a>         }
+     }
+ 
+<b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/snap/BitmojiSelfie.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/snap/BitmojiSelfie.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/snap/BitmojiSelfie.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/snap/BitmojiSelfie.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -5,7 +5,8 @@ object BitmojiSelfie {
+</a>         val prefixUrl: String,
+     ) {
+         STANDARD(&quot;https://sdk.bitmoji.com/render/panel/&quot;),
+<a href="#h2-0-3" id="h2-0-3" class="d">-        THREE_D(&quot;https://images.bitmoji.com/3d/render/&quot;)
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+        THREE_D(&quot;https://images.bitmoji.com/3d/render/&quot;),
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+        NEW_THREE_D(&quot;https://images.bitmoji.com/3d/render/&quot;),
+</a>     }
+ 
+     fun getBitmojiSelfie(selfieId: String?, avatarId: String?, type: BitmojiSelfieType): String? {
+<a href="#h2-1" id="h2-1" class="h">@@ -15,6 +16,7 @@ object BitmojiSelfie {
+</a>         return when (type) {
+             BitmojiSelfieType.STANDARD -&gt; &quot;${type.prefixUrl}$selfieId-$avatarId-v1.webp?transparent=1&quot;
+             BitmojiSelfieType.THREE_D -&gt; &quot;${type.prefixUrl}$selfieId-$avatarId-v1.webp?trim=circle&quot;
+<a href="#h2-1-3" id="h2-1-3" class="i">+            BitmojiSelfieType.NEW_THREE_D -&gt; &quot;${type.prefixUrl}$selfieId-$avatarId-v1.webp?trim=circle&amp;ua=1&quot;
+</a>         }
+     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -1,31 +1,77 @@
+</a> package me.rhunk.snapenhance.core.action.impl
+ 
+<a href="#h3-0-2" id="h3-0-2" class="i">+import android.content.Context
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+import android.graphics.Bitmap
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import android.graphics.BitmapFactory
+</a> import android.widget.ProgressBar
+<a href="#h3-0-6" id="h3-0-6" class="i">+import androidx.compose.foundation.Image
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+import androidx.compose.foundation.clickable
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+import androidx.compose.foundation.gestures.detectTapGestures
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+import androidx.compose.foundation.layout.*
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+import androidx.compose.foundation.lazy.LazyColumn
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+import androidx.compose.foundation.lazy.items
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+import androidx.compose.material3.*
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+import androidx.compose.runtime.*
+</a><a href="#h3-0-14" id="h3-0-14" class="i">+import androidx.compose.ui.Alignment
+</a><a href="#h3-0-15" id="h3-0-15" class="i">+import androidx.compose.ui.Modifier
+</a><a href="#h3-0-16" id="h3-0-16" class="i">+import androidx.compose.ui.graphics.asImageBitmap
+</a><a href="#h3-0-17" id="h3-0-17" class="i">+import androidx.compose.ui.input.pointer.pointerInput
+</a><a href="#h3-0-18" id="h3-0-18" class="i">+import androidx.compose.ui.platform.LocalContext
+</a><a href="#h3-0-19" id="h3-0-19" class="i">+import androidx.compose.ui.text.font.FontWeight
+</a><a href="#h3-0-20" id="h3-0-20" class="i">+import androidx.compose.ui.text.style.TextAlign
+</a><a href="#h3-0-21" id="h3-0-21" class="i">+import androidx.compose.ui.text.style.TextOverflow
+</a><a href="#h3-0-22" id="h3-0-22" class="i">+import androidx.compose.ui.unit.dp
+</a><a href="#h3-0-23" id="h3-0-23" class="i">+import androidx.compose.ui.unit.sp
+</a> import kotlinx.coroutines.Dispatchers
+<a href="#h3-0-25" id="h3-0-25" class="i">+import kotlinx.coroutines.Job
+</a> import kotlinx.coroutines.delay
+ import kotlinx.coroutines.launch
+<a href="#h3-0-28" id="h3-0-28" class="d">-import kotlinx.coroutines.suspendCancellableCoroutine
+</a> import kotlinx.coroutines.withContext
+ import me.rhunk.snapenhance.common.data.FriendLinkType
+<a href="#h3-0-31" id="h3-0-31" class="i">+import me.rhunk.snapenhance.common.database.impl.FriendInfo
+</a><a href="#h3-0-32" id="h3-0-32" class="i">+import me.rhunk.snapenhance.common.ui.createComposeAlertDialog
+</a><a href="#h3-0-33" id="h3-0-33" class="i">+import me.rhunk.snapenhance.common.util.ktx.copyToClipboard
+</a><a href="#h3-0-34" id="h3-0-34" class="i">+import me.rhunk.snapenhance.common.util.snap.BitmojiSelfie
+</a> import me.rhunk.snapenhance.core.action.AbstractAction
+ import me.rhunk.snapenhance.core.features.impl.experiments.AddFriendSourceSpoof
+ import me.rhunk.snapenhance.core.features.impl.messaging.Messaging
+<a href="#h3-0-38" id="h3-0-38" class="d">-import me.rhunk.snapenhance.core.messaging.EnumBulkAction
+</a> import me.rhunk.snapenhance.core.ui.ViewAppearanceHelper
+<a href="#h3-0-40" id="h3-0-40" class="i">+import me.rhunk.snapenhance.core.util.EvictingMap
+</a> import me.rhunk.snapenhance.mapper.impl.FriendRelationshipChangerMapper
+<a href="#h3-0-42" id="h3-0-42" class="i">+import java.net.URL
+</a><a href="#h3-0-43" id="h3-0-43" class="i">+import java.text.DateFormat
+</a><a href="#h3-0-44" id="h3-0-44" class="i">+import java.util.Date
+</a> 
+ class BulkMessagingAction : AbstractAction() {
+<a href="#h3-0-47" id="h3-0-47" class="i">+    enum class SortBy {
+</a><a href="#h3-0-48" id="h3-0-48" class="i">+        NONE,
+</a><a href="#h3-0-49" id="h3-0-49" class="i">+        USERNAME,
+</a><a href="#h3-0-50" id="h3-0-50" class="i">+        ADDED_TIMESTAMP,
+</a><a href="#h3-0-51" id="h3-0-51" class="i">+        SNAP_SCORE,
+</a><a href="#h3-0-52" id="h3-0-52" class="i">+        STREAK_LENGTH,
+</a><a href="#h3-0-53" id="h3-0-53" class="i">+    }
+</a><a href="#h3-0-54" id="h3-0-54" class="i">+
+</a><a href="#h3-0-55" id="h3-0-55" class="i">+    enum class Filter {
+</a><a href="#h3-0-56" id="h3-0-56" class="i">+        ALL,
+</a><a href="#h3-0-57" id="h3-0-57" class="i">+        MY_FRIENDS,
+</a><a href="#h3-0-58" id="h3-0-58" class="i">+        BLOCKED,
+</a><a href="#h3-0-59" id="h3-0-59" class="i">+        REMOVED_ME,
+</a><a href="#h3-0-60" id="h3-0-60" class="i">+        DELETED,
+</a><a href="#h3-0-61" id="h3-0-61" class="i">+        SUGGESTED,
+</a><a href="#h3-0-62" id="h3-0-62" class="i">+        BUSINESS_ACCOUNTS,
+</a><a href="#h3-0-63" id="h3-0-63" class="i">+    }
+</a><a href="#h3-0-64" id="h3-0-64" class="i">+
+</a>     private val translation by lazy { context.translation.getCategory(&quot;bulk_messaging_action&quot;) }
+ 
+<a href="#h3-0-67" id="h3-0-67" class="d">-    private fun removeAction(ids: List&lt;String&gt;, action: (String) -&gt; Unit = {}) {
+</a><a href="#h3-0-68" id="h3-0-68" class="i">+    private fun removeAction(ctx: Context, ids: List&lt;String&gt;, action: (String) -&gt; Unit = {}): Job {
+</a>         var index = 0
+<a href="#h3-0-70" id="h3-0-70" class="d">-        val dialog = ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity)
+</a><a href="#h3-0-71" id="h3-0-71" class="i">+        val dialog = ViewAppearanceHelper.newAlertDialogBuilder(ctx)
+</a>             .setTitle(&quot;...&quot;)
+<a href="#h3-0-73" id="h3-0-73" class="d">-            .setView(ProgressBar(context.mainActivity))
+</a><a href="#h3-0-74" id="h3-0-74" class="i">+            .setView(ProgressBar(ctx))
+</a>             .setCancelable(false)
+             .show()
+ 
+<a href="#h3-0-78" id="h3-0-78" class="d">-        context.coroutineScope.launch {
+</a><a href="#h3-0-79" id="h3-0-79" class="i">+        return context.coroutineScope.launch {
+</a>             ids.forEach { id -&gt;
+                 runCatching {
+                     action(id)
+<a href="#h3-1" id="h3-1" class="h">@@ -47,101 +93,352 @@ class BulkMessagingAction : AbstractAction() {
+</a>         }
+     }
+ 
+<a href="#h3-1-3" id="h3-1-3" class="d">-    private suspend fun askActionType() = suspendCancellableCoroutine { cont -&gt;
+</a><a href="#h3-1-4" id="h3-1-4" class="d">-        context.runOnUiThread {
+</a><a href="#h3-1-5" id="h3-1-5" class="d">-            ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity)
+</a><a href="#h3-1-6" id="h3-1-6" class="d">-                .setTitle(translation[&quot;choose_action_title&quot;])
+</a><a href="#h3-1-7" id="h3-1-7" class="d">-                .setItems(EnumBulkAction.entries.map { translation[&quot;actions.${it.key}&quot;] }.toTypedArray()) { _, which -&gt;
+</a><a href="#h3-1-8" id="h3-1-8" class="d">-                    cont.resumeWith(Result.success(EnumBulkAction.entries[which]))
+</a><a href="#h3-1-9" id="h3-1-9" class="i">+    @Composable
+</a><a href="#h3-1-10" id="h3-1-10" class="i">+    private fun ConfirmationDialog(
+</a><a href="#h3-1-11" id="h3-1-11" class="i">+        onConfirm: () -&gt; Unit,
+</a><a href="#h3-1-12" id="h3-1-12" class="i">+        onCancel: () -&gt; Unit,
+</a><a href="#h3-1-13" id="h3-1-13" class="i">+    ) {
+</a><a href="#h3-1-14" id="h3-1-14" class="i">+        AlertDialog(
+</a><a href="#h3-1-15" id="h3-1-15" class="i">+            onDismissRequest = onCancel,
+</a><a href="#h3-1-16" id="h3-1-16" class="i">+            title = { Text(text = translation[&quot;confirmation_dialog.title&quot;]) },
+</a><a href="#h3-1-17" id="h3-1-17" class="i">+            text = { Text(text = translation[&quot;confirmation_dialog.message&quot;]) },
+</a><a href="#h3-1-18" id="h3-1-18" class="i">+            confirmButton = {
+</a><a href="#h3-1-19" id="h3-1-19" class="i">+                TextButton(onClick = onConfirm) {
+</a><a href="#h3-1-20" id="h3-1-20" class="i">+                    Text(text = context.translation[&quot;button.positive&quot;])
+</a>                 }
+<a href="#h3-1-22" id="h3-1-22" class="d">-                .setOnCancelListener {
+</a><a href="#h3-1-23" id="h3-1-23" class="d">-                    cont.resumeWith(Result.success(null))
+</a><a href="#h3-1-24" id="h3-1-24" class="i">+            },
+</a><a href="#h3-1-25" id="h3-1-25" class="i">+            dismissButton = {
+</a><a href="#h3-1-26" id="h3-1-26" class="i">+                TextButton(onClick = onCancel) {
+</a><a href="#h3-1-27" id="h3-1-27" class="i">+                    Text(text = context.translation[&quot;button.negative&quot;])
+</a>                 }
+<a href="#h3-1-29" id="h3-1-29" class="d">-                .show()
+</a><a href="#h3-1-30" id="h3-1-30" class="d">-        }
+</a><a href="#h3-1-31" id="h3-1-31" class="i">+            }
+</a><a href="#h3-1-32" id="h3-1-32" class="i">+        )
+</a>     }
+ 
+<a href="#h3-1-35" id="h3-1-35" class="d">-    private fun confirmationDialog(onConfirm: () -&gt; Unit) {
+</a><a href="#h3-1-36" id="h3-1-36" class="d">-        ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity)
+</a><a href="#h3-1-37" id="h3-1-37" class="d">-            .setTitle(translation[&quot;confirmation_dialog.title&quot;])
+</a><a href="#h3-1-38" id="h3-1-38" class="d">-            .setMessage(translation[&quot;confirmation_dialog.message&quot;])
+</a><a href="#h3-1-39" id="h3-1-39" class="d">-            .setPositiveButton(context.translation[&quot;button.positive&quot;]) { _, _ -&gt;
+</a><a href="#h3-1-40" id="h3-1-40" class="d">-                onConfirm()
+</a><a href="#h3-1-41" id="h3-1-41" class="i">+
+</a><a href="#h3-1-42" id="h3-1-42" class="i">+    @OptIn(ExperimentalMaterial3Api::class)
+</a><a href="#h3-1-43" id="h3-1-43" class="i">+    @Composable
+</a><a href="#h3-1-44" id="h3-1-44" class="i">+    private fun BulkMessagingDialog() {
+</a><a href="#h3-1-45" id="h3-1-45" class="i">+        var sortBy by remember { mutableStateOf(SortBy.USERNAME) }
+</a><a href="#h3-1-46" id="h3-1-46" class="i">+        var filter by remember { mutableStateOf(Filter.REMOVED_ME) }
+</a><a href="#h3-1-47" id="h3-1-47" class="i">+        var sortReverseOrder by remember { mutableStateOf(false) }
+</a><a href="#h3-1-48" id="h3-1-48" class="i">+        val selectedFriends = remember { mutableStateListOf&lt;String&gt;() }
+</a><a href="#h3-1-49" id="h3-1-49" class="i">+        val friends = remember { mutableStateListOf&lt;FriendInfo&gt;() }
+</a><a href="#h3-1-50" id="h3-1-50" class="i">+        val bitmojiCache = remember { EvictingMap&lt;String, Bitmap&gt;(50) }
+</a><a href="#h3-1-51" id="h3-1-51" class="i">+        val noBitmojiBitmap = remember { BitmapFactory.decodeResource(context.resources, android.R.drawable.ic_menu_report_image).asImageBitmap() }
+</a><a href="#h3-1-52" id="h3-1-52" class="i">+
+</a><a href="#h3-1-53" id="h3-1-53" class="i">+        suspend fun refreshList() {
+</a><a href="#h3-1-54" id="h3-1-54" class="i">+            withContext(Dispatchers.Main) {
+</a><a href="#h3-1-55" id="h3-1-55" class="i">+                selectedFriends.clear()
+</a><a href="#h3-1-56" id="h3-1-56" class="i">+                friends.clear()
+</a>             }
+<a href="#h3-1-58" id="h3-1-58" class="d">-            .setNegativeButton(context.translation[&quot;button.negative&quot;]) { _, _ -&gt; }
+</a><a href="#h3-1-59" id="h3-1-59" class="d">-            .show()
+</a><a href="#h3-1-60" id="h3-1-60" class="d">-    }
+</a><a href="#h3-1-61" id="h3-1-61" class="i">+            withContext(Dispatchers.IO) {
+</a><a href="#h3-1-62" id="h3-1-62" class="i">+                val userIdBlacklist = arrayOf(
+</a><a href="#h3-1-63" id="h3-1-63" class="i">+                    context.database.myUserId,
+</a><a href="#h3-1-64" id="h3-1-64" class="i">+                    &quot;b42f1f70-5a8b-4c53-8c25-34e7ec9e6781&quot;, // myai
+</a><a href="#h3-1-65" id="h3-1-65" class="i">+                    &quot;84ee8839-3911-492d-8b94-72dd80f3713a&quot;, // teamsnapchat
+</a><a href="#h3-1-66" id="h3-1-66" class="i">+                )
+</a><a href="#h3-1-67" id="h3-1-67" class="i">+                val newFriends = context.database.getAllFriends().filter {
+</a><a href="#h3-1-68" id="h3-1-68" class="i">+                    it.userId !in userIdBlacklist &amp;&amp; when (filter) {
+</a><a href="#h3-1-69" id="h3-1-69" class="i">+                        Filter.ALL -&gt; true
+</a><a href="#h3-1-70" id="h3-1-70" class="i">+                        Filter.MY_FRIENDS -&gt; it.friendLinkType == FriendLinkType.MUTUAL.value &amp;&amp; it.addedTimestamp &gt; 0
+</a><a href="#h3-1-71" id="h3-1-71" class="i">+                        Filter.BLOCKED -&gt; it.friendLinkType == FriendLinkType.BLOCKED.value
+</a><a href="#h3-1-72" id="h3-1-72" class="i">+                        Filter.REMOVED_ME -&gt; it.friendLinkType == FriendLinkType.OUTGOING.value &amp;&amp; it.addedTimestamp &gt; 0 &amp;&amp; it.businessCategory == 0 // ignore followed accounts
+</a><a href="#h3-1-73" id="h3-1-73" class="i">+                        Filter.SUGGESTED -&gt; it.friendLinkType == FriendLinkType.SUGGESTED.value
+</a><a href="#h3-1-74" id="h3-1-74" class="i">+                        Filter.DELETED -&gt; it.friendLinkType == FriendLinkType.DELETED.value
+</a><a href="#h3-1-75" id="h3-1-75" class="i">+                        Filter.BUSINESS_ACCOUNTS -&gt; it.businessCategory &gt; 0
+</a><a href="#h3-1-76" id="h3-1-76" class="i">+                    }
+</a><a href="#h3-1-77" id="h3-1-77" class="i">+                }.toMutableList()
+</a><a href="#h3-1-78" id="h3-1-78" class="i">+                when (sortBy) {
+</a><a href="#h3-1-79" id="h3-1-79" class="i">+                    SortBy.NONE -&gt; {}
+</a><a href="#h3-1-80" id="h3-1-80" class="i">+                    SortBy.USERNAME -&gt; newFriends.sortBy { it.mutableUsername }
+</a><a href="#h3-1-81" id="h3-1-81" class="i">+                    SortBy.ADDED_TIMESTAMP -&gt; newFriends.sortBy { it.addedTimestamp }
+</a><a href="#h3-1-82" id="h3-1-82" class="i">+                    SortBy.SNAP_SCORE -&gt; newFriends.sortBy { it.snapScore }
+</a><a href="#h3-1-83" id="h3-1-83" class="i">+                    SortBy.STREAK_LENGTH -&gt; newFriends.sortBy { it.streakLength }
+</a><a href="#h3-1-84" id="h3-1-84" class="i">+                }
+</a><a href="#h3-1-85" id="h3-1-85" class="i">+                if (sortReverseOrder) newFriends.reverse()
+</a><a href="#h3-1-86" id="h3-1-86" class="i">+                withContext(Dispatchers.Main) {
+</a><a href="#h3-1-87" id="h3-1-87" class="i">+                    friends.addAll(newFriends)
+</a><a href="#h3-1-88" id="h3-1-88" class="i">+                }
+</a><a href="#h3-1-89" id="h3-1-89" class="i">+            }
+</a><a href="#h3-1-90" id="h3-1-90" class="i">+        }
+</a> 
+<a href="#h3-1-92" id="h3-1-92" class="d">-    override fun run() {
+</a><a href="#h3-1-93" id="h3-1-93" class="d">-        val userIdBlacklist = arrayOf(
+</a><a href="#h3-1-94" id="h3-1-94" class="d">-            context.database.myUserId,
+</a><a href="#h3-1-95" id="h3-1-95" class="d">-            &quot;b42f1f70-5a8b-4c53-8c25-34e7ec9e6781&quot;, // myai
+</a><a href="#h3-1-96" id="h3-1-96" class="d">-            &quot;84ee8839-3911-492d-8b94-72dd80f3713a&quot;, // teamsnapchat
+</a><a href="#h3-1-97" id="h3-1-97" class="d">-        )
+</a><a href="#h3-1-98" id="h3-1-98" class="i">+        Column(
+</a><a href="#h3-1-99" id="h3-1-99" class="i">+            modifier = Modifier
+</a><a href="#h3-1-100" id="h3-1-100" class="i">+                .fillMaxWidth()
+</a><a href="#h3-1-101" id="h3-1-101" class="i">+                .padding(10.dp),
+</a><a href="#h3-1-102" id="h3-1-102" class="i">+            verticalArrangement = Arrangement.spacedBy(10.dp)
+</a><a href="#h3-1-103" id="h3-1-103" class="i">+        ) {
+</a><a href="#h3-1-104" id="h3-1-104" class="i">+            Row(
+</a><a href="#h3-1-105" id="h3-1-105" class="i">+                modifier = Modifier.fillMaxWidth(),
+</a><a href="#h3-1-106" id="h3-1-106" class="i">+                horizontalArrangement = Arrangement.SpaceEvenly,
+</a><a href="#h3-1-107" id="h3-1-107" class="i">+                verticalAlignment = Alignment.CenterVertically
+</a><a href="#h3-1-108" id="h3-1-108" class="i">+            ) {
+</a><a href="#h3-1-109" id="h3-1-109" class="i">+                var filterMenuExpanded by remember { mutableStateOf(false) }
+</a> 
+<a href="#h3-1-111" id="h3-1-111" class="d">-        context.coroutineScope.launch(Dispatchers.Main) {
+</a><a href="#h3-1-112" id="h3-1-112" class="d">-            val bulkAction = askActionType() ?: return@launch
+</a><a href="#h3-1-113" id="h3-1-113" class="d">-
+</a><a href="#h3-1-114" id="h3-1-114" class="d">-            val friends = context.database.getAllFriends().filter {
+</a><a href="#h3-1-115" id="h3-1-115" class="d">-                it.userId !in userIdBlacklist &amp;&amp;
+</a><a href="#h3-1-116" id="h3-1-116" class="d">-                it.addedTimestamp != -1L &amp;&amp;
+</a><a href="#h3-1-117" id="h3-1-117" class="d">-                it.friendLinkType == FriendLinkType.MUTUAL.value ||
+</a><a href="#h3-1-118" id="h3-1-118" class="d">-                it.friendLinkType == FriendLinkType.OUTGOING.value
+</a><a href="#h3-1-119" id="h3-1-119" class="d">-            }.sortedByDescending {
+</a><a href="#h3-1-120" id="h3-1-120" class="d">-                it.friendLinkType == FriendLinkType.OUTGOING.value
+</a><a href="#h3-1-121" id="h3-1-121" class="i">+                ExposedDropdownMenuBox(
+</a><a href="#h3-1-122" id="h3-1-122" class="i">+                    expanded = filterMenuExpanded,
+</a><a href="#h3-1-123" id="h3-1-123" class="i">+                    onExpandedChange = { filterMenuExpanded = it },
+</a><a href="#h3-1-124" id="h3-1-124" class="i">+                ) {
+</a><a href="#h3-1-125" id="h3-1-125" class="i">+                    ElevatedCard(
+</a><a href="#h3-1-126" id="h3-1-126" class="i">+                        modifier = Modifier.menuAnchor()
+</a><a href="#h3-1-127" id="h3-1-127" class="i">+                    ) {
+</a><a href="#h3-1-128" id="h3-1-128" class="i">+                        Text(text = filter.name, modifier = Modifier.padding(5.dp))
+</a><a href="#h3-1-129" id="h3-1-129" class="i">+                    }
+</a><a href="#h3-1-130" id="h3-1-130" class="i">+
+</a><a href="#h3-1-131" id="h3-1-131" class="i">+                    DropdownMenu(
+</a><a href="#h3-1-132" id="h3-1-132" class="i">+                        expanded = filterMenuExpanded,
+</a><a href="#h3-1-133" id="h3-1-133" class="i">+                        onDismissRequest = { filterMenuExpanded = false }
+</a><a href="#h3-1-134" id="h3-1-134" class="i">+                    ) {
+</a><a href="#h3-1-135" id="h3-1-135" class="i">+                        Filter.entries.forEach { entry -&gt;
+</a><a href="#h3-1-136" id="h3-1-136" class="i">+                            DropdownMenuItem(onClick = {
+</a><a href="#h3-1-137" id="h3-1-137" class="i">+                                filter = entry
+</a><a href="#h3-1-138" id="h3-1-138" class="i">+                                filterMenuExpanded = false
+</a><a href="#h3-1-139" id="h3-1-139" class="i">+                            }, text = {
+</a><a href="#h3-1-140" id="h3-1-140" class="i">+                                Text(text = entry.name, fontWeight = if (entry == filter) FontWeight.Bold else FontWeight.Normal)
+</a><a href="#h3-1-141" id="h3-1-141" class="i">+                            })
+</a><a href="#h3-1-142" id="h3-1-142" class="i">+                        }
+</a><a href="#h3-1-143" id="h3-1-143" class="i">+                    }
+</a><a href="#h3-1-144" id="h3-1-144" class="i">+                }
+</a><a href="#h3-1-145" id="h3-1-145" class="i">+
+</a><a href="#h3-1-146" id="h3-1-146" class="i">+                var sortMenuExpanded by remember { mutableStateOf(false) }
+</a><a href="#h3-1-147" id="h3-1-147" class="i">+
+</a><a href="#h3-1-148" id="h3-1-148" class="i">+                ExposedDropdownMenuBox(
+</a><a href="#h3-1-149" id="h3-1-149" class="i">+                    expanded = sortMenuExpanded,
+</a><a href="#h3-1-150" id="h3-1-150" class="i">+                    onExpandedChange = { sortMenuExpanded = it },
+</a><a href="#h3-1-151" id="h3-1-151" class="i">+                ) {
+</a><a href="#h3-1-152" id="h3-1-152" class="i">+                    ElevatedCard(
+</a><a href="#h3-1-153" id="h3-1-153" class="i">+                        modifier = Modifier.menuAnchor()
+</a><a href="#h3-1-154" id="h3-1-154" class="i">+                    ) {
+</a><a href="#h3-1-155" id="h3-1-155" class="i">+                        Text(text = &quot;Sort by&quot;, modifier = Modifier.padding(5.dp))
+</a><a href="#h3-1-156" id="h3-1-156" class="i">+                    }
+</a><a href="#h3-1-157" id="h3-1-157" class="i">+
+</a><a href="#h3-1-158" id="h3-1-158" class="i">+                    DropdownMenu(
+</a><a href="#h3-1-159" id="h3-1-159" class="i">+                        expanded = sortMenuExpanded,
+</a><a href="#h3-1-160" id="h3-1-160" class="i">+                        onDismissRequest = { sortMenuExpanded = false }
+</a><a href="#h3-1-161" id="h3-1-161" class="i">+                    ) {
+</a><a href="#h3-1-162" id="h3-1-162" class="i">+                        SortBy.entries.forEach { entry -&gt;
+</a><a href="#h3-1-163" id="h3-1-163" class="i">+                            DropdownMenuItem(onClick = {
+</a><a href="#h3-1-164" id="h3-1-164" class="i">+                                sortBy = entry
+</a><a href="#h3-1-165" id="h3-1-165" class="i">+                                sortMenuExpanded = false
+</a><a href="#h3-1-166" id="h3-1-166" class="i">+                            }, text = {
+</a><a href="#h3-1-167" id="h3-1-167" class="i">+                                Text(text = entry.name, fontWeight = if (entry == sortBy) FontWeight.Bold else FontWeight.Normal)
+</a><a href="#h3-1-168" id="h3-1-168" class="i">+                            })
+</a><a href="#h3-1-169" id="h3-1-169" class="i">+                        }
+</a><a href="#h3-1-170" id="h3-1-170" class="i">+                    }
+</a><a href="#h3-1-171" id="h3-1-171" class="i">+                }
+</a><a href="#h3-1-172" id="h3-1-172" class="i">+
+</a><a href="#h3-1-173" id="h3-1-173" class="i">+                Row(
+</a><a href="#h3-1-174" id="h3-1-174" class="i">+                    verticalAlignment = Alignment.CenterVertically
+</a><a href="#h3-1-175" id="h3-1-175" class="i">+                ) {
+</a><a href="#h3-1-176" id="h3-1-176" class="i">+                    Checkbox(
+</a><a href="#h3-1-177" id="h3-1-177" class="i">+                        checked = sortReverseOrder,
+</a><a href="#h3-1-178" id="h3-1-178" class="i">+                        onCheckedChange = { sortReverseOrder = it },
+</a><a href="#h3-1-179" id="h3-1-179" class="i">+                    )
+</a><a href="#h3-1-180" id="h3-1-180" class="i">+                    Text(text = &quot;Reverse order&quot;, fontSize = 15.sp, fontWeight = FontWeight.Light)
+</a><a href="#h3-1-181" id="h3-1-181" class="i">+                }
+</a>             }
+ 
+<a href="#h3-1-184" id="h3-1-184" class="d">-            val selectedFriends = mutableListOf&lt;String&gt;()
+</a><a href="#h3-1-185" id="h3-1-185" class="d">-
+</a><a href="#h3-1-186" id="h3-1-186" class="d">-            ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity)
+</a><a href="#h3-1-187" id="h3-1-187" class="d">-                .setTitle(translation[&quot;actions.${bulkAction.key}&quot;])
+</a><a href="#h3-1-188" id="h3-1-188" class="d">-                .setMultiChoiceItems(friends.map { friend -&gt;
+</a><a href="#h3-1-189" id="h3-1-189" class="d">-                    (friend.displayName?.let {
+</a><a href="#h3-1-190" id="h3-1-190" class="d">-                        &quot;$it (${friend.mutableUsername})&quot;
+</a><a href="#h3-1-191" id="h3-1-191" class="d">-                    } ?: friend.mutableUsername) +
+</a><a href="#h3-1-192" id="h3-1-192" class="d">-                    &quot;: ${context.translation[&quot;friendship_link_type.${FriendLinkType.fromValue(friend.friendLinkType).shortName}&quot;]}&quot;
+</a><a href="#h3-1-193" id="h3-1-193" class="d">-                }.toTypedArray(), null) { _, which, isChecked -&gt;
+</a><a href="#h3-1-194" id="h3-1-194" class="d">-                    if (isChecked) {
+</a><a href="#h3-1-195" id="h3-1-195" class="d">-                        selectedFriends.add(friends[which].userId!!)
+</a><a href="#h3-1-196" id="h3-1-196" class="i">+            LazyColumn(
+</a><a href="#h3-1-197" id="h3-1-197" class="i">+                modifier = Modifier
+</a><a href="#h3-1-198" id="h3-1-198" class="i">+                    .fillMaxWidth()
+</a><a href="#h3-1-199" id="h3-1-199" class="i">+                    .weight(1f),
+</a><a href="#h3-1-200" id="h3-1-200" class="i">+                verticalArrangement = Arrangement.spacedBy(2.dp)
+</a><a href="#h3-1-201" id="h3-1-201" class="i">+            ) {
+</a><a href="#h3-1-202" id="h3-1-202" class="i">+                item {
+</a><a href="#h3-1-203" id="h3-1-203" class="i">+                    if (friends.isNotEmpty()) {
+</a><a href="#h3-1-204" id="h3-1-204" class="i">+                        Row(
+</a><a href="#h3-1-205" id="h3-1-205" class="i">+                            modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
+</a><a href="#h3-1-206" id="h3-1-206" class="i">+                            horizontalArrangement = Arrangement.End,
+</a><a href="#h3-1-207" id="h3-1-207" class="i">+                            verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h3-1-208" id="h3-1-208" class="i">+                        ) {
+</a><a href="#h3-1-209" id="h3-1-209" class="i">+                            Text(text = &quot;Selected &quot; + selectedFriends.size + &quot; friends&quot;, fontSize = 12.sp, fontWeight = FontWeight.Light)
+</a><a href="#h3-1-210" id="h3-1-210" class="i">+                            Checkbox(
+</a><a href="#h3-1-211" id="h3-1-211" class="i">+                                checked = selectedFriends.size == friends.size,
+</a><a href="#h3-1-212" id="h3-1-212" class="i">+                                onCheckedChange = { state -&gt;
+</a><a href="#h3-1-213" id="h3-1-213" class="i">+                                    if (state) {
+</a><a href="#h3-1-214" id="h3-1-214" class="i">+                                        friends.mapNotNull { it.userId }.forEach { userId -&gt;
+</a><a href="#h3-1-215" id="h3-1-215" class="i">+                                            if (!selectedFriends.contains(userId)) {
+</a><a href="#h3-1-216" id="h3-1-216" class="i">+                                                selectedFriends.add(userId)
+</a><a href="#h3-1-217" id="h3-1-217" class="i">+                                            }
+</a><a href="#h3-1-218" id="h3-1-218" class="i">+                                        }
+</a><a href="#h3-1-219" id="h3-1-219" class="i">+                                    } else selectedFriends.clear()
+</a><a href="#h3-1-220" id="h3-1-220" class="i">+                                }
+</a><a href="#h3-1-221" id="h3-1-221" class="i">+                            )
+</a><a href="#h3-1-222" id="h3-1-222" class="i">+                        }
+</a>                     } else {
+<a href="#h3-1-224" id="h3-1-224" class="d">-                        selectedFriends.remove(friends[which].userId)
+</a><a href="#h3-1-225" id="h3-1-225" class="i">+                        Text(text = &quot;No friends found&quot;, fontSize = 12.sp, fontWeight = FontWeight.Light, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+</a>                     }
+                 }
+<a href="#h3-1-228" id="h3-1-228" class="d">-                .setPositiveButton(translation[&quot;selection_dialog_continue_button&quot;]) { _, _ -&gt;
+</a><a href="#h3-1-229" id="h3-1-229" class="d">-                    confirmationDialog {
+</a><a href="#h3-1-230" id="h3-1-230" class="d">-                        when (bulkAction) {
+</a><a href="#h3-1-231" id="h3-1-231" class="d">-                            EnumBulkAction.REMOVE_FRIENDS -&gt; {
+</a><a href="#h3-1-232" id="h3-1-232" class="d">-                                removeAction(selectedFriends) {
+</a><a href="#h3-1-233" id="h3-1-233" class="d">-                                    removeFriend(it)
+</a><a href="#h3-1-234" id="h3-1-234" class="i">+                items(friends) { friendInfo -&gt;
+</a><a href="#h3-1-235" id="h3-1-235" class="i">+                    var bitmojiBitmap by remember(friendInfo) { mutableStateOf(bitmojiCache[friendInfo.bitmojiAvatarId]) }
+</a><a href="#h3-1-236" id="h3-1-236" class="i">+
+</a><a href="#h3-1-237" id="h3-1-237" class="i">+                    fun selectFriend(state: Boolean) {
+</a><a href="#h3-1-238" id="h3-1-238" class="i">+                        friendInfo.userId?.let {
+</a><a href="#h3-1-239" id="h3-1-239" class="i">+                            if (state) {
+</a><a href="#h3-1-240" id="h3-1-240" class="i">+                                selectedFriends.add(it)
+</a><a href="#h3-1-241" id="h3-1-241" class="i">+                            } else {
+</a><a href="#h3-1-242" id="h3-1-242" class="i">+                                selectedFriends.remove(it)
+</a><a href="#h3-1-243" id="h3-1-243" class="i">+                            }
+</a><a href="#h3-1-244" id="h3-1-244" class="i">+                        }
+</a><a href="#h3-1-245" id="h3-1-245" class="i">+                    }
+</a><a href="#h3-1-246" id="h3-1-246" class="i">+
+</a><a href="#h3-1-247" id="h3-1-247" class="i">+                    Row(
+</a><a href="#h3-1-248" id="h3-1-248" class="i">+                        modifier = Modifier
+</a><a href="#h3-1-249" id="h3-1-249" class="i">+                            .fillMaxWidth()
+</a><a href="#h3-1-250" id="h3-1-250" class="i">+                            .clickable {
+</a><a href="#h3-1-251" id="h3-1-251" class="i">+                                selectFriend(!selectedFriends.contains(friendInfo.userId))
+</a><a href="#h3-1-252" id="h3-1-252" class="i">+                            }.pointerInput(Unit) {
+</a><a href="#h3-1-253" id="h3-1-253" class="i">+                                detectTapGestures(
+</a><a href="#h3-1-254" id="h3-1-254" class="i">+                                    onLongPress = { context.androidContext.copyToClipboard(friendInfo.mutableUsername.toString()) }
+</a><a href="#h3-1-255" id="h3-1-255" class="i">+                                )
+</a><a href="#h3-1-256" id="h3-1-256" class="i">+                            },
+</a><a href="#h3-1-257" id="h3-1-257" class="i">+                        verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h3-1-258" id="h3-1-258" class="i">+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+</a><a href="#h3-1-259" id="h3-1-259" class="i">+                    ) {
+</a><a href="#h3-1-260" id="h3-1-260" class="i">+                        LaunchedEffect(friendInfo) {
+</a><a href="#h3-1-261" id="h3-1-261" class="i">+                            withContext(Dispatchers.IO) {
+</a><a href="#h3-1-262" id="h3-1-262" class="i">+                                if (bitmojiBitmap != null || friendInfo.bitmojiAvatarId == null || friendInfo.bitmojiSelfieId == null) return@withContext
+</a><a href="#h3-1-263" id="h3-1-263" class="i">+
+</a><a href="#h3-1-264" id="h3-1-264" class="i">+                                val bitmojiUrl = BitmojiSelfie.getBitmojiSelfie(friendInfo.bitmojiSelfieId, friendInfo.bitmojiAvatarId, BitmojiSelfie.BitmojiSelfieType.NEW_THREE_D) ?: return@withContext
+</a><a href="#h3-1-265" id="h3-1-265" class="i">+                                runCatching {
+</a><a href="#h3-1-266" id="h3-1-266" class="i">+                                    URL(bitmojiUrl).openStream().use { input -&gt;
+</a><a href="#h3-1-267" id="h3-1-267" class="i">+                                        bitmojiCache[friendInfo.bitmojiAvatarId ?: return@withContext] = BitmapFactory.decodeStream(input)
+</a><a href="#h3-1-268" id="h3-1-268" class="i">+                                    }
+</a><a href="#h3-1-269" id="h3-1-269" class="i">+                                    bitmojiBitmap = bitmojiCache[friendInfo.bitmojiAvatarId ?: return@withContext]
+</a><a href="#h3-1-270" id="h3-1-270" class="i">+                                }.onFailure {
+</a><a href="#h3-1-271" id="h3-1-271" class="i">+                                    context.log.error(&quot;Failed to load bitmoji&quot;, it)
+</a>                                 }
+                             }
+<a href="#h3-1-274" id="h3-1-274" class="d">-                            EnumBulkAction.CLEAR_CONVERSATIONS -&gt; clearConversations(selectedFriends)
+</a>                         }
+<a href="#h3-1-276" id="h3-1-276" class="i">+
+</a><a href="#h3-1-277" id="h3-1-277" class="i">+                        Image(
+</a><a href="#h3-1-278" id="h3-1-278" class="i">+                            bitmap = remember (bitmojiBitmap) { bitmojiBitmap?.asImageBitmap() ?: noBitmojiBitmap },
+</a><a href="#h3-1-279" id="h3-1-279" class="i">+                            contentDescription = null,
+</a><a href="#h3-1-280" id="h3-1-280" class="i">+                            modifier = Modifier.size(35.dp)
+</a><a href="#h3-1-281" id="h3-1-281" class="i">+                        )
+</a><a href="#h3-1-282" id="h3-1-282" class="i">+
+</a><a href="#h3-1-283" id="h3-1-283" class="i">+                        Column(
+</a><a href="#h3-1-284" id="h3-1-284" class="i">+                            modifier = Modifier.weight(1f),
+</a><a href="#h3-1-285" id="h3-1-285" class="i">+                        ) {
+</a><a href="#h3-1-286" id="h3-1-286" class="i">+                            Row(
+</a><a href="#h3-1-287" id="h3-1-287" class="i">+                                modifier = Modifier.fillMaxWidth(),
+</a><a href="#h3-1-288" id="h3-1-288" class="i">+                                horizontalArrangement = Arrangement.spacedBy(3.dp),
+</a><a href="#h3-1-289" id="h3-1-289" class="i">+                                verticalAlignment = Alignment.CenterVertically
+</a><a href="#h3-1-290" id="h3-1-290" class="i">+                            ){
+</a><a href="#h3-1-291" id="h3-1-291" class="i">+                                Text(text = (friendInfo.displayName ?: friendInfo.mutableUsername).toString(), fontSize = 16.sp, fontWeight = FontWeight.Bold, overflow = TextOverflow.Ellipsis, maxLines = 1)
+</a><a href="#h3-1-292" id="h3-1-292" class="i">+                                Text(text = friendInfo.mutableUsername.toString(), fontSize = 10.sp, fontWeight = FontWeight.Light, overflow = TextOverflow.Ellipsis, maxLines = 1)
+</a><a href="#h3-1-293" id="h3-1-293" class="i">+                            }
+</a><a href="#h3-1-294" id="h3-1-294" class="i">+                            Text(text = &quot;Relationship: &quot; + remember(friendInfo) {
+</a><a href="#h3-1-295" id="h3-1-295" class="i">+                                 context.translation[&quot;friendship_link_type.${FriendLinkType.fromValue(friendInfo.friendLinkType).shortName}&quot;]
+</a><a href="#h3-1-296" id="h3-1-296" class="i">+                            }, fontSize = 12.sp, fontWeight = FontWeight.Light)
+</a><a href="#h3-1-297" id="h3-1-297" class="i">+                            remember(friendInfo) { friendInfo.addedTimestamp.takeIf { it &gt; 0L }?.let {
+</a><a href="#h3-1-298" id="h3-1-298" class="i">+                                DateFormat.getDateTimeInstance().format(Date(friendInfo.addedTimestamp))
+</a><a href="#h3-1-299" id="h3-1-299" class="i">+                            } }?.let {
+</a><a href="#h3-1-300" id="h3-1-300" class="i">+                                Text(text = &quot;Added $it&quot;, fontSize = 12.sp, fontWeight = FontWeight.Light)
+</a><a href="#h3-1-301" id="h3-1-301" class="i">+                            }
+</a><a href="#h3-1-302" id="h3-1-302" class="i">+                            remember(friendInfo) { friendInfo.snapScore.takeIf { it &gt; 0 } }?.let {
+</a><a href="#h3-1-303" id="h3-1-303" class="i">+                                Text(text = &quot;Snap Score: $it&quot;, fontSize = 12.sp, fontWeight = FontWeight.Light)
+</a><a href="#h3-1-304" id="h3-1-304" class="i">+                            }
+</a><a href="#h3-1-305" id="h3-1-305" class="i">+                            remember(friendInfo) { friendInfo.streakLength.takeIf { it &gt; 0 } }?.let {
+</a><a href="#h3-1-306" id="h3-1-306" class="i">+                                Text(text = &quot;Streaks length: $it&quot;, fontSize = 12.sp, fontWeight = FontWeight.Light)
+</a><a href="#h3-1-307" id="h3-1-307" class="i">+                            }
+</a><a href="#h3-1-308" id="h3-1-308" class="i">+                        }
+</a><a href="#h3-1-309" id="h3-1-309" class="i">+
+</a><a href="#h3-1-310" id="h3-1-310" class="i">+                        Checkbox(
+</a><a href="#h3-1-311" id="h3-1-311" class="i">+                            checked = selectedFriends.contains(friendInfo.userId),
+</a><a href="#h3-1-312" id="h3-1-312" class="i">+                            onCheckedChange = { selectFriend(it) }
+</a><a href="#h3-1-313" id="h3-1-313" class="i">+                        )
+</a><a href="#h3-1-314" id="h3-1-314" class="i">+                    }
+</a><a href="#h3-1-315" id="h3-1-315" class="i">+                }
+</a><a href="#h3-1-316" id="h3-1-316" class="i">+            }
+</a><a href="#h3-1-317" id="h3-1-317" class="i">+
+</a><a href="#h3-1-318" id="h3-1-318" class="i">+            var showConfirmationDialog by remember { mutableStateOf(false) }
+</a><a href="#h3-1-319" id="h3-1-319" class="i">+            var action by remember { mutableStateOf({}) }
+</a><a href="#h3-1-320" id="h3-1-320" class="i">+
+</a><a href="#h3-1-321" id="h3-1-321" class="i">+            if (showConfirmationDialog) {
+</a><a href="#h3-1-322" id="h3-1-322" class="i">+                ConfirmationDialog(
+</a><a href="#h3-1-323" id="h3-1-323" class="i">+                    onConfirm = {
+</a><a href="#h3-1-324" id="h3-1-324" class="i">+                        action()
+</a><a href="#h3-1-325" id="h3-1-325" class="i">+                        action = {}
+</a><a href="#h3-1-326" id="h3-1-326" class="i">+                        showConfirmationDialog = false
+</a><a href="#h3-1-327" id="h3-1-327" class="i">+                    },
+</a><a href="#h3-1-328" id="h3-1-328" class="i">+                    onCancel = {
+</a><a href="#h3-1-329" id="h3-1-329" class="i">+                        action = {}
+</a><a href="#h3-1-330" id="h3-1-330" class="i">+                        showConfirmationDialog = false
+</a>                     }
+<a href="#h3-1-332" id="h3-1-332" class="i">+                )
+</a><a href="#h3-1-333" id="h3-1-333" class="i">+            }
+</a><a href="#h3-1-334" id="h3-1-334" class="i">+
+</a><a href="#h3-1-335" id="h3-1-335" class="i">+            val ctx = LocalContext.current
+</a><a href="#h3-1-336" id="h3-1-336" class="i">+
+</a><a href="#h3-1-337" id="h3-1-337" class="i">+            Column(
+</a><a href="#h3-1-338" id="h3-1-338" class="i">+                modifier = Modifier.fillMaxWidth(),
+</a><a href="#h3-1-339" id="h3-1-339" class="i">+            ) {
+</a><a href="#h3-1-340" id="h3-1-340" class="i">+                Button(
+</a><a href="#h3-1-341" id="h3-1-341" class="i">+                    modifier = Modifier
+</a><a href="#h3-1-342" id="h3-1-342" class="i">+                        .fillMaxWidth()
+</a><a href="#h3-1-343" id="h3-1-343" class="i">+                        .padding(2.dp),
+</a><a href="#h3-1-344" id="h3-1-344" class="i">+                    onClick = {
+</a><a href="#h3-1-345" id="h3-1-345" class="i">+                        showConfirmationDialog = true
+</a><a href="#h3-1-346" id="h3-1-346" class="i">+                        action = {
+</a><a href="#h3-1-347" id="h3-1-347" class="i">+                            val messaging = context.feature(Messaging::class)
+</a><a href="#h3-1-348" id="h3-1-348" class="i">+                            messaging.conversationManager?.apply {
+</a><a href="#h3-1-349" id="h3-1-349" class="i">+                                getOneOnOneConversationIds(selectedFriends, onError = { error -&gt;
+</a><a href="#h3-1-350" id="h3-1-350" class="i">+                                    context.shortToast(&quot;Failed to fetch conversations: $error&quot;)
+</a><a href="#h3-1-351" id="h3-1-351" class="i">+                                }, onSuccess = { conversations -&gt;
+</a><a href="#h3-1-352" id="h3-1-352" class="i">+                                    context.runOnUiThread {
+</a><a href="#h3-1-353" id="h3-1-353" class="i">+                                        removeAction(ctx, conversations.map { it.second }.distinct()) {
+</a><a href="#h3-1-354" id="h3-1-354" class="i">+                                            messaging.clearConversationFromFeed(it, onError = { error -&gt;
+</a><a href="#h3-1-355" id="h3-1-355" class="i">+                                                context.shortToast(&quot;Failed to clear conversation: $error&quot;)
+</a><a href="#h3-1-356" id="h3-1-356" class="i">+                                            })
+</a><a href="#h3-1-357" id="h3-1-357" class="i">+                                        }.invokeOnCompletion {
+</a><a href="#h3-1-358" id="h3-1-358" class="i">+                                            context.coroutineScope.launch { refreshList() }
+</a><a href="#h3-1-359" id="h3-1-359" class="i">+                                        }
+</a><a href="#h3-1-360" id="h3-1-360" class="i">+                                    }
+</a><a href="#h3-1-361" id="h3-1-361" class="i">+                                })
+</a><a href="#h3-1-362" id="h3-1-362" class="i">+                                selectedFriends.clear()
+</a><a href="#h3-1-363" id="h3-1-363" class="i">+                            }
+</a><a href="#h3-1-364" id="h3-1-364" class="i">+                        }
+</a><a href="#h3-1-365" id="h3-1-365" class="i">+                    },
+</a><a href="#h3-1-366" id="h3-1-366" class="i">+                    enabled = selectedFriends.isNotEmpty()
+</a><a href="#h3-1-367" id="h3-1-367" class="i">+                ) {
+</a><a href="#h3-1-368" id="h3-1-368" class="i">+                    Text(text = &quot;Clear &quot; + selectedFriends.size + &quot; conversations&quot;)
+</a>                 }
+<a href="#h3-1-370" id="h3-1-370" class="d">-                .setNegativeButton(context.translation[&quot;button.cancel&quot;]) { dialog, _ -&gt;
+</a><a href="#h3-1-371" id="h3-1-371" class="d">-                    dialog.dismiss()
+</a><a href="#h3-1-372" id="h3-1-372" class="i">+                Button(
+</a><a href="#h3-1-373" id="h3-1-373" class="i">+                    modifier = Modifier
+</a><a href="#h3-1-374" id="h3-1-374" class="i">+                        .fillMaxWidth()
+</a><a href="#h3-1-375" id="h3-1-375" class="i">+                        .padding(2.dp),
+</a><a href="#h3-1-376" id="h3-1-376" class="i">+                    onClick = {
+</a><a href="#h3-1-377" id="h3-1-377" class="i">+                        showConfirmationDialog = true
+</a><a href="#h3-1-378" id="h3-1-378" class="i">+                        action = {
+</a><a href="#h3-1-379" id="h3-1-379" class="i">+                            removeAction(ctx, selectedFriends.also {
+</a><a href="#h3-1-380" id="h3-1-380" class="i">+                                selectedFriends.clear()
+</a><a href="#h3-1-381" id="h3-1-381" class="i">+                            }) { removeFriend(it) }.invokeOnCompletion {
+</a><a href="#h3-1-382" id="h3-1-382" class="i">+                                context.coroutineScope.launch { refreshList() }
+</a><a href="#h3-1-383" id="h3-1-383" class="i">+                            }
+</a><a href="#h3-1-384" id="h3-1-384" class="i">+                        }
+</a><a href="#h3-1-385" id="h3-1-385" class="i">+                    },
+</a><a href="#h3-1-386" id="h3-1-386" class="i">+                    enabled = selectedFriends.isNotEmpty()
+</a><a href="#h3-1-387" id="h3-1-387" class="i">+                ) {
+</a><a href="#h3-1-388" id="h3-1-388" class="i">+                    Text(text = &quot;Remove &quot; + selectedFriends.size + &quot; friends&quot;)
+</a>                 }
+<a href="#h3-1-390" id="h3-1-390" class="d">-                .setCancelable(false)
+</a><a href="#h3-1-391" id="h3-1-391" class="d">-                .show()
+</a><a href="#h3-1-392" id="h3-1-392" class="i">+            }
+</a><a href="#h3-1-393" id="h3-1-393" class="i">+        }
+</a><a href="#h3-1-394" id="h3-1-394" class="i">+
+</a><a href="#h3-1-395" id="h3-1-395" class="i">+        LaunchedEffect(filter, sortBy, sortReverseOrder) {
+</a><a href="#h3-1-396" id="h3-1-396" class="i">+            refreshList()
+</a>         }
+     }
+ 
+<a href="#h3-1-400" id="h3-1-400" class="d">-    private fun clearConversations(friendIds: List&lt;String&gt;) {
+</a><a href="#h3-1-401" id="h3-1-401" class="d">-        val messaging = context.feature(Messaging::class)
+</a><a href="#h3-1-402" id="h3-1-402" class="d">-
+</a><a href="#h3-1-403" id="h3-1-403" class="d">-        messaging.conversationManager?.apply {
+</a><a href="#h3-1-404" id="h3-1-404" class="d">-            getOneOnOneConversationIds(friendIds, onError = { error -&gt;
+</a><a href="#h3-1-405" id="h3-1-405" class="d">-                context.shortToast(&quot;Failed to fetch conversations: $error&quot;)
+</a><a href="#h3-1-406" id="h3-1-406" class="d">-            }, onSuccess = { conversations -&gt;
+</a><a href="#h3-1-407" id="h3-1-407" class="d">-                context.runOnUiThread {
+</a><a href="#h3-1-408" id="h3-1-408" class="d">-                    removeAction(conversations.map { it.second }.distinct()) {
+</a><a href="#h3-1-409" id="h3-1-409" class="d">-                        messaging.clearConversationFromFeed(it, onError = { error -&gt;
+</a><a href="#h3-1-410" id="h3-1-410" class="d">-                            context.shortToast(&quot;Failed to clear conversation: $error&quot;)
+</a><a href="#h3-1-411" id="h3-1-411" class="d">-                        })
+</a><a href="#h3-1-412" id="h3-1-412" class="d">-                    }
+</a><a href="#h3-1-413" id="h3-1-413" class="d">-                }
+</a><a href="#h3-1-414" id="h3-1-414" class="d">-            })
+</a><a href="#h3-1-415" id="h3-1-415" class="i">+    override fun run() {
+</a><a href="#h3-1-416" id="h3-1-416" class="i">+        context.coroutineScope.launch(Dispatchers.Main) {
+</a><a href="#h3-1-417" id="h3-1-417" class="i">+            createComposeAlertDialog(context.mainActivity!!) {
+</a><a href="#h3-1-418" id="h3-1-418" class="i">+                BulkMessagingDialog()
+</a><a href="#h3-1-419" id="h3-1-419" class="i">+            }.apply {
+</a><a href="#h3-1-420" id="h3-1-420" class="i">+                setCanceledOnTouchOutside(false)
+</a><a href="#h3-1-421" id="h3-1-421" class="i">+                show()
+</a><a href="#h3-1-422" id="h3-1-422" class="i">+            }
+</a>         }
+     }
+ 
+</pre>
+</div>
+</body>
+</html>

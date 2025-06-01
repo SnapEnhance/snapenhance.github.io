@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>refactor: composer loader - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/31ae06ed625d87fa6ab6ced8b774938ddb6c1f24.html">31ae06ed625d87fa6ab6ced8b774938ddb6c1f24</a>
+<b>parent</b> <a href="../commit/c72cc1d3203245a8a812f7917ea99c6defa4a3c0.html">c72cc1d3203245a8a812f7917ea99c6defa4a3c0</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat,  8 Jun 2024 21:31:47 +0200
+
+refactor: composer loader
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/RemoteFileHandleManager.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></td><td> | </td><td class="num">6</td><td><span class="i"></span><span class="d">------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a></td><td> | </td><td class="num">15</td><td><span class="i">+++++++</span><span class="d">--------</span></td></tr>
+</table></pre><pre>4 files changed, 15 insertions(+), 15 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteFileHandleManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteFileHandleManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteFileHandleManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteFileHandleManager.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -91,6 +91,12 @@ class RemoteFileHandleManager(
+</a>                     File(userImportFolder, name.substringAfterLast(&quot;/&quot;))
+                 )
+             }
+<a href="#h0-0-3" id="h0-0-3" class="i">+            FileHandleScope.COMPOSER -&gt; {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                return AssetFileHandle(
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+                    context,
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                    &quot;composer/${name.substringAfterLast(&quot;/&quot;)}&quot;
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+                )
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+            }
+</a>             else -&gt; return null
+         }
+     }
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -193,12 +193,6 @@ class RemoteScriptManager(
+</a>     }
+ 
+     override fun getScriptContent(moduleName: String): ParcelFileDescriptor? {
+<a href="#h1-0-3" id="h1-0-3" class="d">-        if (moduleName.startsWith(&quot;composer/&quot;)) {
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-            return runCatching {
+</a><a href="#h1-0-5" id="h1-0-5" class="d">-                context.androidContext.assets.open(&quot;composer/${moduleName.removePrefix(&quot;composer/&quot;)}&quot;)
+</a><a href="#h1-0-6" id="h1-0-6" class="d">-                    .toParcelFileDescriptor(context.coroutineScope)
+</a><a href="#h1-0-7" id="h1-0-7" class="d">-            }.getOrNull()
+</a><a href="#h1-0-8" id="h1-0-8" class="d">-        }
+</a>         return getScriptInputStream(moduleName) { it?.toParcelFileDescriptor(context.coroutineScope) }
+     }
+ 
+<b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -15,7 +15,8 @@ enum class FileHandleScope(
+</a> ) {
+     INTERNAL(&quot;internal&quot;),
+     LOCALE(&quot;locale&quot;),
+<a href="#h2-0-3" id="h2-0-3" class="d">-    USER_IMPORT(&quot;user_import&quot;);
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+    USER_IMPORT(&quot;user_import&quot;),
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+    COMPOSER(&quot;composer&quot;);
+</a> 
+     companion object {
+         fun fromValue(name: String): FileHandleScope? = entries.find { it.key == name }
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -19,6 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
+</a> import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+ import kotlinx.coroutines.launch
+<a href="#h3-0-3" id="h3-0-3" class="i">+import me.rhunk.snapenhance.common.bridge.FileHandleScope
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import me.rhunk.snapenhance.common.bridge.toWrapper
+</a> import me.rhunk.snapenhance.common.ui.AppMaterialTheme
+ import me.rhunk.snapenhance.common.ui.createComposeAlertDialog
+ import me.rhunk.snapenhance.common.ui.createComposeView
+<a href="#h3-1" id="h3-1" class="h">@@ -193,14 +195,11 @@ class ComposerHooks: Feature(&quot;ComposerHooks&quot;, loadParams = FeatureLoadParams.INI
+</a>                 context.log.error(&quot;ComposerHooks cannot be loaded without NativeLib&quot;)
+                 return
+             }
+<a href="#h3-1-3" id="h3-1-3" class="d">-            val loaderScript = context.scriptRuntime.scripting.getScriptContent(&quot;composer/loader.js&quot;)?.let { pfd -&gt;
+</a><a href="#h3-1-4" id="h3-1-4" class="d">-                ParcelFileDescriptor.AutoCloseInputStream(pfd).use {
+</a><a href="#h3-1-5" id="h3-1-5" class="d">-                    it.readBytes().toString(Charsets.UTF_8)
+</a><a href="#h3-1-6" id="h3-1-6" class="d">-                }
+</a><a href="#h3-1-7" id="h3-1-7" class="d">-            } ?: run {
+</a><a href="#h3-1-8" id="h3-1-8" class="d">-                context.log.error(&quot;Failed to load composer loader script&quot;)
+</a><a href="#h3-1-9" id="h3-1-9" class="d">-                return
+</a><a href="#h3-1-10" id="h3-1-10" class="d">-            }
+</a><a href="#h3-1-11" id="h3-1-11" class="i">+            val loaderScript = runCatching {
+</a><a href="#h3-1-12" id="h3-1-12" class="i">+                context.fileHandlerManager.getFileHandle(FileHandleScope.COMPOSER.key, &quot;loader.js&quot;).toWrapper().readBytes().toString(Charsets.UTF_8)
+</a><a href="#h3-1-13" id="h3-1-13" class="i">+            }.onFailure {
+</a><a href="#h3-1-14" id="h3-1-14" class="i">+                context.log.error(&quot;Failed to load composer loader script&quot;, it)
+</a><a href="#h3-1-15" id="h3-1-15" class="i">+            }.getOrNull() ?: return
+</a>             context.native.setComposerLoader(&quot;&quot;&quot;
+                 (() =&gt; { const _getImportsFunctionName = &quot;$getImportsFunctionName&quot;; $loaderScript })();
+             &quot;&quot;&quot;.trimIndent().trim())
+</pre>
+</div>
+</body>
+</html>

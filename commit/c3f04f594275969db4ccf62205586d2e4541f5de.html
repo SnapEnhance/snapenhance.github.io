@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build: debug properties - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/c3f04f594275969db4ccf62205586d2e4541f5de.html">c3f04f594275969db4ccf62205586d2e4541f5de</a>
+<b>parent</b> <a href="../commit/93716bd236d6f607da6b89b1e2e0690fd4870e5c.html">93716bd236d6f607da6b89b1e2e0690fd4870e5c</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed,  1 Nov 2023 01:08:25 +0100
+
+build: debug properties
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/build.gradle.kts</a></td><td> | </td><td class="num">13</td><td><span class="i">++++++</span><span class="d">-------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">build.gradle.kts</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">manager/build.gradle.kts</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">native/build.gradle.kts</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+</table></pre><pre>4 files changed, 9 insertions(+), 10 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/build.gradle.kts.html">app/build.gradle.kts</a> b/<a href="../file/app/build.gradle.kts.html">app/build.gradle.kts</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,4 +1,5 @@
+</a> import com.android.build.gradle.internal.api.BaseVariantOutputImpl
+<a href="#h0-0-1" id="h0-0-1" class="i">+import org.gradle.configurationcache.extensions.capitalized
+</a> 
+ plugins {
+     alias(libs.plugins.androidApplication)
+<a href="#h0-1" id="h0-1" class="h">@@ -33,7 +34,7 @@ android {
+</a>             proguardFiles += file(&quot;proguard-rules.pro&quot;)
+         }
+         debug {
+<a href="#h0-1-3" id="h0-1-3" class="d">-            (properties[&quot;debug_assemble_task&quot;] == null).also {
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+            (properties[&quot;debug_flavor&quot;] == null).also {
+</a>                 isDebuggable = !it
+                 isMinifyEnabled = it
+                 isShrinkResources = it
+<a href="#h0-2" id="h0-2" class="h">@@ -150,16 +151,14 @@ dependencies {
+</a> }
+ 
+ afterEvaluate {
+<a href="#h0-2-3" id="h0-2-3" class="d">-    properties[&quot;debug_assemble_task&quot;]?.let { tasks.findByName(it.toString()) }?.doLast {
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+    properties[&quot;debug_flavor&quot;]?.toString()?.let { tasks.findByName(&quot;install${it.capitalized()}Debug&quot;) }?.doLast {
+</a>         runCatching {
+             exec {
+<a href="#h0-2-7" id="h0-2-7" class="d">-                commandLine(&quot;adb&quot;, &quot;shell&quot;, &quot;am&quot;, &quot;force-stop&quot;, &quot;com.snapchat.android&quot;)
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+                commandLine(&quot;adb&quot;, &quot;shell&quot;, &quot;am&quot;, &quot;force-stop&quot;, properties[&quot;debug_package_name&quot;])
+</a>             }
+<a href="#h0-2-10" id="h0-2-10" class="i">+            Thread.sleep(1000L)
+</a>             exec {
+<a href="#h0-2-12" id="h0-2-12" class="d">-                commandLine(&quot;adb&quot;, &quot;install&quot;, &quot;-r&quot;, &quot;-d&quot;, apkDebugFile.absolutePath)
+</a><a href="#h0-2-13" id="h0-2-13" class="d">-            }
+</a><a href="#h0-2-14" id="h0-2-14" class="d">-            exec {
+</a><a href="#h0-2-15" id="h0-2-15" class="d">-                commandLine(&quot;adb&quot;, &quot;shell&quot;, &quot;am&quot;, &quot;start&quot;, &quot;com.snapchat.android&quot;)
+</a><a href="#h0-2-16" id="h0-2-16" class="i">+                commandLine(&quot;adb&quot;, &quot;shell&quot;, &quot;am&quot;, &quot;start&quot;, properties[&quot;debug_package_name&quot;])
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h1" href="../file/build.gradle.kts.html">build.gradle.kts</a> b/<a href="../file/build.gradle.kts.html">build.gradle.kts</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -11,7 +11,7 @@ var versionCode = 1 //&quot;1&quot; for now until stable release
+</a> rootProject.ext.set(&quot;appVersionName&quot;, versionName)
+ rootProject.ext.set(&quot;appVersionCode&quot;, versionCode)
+ rootProject.ext.set(&quot;applicationId&quot;, &quot;me.rhunk.snapenhance&quot;)
+<a href="#h1-0-3" id="h1-0-3" class="d">-rootProject.ext.set(&quot;buildHash&quot;, properties[&quot;custom_build_hash&quot;] ?: java.security.SecureRandom().nextLong(1000000000, 99999999999).toString(16))
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+rootProject.ext.set(&quot;buildHash&quot;, properties[&quot;debug_build_hash&quot;] ?: java.security.SecureRandom().nextLong(1000000000, 99999999999).toString(16))
+</a> 
+ tasks.register(&quot;getVersion&quot;) {
+     doLast {
+<b>diff --git a/<a id="h2" href="../file/manager/build.gradle.kts.html">manager/build.gradle.kts</a> b/<a href="../file/manager/build.gradle.kts.html">manager/build.gradle.kts</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -42,7 +42,7 @@ android {
+</a>             proguardFiles += file(&quot;proguard-rules.pro&quot;)
+         }
+         debug {
+<a href="#h2-0-3" id="h2-0-3" class="d">-            (properties[&quot;debug_assemble_task&quot;] == null).also {
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+            (properties[&quot;debug_flavor&quot;] == null).also {
+</a>                 isDebuggable = !it
+                 isMinifyEnabled = it
+                 isShrinkResources = it
+<b>diff --git a/<a id="h3" href="../file/native/build.gradle.kts.html">native/build.gradle.kts</a> b/<a href="../file/native/build.gradle.kts.html">native/build.gradle.kts</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -29,7 +29,7 @@ android {
+</a>             }
+             ndk {
+                 //noinspection ChromeOsAbiSupport
+<a href="#h3-0-3" id="h3-0-3" class="d">-                abiFilters += properties[&quot;custom_abi_filters&quot;]?.toString()?.split(&quot;,&quot;)
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+                abiFilters += properties[&quot;debug_abi_filters&quot;]?.toString()?.split(&quot;,&quot;)
+</a>                     ?: listOf(&quot;arm64-v8a&quot;, &quot;armeabi-v7a&quot;)
+             }
+         }
+</pre>
+</div>
+</body>
+</html>

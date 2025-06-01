@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>perf: ui improvements - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/fc941170294a627b5d3666da517287d82fe0c423.html">fc941170294a627b5d3666da517287d82fe0c423</a>
+<b>parent</b> <a href="../commit/85335dafa81e59af9a35c65a8cdcdf9463350984.html">85335dafa81e59af9a35c65a8cdcdf9463350984</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun,  4 Jun 2023 15:02:06 +0200
+
+perf: ui improvements
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/MenuViewInjector.kt</a></td><td> | </td><td class="num">93</td><td><span class="i">+++++++++++++++++++++++++++</span><span class="d">----------------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/FriendFeedInfoMenu.kt</a></td><td> | </td><td class="num">10</td><td><span class="i">+++++</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/OperaContextActionMenu.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+</table></pre><pre>3 files changed, 38 insertions(+), 66 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/MenuViewInjector.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/MenuViewInjector.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/MenuViewInjector.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/MenuViewInjector.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,15 +1,12 @@
+</a> package me.rhunk.snapenhance.features.impl.ui.menus
+ 
+ import android.annotation.SuppressLint
+<a href="#h0-0-3" id="h0-0-3" class="d">-import android.content.Context
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-import android.util.AttributeSet
+</a> import android.view.View
+ import android.view.ViewGroup
+ import android.widget.FrameLayout
+ import android.widget.LinearLayout
+ import de.robv.android.xposed.XposedBridge
+<a href="#h0-0-10" id="h0-0-10" class="d">-import me.rhunk.snapenhance.Constants.VIEW_DRAWER
+</a><a href="#h0-0-11" id="h0-0-11" class="d">-import me.rhunk.snapenhance.Constants.VIEW_INJECTED_CODE
+</a><a href="#h0-0-12" id="h0-0-12" class="i">+import me.rhunk.snapenhance.Constants
+</a> import me.rhunk.snapenhance.config.ConfigProperty
+ import me.rhunk.snapenhance.features.Feature
+ import me.rhunk.snapenhance.features.FeatureLoadParams
+<a href="#h0-1" id="h0-1" class="h">@@ -20,19 +17,17 @@ import me.rhunk.snapenhance.features.impl.ui.menus.impl.OperaContextActionMenu
+</a> import me.rhunk.snapenhance.features.impl.ui.menus.impl.SettingsMenu
+ import me.rhunk.snapenhance.hook.HookStage
+ import me.rhunk.snapenhance.hook.Hooker
+<a href="#h0-1-3" id="h0-1-3" class="d">-import java.lang.reflect.Field
+</a> import java.lang.reflect.Modifier
+ 
+<a href="#h0-1-6" id="h0-1-6" class="i">+@SuppressLint(&quot;DiscouragedApi&quot;)
+</a> class MenuViewInjector : Feature(&quot;MenuViewInjector&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_ASYNC) {
+     private val friendFeedInfoMenu = FriendFeedInfoMenu()
+     private val operaContextActionMenu = OperaContextActionMenu()
+     private val chatActionMenu = ChatActionMenu()
+     private val settingMenu = SettingsMenu()
+ 
+<a href="#h0-1-13" id="h0-1-13" class="d">-    private fun wasInjectedView(view: View): Boolean {
+</a><a href="#h0-1-14" id="h0-1-14" class="d">-        if (view.getTag(VIEW_INJECTED_CODE) != null) return true
+</a><a href="#h0-1-15" id="h0-1-15" class="d">-        view.setTag(VIEW_INJECTED_CODE, true)
+</a><a href="#h0-1-16" id="h0-1-16" class="d">-        return false
+</a><a href="#h0-1-17" id="h0-1-17" class="i">+    private val newChatString by lazy {
+</a><a href="#h0-1-18" id="h0-1-18" class="i">+        context.resources.getString(context.resources.getIdentifier(&quot;new_chat&quot;, &quot;string&quot;, Constants.SNAPCHAT_PACKAGE_NAME))
+</a>     }
+ 
+     @SuppressLint(&quot;ResourceType&quot;)
+<a href="#h0-2" id="h0-2" class="h">@@ -42,6 +37,7 @@ class MenuViewInjector : Feature(&quot;MenuViewInjector&quot;, loadParams = FeatureLoadPar
+</a>         chatActionMenu.context = context
+         settingMenu.context = context
+ 
+<a href="#h0-2-3" id="h0-2-3" class="i">+        val actionSheetItemsContainerLayoutId = context.resources.getIdentifier(&quot;action_sheet_items_container&quot;, &quot;id&quot;, Constants.SNAPCHAT_PACKAGE_NAME)
+</a>         val addViewMethod = ViewGroup::class.java.getMethod(
+             &quot;addView&quot;,
+             View::class.java,
+<a href="#h0-3" id="h0-3" class="h">@@ -49,22 +45,6 @@ class MenuViewInjector : Feature(&quot;MenuViewInjector&quot;, loadParams = FeatureLoadPar
+</a>             ViewGroup.LayoutParams::class.java
+         )
+ 
+<a href="#h0-3-3" id="h0-3-3" class="d">-        //catch the card view instance in the action drawer
+</a><a href="#h0-3-4" id="h0-3-4" class="d">-        Hooker.hook(
+</a><a href="#h0-3-5" id="h0-3-5" class="d">-            LinearLayout::class.java.getConstructor(
+</a><a href="#h0-3-6" id="h0-3-6" class="d">-                Context::class.java,
+</a><a href="#h0-3-7" id="h0-3-7" class="d">-                AttributeSet::class.java,
+</a><a href="#h0-3-8" id="h0-3-8" class="d">-                Int::class.javaPrimitiveType
+</a><a href="#h0-3-9" id="h0-3-9" class="d">-            ), HookStage.AFTER
+</a><a href="#h0-3-10" id="h0-3-10" class="d">-        ) { param -&gt;
+</a><a href="#h0-3-11" id="h0-3-11" class="d">-            val viewGroup: LinearLayout = param.thisObject()
+</a><a href="#h0-3-12" id="h0-3-12" class="d">-            val attribute: Int = param.arg(2)
+</a><a href="#h0-3-13" id="h0-3-13" class="d">-            if (attribute == 0) return@hook
+</a><a href="#h0-3-14" id="h0-3-14" class="d">-            val resourceName = viewGroup.resources.getResourceName(attribute)
+</a><a href="#h0-3-15" id="h0-3-15" class="d">-            if (!resourceName.endsWith(&quot;snapCardContentLayoutStyle&quot;)) return@hook
+</a><a href="#h0-3-16" id="h0-3-16" class="d">-            viewGroup.setTag(VIEW_DRAWER, Any())
+</a><a href="#h0-3-17" id="h0-3-17" class="d">-        }
+</a><a href="#h0-3-18" id="h0-3-18" class="d">-
+</a>         Hooker.hook(addViewMethod, HookStage.BEFORE) { param -&gt;
+             val viewGroup: ViewGroup = param.thisObject()
+             val originalAddView: (View) -&gt; Unit = { view: View -&gt;
+<a href="#h0-4" id="h0-4" class="h">@@ -87,52 +67,43 @@ class MenuViewInjector : Feature(&quot;MenuViewInjector&quot;, loadParams = FeatureLoadPar
+</a> 
+             //download in chat snaps and notes from the chat action menu
+             if (viewGroup.javaClass.name.endsWith(&quot;ActionMenuChatItemContainer&quot;)) {
+<a href="#h0-4-3" id="h0-4-3" class="d">-                if (viewGroup.parent == null || viewGroup.parent
+</a><a href="#h0-4-4" id="h0-4-4" class="d">-                        .parent == null
+</a><a href="#h0-4-5" id="h0-4-5" class="d">-                ) return@hook
+</a><a href="#h0-4-6" id="h0-4-6" class="i">+                if (viewGroup.parent == null || viewGroup.parent.parent == null) return@hook
+</a>                 chatActionMenu.inject(viewGroup)
+                 return@hook
+             }
+ 
+             //TODO : preview group chats
+<a href="#h0-4-12" id="h0-4-12" class="d">-            if (viewGroup !is LinearLayout) return@hook
+</a><a href="#h0-4-13" id="h0-4-13" class="d">-            if (viewGroup.getTag(VIEW_DRAWER) == null) return@hook
+</a><a href="#h0-4-14" id="h0-4-14" class="d">-            val itemStringInterface =childView.javaClass.declaredFields.filter { field: Field -&gt;
+</a><a href="#h0-4-15" id="h0-4-15" class="d">-                        !field.type.isPrimitive &amp;&amp; Modifier.isAbstract(
+</a><a href="#h0-4-16" id="h0-4-16" class="d">-                            field.type.modifiers
+</a><a href="#h0-4-17" id="h0-4-17" class="d">-                        )
+</a><a href="#h0-4-18" id="h0-4-18" class="d">-                    }
+</a><a href="#h0-4-19" id="h0-4-19" class="d">-                    .map { field: Field -&gt;
+</a><a href="#h0-4-20" id="h0-4-20" class="d">-                        try {
+</a><a href="#h0-4-21" id="h0-4-21" class="d">-                            field.isAccessible = true
+</a><a href="#h0-4-22" id="h0-4-22" class="d">-                            return@map field[childView]
+</a><a href="#h0-4-23" id="h0-4-23" class="d">-                        } catch (e: IllegalAccessException) {
+</a><a href="#h0-4-24" id="h0-4-24" class="d">-                            e.printStackTrace()
+</a><a href="#h0-4-25" id="h0-4-25" class="d">-                        }
+</a><a href="#h0-4-26" id="h0-4-26" class="d">-                        null
+</a><a href="#h0-4-27" id="h0-4-27" class="i">+            if (viewGroup is LinearLayout &amp;&amp; viewGroup.id == actionSheetItemsContainerLayoutId) {
+</a><a href="#h0-4-28" id="h0-4-28" class="i">+                val itemStringInterface by lazy {
+</a><a href="#h0-4-29" id="h0-4-29" class="i">+                    childView.javaClass.declaredFields.filter {
+</a><a href="#h0-4-30" id="h0-4-30" class="i">+                        !it.type.isPrimitive &amp;&amp; Modifier.isAbstract(it.type.modifiers)
+</a><a href="#h0-4-31" id="h0-4-31" class="i">+                    }.map {
+</a><a href="#h0-4-32" id="h0-4-32" class="i">+                        runCatching {
+</a><a href="#h0-4-33" id="h0-4-33" class="i">+                            it.isAccessible = true
+</a><a href="#h0-4-34" id="h0-4-34" class="i">+                            it[childView]
+</a><a href="#h0-4-35" id="h0-4-35" class="i">+                        }.getOrNull()
+</a>                     }.firstOrNull()
+<a href="#h0-4-37" id="h0-4-37" class="i">+                }
+</a> 
+<a href="#h0-4-39" id="h0-4-39" class="d">-            //the 3 dot button shows a menu which contains the first item as a Plain object
+</a><a href="#h0-4-40" id="h0-4-40" class="d">-            //FIXME: better way to detect the 3 dot button
+</a><a href="#h0-4-41" id="h0-4-41" class="d">-           if (viewGroup.getChildCount() == 0 &amp;&amp; itemStringInterface != null &amp;&amp; itemStringInterface.toString().startsWith(&quot;Plain(primaryText=&quot;)) {
+</a><a href="#h0-4-42" id="h0-4-42" class="d">-                if (wasInjectedView(viewGroup)) return@hook
+</a><a href="#h0-4-43" id="h0-4-43" class="i">+                //the 3 dot button shows a menu which contains the first item as a Plain object
+</a><a href="#h0-4-44" id="h0-4-44" class="i">+                if (viewGroup.getChildCount() == 0 &amp;&amp; itemStringInterface != null &amp;&amp; itemStringInterface.toString().startsWith(&quot;Plain(primaryText=$newChatString&quot;)) {
+</a> 
+<a href="#h0-4-46" id="h0-4-46" class="d">-                settingMenu.inject(viewGroup, originalAddView)
+</a><a href="#h0-4-47" id="h0-4-47" class="d">-                viewGroup.addOnAttachStateChangeListener(object: View.OnAttachStateChangeListener {
+</a><a href="#h0-4-48" id="h0-4-48" class="d">-                    override fun onViewAttachedToWindow(v: View) {}
+</a><a href="#h0-4-49" id="h0-4-49" class="d">-                    override fun onViewDetachedFromWindow(v: View) {
+</a><a href="#h0-4-50" id="h0-4-50" class="d">-                        context.config.writeConfig()
+</a><a href="#h0-4-51" id="h0-4-51" class="d">-                    }
+</a><a href="#h0-4-52" id="h0-4-52" class="d">-                })
+</a><a href="#h0-4-53" id="h0-4-53" class="d">-                return@hook
+</a><a href="#h0-4-54" id="h0-4-54" class="d">-            }
+</a><a href="#h0-4-55" id="h0-4-55" class="d">-            if (context.feature(Messaging::class).lastFetchConversationUserUUID == null) return@hook
+</a><a href="#h0-4-56" id="h0-4-56" class="i">+                    settingMenu.inject(viewGroup, originalAddView)
+</a><a href="#h0-4-57" id="h0-4-57" class="i">+                    viewGroup.addOnAttachStateChangeListener(object: View.OnAttachStateChangeListener {
+</a><a href="#h0-4-58" id="h0-4-58" class="i">+                        override fun onViewAttachedToWindow(v: View) {}
+</a><a href="#h0-4-59" id="h0-4-59" class="i">+                        override fun onViewDetachedFromWindow(v: View) {
+</a><a href="#h0-4-60" id="h0-4-60" class="i">+                            context.config.writeConfig()
+</a><a href="#h0-4-61" id="h0-4-61" class="i">+                        }
+</a><a href="#h0-4-62" id="h0-4-62" class="i">+                    })
+</a><a href="#h0-4-63" id="h0-4-63" class="i">+                    return@hook
+</a><a href="#h0-4-64" id="h0-4-64" class="i">+                }
+</a><a href="#h0-4-65" id="h0-4-65" class="i">+                if (context.feature(Messaging::class).lastFetchConversationUserUUID == null) return@hook
+</a> 
+<a href="#h0-4-67" id="h0-4-67" class="d">-            //filter by the slot index
+</a><a href="#h0-4-68" id="h0-4-68" class="d">-            if (viewGroup.getChildCount() != context.config.int(ConfigProperty.MENU_SLOT_ID)) return@hook
+</a><a href="#h0-4-69" id="h0-4-69" class="i">+                //filter by the slot index
+</a><a href="#h0-4-70" id="h0-4-70" class="i">+                if (viewGroup.getChildCount() != context.config.int(ConfigProperty.MENU_SLOT_ID)) return@hook
+</a><a href="#h0-4-71" id="h0-4-71" class="i">+                friendFeedInfoMenu.inject(viewGroup, originalAddView)
+</a><a href="#h0-4-72" id="h0-4-72" class="i">+            }
+</a> 
+<a href="#h0-4-74" id="h0-4-74" class="d">-            friendFeedInfoMenu.inject(viewGroup, originalAddView)
+</a><a href="#h0-4-75" id="h0-4-75" class="d">-            childView.setTag(VIEW_DRAWER, null)
+</a>         }
+     }
+ 
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/FriendFeedInfoMenu.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/FriendFeedInfoMenu.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/FriendFeedInfoMenu.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/FriendFeedInfoMenu.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -45,7 +45,7 @@ class FriendFeedInfoMenu : AbstractMenu() {
+</a>         return SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss&quot;, Locale.ENGLISH).format(Date(timestamp))
+     }
+ 
+<a href="#h1-0-3" id="h1-0-3" class="d">-    fun showProfileInfo(profile: FriendInfo) {
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    private fun showProfileInfo(profile: FriendInfo) {
+</a>         var icon: Drawable? = null
+         try {
+             if (profile.bitmojiSelfieId != null &amp;&amp; profile.bitmojiAvatarId != null) {
+<a href="#h1-1" id="h1-1" class="h">@@ -90,14 +90,14 @@ class FriendFeedInfoMenu : AbstractMenu() {
+</a>         }
+     }
+ 
+<a href="#h1-1-3" id="h1-1-3" class="d">-    fun showPreview(userId: String?, conversationId: String, androidCtx: Context?) {
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+    private fun showPreview(userId: String?, conversationId: String, androidCtx: Context?) {
+</a>         //query message
+         val messages: List&lt;ConversationMessage&gt;? = context.database.getMessagesFromConversationId(
+             conversationId,
+             context.config.int(ConfigProperty.MESSAGE_PREVIEW_LENGTH)
+         )?.reversed()
+ 
+<a href="#h1-1-11" id="h1-1-11" class="d">-        if (messages == null || messages.isEmpty()) {
+</a><a href="#h1-1-12" id="h1-1-12" class="i">+        if (messages.isNullOrEmpty()) {
+</a>             Toast.makeText(androidCtx, &quot;No messages found&quot;, Toast.LENGTH_SHORT).show()
+             return
+         }
+<a href="#h1-2" id="h1-2" class="h">@@ -136,8 +136,8 @@ class FriendFeedInfoMenu : AbstractMenu() {
+</a>         val targetPerson: FriendInfo? =
+             if (userId == null) null else participants[userId]
+ 
+<a href="#h1-2-3" id="h1-2-3" class="d">-        targetPerson?.let {
+</a><a href="#h1-2-4" id="h1-2-4" class="d">-            val timeSecondDiff = ((it.streakExpirationTimestamp - System.currentTimeMillis()) / 1000 / 60).toInt()
+</a><a href="#h1-2-5" id="h1-2-5" class="i">+        targetPerson?.streakExpirationTimestamp?.takeIf { it &gt; 0 }?.let {
+</a><a href="#h1-2-6" id="h1-2-6" class="i">+            val timeSecondDiff = ((it - System.currentTimeMillis()) / 1000 / 60).toInt()
+</a>             messageBuilder.append(&quot;\n\n&quot;)
+                 .append(&quot;\uD83D\uDD25 &quot;) //fire emoji
+                 .append(context.translation.get(&quot;conversation_preview.streak_expiration&quot;).format(
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/OperaContextActionMenu.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/OperaContextActionMenu.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/OperaContextActionMenu.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/impl/OperaContextActionMenu.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -13,6 +13,7 @@ import me.rhunk.snapenhance.features.impl.downloader.MediaDownloader
+</a> import me.rhunk.snapenhance.features.impl.ui.menus.AbstractMenu
+ import me.rhunk.snapenhance.features.impl.ui.menus.ViewAppearanceHelper.applyTheme
+ 
+<a href="#h2-0-3" id="h2-0-3" class="i">+@SuppressLint(&quot;DiscouragedApi&quot;)
+</a> class OperaContextActionMenu : AbstractMenu() {
+     private val contextCardsScrollView by lazy {
+         context.resources.getIdentifier(&quot;context_cards_scroll_view&quot;, &quot;id&quot;, Constants.SNAPCHAT_PACKAGE_NAME)
+</pre>
+</div>
+</body>
+</html>

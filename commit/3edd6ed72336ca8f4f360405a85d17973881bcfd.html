@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(scripting): module exports - add currentSide global - add script name rule - add displayName - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/3edd6ed72336ca8f4f360405a85d17973881bcfd.html">3edd6ed72336ca8f4f360405a85d17973881bcfd</a>
+<b>parent</b> <a href="../commit/4a4aa28ccf3fd983092ed8409325543a81d180cb.html">4a4aa28ccf3fd983092ed8409325543a81d180cb</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Mon, 25 Dec 2023 02:02:27 +0100
+
+feat(scripting): module exports
+- add currentSide global
+- add script name rule
+- add displayName
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a></td><td> | </td><td class="num">22</td><td><span class="i">++++++++++++++</span><span class="d">--------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a></td><td> | </td><td class="num">13</td><td><span class="i">++++++++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ScriptRuntime.kt</a></td><td> | </td><td class="num">11</td><td><span class="i">++++++++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/type/ModuleInfo.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+</table></pre><pre>7 files changed, 40 insertions(+), 13 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/messaging/ModDatabase.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -64,6 +64,7 @@ class ModDatabase(
+</a>             &quot;scripts&quot; to listOf(
+                 &quot;name VARCHAR PRIMARY KEY&quot;,
+                 &quot;version VARCHAR NOT NULL&quot;,
+<a href="#h0-0-3" id="h0-0-3" class="i">+                &quot;displayName VARCHAR&quot;,
+</a>                 &quot;description VARCHAR&quot;,
+                 &quot;author VARCHAR NOT NULL&quot;,
+                 &quot;enabled BOOLEAN&quot;
+<a href="#h0-1" id="h0-1" class="h">@@ -266,6 +267,7 @@ class ModDatabase(
+</a>                     ModuleInfo(
+                         name = cursor.getStringOrNull(&quot;name&quot;)!!,
+                         version = cursor.getStringOrNull(&quot;version&quot;)!!,
+<a href="#h0-1-3" id="h0-1-3" class="i">+                        displayName = cursor.getStringOrNull(&quot;displayName&quot;),
+</a>                         description = cursor.getStringOrNull(&quot;description&quot;),
+                         author = cursor.getStringOrNull(&quot;author&quot;),
+                         grantedPermissions = emptyList()
+<a href="#h0-2" id="h0-2" class="h">@@ -305,14 +307,18 @@ class ModDatabase(
+</a>             }
+ 
+             availableScripts.forEach { script -&gt;
+<a href="#h0-2-3" id="h0-2-3" class="d">-                if (!enabledScriptPaths.contains(script.name)) {
+</a><a href="#h0-2-4" id="h0-2-4" class="d">-                    database.execSQL(&quot;INSERT OR REPLACE INTO scripts (name, version, description, author, enabled) VALUES (?, ?, ?, ?, ?)&quot;, arrayOf(
+</a><a href="#h0-2-5" id="h0-2-5" class="d">-                        script.name,
+</a><a href="#h0-2-6" id="h0-2-6" class="d">-                        script.version,
+</a><a href="#h0-2-7" id="h0-2-7" class="d">-                        script.description,
+</a><a href="#h0-2-8" id="h0-2-8" class="d">-                        script.author,
+</a><a href="#h0-2-9" id="h0-2-9" class="d">-                        0
+</a><a href="#h0-2-10" id="h0-2-10" class="d">-                    ))
+</a><a href="#h0-2-11" id="h0-2-11" class="i">+                if (!enabledScriptPaths.contains(script.name) || script != enabledScripts.find { it.name == script.name }) {
+</a><a href="#h0-2-12" id="h0-2-12" class="i">+                    database.execSQL(
+</a><a href="#h0-2-13" id="h0-2-13" class="i">+                        &quot;INSERT OR REPLACE INTO scripts (name, version, displayName, description, author, enabled) VALUES (?, ?, ?, ?, ?, ?)&quot;,
+</a><a href="#h0-2-14" id="h0-2-14" class="i">+                        arrayOf(
+</a><a href="#h0-2-15" id="h0-2-15" class="i">+                            script.name,
+</a><a href="#h0-2-16" id="h0-2-16" class="i">+                            script.version,
+</a><a href="#h0-2-17" id="h0-2-17" class="i">+                            script.displayName,
+</a><a href="#h0-2-18" id="h0-2-18" class="i">+                            script.description,
+</a><a href="#h0-2-19" id="h0-2-19" class="i">+                            script.author,
+</a><a href="#h0-2-20" id="h0-2-20" class="i">+                            0
+</a><a href="#h0-2-21" id="h0-2-21" class="i">+                        )
+</a><a href="#h0-2-22" id="h0-2-22" class="i">+                    )
+</a>                 }
+             }
+         }
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -7,6 +7,7 @@ import me.rhunk.snapenhance.bridge.scripting.AutoReloadListener
+</a> import me.rhunk.snapenhance.bridge.scripting.IPCListener
+ import me.rhunk.snapenhance.bridge.scripting.IScripting
+ import me.rhunk.snapenhance.common.scripting.ScriptRuntime
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.common.scripting.bindings.BindingSide
+</a> import me.rhunk.snapenhance.common.scripting.impl.ConfigInterface
+ import me.rhunk.snapenhance.common.scripting.impl.ConfigTransactionType
+ import me.rhunk.snapenhance.common.scripting.type.ModuleInfo
+<a href="#h1-1" id="h1-1" class="h">@@ -63,6 +64,7 @@ class RemoteScriptManager(
+</a> 
+     fun init() {
+         runtime.buildModuleObject = { module -&gt;
+<a href="#h1-1-3" id="h1-1-3" class="i">+            putConst(&quot;currentSide&quot;, this, BindingSide.MANAGER.key)
+</a>             module.registerBindings(
+                 ManagerIPC(ipcListeners),
+                 InterfaceManager(),
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/scripting/ScriptsSection.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -64,7 +64,7 @@ class ScriptsSection : Section() {
+</a>                         .weight(1f)
+                         .padding(end = 8.dp)
+                 ) {
+<a href="#h2-0-3" id="h2-0-3" class="d">-                    Text(text = script.name, fontSize = 20.sp,)
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+                    Text(text = script.displayName ?: script.name, fontSize = 20.sp,)
+</a>                     Text(text = script.description ?: &quot;No description&quot;, fontSize = 14.sp,)
+                 }
+                 IconButton(onClick = { openSettings = !openSettings }) {
+<b>diff --git a/<a id="h3" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -6,6 +6,7 @@ import me.rhunk.snapenhance.common.scripting.bindings.AbstractBinding
+</a> import me.rhunk.snapenhance.common.scripting.bindings.BindingsContext
+ import me.rhunk.snapenhance.common.scripting.ktx.contextScope
+ import me.rhunk.snapenhance.common.scripting.ktx.putFunction
+<a href="#h3-0-3" id="h3-0-3" class="i">+import me.rhunk.snapenhance.common.scripting.ktx.scriptable
+</a> import me.rhunk.snapenhance.common.scripting.ktx.scriptableObject
+ import me.rhunk.snapenhance.common.scripting.type.ModuleInfo
+ import org.mozilla.javascript.Function
+<a href="#h3-1" id="h3-1" class="h">@@ -39,6 +40,7 @@ class JSModule(
+</a>                 putConst(&quot;info&quot;, this, scriptableObject {
+                     putConst(&quot;name&quot;, this, moduleInfo.name)
+                     putConst(&quot;version&quot;, this, moduleInfo.version)
+<a href="#h3-1-3" id="h3-1-3" class="i">+                    putConst(&quot;displayName&quot;, this, moduleInfo.displayName)
+</a>                     putConst(&quot;description&quot;, this, moduleInfo.description)
+                     putConst(&quot;author&quot;, this, moduleInfo.author)
+                     putConst(&quot;minSnapchatVersion&quot;, this, moduleInfo.minSnapchatVersion)
+<a href="#h3-2" id="h3-2" class="h">@@ -145,7 +147,16 @@ class JSModule(
+</a> 
+             moduleObject.putFunction(&quot;require&quot;) { args -&gt;
+                 val bindingName = args?.get(0).toString()
+<a href="#h3-2-3" id="h3-2-3" class="d">-                moduleBindings[bindingName]?.getObject()
+</a><a href="#h3-2-4" id="h3-2-4" class="i">+                val (namespace, path) = bindingName.takeIf {
+</a><a href="#h3-2-5" id="h3-2-5" class="i">+                    it.startsWith(&quot;@&quot;) &amp;&amp; it.contains(&quot;/&quot;)
+</a><a href="#h3-2-6" id="h3-2-6" class="i">+                }?.let {
+</a><a href="#h3-2-7" id="h3-2-7" class="i">+                    it.substring(1).substringBefore(&quot;/&quot;) to it.substringAfter(&quot;/&quot;)
+</a><a href="#h3-2-8" id="h3-2-8" class="i">+                } ?: (null to &quot;&quot;)
+</a><a href="#h3-2-9" id="h3-2-9" class="i">+
+</a><a href="#h3-2-10" id="h3-2-10" class="i">+                when (namespace) {
+</a><a href="#h3-2-11" id="h3-2-11" class="i">+                    &quot;modules&quot; -&gt; scriptRuntime.getModuleByName(path)?.moduleObject?.scriptable(&quot;module&quot;)?.scriptable(&quot;exports&quot;)
+</a><a href="#h3-2-12" id="h3-2-12" class="i">+                    else -&gt; moduleBindings[bindingName]?.getObject()
+</a><a href="#h3-2-13" id="h3-2-13" class="i">+                }
+</a>             }
+ 
+             evaluateString(moduleObject, content, moduleInfo.name, 1, null)
+<b>diff --git a/<a id="h4" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ScriptRuntime.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ScriptRuntime.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ScriptRuntime.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ScriptRuntime.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -54,12 +54,17 @@ open class ScriptRuntime(
+</a>         }
+ 
+         return ModuleInfo(
+<a href="#h4-0-3" id="h4-0-3" class="d">-            name = properties[&quot;name&quot;] ?: throw Exception(&quot;Missing module name&quot;),
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+            name = properties[&quot;name&quot;]?.also {
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+                if (!it.matches(Regex(&quot;[a-z_]+&quot;))) {
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+                    throw Exception(&quot;Invalid module name : Only lowercase letters and underscores are allowed&quot;)
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+                }
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+            } ?: throw Exception(&quot;Missing module name&quot;),
+</a>             version = properties[&quot;version&quot;] ?: throw Exception(&quot;Missing module version&quot;),
+<a href="#h4-0-10" id="h4-0-10" class="i">+            displayName = properties[&quot;displayName&quot;],
+</a>             description = properties[&quot;description&quot;],
+             author = properties[&quot;author&quot;],
+<a href="#h4-0-13" id="h4-0-13" class="d">-            minSnapchatVersion = properties[&quot;minSnapchatVersion&quot;]?.toLong(),
+</a><a href="#h4-0-14" id="h4-0-14" class="d">-            minSEVersion = properties[&quot;minSEVersion&quot;]?.toLong(),
+</a><a href="#h4-0-15" id="h4-0-15" class="i">+            minSnapchatVersion = properties[&quot;minSnapchatVersion&quot;]?.toLongOrNull(),
+</a><a href="#h4-0-16" id="h4-0-16" class="i">+            minSEVersion = properties[&quot;minSEVersion&quot;]?.toLongOrNull(),
+</a>             grantedPermissions = properties[&quot;permissions&quot;]?.split(&quot;,&quot;)?.map { it.trim() } ?: emptyList(),
+         )
+     }
+<b>diff --git a/<a id="h5" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/type/ModuleInfo.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/type/ModuleInfo.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/type/ModuleInfo.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/type/ModuleInfo.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -3,6 +3,7 @@ package me.rhunk.snapenhance.common.scripting.type
+</a> data class ModuleInfo(
+     val name: String,
+     val version: String,
+<a href="#h5-0-3" id="h5-0-3" class="i">+    val displayName: String? = null,
+</a>     val description: String? = null,
+     val author: String? = null,
+     val minSnapchatVersion: Long? = null,
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -4,6 +4,7 @@ import me.rhunk.snapenhance.bridge.scripting.AutoReloadListener
+</a> import me.rhunk.snapenhance.bridge.scripting.IScripting
+ import me.rhunk.snapenhance.common.logger.AbstractLogger
+ import me.rhunk.snapenhance.common.scripting.ScriptRuntime
+<a href="#h6-0-3" id="h6-0-3" class="i">+import me.rhunk.snapenhance.common.scripting.bindings.BindingSide
+</a> import me.rhunk.snapenhance.core.ModContext
+ import me.rhunk.snapenhance.core.scripting.impl.CoreIPC
+ import me.rhunk.snapenhance.core.scripting.impl.CoreScriptConfig
+<a href="#h6-1" id="h6-1" class="h">@@ -17,6 +18,7 @@ class CoreScriptRuntime(
+</a>         scripting = scriptingInterface
+         scriptingInterface.apply {
+             buildModuleObject = { module -&gt;
+<a href="#h6-1-3" id="h6-1-3" class="i">+                putConst(&quot;currentSide&quot;, this, BindingSide.CORE.key)
+</a>                 module.registerBindings(
+                     CoreScriptConfig(),
+                     CoreIPC(),
+</pre>
+</div>
+</body>
+</html>

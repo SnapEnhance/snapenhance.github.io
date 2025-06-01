@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(core/ui): ff menu toasts - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/598128ea0d39667c6282d5d28819b2b99285dbaf.html">598128ea0d39667c6282d5d28819b2b99285dbaf</a>
+<b>parent</b> <a href="../commit/26c850802b7f6751297a2f3b92ea1815cbad7322.html">26c850802b7f6751297a2f3b92ea1815cbad7322</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 17 Mar 2024 12:06:33 +0100
+
+feat(core/ui): ff menu toasts
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/FriendFeedInfoMenu.kt</a></td><td> | </td><td class="num">63</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++</span><span class="d">---------------------</span></td></tr>
+</table></pre><pre>2 files changed, 46 insertions(+), 21 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -76,6 +76,10 @@
+</a>     },
+ 
+     &quot;rules&quot;: {
+<a href="#h0-0-3" id="h0-0-3" class="i">+        &quot;toasts&quot;: {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+            &quot;enabled&quot;: &quot;{ruleName} enabled&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+            &quot;disabled&quot;: &quot;{ruleName} disabled&quot;
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+        },
+</a>         &quot;modes&quot;: {
+             &quot;blacklist&quot;: &quot;Blacklist mode&quot;,
+             &quot;whitelist&quot;: &quot;Whitelist mode&quot;
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/FriendFeedInfoMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/FriendFeedInfoMenu.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/FriendFeedInfoMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/FriendFeedInfoMenu.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -13,6 +13,11 @@ import android.widget.LinearLayout
+</a> import android.widget.ProgressBar
+ import android.widget.Switch
+ import androidx.compose.foundation.layout.fillMaxWidth
+<a href="#h1-0-3" id="h1-0-3" class="i">+import androidx.compose.material.icons.Icons
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import androidx.compose.material.icons.filled.CheckCircleOutline
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+import androidx.compose.material.icons.filled.Info
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+import androidx.compose.material.icons.filled.NotInterested
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+import androidx.compose.material.icons.filled.WarningAmber
+</a> import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Surface
+ import androidx.compose.runtime.remember
+<a href="#h1-1" id="h1-1" class="h">@@ -129,7 +134,10 @@ class FriendFeedInfoMenu : AbstractMenu() {
+</a>     private fun markAsSeen(conversationId: String) {
+         val messaging = context.feature(Messaging::class)
+         val messageIds = messaging.getFeedCachedMessageIds(conversationId)?.takeIf { it.isNotEmpty() } ?: run {
+<a href="#h1-1-3" id="h1-1-3" class="d">-            context.shortToast(context.translation[&quot;mark_as_seen.no_unseen_snaps_toast&quot;])
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+            context.inAppOverlay.showStatusToast(
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+                Icons.Default.WarningAmber,
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+                context.translation[&quot;mark_as_seen.no_unseen_snaps_toast&quot;]
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+            )
+</a>             return
+         }
+ 
+<a href="#h1-2" id="h1-2" class="h">@@ -275,15 +283,16 @@ class FriendFeedInfoMenu : AbstractMenu() {
+</a>         return conversationId to focusedConversationTargetUser
+     }
+ 
+<a href="#h1-2-3" id="h1-2-3" class="d">-    private fun createToggleFeature(viewConsumer: ((View) -&gt; Unit), text: String, isChecked: () -&gt; Boolean, toggle: (Boolean) -&gt; Unit) {
+</a><a href="#h1-2-4" id="h1-2-4" class="d">-        val switch = Switch(context.androidContext)
+</a><a href="#h1-2-5" id="h1-2-5" class="d">-        switch.text = context.translation[text]
+</a><a href="#h1-2-6" id="h1-2-6" class="d">-        switch.isChecked = isChecked()
+</a><a href="#h1-2-7" id="h1-2-7" class="d">-        switch.applyTheme(hasRadius = true)
+</a><a href="#h1-2-8" id="h1-2-8" class="d">-        switch.setOnCheckedChangeListener { _: CompoundButton?, checked: Boolean -&gt;
+</a><a href="#h1-2-9" id="h1-2-9" class="d">-            toggle(checked)
+</a><a href="#h1-2-10" id="h1-2-10" class="d">-        }
+</a><a href="#h1-2-11" id="h1-2-11" class="d">-        viewConsumer(switch)
+</a><a href="#h1-2-12" id="h1-2-12" class="i">+    private fun createToggleFeature(viewConsumer: ((View) -&gt; Unit), value: String, checked: () -&gt; Boolean, toggle: (Boolean) -&gt; Unit) {
+</a><a href="#h1-2-13" id="h1-2-13" class="i">+        viewConsumer(Switch(context.androidContext).apply {
+</a><a href="#h1-2-14" id="h1-2-14" class="i">+            text = this@FriendFeedInfoMenu.context.translation[value]
+</a><a href="#h1-2-15" id="h1-2-15" class="i">+            isChecked = checked()
+</a><a href="#h1-2-16" id="h1-2-16" class="i">+            applyTheme(hasRadius = true)
+</a><a href="#h1-2-17" id="h1-2-17" class="i">+            isSoundEffectsEnabled = false
+</a><a href="#h1-2-18" id="h1-2-18" class="i">+            setOnCheckedChangeListener { _, checked -&gt;
+</a><a href="#h1-2-19" id="h1-2-19" class="i">+                toggle(checked)
+</a><a href="#h1-2-20" id="h1-2-20" class="i">+            }
+</a><a href="#h1-2-21" id="h1-2-21" class="i">+        })
+</a>     }
+ 
+     override fun inject(parent: ViewGroup, view: View, viewConsumer: ((View) -&gt; Unit)) {
+<a href="#h1-3" id="h1-3" class="h">@@ -315,13 +324,22 @@ class FriendFeedInfoMenu : AbstractMenu() {
+</a>             createToggleFeature(viewConsumer,
+                 ruleFeature.ruleType.translateOptionKey(ruleState.key),
+                 { ruleFeature.getState(conversationId) },
+<a href="#h1-3-3" id="h1-3-3" class="d">-                { ruleFeature.setState(conversationId, it) }
+</a><a href="#h1-3-4" id="h1-3-4" class="i">+                {
+</a><a href="#h1-3-5" id="h1-3-5" class="i">+                    ruleFeature.setState(conversationId, it)
+</a><a href="#h1-3-6" id="h1-3-6" class="i">+                    context.inAppOverlay.showStatusToast(
+</a><a href="#h1-3-7" id="h1-3-7" class="i">+                        if (it) Icons.Default.CheckCircleOutline else Icons.Default.NotInterested,
+</a><a href="#h1-3-8" id="h1-3-8" class="i">+                        context.translation.format(&quot;rules.toasts.${if (it) &quot;enabled&quot; else &quot;disabled&quot;}&quot;, &quot;ruleName&quot; to context.translation[ruleFeature.ruleType.translateOptionKey(ruleState.key)]),
+</a><a href="#h1-3-9" id="h1-3-9" class="i">+                        durationMs = 1500
+</a><a href="#h1-3-10" id="h1-3-10" class="i">+                    )
+</a><a href="#h1-3-11" id="h1-3-11" class="i">+                    context.mainActivity?.triggerRootCloseTouchEvent()
+</a><a href="#h1-3-12" id="h1-3-12" class="i">+                }
+</a>             )
+         }
+ 
+         if (friendFeedMenuOptions.contains(&quot;mark_snaps_as_seen&quot;)) {
+             viewConsumer(Button(view.context).apply {
+                 text = translation[&quot;mark_snaps_as_seen&quot;]
+<a href="#h1-3-19" id="h1-3-19" class="i">+                isSoundEffectsEnabled = false
+</a>                 applyTheme(view.width, hasRadius = true)
+                 setOnClickListener {
+                     this@FriendFeedInfoMenu.context.mainActivity?.triggerRootCloseTouchEvent()
+<a href="#h1-4" id="h1-4" class="h">@@ -334,26 +352,29 @@ class FriendFeedInfoMenu : AbstractMenu() {
+</a>             viewConsumer(Button(view.context).apply {
+                 text = translation[&quot;mark_stories_as_seen_locally&quot;]
+                 applyTheme(view.width, hasRadius = true)
+<a href="#h1-4-3" id="h1-4-3" class="i">+                isSoundEffectsEnabled = false
+</a> 
+                 val translations = this@FriendFeedInfoMenu.context.translation.getCategory(&quot;mark_as_seen&quot;)
+ 
+                 this@FriendFeedInfoMenu.context.apply {
+                     setOnClickListener {
+                         mainActivity?.triggerRootCloseTouchEvent()
+<a href="#h1-4-10" id="h1-4-10" class="d">-                        if (database.setStoriesViewedState(targetUser, true)) {
+</a><a href="#h1-4-11" id="h1-4-11" class="d">-                            shortToast(translations[&quot;seen_toast&quot;])
+</a><a href="#h1-4-12" id="h1-4-12" class="d">-                        } else {
+</a><a href="#h1-4-13" id="h1-4-13" class="d">-                            shortToast(translations[&quot;already_seen_toast&quot;])
+</a><a href="#h1-4-14" id="h1-4-14" class="d">-                        }
+</a><a href="#h1-4-15" id="h1-4-15" class="i">+                        this@FriendFeedInfoMenu.context.inAppOverlay.showStatusToast(
+</a><a href="#h1-4-16" id="h1-4-16" class="i">+                            Icons.Default.Info,
+</a><a href="#h1-4-17" id="h1-4-17" class="i">+                            if (database.setStoriesViewedState(targetUser, true)) translations[&quot;seen_toast&quot;]
+</a><a href="#h1-4-18" id="h1-4-18" class="i">+                            else translations[&quot;already_seen_toast&quot;],
+</a><a href="#h1-4-19" id="h1-4-19" class="i">+                            durationMs = 2500
+</a><a href="#h1-4-20" id="h1-4-20" class="i">+                        )
+</a>                     }
+                     setOnLongClickListener {
+                         context.vibrateLongPress()
+                         mainActivity?.triggerRootCloseTouchEvent()
+<a href="#h1-4-25" id="h1-4-25" class="d">-                        if (database.setStoriesViewedState(targetUser, false)) {
+</a><a href="#h1-4-26" id="h1-4-26" class="d">-                            shortToast(translations[&quot;unseen_toast&quot;])
+</a><a href="#h1-4-27" id="h1-4-27" class="d">-                        } else {
+</a><a href="#h1-4-28" id="h1-4-28" class="d">-                            shortToast(translations[&quot;already_unseen_toast&quot;])
+</a><a href="#h1-4-29" id="h1-4-29" class="d">-                        }
+</a><a href="#h1-4-30" id="h1-4-30" class="i">+                        this@FriendFeedInfoMenu.context.inAppOverlay.showStatusToast(
+</a><a href="#h1-4-31" id="h1-4-31" class="i">+                            Icons.Default.Info,
+</a><a href="#h1-4-32" id="h1-4-32" class="i">+                            if (database.setStoriesViewedState(targetUser, false)) translations[&quot;unseen_toast&quot;]
+</a><a href="#h1-4-33" id="h1-4-33" class="i">+                            else translations[&quot;already_unseen_toast&quot;],
+</a><a href="#h1-4-34" id="h1-4-34" class="i">+                            durationMs = 2500
+</a><a href="#h1-4-35" id="h1-4-35" class="i">+                        )
+</a>                         true
+                     }
+                 }
+</pre>
+</div>
+</body>
+</html>

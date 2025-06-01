@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core): opera viewer params override supports v13.22.0.61 and higher - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/2c435a3760502adead950b342ed654f672f8df85.html">2c435a3760502adead950b342ed654f672f8df85</a>
+<b>parent</b> <a href="../commit/c7cb25c19022f3cad69a5add6d7845cab6b77fd5.html">c7cb25c19022f3cad69a5add6d7845cab6b77fd5</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 10 Jan 2025 15:25:49 +0100
+
+fix(core): opera viewer params override
+supports v13.22.0.61 and higher
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/OperaViewerParamsOverride.kt</a></td><td> | </td><td class="num">20</td><td><span class="i">+++++++++++++</span><span class="d">-------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/ParamMap.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/OperaViewerParamsMapper.kt</a></td><td> | </td><td class="num">22</td><td><span class="i">+++++</span><span class="d">-----------------</span></td></tr>
+</table></pre><pre>3 files changed, 19 insertions(+), 25 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/OperaViewerParamsOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/OperaViewerParamsOverride.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/OperaViewerParamsOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/OperaViewerParamsOverride.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -2,8 +2,10 @@ package me.rhunk.snapenhance.core.features.impl
+</a> 
+ import me.rhunk.snapenhance.core.features.Feature
+ import me.rhunk.snapenhance.core.util.hook.HookStage
+<a href="#h0-0-3" id="h0-0-3" class="d">-import me.rhunk.snapenhance.core.util.hook.hook
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+import me.rhunk.snapenhance.core.util.hook.hookConstructor
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+import me.rhunk.snapenhance.core.wrapper.impl.media.opera.ParamMap
+</a> import me.rhunk.snapenhance.mapper.impl.OperaViewerParamsMapper
+<a href="#h0-0-7" id="h0-0-7" class="i">+import java.util.concurrent.ConcurrentHashMap
+</a> 
+ class OperaViewerParamsOverride : Feature(&quot;OperaViewerParamsOverride&quot;) {
+     var currentPlaybackRate = 1.0F
+<a href="#h0-1" id="h0-1" class="h">@@ -37,7 +39,7 @@ class OperaViewerParamsOverride : Feature(&quot;OperaViewerParamsOverride&quot;) {
+</a>             overrideParam(&quot;auto_advance_max_loop_number&quot;, { true }, { _, _ -&gt; Int.MAX_VALUE })
+             overrideParam(&quot;media_playback_mode&quot;, { true }, { _, value -&gt;
+                 val playbackMode = value ?: return@overrideParam null
+<a href="#h0-1-3" id="h0-1-3" class="d">-                playbackMode::class.java.enumConstants.firstOrNull {
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+                playbackMode::class.java.enumConstants?.firstOrNull {
+</a>                     it.toString() == &quot;LOOPING&quot;
+                 } ?: return@overrideParam value
+             })
+<a href="#h0-2" id="h0-2" class="h">@@ -69,12 +71,16 @@ class OperaViewerParamsOverride : Feature(&quot;OperaViewerParamsOverride&quot;) {
+</a>                     return value
+                 }
+ 
+<a href="#h0-2-3" id="h0-2-3" class="d">-                classReference.get()?.hook(getMethod.get()!!, HookStage.AFTER) { param -&gt;
+</a><a href="#h0-2-4" id="h0-2-4" class="d">-                    param.setResult(overrideParamResult(param.arg(0), param.getResult()))
+</a><a href="#h0-2-5" id="h0-2-5" class="d">-                }
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+                classReference.get()?.hookConstructor(HookStage.AFTER) { param -&gt;
+</a><a href="#h0-2-7" id="h0-2-7" class="i">+                    ParamMap(param.thisObject()).paramMapField.set(param.thisObject(), object: ConcurrentHashMap&lt;Any, Any&gt;() {
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+                        override fun put(key: Any, value: Any): Any? {
+</a><a href="#h0-2-9" id="h0-2-9" class="i">+                            return super.put(key, overrideParamResult(key, value) ?: return value)
+</a><a href="#h0-2-10" id="h0-2-10" class="i">+                        }
+</a> 
+<a href="#h0-2-12" id="h0-2-12" class="d">-                classReference.get()?.hook(getOrDefaultMethod.get()!!, HookStage.AFTER) { param -&gt;
+</a><a href="#h0-2-13" id="h0-2-13" class="d">-                    param.setResult(overrideParamResult(param.arg(0), param.getResult()))
+</a><a href="#h0-2-14" id="h0-2-14" class="i">+                        override fun get(key: Any): Any? {
+</a><a href="#h0-2-15" id="h0-2-15" class="i">+                            return overrideParamResult(key, super.get(key))
+</a><a href="#h0-2-16" id="h0-2-16" class="i">+                        }
+</a><a href="#h0-2-17" id="h0-2-17" class="i">+                    })
+</a>                 }
+             }
+         }
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/ParamMap.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/ParamMap.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/ParamMap.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/media/opera/ParamMap.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap
+</a> 
+ @Suppress(&quot;UNCHECKED_CAST&quot;)
+ class ParamMap(obj: Any?) : AbstractWrapper(obj) {
+<a href="#h1-0-3" id="h1-0-3" class="d">-    private val paramMapField: Field by lazy {
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    val paramMapField: Field by lazy {
+</a>         instanceNonNull()::class.java.findFields(once = true) {
+             it.type == ConcurrentHashMap::class.java || runCatching { it.get(instance) }.getOrNull() is ConcurrentHashMap&lt;*, *&gt;
+         }.firstOrNull() ?: throw RuntimeException(&quot;Could not find paramMap field&quot;)
+<b>diff --git a/<a id="h2" href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/OperaViewerParamsMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/OperaViewerParamsMapper.kt</a> b/<a href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/OperaViewerParamsMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/OperaViewerParamsMapper.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -9,8 +9,6 @@ import me.rhunk.snapenhance.mapper.ext.getClassName
+</a> 
+ class OperaViewerParamsMapper : AbstractClassMapper(&quot;OperaViewerParams&quot;) {
+     val classReference = classReference(&quot;class&quot;)
+<a href="#h2-0-3" id="h2-0-3" class="d">-    val getMethod = string(&quot;getMethod&quot;)
+</a><a href="#h2-0-4" id="h2-0-4" class="d">-    val getOrDefaultMethod = string(&quot;getOrDefaultMethod&quot;)
+</a> 
+     private fun Method.hasHashMapReference(methodName: String) = implementation?.instructions?.any {
+         val instruction = it as? Instruction35c ?: return@any false
+<a href="#h2-1" id="h2-1" class="h">@@ -21,25 +19,15 @@ class OperaViewerParamsMapper : AbstractClassMapper(&quot;OperaViewerParams&quot;) {
+</a>     init {
+         mapper {
+             for (classDef in classes) {
+<a href="#h2-1-3" id="h2-1-3" class="d">-                classDef.fields.firstOrNull { it.type == &quot;Ljava/util/concurrent/ConcurrentHashMap;&quot; } ?: continue
+</a>                 if (classDef.methods.firstOrNull { it.name == &quot;toString&quot; }?.implementation?.findConstString(&quot;Params&quot;) != true) continue
+ 
+<a href="#h2-1-6" id="h2-1-6" class="d">-                val getOrDefaultDexMethod = classDef.methods.firstOrNull { method -&gt;
+</a><a href="#h2-1-7" id="h2-1-7" class="i">+                classDef.methods.firstOrNull { method -&gt;
+</a>                     method.returnType == &quot;Ljava/lang/Object;&quot; &amp;&amp;
+<a href="#h2-1-9" id="h2-1-9" class="d">-                    method.parameters.size == 2 &amp;&amp;
+</a><a href="#h2-1-10" id="h2-1-10" class="d">-                    method.parameterTypes[1] == &quot;Ljava/lang/Object;&quot; &amp;&amp;
+</a><a href="#h2-1-11" id="h2-1-11" class="d">-                    method.hasHashMapReference(&quot;get&quot;)
+</a><a href="#h2-1-12" id="h2-1-12" class="d">-                } ?: return@mapper
+</a><a href="#h2-1-13" id="h2-1-13" class="i">+                            method.parameters.size == 2 &amp;&amp;
+</a><a href="#h2-1-14" id="h2-1-14" class="i">+                            method.parameterTypes[1] == &quot;Ljava/lang/Object;&quot; &amp;&amp;
+</a><a href="#h2-1-15" id="h2-1-15" class="i">+                            method.hasHashMapReference(&quot;get&quot;)
+</a><a href="#h2-1-16" id="h2-1-16" class="i">+                } ?: continue
+</a> 
+<a href="#h2-1-18" id="h2-1-18" class="d">-                val getDexMethod = classDef.methods.firstOrNull { method -&gt;
+</a><a href="#h2-1-19" id="h2-1-19" class="d">-                    method.returnType == &quot;Ljava/lang/Object;&quot; &amp;&amp;
+</a><a href="#h2-1-20" id="h2-1-20" class="d">-                    method.parameters.size == 1 &amp;&amp;
+</a><a href="#h2-1-21" id="h2-1-21" class="d">-                    method.parameterTypes[0] == getOrDefaultDexMethod.parameterTypes[0] &amp;&amp;
+</a><a href="#h2-1-22" id="h2-1-22" class="d">-                    method.hasHashMapReference(&quot;get&quot;)
+</a><a href="#h2-1-23" id="h2-1-23" class="d">-                } ?: return@mapper
+</a><a href="#h2-1-24" id="h2-1-24" class="d">-
+</a><a href="#h2-1-25" id="h2-1-25" class="d">-                getMethod.set(getDexMethod.name)
+</a><a href="#h2-1-26" id="h2-1-26" class="d">-                getOrDefaultMethod.set(getOrDefaultDexMethod.name)
+</a>                 classReference.set(classDef.getClassName())
+                 return@mapper
+             }
+</pre>
+</div>
+</body>
+</html>

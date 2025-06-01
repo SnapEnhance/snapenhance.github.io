@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(composer_hooks): show first created username - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/69e5ca74eead5e531cccbd6917f0387358fd6d30.html">69e5ca74eead5e531cccbd6917f0387358fd6d30</a>
+<b>parent</b> <a href="../commit/8bb3e1521c1c300c55a01700801a8d3e80b7bf40.html">8bb3e1521c1c300c55a01700801a8d3e80b7bf40</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 24 Apr 2024 10:29:52 +0200
+
+feat(composer_hooks): show first created username
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/assets/composer/loader.js</a></td><td> | </td><td class="num">38</td><td><span class="i">++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a></td><td> | </td><td class="num">11</td><td><span class="i">+++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a></td><td> | </td><td class="num">38</td><td><span class="i">+++++++++++++++++++++++++</span><span class="d">-------------</span></td></tr>
+</table></pre><pre>5 files changed, 79 insertions(+), 13 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -774,6 +774,10 @@
+</a>                                 &quot;name&quot;: &quot;Composer Hooks&quot;,
+                                 &quot;description&quot;: &quot;Injects code into the Composer cross-platform UI framework&quot;,
+                                 &quot;properties&quot;: {
+<a href="#h0-0-3" id="h0-0-3" class="i">+                                    &quot;show_first_created_username&quot;: {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                                        &quot;name&quot;: &quot;Show First Created Username&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+                                        &quot;description&quot;: &quot;Shows the first created username next to the current username in the profile page&quot;
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                                    },
+</a>                                     &quot;bypass_camera_roll_limit&quot;: {
+                                         &quot;name&quot;: &quot;Bypass Camera Roll Limit&quot;,
+                                         &quot;description&quot;: &quot;Increases the maximum amount of media you can send from the camera roll&quot;
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -10,6 +10,7 @@ class Experimental : ConfigContainer() {
+</a>     }
+ 
+     class ComposerHooksConfig: ConfigContainer(hasGlobalState = true) {
+<a href="#h1-0-3" id="h1-0-3" class="i">+        val showFirstCreatedUsername = boolean(&quot;show_first_created_username&quot;)
+</a>         val bypassCameraRollLimit = boolean(&quot;bypass_camera_roll_limit&quot;)
+         val composerConsole = boolean(&quot;composer_console&quot;)
+         val composerLogs = boolean(&quot;composer_logs&quot;)
+<b>diff --git a/<a id="h2" href="../file/core/src/main/assets/composer/loader.js.html">core/src/main/assets/composer/loader.js</a> b/<a href="../file/core/src/main/assets/composer/loader.js.html">core/src/main/assets/composer/loader.js</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -19,3 +19,41 @@ if (config.bypassCameraRollLimit) {
+</a>         });
+     })(require(&#39;memories_ui/src/clickhandlers/MultiSelectClickHandler&#39;))
+ }
+<a href="#h2-0-3" id="h2-0-3" class="i">+
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+(module =&gt; {
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+    function onComponentPreRender(component, viewModel) {
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+        const componentName = component.constructor.name;
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+        if (componentName == &quot;ProfileIdentityView&quot; &amp;&amp; config.showFirstCreatedUsername) {
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+            let userInfo = callExport(&quot;getFriendInfoByUsername&quot;, viewModel.username);
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+            if (userInfo) {
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+                let userInfoJson = JSON.parse(userInfo);
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+                let firstCreatedUsername = userInfoJson.username.split(&quot;|&quot;)[0];
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+                if (firstCreatedUsername != viewModel.username) {
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+                    viewModel.username += &quot; (&quot; + firstCreatedUsername + &quot;)&quot;;
+</a><a href="#h2-0-16" id="h2-0-16" class="i">+                }
+</a><a href="#h2-0-17" id="h2-0-17" class="i">+            }
+</a><a href="#h2-0-18" id="h2-0-18" class="i">+        }
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+        return false
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+    }
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+    
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+    function onComponentPostRender(component, viewModel) {
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+    }
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+    module.Component = new Proxy(module.Component, {
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+        construct: function(target, args, newTarget) {
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+            let component = Reflect.construct(target, args, newTarget);
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+            component.onRender = new Proxy(component.onRender, {
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+                apply: function(target, thisArg, argumentsList) {
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+                    if (onComponentPreRender(component, thisArg.viewModel || {})) return;
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+                    let result = Reflect.apply(target, thisArg, argumentsList);
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+                    onComponentPostRender(component, thisArg.viewModel || {});
+</a><a href="#h2-0-34" id="h2-0-34" class="i">+                    return result;
+</a><a href="#h2-0-35" id="h2-0-35" class="i">+                }
+</a><a href="#h2-0-36" id="h2-0-36" class="i">+            });
+</a><a href="#h2-0-37" id="h2-0-37" class="i">+            return component;
+</a><a href="#h2-0-38" id="h2-0-38" class="i">+        }
+</a><a href="#h2-0-39" id="h2-0-39" class="i">+    })
+</a><a href="#h2-0-40" id="h2-0-40" class="i">+})(require(&#39;composer_core/src/Component&#39;))
+</a><b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -202,6 +202,17 @@ class DatabaseAccess(
+</a>         }
+     }
+ 
+<a href="#h3-0-3" id="h3-0-3" class="i">+    fun getFriendInfoByUsername(username: String): FriendInfo? {
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+        return useDatabase(DatabaseType.MAIN)?.performOperation {
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+            readDatabaseObject(
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+                FriendInfo(),
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+                &quot;FriendWithUsername&quot;,
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+                &quot;usernameForSorting = ?&quot;,
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+                arrayOf(username)
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+            )
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+        }
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+    }
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+
+</a>     fun getAllFriends(): List&lt;FriendInfo&gt; {
+         return useDatabase(DatabaseType.MAIN)?.performOperation {
+             safeRawQuery(
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -130,25 +130,36 @@ class ComposerHooks: Feature(&quot;ComposerHooks&quot;, loadParams = FeatureLoadParams.ACT
+</a>         }
+     }
+ 
+<a href="#h4-0-3" id="h4-0-3" class="i">+    private fun getConfig(): Map&lt;String, Any&gt; {
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+        return HashMap&lt;String, Any&gt;().apply {
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+            put(&quot;bypassCameraRollLimit&quot;, config.bypassCameraRollLimit.get())
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+            put(&quot;showFirstCreatedUsername&quot;, config.showFirstCreatedUsername.get())
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+            put(&quot;composerConsole&quot;, config.composerConsole.get())
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+            put(&quot;composerLogs&quot;, config.composerLogs.get())
+</a><a href="#h4-0-9" id="h4-0-9" class="i">+        }
+</a><a href="#h4-0-10" id="h4-0-10" class="i">+    }
+</a><a href="#h4-0-11" id="h4-0-11" class="i">+
+</a>     private fun handleExportCall(composerMarshaller: ComposerMarshaller): Boolean {
+         val argc = composerMarshaller.getSize()
+         if (argc &lt; 1) return false
+         val action = composerMarshaller.getUntyped(0) as? String ?: return false
+ 
+         when (action) {
+<a href="#h4-0-18" id="h4-0-18" class="d">-            &quot;getConfig&quot; -&gt; {
+</a><a href="#h4-0-19" id="h4-0-19" class="d">-                composerMarshaller.pushUntyped(
+</a><a href="#h4-0-20" id="h4-0-20" class="d">-                    HashMap&lt;String, Any&gt;().apply {
+</a><a href="#h4-0-21" id="h4-0-21" class="d">-                        put(&quot;bypassCameraRollLimit&quot;, config.bypassCameraRollLimit.get())
+</a><a href="#h4-0-22" id="h4-0-22" class="d">-                        put(&quot;composerConsole&quot;, config.composerConsole.get())
+</a><a href="#h4-0-23" id="h4-0-23" class="d">-                        put(&quot;composerLogs&quot;, config.composerLogs.get())
+</a><a href="#h4-0-24" id="h4-0-24" class="d">-                    }
+</a><a href="#h4-0-25" id="h4-0-25" class="d">-                )
+</a><a href="#h4-0-26" id="h4-0-26" class="d">-            }
+</a><a href="#h4-0-27" id="h4-0-27" class="i">+            &quot;getConfig&quot; -&gt; composerMarshaller.pushUntyped(getConfig())
+</a>             &quot;showToast&quot; -&gt; {
+                 if (argc &lt; 2) return false
+<a href="#h4-0-30" id="h4-0-30" class="d">-                val message = composerMarshaller.getUntyped(1) as? String ?: return false
+</a><a href="#h4-0-31" id="h4-0-31" class="d">-                context.shortToast(message)
+</a><a href="#h4-0-32" id="h4-0-32" class="i">+                context.shortToast(composerMarshaller.getUntyped(1) as? String ?: return false)
+</a><a href="#h4-0-33" id="h4-0-33" class="i">+            }
+</a><a href="#h4-0-34" id="h4-0-34" class="i">+            &quot;getFriendInfoByUsername&quot; -&gt; {
+</a><a href="#h4-0-35" id="h4-0-35" class="i">+                if (argc &lt; 2) return false
+</a><a href="#h4-0-36" id="h4-0-36" class="i">+                val username = composerMarshaller.getUntyped(1) as? String ?: return false
+</a><a href="#h4-0-37" id="h4-0-37" class="i">+                runCatching {
+</a><a href="#h4-0-38" id="h4-0-38" class="i">+                    composerMarshaller.pushUntyped(context.database.getFriendInfoByUsername(username)?.let {
+</a><a href="#h4-0-39" id="h4-0-39" class="i">+                        context.gson.toJson(it)
+</a><a href="#h4-0-40" id="h4-0-40" class="i">+                    })
+</a><a href="#h4-0-41" id="h4-0-41" class="i">+                }.onFailure {
+</a><a href="#h4-0-42" id="h4-0-42" class="i">+                    composerMarshaller.pushUntyped(null)
+</a><a href="#h4-0-43" id="h4-0-43" class="i">+                }
+</a>             }
+             &quot;log&quot; -&gt; {
+                 if (argc &lt; 3) return false
+<a href="#h4-1" id="h4-1" class="h">@@ -167,9 +178,10 @@ class ComposerHooks: Feature(&quot;ComposerHooks&quot;, loadParams = FeatureLoadParams.ACT
+</a>             }
+             &quot;eval&quot; -&gt; {
+                 if (argc &lt; 2) return false
+<a href="#h4-1-3" id="h4-1-3" class="d">-                val code = composerMarshaller.getUntyped(1) as? String ?: return false
+</a>                 runCatching {
+<a href="#h4-1-5" id="h4-1-5" class="d">-                    composerMarshaller.pushUntyped(context.native.composerEval(code))
+</a><a href="#h4-1-6" id="h4-1-6" class="i">+                    composerMarshaller.pushUntyped(context.native.composerEval(
+</a><a href="#h4-1-7" id="h4-1-7" class="i">+                        composerMarshaller.getUntyped(1) as? String ?: return false
+</a><a href="#h4-1-8" id="h4-1-8" class="i">+                    ))
+</a>                 }.onFailure {
+                     composerMarshaller.pushUntyped(it.toString())
+                 }
+</pre>
+</div>
+</body>
+</html>

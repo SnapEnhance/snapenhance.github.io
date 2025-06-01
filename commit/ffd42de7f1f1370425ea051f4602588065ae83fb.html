@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core): SuspendLocationUpdates - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/ffd42de7f1f1370425ea051f4602588065ae83fb.html">ffd42de7f1f1370425ea051f4602588065ae83fb</a>
+<b>parent</b> <a href="../commit/d7d3834f215bc28dd82bb58f2b8a19e40cef8de8.html">d7d3834f215bc28dd82bb58f2b8a19e40cef8de8</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 29 Dec 2023 01:01:28 +0100
+
+fix(core): SuspendLocationUpdates
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SuspendLocationUpdates.kt</a></td><td> | </td><td class="num">39</td><td><span class="i">+++++++++++++++++++++++++++++++++++</span><span class="d">----</span></td></tr>
+</table></pre><pre>1 file changed, 35 insertions(+), 4 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SuspendLocationUpdates.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SuspendLocationUpdates.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SuspendLocationUpdates.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SuspendLocationUpdates.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -10,6 +10,7 @@ import me.rhunk.snapenhance.core.ui.ViewAppearanceHelper
+</a> import me.rhunk.snapenhance.core.util.hook.HookStage
+ import me.rhunk.snapenhance.core.util.hook.hook
+ import me.rhunk.snapenhance.core.util.ktx.getId
+<a href="#h0-0-3" id="h0-0-3" class="i">+import java.util.WeakHashMap
+</a> 
+ //TODO: bridge shared preferences
+ class SuspendLocationUpdates : BridgeFileFeature(
+<a href="#h0-1" id="h0-1" class="h">@@ -17,15 +18,39 @@ class SuspendLocationUpdates : BridgeFileFeature(
+</a>     loadParams = FeatureLoadParams.INIT_SYNC or FeatureLoadParams.ACTIVITY_CREATE_SYNC,
+     bridgeFileType = BridgeFileType.SUSPEND_LOCATION_STATE
+ ) {
+<a href="#h0-1-3" id="h0-1-3" class="i">+    private val streamSendHandlerInstanceMap = WeakHashMap&lt;Any, () -&gt; Unit&gt;()
+</a>     private val isEnabled get() = context.config.global.suspendLocationUpdates.get()
+<a href="#h0-1-5" id="h0-1-5" class="i">+
+</a>     override fun init() {
+         if (!isEnabled) return
+         reload()
+ 
+<a href="#h0-1-10" id="h0-1-10" class="d">-        context.classCache.unifiedGrpcService.hook(&quot;bidiStreamingCall&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h0-1-11" id="h0-1-11" class="d">-            val uri = param.arg&lt;String&gt;(0)
+</a><a href="#h0-1-12" id="h0-1-12" class="d">-            if (uri == &quot;/snapchat.valis.Valis/Communicate&quot; &amp;&amp; exists(&quot;true&quot;)) {
+</a><a href="#h0-1-13" id="h0-1-13" class="d">-                param.setResult(null)
+</a><a href="#h0-1-14" id="h0-1-14" class="i">+        findClass(&quot;com.snapchat.client.grpc.ClientStreamSendHandler\$CppProxy&quot;).hook(&quot;send&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h0-1-15" id="h0-1-15" class="i">+            if (param.nullableThisObject&lt;Any&gt;() !in streamSendHandlerInstanceMap) return@hook
+</a><a href="#h0-1-16" id="h0-1-16" class="i">+            if (!exists(&quot;true&quot;)) return@hook
+</a><a href="#h0-1-17" id="h0-1-17" class="i">+            param.setResult(null)
+</a><a href="#h0-1-18" id="h0-1-18" class="i">+        }
+</a><a href="#h0-1-19" id="h0-1-19" class="i">+
+</a><a href="#h0-1-20" id="h0-1-20" class="i">+        context.classCache.unifiedGrpcService.apply {
+</a><a href="#h0-1-21" id="h0-1-21" class="i">+            hook(&quot;unaryCall&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h0-1-22" id="h0-1-22" class="i">+                val uri = param.arg&lt;String&gt;(0)
+</a><a href="#h0-1-23" id="h0-1-23" class="i">+                if (exists(&quot;true&quot;) &amp;&amp; uri == &quot;/snapchat.valis.Valis/SendClientUpdate&quot;) {
+</a><a href="#h0-1-24" id="h0-1-24" class="i">+                    param.setResult(null)
+</a><a href="#h0-1-25" id="h0-1-25" class="i">+                }
+</a><a href="#h0-1-26" id="h0-1-26" class="i">+            }
+</a><a href="#h0-1-27" id="h0-1-27" class="i">+
+</a><a href="#h0-1-28" id="h0-1-28" class="i">+            hook(&quot;bidiStreamingCall&quot;, HookStage.AFTER) { param -&gt;
+</a><a href="#h0-1-29" id="h0-1-29" class="i">+                val uri = param.arg&lt;String&gt;(0)
+</a><a href="#h0-1-30" id="h0-1-30" class="i">+                if (uri != &quot;/snapchat.valis.Valis/Communicate&quot;) return@hook
+</a><a href="#h0-1-31" id="h0-1-31" class="i">+                param.getResult()?.let { instance -&gt;
+</a><a href="#h0-1-32" id="h0-1-32" class="i">+                    streamSendHandlerInstanceMap[instance] = {
+</a><a href="#h0-1-33" id="h0-1-33" class="i">+                        runCatching {
+</a><a href="#h0-1-34" id="h0-1-34" class="i">+                            instance::class.java.methods.first { it.name == &quot;closeStream&quot; }.invoke(instance)
+</a><a href="#h0-1-35" id="h0-1-35" class="i">+                        }.onFailure {
+</a><a href="#h0-1-36" id="h0-1-36" class="i">+                            context.log.error(&quot;Failed to close stream send handler instance&quot;, it)
+</a><a href="#h0-1-37" id="h0-1-37" class="i">+                        }
+</a><a href="#h0-1-38" id="h0-1-38" class="i">+                    }
+</a><a href="#h0-1-39" id="h0-1-39" class="i">+                }
+</a>             }
+         }
+     }
+<a href="#h0-2" id="h0-2" class="h">@@ -47,6 +72,12 @@ class SuspendLocationUpdates : BridgeFileFeature(
+</a>                         ViewGroup.LayoutParams.WRAP_CONTENT
+                     )
+                     setOnCheckedChangeListener { _, isChecked -&gt;
+<a href="#h0-2-3" id="h0-2-3" class="i">+                        if (isChecked) {
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+                            streamSendHandlerInstanceMap.entries.removeIf { (_, closeStream) -&gt;
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+                                closeStream()
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+                                true
+</a><a href="#h0-2-7" id="h0-2-7" class="i">+                            }
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+                        }
+</a>                         setState(&quot;true&quot;, isChecked)
+                     }
+                 })
+</pre>
+</div>
+</body>
+</html>

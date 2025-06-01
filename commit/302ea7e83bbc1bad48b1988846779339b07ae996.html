@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(settings_overlay): dialog dismiss callback - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/302ea7e83bbc1bad48b1988846779339b07ae996.html">302ea7e83bbc1bad48b1988846779339b07ae996</a>
+<b>parent</b> <a href="../commit/aeffddb7cc2b74ac911a75be306c3dbd10e56db2.html">aeffddb7cc2b74ac911a75be306c3dbd10e56db2</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 22 Sep 2023 18:19:49 +0200
+
+fix(settings_overlay): dialog dismiss callback
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/overlay/SettingsOverlay.kt</a></td><td> | </td><td class="num">27</td><td><span class="i">+++++++++++++++++</span><span class="d">----------</span></td></tr>
+</table></pre><pre>1 file changed, 17 insertions(+), 10 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/overlay/SettingsOverlay.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/overlay/SettingsOverlay.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/overlay/SettingsOverlay.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/overlay/SettingsOverlay.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
+</a> import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Scaffold
+ import androidx.compose.runtime.Composable
+<a href="#h0-0-3" id="h0-0-3" class="i">+import androidx.compose.runtime.LaunchedEffect
+</a> import androidx.compose.runtime.remember
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+<a href="#h0-1" id="h0-1" class="h">@@ -33,6 +34,8 @@ class SettingsOverlay(
+</a>     private val context: RemoteSideContext
+ ) {
+     private lateinit var dialog: Dialog
+<a href="#h0-1-3" id="h0-1-3" class="i">+    private lateinit var dismissCallback: () -&gt; Boolean
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+
+</a>     private fun checkForPermissions(): Boolean {
+         if (!Settings.canDrawOverlays(context.androidContext)) {
+             val myIntent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+<a href="#h0-2" id="h0-2" class="h">@@ -48,9 +51,9 @@ class SettingsOverlay(
+</a>     private fun OverlayContent() {
+         val navHostController = rememberNavController()
+ 
+<a href="#h0-2-3" id="h0-2-3" class="d">-        /*navHostController.addOnDestinationChangedListener { _, destination, _ -&gt;
+</a><a href="#h0-2-4" id="h0-2-4" class="d">-            dialog.setCancelable(destination.route == FeaturesSection.MAIN_ROUTE)
+</a><a href="#h0-2-5" id="h0-2-5" class="d">-        }*/
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+        LaunchedEffect(Unit) {
+</a><a href="#h0-2-7" id="h0-2-7" class="i">+            dismissCallback = { !navHostController.popBackStack() }
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+        }
+</a> 
+         val navigation = remember {
+             Navigation(
+<a href="#h0-3" id="h0-3" class="h">@@ -78,8 +81,10 @@ class SettingsOverlay(
+</a> 
+     fun close() {
+         if (!::dialog.isInitialized || !dialog.isShowing) return
+<a href="#h0-3-3" id="h0-3-3" class="d">-        context.config.writeConfig()
+</a><a href="#h0-3-4" id="h0-3-4" class="d">-        dialog.dismiss()
+</a><a href="#h0-3-5" id="h0-3-5" class="i">+
+</a><a href="#h0-3-6" id="h0-3-6" class="i">+        context.androidContext.mainExecutor.execute {
+</a><a href="#h0-3-7" id="h0-3-7" class="i">+            dialog.dismiss()
+</a><a href="#h0-3-8" id="h0-3-8" class="i">+        }
+</a>     }
+ 
+     fun show() {
+<a href="#h0-4" id="h0-4" class="h">@@ -92,7 +97,13 @@ class SettingsOverlay(
+</a>         }
+ 
+         context.androidContext.mainExecutor.execute {
+<a href="#h0-4-3" id="h0-4-3" class="d">-            dialog = Dialog(context.androidContext, R.style.FullscreenOverlayDialog)
+</a><a href="#h0-4-4" id="h0-4-4" class="i">+            dialog = object: Dialog(context.androidContext, R.style.FullscreenOverlayDialog) {
+</a><a href="#h0-4-5" id="h0-4-5" class="i">+                override fun dismiss() {
+</a><a href="#h0-4-6" id="h0-4-6" class="i">+                    if (!::dismissCallback.isInitialized || !dismissCallback()) return
+</a><a href="#h0-4-7" id="h0-4-7" class="i">+                    super.dismiss()
+</a><a href="#h0-4-8" id="h0-4-8" class="i">+                    this@SettingsOverlay.context.config.writeConfig()
+</a><a href="#h0-4-9" id="h0-4-9" class="i">+                }
+</a><a href="#h0-4-10" id="h0-4-10" class="i">+            }
+</a>             dialog.window?.apply {
+                 setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                 setLayout(
+<a href="#h0-5" id="h0-5" class="h">@@ -123,10 +134,6 @@ class SettingsOverlay(
+</a>             )
+ 
+             dialog.setCancelable(true)
+<a href="#h0-5-3" id="h0-5-3" class="d">-            dialog.setOnDismissListener {
+</a><a href="#h0-5-4" id="h0-5-4" class="d">-                close()
+</a><a href="#h0-5-5" id="h0-5-5" class="d">-            }
+</a><a href="#h0-5-6" id="h0-5-6" class="d">-
+</a>             dialog.show()
+         }
+     }
+</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: prevent snap replays - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/1a40856ae74db91023f27cb23bc064413e74fa39.html">1a40856ae74db91023f27cb23bc064413e74fa39</a>
+<b>parent</b> <a href="../commit/e0f6d05676cb54a59fb5319c7d16be9a304b3d65.html">e0f6d05676cb54a59fb5319c7d16be9a304b3d65</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Mon,  9 Oct 2023 21:10:27 +0200
+
+feat: prevent snap replays
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/data/SnapEnums.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/privacy/PreventMessageSending.kt</a></td><td> | </td><td class="num">15</td><td><span class="i">++++++++++++++</span><span class="d">-</span></td></tr>
+</table></pre><pre>3 files changed, 16 insertions(+), 1 deletion(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a> b/<a href="../file/core/src/main/assets/lang/en_US.json.html">core/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -622,6 +622,7 @@
+</a>             &quot;notifications&quot;: {
+                 &quot;chat_screenshot&quot;: &quot;Screenshot&quot;,
+                 &quot;chat_screen_record&quot;: &quot;Screen Record&quot;,
+<a href="#h0-0-3" id="h0-0-3" class="i">+                &quot;snap_replay&quot;: &quot;Snap Replay&quot;,
+</a>                 &quot;camera_roll_save&quot;: &quot;Camera Roll Save&quot;,
+                 &quot;chat&quot;: &quot;Chat&quot;,
+                 &quot;chat_reply&quot;: &quot;Chat Reply&quot;,
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/data/SnapEnums.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/data/SnapEnums.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/data/SnapEnums.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/data/SnapEnums.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -14,6 +14,7 @@ enum class NotificationType (
+</a>     SCREENSHOT(&quot;chat_screenshot&quot;, true, ContentType.STATUS_CONVERSATION_CAPTURE_SCREENSHOT),
+     SCREEN_RECORD(&quot;chat_screen_record&quot;, true, ContentType.STATUS_CONVERSATION_CAPTURE_RECORD),
+     CAMERA_ROLL_SAVE(&quot;camera_roll_save&quot;, true, ContentType.STATUS_SAVE_TO_CAMERA_ROLL),
+<a href="#h1-0-3" id="h1-0-3" class="i">+    SNAP_REPLAY(&quot;snap_replay&quot;, true, ContentType.STATUS),
+</a>     SNAP(&quot;snap&quot;,true),
+     CHAT(&quot;chat&quot;,true),
+     CHAT_REPLY(&quot;chat_reply&quot;,true),
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/privacy/PreventMessageSending.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/privacy/PreventMessageSending.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/privacy/PreventMessageSending.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/privacy/PreventMessageSending.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,6 +1,8 @@
+</a> package me.rhunk.snapenhance.features.impl.privacy
+ 
+ import me.rhunk.snapenhance.core.event.events.impl.SendMessageWithContentEvent
+<a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.core.event.events.impl.UnaryCallEvent
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import me.rhunk.snapenhance.core.util.protobuf.ProtoEditor
+</a> import me.rhunk.snapenhance.data.NotificationType
+ import me.rhunk.snapenhance.features.Feature
+ import me.rhunk.snapenhance.features.FeatureLoadParams
+<a href="#h2-1" id="h2-1" class="h">@@ -11,8 +13,19 @@ class PreventMessageSending : Feature(&quot;Prevent message sending&quot;, loadParams = Fe
+</a>     override fun asyncOnActivityCreate() {
+         val preventMessageSending by context.config.messaging.preventMessageSending
+ 
+<a href="#h2-1-3" id="h2-1-3" class="i">+        context.event.subscribe(UnaryCallEvent::class, { preventMessageSending.contains(&quot;snap_replay&quot;) }) { event -&gt;
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+            if (event.uri != &quot;/messagingcoreservice.MessagingCoreService/UpdateContentMessage&quot;) return@subscribe
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+            event.buffer = ProtoEditor(event.buffer).apply {
+</a><a href="#h2-1-6" id="h2-1-6" class="i">+                edit(3) {
+</a><a href="#h2-1-7" id="h2-1-7" class="i">+                    // replace replayed to read receipt
+</a><a href="#h2-1-8" id="h2-1-8" class="i">+                    remove(13)
+</a><a href="#h2-1-9" id="h2-1-9" class="i">+                    addBuffer(4, byteArrayOf())
+</a><a href="#h2-1-10" id="h2-1-10" class="i">+                }
+</a><a href="#h2-1-11" id="h2-1-11" class="i">+            }.toByteArray()
+</a><a href="#h2-1-12" id="h2-1-12" class="i">+        }
+</a><a href="#h2-1-13" id="h2-1-13" class="i">+
+</a>         context.classCache.conversationManager.hook(&quot;updateMessage&quot;, HookStage.BEFORE) { param -&gt;
+<a href="#h2-1-15" id="h2-1-15" class="d">-            val messageUpdate = param.arg&lt;Any&gt;(2).toString();
+</a><a href="#h2-1-16" id="h2-1-16" class="i">+            val messageUpdate = param.arg&lt;Any&gt;(2).toString()
+</a>             if (messageUpdate == &quot;SCREENSHOT&quot; &amp;&amp; preventMessageSending.contains(&quot;chat_screenshot&quot;)) {
+                 param.setResult(null)
+             }
+</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core/account_switcher): backup fidelius databases - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/17ddfa5b9c95804616fabd14062e40ae7885971a.html">17ddfa5b9c95804616fabd14062e40ae7885971a</a>
+<b>parent</b> <a href="../commit/115b5ce0d8b465651553daa64f10306bdf75d8fc.html">115b5ce0d8b465651553daa64f10306bdf75d8fc</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 24 Jul 2024 13:37:09 +0200
+
+fix(core/account_switcher): backup fidelius databases
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/AccountSwitcher.kt</a></td><td> | </td><td class="num">34</td><td><span class="i">++++++++++++++++++++++</span><span class="d">------------</span></td></tr>
+</table></pre><pre>1 file changed, 22 insertions(+), 12 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/AccountSwitcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/AccountSwitcher.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/AccountSwitcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/AccountSwitcher.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -7,11 +7,7 @@ import android.database.sqlite.SQLiteDatabase
+</a> import android.net.Uri
+ import android.os.ParcelFileDescriptor
+ import android.widget.FrameLayout
+<a href="#h0-0-3" id="h0-0-3" class="d">-import androidx.compose.foundation.layout.Arrangement
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-import androidx.compose.foundation.layout.Column
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-import androidx.compose.foundation.layout.Row
+</a><a href="#h0-0-6" id="h0-0-6" class="d">-import androidx.compose.foundation.layout.fillMaxWidth
+</a><a href="#h0-0-7" id="h0-0-7" class="d">-import androidx.compose.foundation.layout.padding
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+import androidx.compose.foundation.layout.*
+</a> import androidx.compose.foundation.lazy.LazyColumn
+ import androidx.compose.foundation.lazy.items
+ import androidx.compose.material.icons.Icons
+<a href="#h0-1" id="h0-1" class="h">@@ -303,24 +299,38 @@ class AccountSwitcher: Feature(&quot;Account Switcher&quot;) {
+</a>         context.coroutineScope.launch(Dispatchers.IO) {
+             val zipOutputStream = ZipOutputStream(ParcelFileDescriptor.AutoCloseOutputStream(pfd[1]))
+ 
+<a href="#h0-1-3" id="h0-1-3" class="d">-            for (file in arrayOf(
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+            fun addFile(path: String, file: File) {
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+                file.takeIf { it.exists() }?.inputStream()?.use {
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+                    context.log.verbose(&quot;Adding $file to zip&quot;)
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+                    zipOutputStream.putNextEntry(ZipEntry(path))
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+                    it.copyTo(zipOutputStream)
+</a><a href="#h0-1-9" id="h0-1-9" class="i">+                    zipOutputStream.closeEntry()
+</a><a href="#h0-1-10" id="h0-1-10" class="i">+                }
+</a><a href="#h0-1-11" id="h0-1-11" class="i">+            }
+</a><a href="#h0-1-12" id="h0-1-12" class="i">+
+</a><a href="#h0-1-13" id="h0-1-13" class="i">+            for (path in arrayOf(
+</a>                 &quot;databases/main.db&quot;,
+                 &quot;databases/main.db-shm&quot;,
+                 &quot;databases/main.db-wal&quot;,
+                 &quot;databases/core.db&quot;,
+                 &quot;databases/core.db-wal&quot;,
+                 &quot;databases/core.db-shm&quot;,
+<a href="#h0-1-20" id="h0-1-20" class="i">+                &quot;databases/fidelius_database.db&quot;,
+</a><a href="#h0-1-21" id="h0-1-21" class="i">+                &quot;databases/fidelius_database.db-wal&quot;,
+</a><a href="#h0-1-22" id="h0-1-22" class="i">+                &quot;databases/fidelius_database.db-shm&quot;,
+</a>                 &quot;shared_prefs/user_session_shared_pref.xml&quot;,
+                 &quot;shared_prefs/user_device_identity_keys.xml&quot;,
+                 &quot;shared_prefs/com.google.android.gms.appid.xml&quot;,
+             )) {
+<a href="#h0-1-27" id="h0-1-27" class="d">-                context.androidContext.dataDir.resolve(file).takeIf { it.exists() }?.inputStream()?.use {
+</a><a href="#h0-1-28" id="h0-1-28" class="d">-                    context.log.verbose(&quot;Adding $file to zip&quot;)
+</a><a href="#h0-1-29" id="h0-1-29" class="d">-                    zipOutputStream.putNextEntry(ZipEntry(file))
+</a><a href="#h0-1-30" id="h0-1-30" class="d">-                    it.copyTo(zipOutputStream)
+</a><a href="#h0-1-31" id="h0-1-31" class="d">-                    zipOutputStream.closeEntry()
+</a><a href="#h0-1-32" id="h0-1-32" class="d">-                }
+</a><a href="#h0-1-33" id="h0-1-33" class="i">+                addFile(path, context.androidContext.dataDir.resolve(path))
+</a>             }
+<a href="#h0-1-35" id="h0-1-35" class="i">+
+</a><a href="#h0-1-36" id="h0-1-36" class="i">+            context.androidContext.dataDir.resolve(&quot;databases&quot;).listFiles()?.filter {
+</a><a href="#h0-1-37" id="h0-1-37" class="i">+                it.name.contains(&quot;_fidelius.db&quot;)
+</a><a href="#h0-1-38" id="h0-1-38" class="i">+            }?.forEach {
+</a><a href="#h0-1-39" id="h0-1-39" class="i">+                addFile(&quot;databases/${it.name}&quot;, it)
+</a><a href="#h0-1-40" id="h0-1-40" class="i">+            }
+</a><a href="#h0-1-41" id="h0-1-41" class="i">+
+</a>             zipOutputStream.flush()
+             zipOutputStream.close()
+         }
+</pre>
+</div>
+</body>
+</html>

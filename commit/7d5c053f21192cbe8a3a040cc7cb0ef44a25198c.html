@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: file imports - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/7d5c053f21192cbe8a3a040cc7cb0ef44a25198c.html">7d5c053f21192cbe8a3a040cc7cb0ef44a25198c</a>
+<b>parent</b> <a href="../commit/7f5a10cce507bfeecab7390cbe3b0b2d5dcde3a3.html">7f5a10cce507bfeecab7390cbe3b0b2d5dcde3a3</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 29 May 2024 21:17:11 +0200
+
+feat: file imports
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/RemoteFileHandleManager.kt</a></td><td> | </td><td class="num">43</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Routes.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/FileImportsRoot.kt</a></td><td> | </td><td class="num">159</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/features/FeaturesRoot.kt</a></td><td> | </td><td class="num">71</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeRoot.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">++++</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">13</td><td><span class="i">+++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">common/src/main/kotlin/me/rhunk/snapenhance/common/config/ConfigObjects.kt</a></td><td> | </td><td class="num">30</td><td><span class="i">++++++++++++++++</span><span class="d">--------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/core/util/ktx/FileHandleManagerKtx.kt</a></td><td> | </td><td class="num">30</td><td><span class="i">++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>9 files changed, 335 insertions(+), 25 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteFileHandleManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteFileHandleManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteFileHandleManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteFileHandleManager.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -9,6 +9,7 @@ import me.rhunk.snapenhance.common.bridge.wrapper.LocaleWrapper
+</a> import me.rhunk.snapenhance.common.logger.AbstractLogger
+ import me.rhunk.snapenhance.common.util.ktx.toParcelFileDescriptor
+ import java.io.File
+<a href="#h0-0-3" id="h0-0-3" class="i">+import java.io.OutputStream
+</a> 
+ 
+ class LocalFileHandle(
+<a href="#h0-1" id="h0-1" class="h">@@ -39,7 +40,7 @@ class AssetFileHandle(
+</a>         return runCatching {
+             context.androidContext.assets.open(assetPath).toParcelFileDescriptor(context.coroutineScope)
+         }.onFailure {
+<a href="#h0-1-3" id="h0-1-3" class="d">-            AbstractLogger.directError(&quot;Failed to open asset handle: ${it.message}&quot;, it)
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+            context.log.error(&quot;Failed to open asset handle: ${it.message}&quot;, it)
+</a>         }.getOrNull()
+     }
+ }
+<a href="#h0-2" id="h0-2" class="h">@@ -48,6 +49,10 @@ class AssetFileHandle(
+</a> class RemoteFileHandleManager(
+     private val context: RemoteSideContext
+ ): FileHandleManager.Stub() {
+<a href="#h0-2-3" id="h0-2-3" class="i">+    private val userImportFolder = File(context.androidContext.filesDir, &quot;user_imports&quot;).apply {
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+        mkdirs()
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+    }
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+
+</a>     override fun getFileHandle(scope: String, name: String): FileHandle? {
+         val fileHandleScope = FileHandleScope.fromValue(scope) ?: run {
+             context.log.error(&quot;invalid file handle scope: $scope&quot;, &quot;FileHandleManager&quot;)
+<a href="#h0-3" id="h0-3" class="h">@@ -81,7 +86,43 @@ class RemoteFileHandleManager(
+</a>                     &quot;lang/$foundLocale.json&quot;
+                 )
+             }
+<a href="#h0-3-3" id="h0-3-3" class="i">+            FileHandleScope.USER_IMPORT -&gt; {
+</a><a href="#h0-3-4" id="h0-3-4" class="i">+                return LocalFileHandle(
+</a><a href="#h0-3-5" id="h0-3-5" class="i">+                    File(userImportFolder, name.substringAfterLast(&quot;/&quot;))
+</a><a href="#h0-3-6" id="h0-3-6" class="i">+                )
+</a><a href="#h0-3-7" id="h0-3-7" class="i">+            }
+</a>             else -&gt; return null
+         }
+     }
+<a href="#h0-3-11" id="h0-3-11" class="i">+
+</a><a href="#h0-3-12" id="h0-3-12" class="i">+    fun getStoredFiles(): List&lt;File&gt; {
+</a><a href="#h0-3-13" id="h0-3-13" class="i">+        return userImportFolder.listFiles()?.toList()?.sortedBy { -it.lastModified() } ?: emptyList()
+</a><a href="#h0-3-14" id="h0-3-14" class="i">+    }
+</a><a href="#h0-3-15" id="h0-3-15" class="i">+
+</a><a href="#h0-3-16" id="h0-3-16" class="i">+    fun getFileInfo(name: String): Pair&lt;Long, Long&gt;? {
+</a><a href="#h0-3-17" id="h0-3-17" class="i">+        return runCatching {
+</a><a href="#h0-3-18" id="h0-3-18" class="i">+            val file = File(userImportFolder, name)
+</a><a href="#h0-3-19" id="h0-3-19" class="i">+            file.length() to file.lastModified()
+</a><a href="#h0-3-20" id="h0-3-20" class="i">+        }.onFailure {
+</a><a href="#h0-3-21" id="h0-3-21" class="i">+            context.log.error(&quot;Failed to get file info: ${it.message}&quot;, it)
+</a><a href="#h0-3-22" id="h0-3-22" class="i">+        }.getOrNull()
+</a><a href="#h0-3-23" id="h0-3-23" class="i">+    }
+</a><a href="#h0-3-24" id="h0-3-24" class="i">+
+</a><a href="#h0-3-25" id="h0-3-25" class="i">+    fun importFile(name: String, block: OutputStream.() -&gt; Unit): Boolean {
+</a><a href="#h0-3-26" id="h0-3-26" class="i">+        return runCatching {
+</a><a href="#h0-3-27" id="h0-3-27" class="i">+            val file = File(userImportFolder, name)
+</a><a href="#h0-3-28" id="h0-3-28" class="i">+            file.outputStream().use(block)
+</a><a href="#h0-3-29" id="h0-3-29" class="i">+            true
+</a><a href="#h0-3-30" id="h0-3-30" class="i">+        }.onFailure {
+</a><a href="#h0-3-31" id="h0-3-31" class="i">+            context.log.error(&quot;Failed to import file: ${it.message}&quot;, it)
+</a><a href="#h0-3-32" id="h0-3-32" class="i">+        }.getOrDefault(false)
+</a><a href="#h0-3-33" id="h0-3-33" class="i">+    }
+</a><a href="#h0-3-34" id="h0-3-34" class="i">+
+</a><a href="#h0-3-35" id="h0-3-35" class="i">+    fun deleteFile(name: String): Boolean {
+</a><a href="#h0-3-36" id="h0-3-36" class="i">+        return runCatching {
+</a><a href="#h0-3-37" id="h0-3-37" class="i">+            File(userImportFolder, name).delete()
+</a><a href="#h0-3-38" id="h0-3-38" class="i">+        }.onFailure {
+</a><a href="#h0-3-39" id="h0-3-39" class="i">+            context.log.error(&quot;Failed to delete file: ${it.message}&quot;, it)
+</a><a href="#h0-3-40" id="h0-3-40" class="i">+        }.isSuccess
+</a><a href="#h0-3-41" id="h0-3-41" class="i">+    }
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Routes.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Routes.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Routes.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/Routes.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -15,6 +15,7 @@ import androidx.navigation.NavDestination.Companion.hierarchy
+</a> import androidx.navigation.NavGraph.Companion.findStartDestination
+ import androidx.navigation.NavGraphBuilder
+ import me.rhunk.snapenhance.RemoteSideContext
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.ui.manager.pages.FileImportsRoot
+</a> import me.rhunk.snapenhance.ui.manager.pages.LoggerHistoryRoot
+ import me.rhunk.snapenhance.ui.manager.pages.TasksRoot
+ import me.rhunk.snapenhance.ui.manager.pages.features.FeaturesRoot
+<a href="#h1-1" id="h1-1" class="h">@@ -58,6 +59,7 @@ class Routes(
+</a>     val friendTracker = route(RouteInfo(&quot;friend_tracker&quot;), FriendTrackerManagerRoot()).parent(home)
+     val editRule = route(RouteInfo(&quot;edit_rule/?rule_id={rule_id}&quot;), EditRule())
+ 
+<a href="#h1-1-3" id="h1-1-3" class="i">+    val fileImports = route(RouteInfo(&quot;file_imports&quot;), FileImportsRoot()).parent(home)
+</a>     val social = route(RouteInfo(&quot;social&quot;, icon = Icons.Default.Group, primary = true), SocialRoot())
+     val manageScope = route(RouteInfo(&quot;manage_scope/?scope={scope}&amp;id={id}&quot;), ManageScope()).parent(social)
+     val messagingPreview = route(RouteInfo(&quot;messaging_preview/?scope={scope}&amp;id={id}&quot;), MessagingPreview()).parent(social)
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/FileImportsRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/FileImportsRoot.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/FileImportsRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/FileImportsRoot.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -0,0 +1,158 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="i">+package me.rhunk.snapenhance.ui.manager.pages
+</a><a href="#h2-0-1" id="h2-0-1" class="i">+
+</a><a href="#h2-0-2" id="h2-0-2" class="i">+import android.net.Uri
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+import android.text.format.Formatter
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import androidx.compose.foundation.layout.*
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+import androidx.compose.foundation.lazy.LazyColumn
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+import androidx.compose.foundation.lazy.items
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+import androidx.compose.material.icons.Icons
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+import androidx.compose.material.icons.filled.AttachFile
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+import androidx.compose.material.icons.filled.DeleteOutline
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+import androidx.compose.material.icons.filled.Upload
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+import androidx.compose.material3.ElevatedCard
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+import androidx.compose.material3.ExtendedFloatingActionButton
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+import androidx.compose.material3.Icon
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+import androidx.compose.material3.IconButton
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+import androidx.compose.material3.Text
+</a><a href="#h2-0-16" id="h2-0-16" class="i">+import androidx.compose.runtime.Composable
+</a><a href="#h2-0-17" id="h2-0-17" class="i">+import androidx.compose.runtime.getValue
+</a><a href="#h2-0-18" id="h2-0-18" class="i">+import androidx.compose.runtime.rememberCoroutineScope
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+import androidx.compose.ui.Alignment
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+import androidx.compose.ui.Modifier
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+import androidx.compose.ui.text.font.FontWeight
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+import androidx.compose.ui.text.style.TextAlign
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+import androidx.compose.ui.unit.dp
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+import androidx.compose.ui.unit.sp
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+import androidx.documentfile.provider.DocumentFile
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+import androidx.navigation.NavBackStackEntry
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+import kotlinx.coroutines.launch
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+import me.rhunk.snapenhance.common.ui.AsyncUpdateDispatcher
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+import me.rhunk.snapenhance.common.ui.rememberAsyncMutableState
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+import me.rhunk.snapenhance.common.ui.rememberAsyncMutableStateList
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+import me.rhunk.snapenhance.ui.manager.Routes
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+import me.rhunk.snapenhance.ui.util.ActivityLauncherHelper
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+import me.rhunk.snapenhance.ui.util.openFile
+</a><a href="#h2-0-34" id="h2-0-34" class="i">+import java.text.DateFormat
+</a><a href="#h2-0-35" id="h2-0-35" class="i">+
+</a><a href="#h2-0-36" id="h2-0-36" class="i">+class FileImportsRoot: Routes.Route() {
+</a><a href="#h2-0-37" id="h2-0-37" class="i">+    private lateinit var activityLauncherHelper: ActivityLauncherHelper
+</a><a href="#h2-0-38" id="h2-0-38" class="i">+    private val reloadDispatcher = AsyncUpdateDispatcher()
+</a><a href="#h2-0-39" id="h2-0-39" class="i">+
+</a><a href="#h2-0-40" id="h2-0-40" class="i">+    override val init: () -&gt; Unit = {
+</a><a href="#h2-0-41" id="h2-0-41" class="i">+        activityLauncherHelper = ActivityLauncherHelper(context.activity!!)
+</a><a href="#h2-0-42" id="h2-0-42" class="i">+    }
+</a><a href="#h2-0-43" id="h2-0-43" class="i">+
+</a><a href="#h2-0-44" id="h2-0-44" class="i">+    override val floatingActionButton: @Composable () -&gt; Unit = {
+</a><a href="#h2-0-45" id="h2-0-45" class="i">+        val coroutineScope = rememberCoroutineScope()
+</a><a href="#h2-0-46" id="h2-0-46" class="i">+        Row {
+</a><a href="#h2-0-47" id="h2-0-47" class="i">+            ExtendedFloatingActionButton(
+</a><a href="#h2-0-48" id="h2-0-48" class="i">+                icon = {
+</a><a href="#h2-0-49" id="h2-0-49" class="i">+                    Icon(Icons.Default.Upload, contentDescription = null)
+</a><a href="#h2-0-50" id="h2-0-50" class="i">+                },
+</a><a href="#h2-0-51" id="h2-0-51" class="i">+                text = {
+</a><a href="#h2-0-52" id="h2-0-52" class="i">+                    Text(translation[&quot;import_file_button&quot;])
+</a><a href="#h2-0-53" id="h2-0-53" class="i">+                },
+</a><a href="#h2-0-54" id="h2-0-54" class="i">+                onClick = {
+</a><a href="#h2-0-55" id="h2-0-55" class="i">+                context.coroutineScope.launch {
+</a><a href="#h2-0-56" id="h2-0-56" class="i">+                    activityLauncherHelper.openFile { filePath -&gt;
+</a><a href="#h2-0-57" id="h2-0-57" class="i">+                        val fileUri = Uri.parse(filePath)
+</a><a href="#h2-0-58" id="h2-0-58" class="i">+                        runCatching {
+</a><a href="#h2-0-59" id="h2-0-59" class="i">+                            DocumentFile.fromSingleUri(context.activity!!, fileUri)?.let { file -&gt;
+</a><a href="#h2-0-60" id="h2-0-60" class="i">+                                if (!file.exists()) {
+</a><a href="#h2-0-61" id="h2-0-61" class="i">+                                    context.shortToast(translation[&quot;file_not_found&quot;])
+</a><a href="#h2-0-62" id="h2-0-62" class="i">+                                    return@openFile
+</a><a href="#h2-0-63" id="h2-0-63" class="i">+                                }
+</a><a href="#h2-0-64" id="h2-0-64" class="i">+                                context.fileHandleManager.importFile(file.name!!) {
+</a><a href="#h2-0-65" id="h2-0-65" class="i">+                                    context.androidContext.contentResolver.openInputStream(fileUri)?.use { inputStream -&gt;
+</a><a href="#h2-0-66" id="h2-0-66" class="i">+                                        inputStream.copyTo(this)
+</a><a href="#h2-0-67" id="h2-0-67" class="i">+                                    }
+</a><a href="#h2-0-68" id="h2-0-68" class="i">+                                }
+</a><a href="#h2-0-69" id="h2-0-69" class="i">+                            }
+</a><a href="#h2-0-70" id="h2-0-70" class="i">+                        }.onFailure {
+</a><a href="#h2-0-71" id="h2-0-71" class="i">+                            context.log.error(&quot;Failed to import file&quot;, it)
+</a><a href="#h2-0-72" id="h2-0-72" class="i">+                            context.shortToast(translation.format(&quot;file_import_failed&quot;, &quot;error&quot; to it.message.toString()))
+</a><a href="#h2-0-73" id="h2-0-73" class="i">+                        }.onSuccess {
+</a><a href="#h2-0-74" id="h2-0-74" class="i">+                            context.shortToast(translation[&quot;file_imported&quot;])
+</a><a href="#h2-0-75" id="h2-0-75" class="i">+                            coroutineScope.launch {
+</a><a href="#h2-0-76" id="h2-0-76" class="i">+                                reloadDispatcher.dispatch()
+</a><a href="#h2-0-77" id="h2-0-77" class="i">+                            }
+</a><a href="#h2-0-78" id="h2-0-78" class="i">+                        }
+</a><a href="#h2-0-79" id="h2-0-79" class="i">+                    }
+</a><a href="#h2-0-80" id="h2-0-80" class="i">+                }
+</a><a href="#h2-0-81" id="h2-0-81" class="i">+            })
+</a><a href="#h2-0-82" id="h2-0-82" class="i">+        }
+</a><a href="#h2-0-83" id="h2-0-83" class="i">+    }
+</a><a href="#h2-0-84" id="h2-0-84" class="i">+
+</a><a href="#h2-0-85" id="h2-0-85" class="i">+    override val content: @Composable (NavBackStackEntry) -&gt; Unit = {
+</a><a href="#h2-0-86" id="h2-0-86" class="i">+        val files = rememberAsyncMutableStateList(defaultValue = listOf(), updateDispatcher = reloadDispatcher) {
+</a><a href="#h2-0-87" id="h2-0-87" class="i">+            context.fileHandleManager.getStoredFiles()
+</a><a href="#h2-0-88" id="h2-0-88" class="i">+        }
+</a><a href="#h2-0-89" id="h2-0-89" class="i">+
+</a><a href="#h2-0-90" id="h2-0-90" class="i">+        LazyColumn(
+</a><a href="#h2-0-91" id="h2-0-91" class="i">+            modifier = Modifier
+</a><a href="#h2-0-92" id="h2-0-92" class="i">+                .fillMaxSize()
+</a><a href="#h2-0-93" id="h2-0-93" class="i">+                .padding(2.dp),
+</a><a href="#h2-0-94" id="h2-0-94" class="i">+            verticalArrangement = Arrangement.spacedBy(5.dp)
+</a><a href="#h2-0-95" id="h2-0-95" class="i">+        ) {
+</a><a href="#h2-0-96" id="h2-0-96" class="i">+            item {
+</a><a href="#h2-0-97" id="h2-0-97" class="i">+                if (files.isEmpty()) {
+</a><a href="#h2-0-98" id="h2-0-98" class="i">+                    Text(
+</a><a href="#h2-0-99" id="h2-0-99" class="i">+                        text = translation[&quot;no_files_hint&quot;],
+</a><a href="#h2-0-100" id="h2-0-100" class="i">+                        modifier = Modifier
+</a><a href="#h2-0-101" id="h2-0-101" class="i">+                            .padding(8.dp)
+</a><a href="#h2-0-102" id="h2-0-102" class="i">+                            .fillMaxWidth(),
+</a><a href="#h2-0-103" id="h2-0-103" class="i">+                        textAlign = TextAlign.Center,
+</a><a href="#h2-0-104" id="h2-0-104" class="i">+                        fontSize = 18.sp,
+</a><a href="#h2-0-105" id="h2-0-105" class="i">+                        fontWeight = FontWeight.Light
+</a><a href="#h2-0-106" id="h2-0-106" class="i">+                    )
+</a><a href="#h2-0-107" id="h2-0-107" class="i">+                }
+</a><a href="#h2-0-108" id="h2-0-108" class="i">+            }
+</a><a href="#h2-0-109" id="h2-0-109" class="i">+            items(files, key = { it }) { file -&gt;
+</a><a href="#h2-0-110" id="h2-0-110" class="i">+                ElevatedCard(
+</a><a href="#h2-0-111" id="h2-0-111" class="i">+                    modifier = Modifier
+</a><a href="#h2-0-112" id="h2-0-112" class="i">+                        .fillMaxWidth()
+</a><a href="#h2-0-113" id="h2-0-113" class="i">+                        .padding(8.dp)
+</a><a href="#h2-0-114" id="h2-0-114" class="i">+                ) {
+</a><a href="#h2-0-115" id="h2-0-115" class="i">+                    val fileInfo by rememberAsyncMutableState(defaultValue = null) {
+</a><a href="#h2-0-116" id="h2-0-116" class="i">+                        context.fileHandleManager.getFileInfo(file.name)
+</a><a href="#h2-0-117" id="h2-0-117" class="i">+                    }
+</a><a href="#h2-0-118" id="h2-0-118" class="i">+                    Row(
+</a><a href="#h2-0-119" id="h2-0-119" class="i">+                        modifier = Modifier
+</a><a href="#h2-0-120" id="h2-0-120" class="i">+                            .padding(8.dp)
+</a><a href="#h2-0-121" id="h2-0-121" class="i">+                            .fillMaxWidth(),
+</a><a href="#h2-0-122" id="h2-0-122" class="i">+                        verticalAlignment = Alignment.CenterVertically
+</a><a href="#h2-0-123" id="h2-0-123" class="i">+                    ) {
+</a><a href="#h2-0-124" id="h2-0-124" class="i">+                        Icon(Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.padding(5.dp))
+</a><a href="#h2-0-125" id="h2-0-125" class="i">+                        Column(
+</a><a href="#h2-0-126" id="h2-0-126" class="i">+                            modifier = Modifier.weight(1f).padding(8.dp),
+</a><a href="#h2-0-127" id="h2-0-127" class="i">+                        ) {
+</a><a href="#h2-0-128" id="h2-0-128" class="i">+                            Text(text = file.name, fontWeight = FontWeight.Bold, fontSize = 18.sp, lineHeight = 20.sp)
+</a><a href="#h2-0-129" id="h2-0-129" class="i">+                            fileInfo?.let { (size, lastModified) -&gt;
+</a><a href="#h2-0-130" id="h2-0-130" class="i">+                                Text(text = &quot;${Formatter.formatFileSize(context.androidContext, size)} - ${DateFormat.getDateTimeInstance().format(lastModified)}&quot;, lineHeight = 15.sp)
+</a><a href="#h2-0-131" id="h2-0-131" class="i">+                            }
+</a><a href="#h2-0-132" id="h2-0-132" class="i">+                        }
+</a><a href="#h2-0-133" id="h2-0-133" class="i">+
+</a><a href="#h2-0-134" id="h2-0-134" class="i">+                        Row(
+</a><a href="#h2-0-135" id="h2-0-135" class="i">+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+</a><a href="#h2-0-136" id="h2-0-136" class="i">+                        ) {
+</a><a href="#h2-0-137" id="h2-0-137" class="i">+                            IconButton(onClick = {
+</a><a href="#h2-0-138" id="h2-0-138" class="i">+                                context.coroutineScope.launch {
+</a><a href="#h2-0-139" id="h2-0-139" class="i">+                                    if (context.fileHandleManager.deleteFile(file.name)) {
+</a><a href="#h2-0-140" id="h2-0-140" class="i">+                                        files.remove(file)
+</a><a href="#h2-0-141" id="h2-0-141" class="i">+                                    } else {
+</a><a href="#h2-0-142" id="h2-0-142" class="i">+                                        context.shortToast(translation[&quot;file_delete_failed&quot;])
+</a><a href="#h2-0-143" id="h2-0-143" class="i">+                                    }
+</a><a href="#h2-0-144" id="h2-0-144" class="i">+                                }
+</a><a href="#h2-0-145" id="h2-0-145" class="i">+                            }) {
+</a><a href="#h2-0-146" id="h2-0-146" class="i">+                                Icon(Icons.Default.DeleteOutline, contentDescription = null)
+</a><a href="#h2-0-147" id="h2-0-147" class="i">+                            }
+</a><a href="#h2-0-148" id="h2-0-148" class="i">+                        }
+</a><a href="#h2-0-149" id="h2-0-149" class="i">+                    }
+</a><a href="#h2-0-150" id="h2-0-150" class="i">+                }
+</a><a href="#h2-0-151" id="h2-0-151" class="i">+            }
+</a><a href="#h2-0-152" id="h2-0-152" class="i">+            item {
+</a><a href="#h2-0-153" id="h2-0-153" class="i">+                Spacer(modifier = Modifier.height(100.dp))
+</a><a href="#h2-0-154" id="h2-0-154" class="i">+            }
+</a><a href="#h2-0-155" id="h2-0-155" class="i">+        }
+</a><a href="#h2-0-156" id="h2-0-156" class="i">+    }
+</a><a href="#h2-0-157" id="h2-0-157" class="i">+}</a><a href="#h2-0-158" id="h2-0-158" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/features/FeaturesRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/features/FeaturesRoot.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/features/FeaturesRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/features/FeaturesRoot.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -14,10 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
+</a> import androidx.compose.foundation.text.KeyboardActions
+ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.automirrored.filled.OpenInNew
+<a href="#h3-0-3" id="h3-0-3" class="d">-import androidx.compose.material.icons.filled.Close
+</a><a href="#h3-0-4" id="h3-0-4" class="d">-import androidx.compose.material.icons.filled.FolderOpen
+</a><a href="#h3-0-5" id="h3-0-5" class="d">-import androidx.compose.material.icons.filled.MoreVert
+</a><a href="#h3-0-6" id="h3-0-6" class="d">-import androidx.compose.material.icons.filled.Search
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+import androidx.compose.material.icons.filled.*
+</a> import androidx.compose.material3.*
+ import androidx.compose.runtime.*
+ import androidx.compose.ui.Alignment
+<a href="#h3-1" id="h3-1" class="h">@@ -40,6 +37,7 @@ import kotlinx.coroutines.Job
+</a> import kotlinx.coroutines.delay
+ import kotlinx.coroutines.launch
+ import me.rhunk.snapenhance.common.config.*
+<a href="#h3-1-3" id="h3-1-3" class="i">+import me.rhunk.snapenhance.common.ui.rememberAsyncMutableStateList
+</a> import me.rhunk.snapenhance.ui.manager.MainActivity
+ import me.rhunk.snapenhance.ui.manager.Routes
+ import me.rhunk.snapenhance.ui.util.*
+<a href="#h3-2" id="h3-2" class="h">@@ -153,6 +151,71 @@ class FeaturesRoot : Routes.Route() {
+</a> 
+         val propertyValue = property.value
+ 
+<a href="#h3-2-3" id="h3-2-3" class="i">+        if (property.key.params.flags.contains(ConfigFlag.USER_IMPORT)) {
+</a><a href="#h3-2-4" id="h3-2-4" class="i">+            registerDialogOnClickCallback()
+</a><a href="#h3-2-5" id="h3-2-5" class="i">+            dialogComposable = {
+</a><a href="#h3-2-6" id="h3-2-6" class="i">+                val files = rememberAsyncMutableStateList(defaultValue = listOf()) {
+</a><a href="#h3-2-7" id="h3-2-7" class="i">+                    context.fileHandleManager.getStoredFiles()
+</a><a href="#h3-2-8" id="h3-2-8" class="i">+                }
+</a><a href="#h3-2-9" id="h3-2-9" class="i">+                var selectedFile by remember(files.size) { mutableStateOf(files.firstOrNull { it.name == propertyValue.getNullable() }?.name) }
+</a><a href="#h3-2-10" id="h3-2-10" class="i">+
+</a><a href="#h3-2-11" id="h3-2-11" class="i">+                Card(
+</a><a href="#h3-2-12" id="h3-2-12" class="i">+                    shape = MaterialTheme.shapes.large,
+</a><a href="#h3-2-13" id="h3-2-13" class="i">+                    modifier = Modifier
+</a><a href="#h3-2-14" id="h3-2-14" class="i">+                        .fillMaxWidth(),
+</a><a href="#h3-2-15" id="h3-2-15" class="i">+                ) {
+</a><a href="#h3-2-16" id="h3-2-16" class="i">+                    LazyColumn(
+</a><a href="#h3-2-17" id="h3-2-17" class="i">+                        modifier = Modifier.fillMaxWidth().padding(4.dp),
+</a><a href="#h3-2-18" id="h3-2-18" class="i">+                    ) {
+</a><a href="#h3-2-19" id="h3-2-19" class="i">+                        item {
+</a><a href="#h3-2-20" id="h3-2-20" class="i">+                            Column(
+</a><a href="#h3-2-21" id="h3-2-21" class="i">+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+</a><a href="#h3-2-22" id="h3-2-22" class="i">+                                horizontalAlignment = Alignment.CenterHorizontally
+</a><a href="#h3-2-23" id="h3-2-23" class="i">+                            ) {
+</a><a href="#h3-2-24" id="h3-2-24" class="i">+                                Text(
+</a><a href="#h3-2-25" id="h3-2-25" class="i">+                                    text = context.translation[&quot;manager.dialogs.file_imports.settings_select_file_hint&quot;],
+</a><a href="#h3-2-26" id="h3-2-26" class="i">+                                    fontSize = 18.sp,
+</a><a href="#h3-2-27" id="h3-2-27" class="i">+                                    fontWeight = FontWeight.Bold,
+</a><a href="#h3-2-28" id="h3-2-28" class="i">+                                )
+</a><a href="#h3-2-29" id="h3-2-29" class="i">+                                if (files.isEmpty()) {
+</a><a href="#h3-2-30" id="h3-2-30" class="i">+                                    Text(
+</a><a href="#h3-2-31" id="h3-2-31" class="i">+                                        text = context.translation[&quot;manager.dialogs.file_imports.no_files_settings_hint&quot;],
+</a><a href="#h3-2-32" id="h3-2-32" class="i">+                                        fontSize = 16.sp,
+</a><a href="#h3-2-33" id="h3-2-33" class="i">+                                        modifier = Modifier.padding(top = 10.dp),
+</a><a href="#h3-2-34" id="h3-2-34" class="i">+                                    )
+</a><a href="#h3-2-35" id="h3-2-35" class="i">+                                }
+</a><a href="#h3-2-36" id="h3-2-36" class="i">+                            }
+</a><a href="#h3-2-37" id="h3-2-37" class="i">+                        }
+</a><a href="#h3-2-38" id="h3-2-38" class="i">+                        items(files, key = { it.name }) { file -&gt;
+</a><a href="#h3-2-39" id="h3-2-39" class="i">+                            Row(
+</a><a href="#h3-2-40" id="h3-2-40" class="i">+                                modifier = Modifier.clickable {
+</a><a href="#h3-2-41" id="h3-2-41" class="i">+                                    selectedFile = if (selectedFile == file.name) null else file.name
+</a><a href="#h3-2-42" id="h3-2-42" class="i">+                                    propertyValue.setAny(selectedFile)
+</a><a href="#h3-2-43" id="h3-2-43" class="i">+                                }.padding(5.dp),
+</a><a href="#h3-2-44" id="h3-2-44" class="i">+                                verticalAlignment = Alignment.CenterVertically
+</a><a href="#h3-2-45" id="h3-2-45" class="i">+                            ) {
+</a><a href="#h3-2-46" id="h3-2-46" class="i">+                                Icon(Icons.Filled.AttachFile, contentDescription = null, modifier = Modifier.padding(5.dp))
+</a><a href="#h3-2-47" id="h3-2-47" class="i">+                                Text(
+</a><a href="#h3-2-48" id="h3-2-48" class="i">+                                    text = file.name,
+</a><a href="#h3-2-49" id="h3-2-49" class="i">+                                    modifier = Modifier
+</a><a href="#h3-2-50" id="h3-2-50" class="i">+                                        .padding(3.dp)
+</a><a href="#h3-2-51" id="h3-2-51" class="i">+                                        .weight(1f),
+</a><a href="#h3-2-52" id="h3-2-52" class="i">+                                    fontSize = 14.sp,
+</a><a href="#h3-2-53" id="h3-2-53" class="i">+                                    lineHeight = 16.sp
+</a><a href="#h3-2-54" id="h3-2-54" class="i">+                                )
+</a><a href="#h3-2-55" id="h3-2-55" class="i">+                                if (selectedFile == file.name) {
+</a><a href="#h3-2-56" id="h3-2-56" class="i">+                                    Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.padding(5.dp))
+</a><a href="#h3-2-57" id="h3-2-57" class="i">+                                }
+</a><a href="#h3-2-58" id="h3-2-58" class="i">+                            }
+</a><a href="#h3-2-59" id="h3-2-59" class="i">+                        }
+</a><a href="#h3-2-60" id="h3-2-60" class="i">+                    }
+</a><a href="#h3-2-61" id="h3-2-61" class="i">+                }
+</a><a href="#h3-2-62" id="h3-2-62" class="i">+            }
+</a><a href="#h3-2-63" id="h3-2-63" class="i">+
+</a><a href="#h3-2-64" id="h3-2-64" class="i">+            Icon(Icons.Filled.AttachFile, contentDescription = null)
+</a><a href="#h3-2-65" id="h3-2-65" class="i">+            return
+</a><a href="#h3-2-66" id="h3-2-66" class="i">+        }
+</a><a href="#h3-2-67" id="h3-2-67" class="i">+
+</a>         if (property.key.params.flags.contains(ConfigFlag.FOLDER)) {
+             IconButton(onClick = registerClickCallback {
+                 activityLauncher {
+<b>diff --git a/<a id="h4" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeRoot.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeRoot.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -8,11 +8,7 @@ import androidx.compose.foundation.layout.*
+</a> import androidx.compose.foundation.verticalScroll
+ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.automirrored.filled.Help
+<a href="#h4-0-3" id="h4-0-3" class="d">-import androidx.compose.material.icons.filled.BugReport
+</a><a href="#h4-0-4" id="h4-0-4" class="d">-import androidx.compose.material.icons.filled.History
+</a><a href="#h4-0-5" id="h4-0-5" class="d">-import androidx.compose.material.icons.filled.MoreVert
+</a><a href="#h4-0-6" id="h4-0-6" class="d">-import androidx.compose.material.icons.filled.PersonSearch
+</a><a href="#h4-0-7" id="h4-0-7" class="d">-import androidx.compose.material.icons.filled.Settings
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+import androidx.compose.material.icons.filled.*
+</a> import androidx.compose.material3.*
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.getValue
+<a href="#h4-1" id="h4-1" class="h">@@ -61,6 +57,9 @@ class HomeRoot : Routes.Route() {
+</a> 
+     private val cards by lazy {
+         mapOf(
+<a href="#h4-1-3" id="h4-1-3" class="i">+            (&quot;File Imports&quot; to Icons.Default.FolderOpen) to {
+</a><a href="#h4-1-4" id="h4-1-4" class="i">+                routes.fileImports.navigateReset()
+</a><a href="#h4-1-5" id="h4-1-5" class="i">+            },
+</a>             (&quot;Friend Tracker&quot; to Icons.Default.PersonSearch) to {
+                 routes.friendTracker.navigateReset()
+             },
+<b>diff --git a/<a id="h5" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -35,6 +35,7 @@
+</a>             &quot;logged_stories&quot;: &quot;Logged Stories&quot;,
+             &quot;friend_tracker&quot;: &quot;Friend Tracker&quot;,
+             &quot;edit_rule&quot;: &quot;Edit Rule&quot;,
+<a href="#h5-0-3" id="h5-0-3" class="i">+            &quot;file_imports&quot;: &quot;File Imports&quot;,
+</a>             &quot;social&quot;: &quot;Social&quot;,
+             &quot;manage_scope&quot;: &quot;Manage Scope&quot;,
+             &quot;messaging_preview&quot;: &quot;Preview&quot;,
+<a href="#h5-1" id="h5-1" class="h">@@ -131,6 +132,14 @@
+</a>                 &quot;message_parse_failed&quot;: &quot;Failed to parse message&quot;,
+                 &quot;unknown_sender&quot;: &quot;Unknown Sender&quot;,
+                 &quot;download_attachment_failed_toast&quot;: &quot;Failed to download attachment&quot;
+<a href="#h5-1-3" id="h5-1-3" class="i">+            },
+</a><a href="#h5-1-4" id="h5-1-4" class="i">+            &quot;file_imports&quot;: {
+</a><a href="#h5-1-5" id="h5-1-5" class="i">+                &quot;import_file_button&quot;: &quot;Import File&quot;,
+</a><a href="#h5-1-6" id="h5-1-6" class="i">+                &quot;file_not_found&quot;: &quot;File not found&quot;,
+</a><a href="#h5-1-7" id="h5-1-7" class="i">+                &quot;file_import_failed&quot;: &quot;Failed to import file: {error}&quot;,
+</a><a href="#h5-1-8" id="h5-1-8" class="i">+                &quot;file_imported&quot;: &quot;File imported successfully&quot;,
+</a><a href="#h5-1-9" id="h5-1-9" class="i">+                &quot;file_delete_failed&quot;: &quot;Failed to delete file&quot;,
+</a><a href="#h5-1-10" id="h5-1-10" class="i">+                &quot;no_files_hint&quot;: &quot;Here you can import files for use in Snapchat. Press the button below to import a file.&quot;
+</a>             }
+         },
+         &quot;dialogs&quot;: {
+<a href="#h5-2" id="h5-2" class="h">@@ -153,6 +162,10 @@
+</a>             &quot;messaging_action&quot;: {
+                 &quot;title&quot;: &quot;Choose content types to process&quot;,
+                 &quot;select_all_button&quot;: &quot;Select All&quot;
+<a href="#h5-2-3" id="h5-2-3" class="i">+            },
+</a><a href="#h5-2-4" id="h5-2-4" class="i">+            &quot;file_imports&quot;: {
+</a><a href="#h5-2-5" id="h5-2-5" class="i">+                &quot;no_files_settings_hint&quot;: &quot;No files found. Make sure you have imported the required files in the File Imports section&quot;,
+</a><a href="#h5-2-6" id="h5-2-6" class="i">+                &quot;settings_select_file_hint&quot;: &quot;Select an imported file&quot;
+</a>             }
+         }
+     },
+<b>diff --git a/<a id="h6" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -12,7 +12,8 @@ enum class FileHandleScope(
+</a>     val key: String
+ ) {
+     INTERNAL(&quot;internal&quot;),
+<a href="#h6-0-3" id="h6-0-3" class="d">-    LOCALE(&quot;locale&quot;);
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+    LOCALE(&quot;locale&quot;),
+</a><a href="#h6-0-5" id="h6-0-5" class="i">+    USER_IMPORT(&quot;user_import&quot;);
+</a> 
+     companion object {
+         fun fromValue(name: String): FileHandleScope? = entries.find { it.key == name }
+<b>diff --git a/<a id="h7" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/ConfigObjects.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/ConfigObjects.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/ConfigObjects.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/ConfigObjects.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -12,24 +12,26 @@ data class PropertyPair&lt;T&gt;(
+</a> }
+ 
+ enum class FeatureNotice(
+<a href="#h7-0-3" id="h7-0-3" class="d">-    val id: Int,
+</a>     val key: String
+ ) {
+<a href="#h7-0-6" id="h7-0-6" class="d">-    UNSTABLE(0b0001, &quot;unstable&quot;),
+</a><a href="#h7-0-7" id="h7-0-7" class="d">-    BAN_RISK(0b0010, &quot;ban_risk&quot;),
+</a><a href="#h7-0-8" id="h7-0-8" class="d">-    INTERNAL_BEHAVIOR(0b0100, &quot;internal_behavior&quot;),
+</a><a href="#h7-0-9" id="h7-0-9" class="d">-    REQUIRE_NATIVE_HOOKS(0b1000, &quot;require_native_hooks&quot;),
+</a><a href="#h7-0-10" id="h7-0-10" class="i">+    UNSTABLE(&quot;unstable&quot;),
+</a><a href="#h7-0-11" id="h7-0-11" class="i">+    BAN_RISK(&quot;ban_risk&quot;),
+</a><a href="#h7-0-12" id="h7-0-12" class="i">+    INTERNAL_BEHAVIOR(&quot;internal_behavior&quot;),
+</a><a href="#h7-0-13" id="h7-0-13" class="i">+    REQUIRE_NATIVE_HOOKS(&quot;require_native_hooks&quot;);
+</a><a href="#h7-0-14" id="h7-0-14" class="i">+
+</a><a href="#h7-0-15" id="h7-0-15" class="i">+    val id get() = 1 shl ordinal
+</a> }
+ 
+<a href="#h7-0-18" id="h7-0-18" class="d">-enum class ConfigFlag(
+</a><a href="#h7-0-19" id="h7-0-19" class="d">-    val id: Int
+</a><a href="#h7-0-20" id="h7-0-20" class="d">-) {
+</a><a href="#h7-0-21" id="h7-0-21" class="d">-    NO_TRANSLATE(0b000001),
+</a><a href="#h7-0-22" id="h7-0-22" class="d">-    HIDDEN(0b000010),
+</a><a href="#h7-0-23" id="h7-0-23" class="d">-    FOLDER(0b000100),
+</a><a href="#h7-0-24" id="h7-0-24" class="d">-    NO_DISABLE_KEY(0b001000),
+</a><a href="#h7-0-25" id="h7-0-25" class="d">-    REQUIRE_RESTART(0b010000),
+</a><a href="#h7-0-26" id="h7-0-26" class="d">-    REQUIRE_CLEAN_CACHE(0b100000)
+</a><a href="#h7-0-27" id="h7-0-27" class="i">+enum class ConfigFlag {
+</a><a href="#h7-0-28" id="h7-0-28" class="i">+    NO_TRANSLATE,
+</a><a href="#h7-0-29" id="h7-0-29" class="i">+    HIDDEN,
+</a><a href="#h7-0-30" id="h7-0-30" class="i">+    FOLDER,
+</a><a href="#h7-0-31" id="h7-0-31" class="i">+    USER_IMPORT,
+</a><a href="#h7-0-32" id="h7-0-32" class="i">+    NO_DISABLE_KEY,
+</a><a href="#h7-0-33" id="h7-0-33" class="i">+    REQUIRE_RESTART,
+</a><a href="#h7-0-34" id="h7-0-34" class="i">+    REQUIRE_CLEAN_CACHE;
+</a><a href="#h7-0-35" id="h7-0-35" class="i">+
+</a><a href="#h7-0-36" id="h7-0-36" class="i">+    val id = 1 shl ordinal
+</a> }
+ 
+ class ConfigParams(
+<b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/ktx/FileHandleManagerKtx.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/ktx/FileHandleManagerKtx.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/ktx/FileHandleManagerKtx.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/ktx/FileHandleManagerKtx.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -0,0 +1,29 @@
+</a><a href="#h8-0-0" id="h8-0-0" class="i">+package me.rhunk.snapenhance.core.util.ktx
+</a><a href="#h8-0-1" id="h8-0-1" class="i">+
+</a><a href="#h8-0-2" id="h8-0-2" class="i">+import android.os.Build
+</a><a href="#h8-0-3" id="h8-0-3" class="i">+import android.os.ParcelFileDescriptor
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+import me.rhunk.snapenhance.bridge.storage.FileHandleManager
+</a><a href="#h8-0-5" id="h8-0-5" class="i">+import me.rhunk.snapenhance.common.bridge.FileHandleScope
+</a><a href="#h8-0-6" id="h8-0-6" class="i">+import me.rhunk.snapenhance.common.util.ktx.longHashCode
+</a><a href="#h8-0-7" id="h8-0-7" class="i">+import me.rhunk.snapenhance.core.ModContext
+</a><a href="#h8-0-8" id="h8-0-8" class="i">+import java.io.FileOutputStream
+</a><a href="#h8-0-9" id="h8-0-9" class="i">+import kotlin.math.absoluteValue
+</a><a href="#h8-0-10" id="h8-0-10" class="i">+
+</a><a href="#h8-0-11" id="h8-0-11" class="i">+fun FileHandleManager.getFileHandleLocalPath(
+</a><a href="#h8-0-12" id="h8-0-12" class="i">+    context: ModContext,
+</a><a href="#h8-0-13" id="h8-0-13" class="i">+    scope: FileHandleScope,
+</a><a href="#h8-0-14" id="h8-0-14" class="i">+    name: String,
+</a><a href="#h8-0-15" id="h8-0-15" class="i">+    fileUniqueIdentifier: String,
+</a><a href="#h8-0-16" id="h8-0-16" class="i">+): String? {
+</a><a href="#h8-0-17" id="h8-0-17" class="i">+    return getFileHandle(scope.key, name)?.open(ParcelFileDescriptor.MODE_READ_ONLY)?.use { pfd -&gt;
+</a><a href="#h8-0-18" id="h8-0-18" class="i">+        val cacheFile = context.androidContext.cacheDir.resolve((fileUniqueIdentifier + Build.FINGERPRINT).longHashCode().absoluteValue.toString(16))
+</a><a href="#h8-0-19" id="h8-0-19" class="i">+        if (!cacheFile.exists() || pfd.statSize != cacheFile.length()) {
+</a><a href="#h8-0-20" id="h8-0-20" class="i">+            FileOutputStream(cacheFile).use { output -&gt;
+</a><a href="#h8-0-21" id="h8-0-21" class="i">+                ParcelFileDescriptor.AutoCloseInputStream(pfd).use { input -&gt;
+</a><a href="#h8-0-22" id="h8-0-22" class="i">+                    input.copyTo(output)
+</a><a href="#h8-0-23" id="h8-0-23" class="i">+                }
+</a><a href="#h8-0-24" id="h8-0-24" class="i">+            }
+</a><a href="#h8-0-25" id="h8-0-25" class="i">+        }
+</a><a href="#h8-0-26" id="h8-0-26" class="i">+        cacheFile.absolutePath
+</a><a href="#h8-0-27" id="h8-0-27" class="i">+    }
+</a><a href="#h8-0-28" id="h8-0-28" class="i">+}</a><a href="#h8-0-29" id="h8-0-29" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

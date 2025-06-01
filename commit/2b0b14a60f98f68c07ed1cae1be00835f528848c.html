@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>refactor: config override - fix: hidden sc plus features - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/2b0b14a60f98f68c07ed1cae1be00835f528848c.html">2b0b14a60f98f68c07ed1cae1be00835f528848c</a>
+<b>parent</b> <a href="../commit/233d043d454214b118b7fb3cc0a8a9c0946196e1.html">233d043d454214b118b7fb3cc0a8a9c0946196e1</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri, 27 Oct 2023 01:05:26 +0200
+
+refactor: config override
+- fix: hidden sc plus features
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ConfigurationOverride.kt</a></td><td> | </td><td class="num">102</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SnapchatPlus.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/util/hook/Hooker.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/MapperContext.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/CompositeConfigurationProviderMapper.kt</a></td><td> | </td><td class="num">47</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-----</span></td></tr>
+</table></pre><pre>5 files changed, 136 insertions(+), 30 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ConfigurationOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ConfigurationOverride.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ConfigurationOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ConfigurationOverride.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -4,14 +4,36 @@ import de.robv.android.xposed.XposedHelpers
+</a> import me.rhunk.snapenhance.core.features.Feature
+ import me.rhunk.snapenhance.core.features.FeatureLoadParams
+ import me.rhunk.snapenhance.core.util.hook.HookStage
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.core.util.hook.Hooker
+</a> import me.rhunk.snapenhance.core.util.hook.hook
+<a href="#h0-0-5" id="h0-0-5" class="i">+import me.rhunk.snapenhance.core.util.ktx.getObjectField
+</a> import me.rhunk.snapenhance.core.util.ktx.setObjectField
+ 
+<a href="#h0-0-8" id="h0-0-8" class="i">+data class ConfigKeyInfo(
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+    val category: String?,
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+    val name: String?,
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+    val defaultValue: Any?
+</a><a href="#h0-0-12" id="h0-0-12" class="i">+)
+</a><a href="#h0-0-13" id="h0-0-13" class="i">+
+</a> class ConfigurationOverride : Feature(&quot;Configuration Override&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+     override fun init() {
+<a href="#h0-0-16" id="h0-0-16" class="d">-        val propertyOverrides = mutableMapOf&lt;String, Pair&lt;(() -&gt; Boolean), Any&gt;&gt;()
+</a><a href="#h0-0-17" id="h0-0-17" class="i">+        val compositeConfigurationProviderMappings = context.mappings.getMappedMap(&quot;CompositeConfigurationProvider&quot;)
+</a><a href="#h0-0-18" id="h0-0-18" class="i">+        val enumMappings = compositeConfigurationProviderMappings[&quot;enum&quot;] as Map&lt;*, *&gt;
+</a><a href="#h0-0-19" id="h0-0-19" class="i">+
+</a><a href="#h0-0-20" id="h0-0-20" class="i">+        fun getConfigKeyInfo(key: Any?) = runCatching {
+</a><a href="#h0-0-21" id="h0-0-21" class="i">+            if (key == null) return@runCatching null
+</a><a href="#h0-0-22" id="h0-0-22" class="i">+            val keyClassMethods = key::class.java.methods
+</a><a href="#h0-0-23" id="h0-0-23" class="i">+            val category = keyClassMethods.firstOrNull { it.name == enumMappings[&quot;getCategory&quot;].toString() }?.invoke(key)?.toString() ?: return null
+</a><a href="#h0-0-24" id="h0-0-24" class="i">+            val valueHolder = keyClassMethods.firstOrNull { it.name == enumMappings[&quot;getValue&quot;].toString() }?.invoke(key) ?: return null
+</a><a href="#h0-0-25" id="h0-0-25" class="i">+            val defaultValue = valueHolder.getObjectField(enumMappings[&quot;defaultValueField&quot;].toString()) ?: return null
+</a><a href="#h0-0-26" id="h0-0-26" class="i">+            ConfigKeyInfo(category, key.toString(), defaultValue)
+</a><a href="#h0-0-27" id="h0-0-27" class="i">+        }.onFailure {
+</a><a href="#h0-0-28" id="h0-0-28" class="i">+            context.log.error(&quot;Failed to get config key info&quot;, it)
+</a><a href="#h0-0-29" id="h0-0-29" class="i">+        }.getOrNull()
+</a> 
+<a href="#h0-0-31" id="h0-0-31" class="d">-        fun overrideProperty(key: String, filter: () -&gt; Boolean, value: Any) {
+</a><a href="#h0-0-32" id="h0-0-32" class="i">+        val propertyOverrides = mutableMapOf&lt;String, Pair&lt;((ConfigKeyInfo) -&gt; Boolean), Any&gt;&gt;()
+</a><a href="#h0-0-33" id="h0-0-33" class="i">+
+</a><a href="#h0-0-34" id="h0-0-34" class="i">+        fun overrideProperty(key: String, filter: (ConfigKeyInfo) -&gt; Boolean, value: Any) {
+</a>             propertyOverrides[key] = Pair(filter, value)
+         }
+ 
+<a href="#h0-1" id="h0-1" class="h">@@ -33,8 +55,17 @@ class ConfigurationOverride : Feature(&quot;Configuration Override&quot;, loadParams = Fea
+</a>             overrideProperty(it, { context.config.global.blockAds.get() }, &quot;http://127.0.0.1&quot;)
+         }
+ 
+<a href="#h0-1-3" id="h0-1-3" class="d">-        val compositeConfigurationProviderMappings = context.mappings.getMappedMap(&quot;CompositeConfigurationProvider&quot;)
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-        val enumMappings = compositeConfigurationProviderMappings[&quot;enum&quot;] as Map&lt;*, *&gt;
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+        findClass(compositeConfigurationProviderMappings[&quot;class&quot;].toString()).hook(
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+            compositeConfigurationProviderMappings[&quot;getProperty&quot;].toString(),
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+            HookStage.AFTER
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+        ) { param -&gt;
+</a><a href="#h0-1-9" id="h0-1-9" class="i">+            val propertyKey = getConfigKeyInfo(param.argNullable&lt;Any&gt;(0)) ?: return@hook
+</a><a href="#h0-1-10" id="h0-1-10" class="i">+
+</a><a href="#h0-1-11" id="h0-1-11" class="i">+            propertyOverrides[propertyKey.name]?.let { (filter, value) -&gt;
+</a><a href="#h0-1-12" id="h0-1-12" class="i">+                if (!filter(propertyKey)) return@let
+</a><a href="#h0-1-13" id="h0-1-13" class="i">+                param.setResult(value)
+</a><a href="#h0-1-14" id="h0-1-14" class="i">+            }
+</a><a href="#h0-1-15" id="h0-1-15" class="i">+        }
+</a> 
+         findClass(compositeConfigurationProviderMappings[&quot;class&quot;].toString()).hook(
+             compositeConfigurationProviderMappings[&quot;observeProperty&quot;].toString(),
+<a href="#h0-2" id="h0-2" class="h">@@ -48,34 +79,59 @@ class ConfigurationOverride : Feature(&quot;Configuration Override&quot;, loadParams = Fea
+</a>             }
+ 
+             propertyOverrides[key]?.let { (filter, value) -&gt;
+<a href="#h0-2-3" id="h0-2-3" class="d">-                if (!filter()) return@let
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+                if (!filter(getConfigKeyInfo(enumData) ?: return@let)) return@let
+</a>                 setValue(value)
+             }
+         }
+ 
+<a href="#h0-2-9" id="h0-2-9" class="d">-        findClass(compositeConfigurationProviderMappings[&quot;class&quot;].toString()).hook(
+</a><a href="#h0-2-10" id="h0-2-10" class="d">-            compositeConfigurationProviderMappings[&quot;getProperty&quot;].toString(),
+</a><a href="#h0-2-11" id="h0-2-11" class="d">-            HookStage.AFTER
+</a><a href="#h0-2-12" id="h0-2-12" class="d">-        ) { param -&gt;
+</a><a href="#h0-2-13" id="h0-2-13" class="d">-            val propertyKey = param.arg&lt;Any&gt;(0).toString()
+</a><a href="#h0-2-14" id="h0-2-14" class="i">+        runCatching {
+</a><a href="#h0-2-15" id="h0-2-15" class="i">+            val appExperimentProviderMappings = compositeConfigurationProviderMappings[&quot;appExperimentProvider&quot;] as Map&lt;*, *&gt;
+</a><a href="#h0-2-16" id="h0-2-16" class="i">+            val customBooleanPropertyRules = mutableListOf&lt;(ConfigKeyInfo) -&gt; Boolean&gt;()
+</a> 
+<a href="#h0-2-18" id="h0-2-18" class="d">-            propertyOverrides[propertyKey]?.let { (filter, value) -&gt;
+</a><a href="#h0-2-19" id="h0-2-19" class="d">-                if (!filter()) return@let
+</a><a href="#h0-2-20" id="h0-2-20" class="d">-                param.setResult(value)
+</a><a href="#h0-2-21" id="h0-2-21" class="i">+            findClass(appExperimentProviderMappings[&quot;GetBooleanAppExperimentClass&quot;].toString()).hook(&quot;invoke&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h0-2-22" id="h0-2-22" class="i">+                val keyInfo = getConfigKeyInfo(param.arg(1)) ?: return@hook
+</a><a href="#h0-2-23" id="h0-2-23" class="i">+                if (keyInfo.defaultValue !is Boolean) return@hook
+</a><a href="#h0-2-24" id="h0-2-24" class="i">+                if (customBooleanPropertyRules.any { it(keyInfo) }) {
+</a><a href="#h0-2-25" id="h0-2-25" class="i">+                    param.setResult(true)
+</a><a href="#h0-2-26" id="h0-2-26" class="i">+                    return@hook
+</a><a href="#h0-2-27" id="h0-2-27" class="i">+                }
+</a><a href="#h0-2-28" id="h0-2-28" class="i">+                propertyOverrides[keyInfo.name]?.let { (filter, value) -&gt;
+</a><a href="#h0-2-29" id="h0-2-29" class="i">+                    if (!filter(keyInfo)) return@let
+</a><a href="#h0-2-30" id="h0-2-30" class="i">+                    param.setResult(value)
+</a><a href="#h0-2-31" id="h0-2-31" class="i">+                }
+</a>             }
+<a href="#h0-2-33" id="h0-2-33" class="d">-        }
+</a> 
+<a href="#h0-2-35" id="h0-2-35" class="d">-        arrayOf(&quot;getBoolean&quot;, &quot;getInt&quot;, &quot;getLong&quot;, &quot;getFloat&quot;, &quot;getString&quot;).forEach { methodName -&gt;
+</a><a href="#h0-2-36" id="h0-2-36" class="d">-            findClass(&quot;android.app.SharedPreferencesImpl&quot;).hook(
+</a><a href="#h0-2-37" id="h0-2-37" class="d">-                methodName,
+</a><a href="#h0-2-38" id="h0-2-38" class="d">-                HookStage.BEFORE
+</a><a href="#h0-2-39" id="h0-2-39" class="d">-            ) { param -&gt;
+</a><a href="#h0-2-40" id="h0-2-40" class="d">-                val key = param.argNullable&lt;Any&gt;(0).toString()
+</a><a href="#h0-2-41" id="h0-2-41" class="d">-                propertyOverrides[key]?.let { (filter, value) -&gt;
+</a><a href="#h0-2-42" id="h0-2-42" class="d">-                    if (!filter()) return@let
+</a><a href="#h0-2-43" id="h0-2-43" class="d">-                    param.setResult(value)
+</a><a href="#h0-2-44" id="h0-2-44" class="i">+            Hooker.ephemeralHookConstructor(
+</a><a href="#h0-2-45" id="h0-2-45" class="i">+                findClass(compositeConfigurationProviderMappings[&quot;class&quot;].toString()),
+</a><a href="#h0-2-46" id="h0-2-46" class="i">+                HookStage.AFTER
+</a><a href="#h0-2-47" id="h0-2-47" class="i">+            ) { constructorParam -&gt;
+</a><a href="#h0-2-48" id="h0-2-48" class="i">+                val instance = constructorParam.thisObject&lt;Any&gt;()
+</a><a href="#h0-2-49" id="h0-2-49" class="i">+                val appExperimentProviderInstance = instance::class.java.fields.firstOrNull {
+</a><a href="#h0-2-50" id="h0-2-50" class="i">+                    findClass(appExperimentProviderMappings[&quot;class&quot;].toString()).isAssignableFrom(it.type)
+</a><a href="#h0-2-51" id="h0-2-51" class="i">+                }?.get(instance) ?: return@ephemeralHookConstructor
+</a><a href="#h0-2-52" id="h0-2-52" class="i">+
+</a><a href="#h0-2-53" id="h0-2-53" class="i">+                appExperimentProviderInstance::class.java.methods.first {
+</a><a href="#h0-2-54" id="h0-2-54" class="i">+                    it.name == appExperimentProviderMappings[&quot;hasExperimentMethod&quot;].toString()
+</a><a href="#h0-2-55" id="h0-2-55" class="i">+                }.hook(HookStage.BEFORE) { param -&gt;
+</a><a href="#h0-2-56" id="h0-2-56" class="i">+                    val keyInfo = getConfigKeyInfo(param.arg(0)) ?: return@hook
+</a><a href="#h0-2-57" id="h0-2-57" class="i">+                    if (keyInfo.defaultValue !is Boolean) return@hook
+</a><a href="#h0-2-58" id="h0-2-58" class="i">+                    if (customBooleanPropertyRules.any { it(keyInfo) }) {
+</a><a href="#h0-2-59" id="h0-2-59" class="i">+                        param.setResult(true)
+</a><a href="#h0-2-60" id="h0-2-60" class="i">+                        return@hook
+</a><a href="#h0-2-61" id="h0-2-61" class="i">+                    }
+</a><a href="#h0-2-62" id="h0-2-62" class="i">+
+</a><a href="#h0-2-63" id="h0-2-63" class="i">+                    val propertyOverride = propertyOverrides[keyInfo.name] ?: return@hook
+</a><a href="#h0-2-64" id="h0-2-64" class="i">+                    if (propertyOverride.first(keyInfo)) param.setResult(true)
+</a><a href="#h0-2-65" id="h0-2-65" class="i">+                }
+</a><a href="#h0-2-66" id="h0-2-66" class="i">+            }
+</a><a href="#h0-2-67" id="h0-2-67" class="i">+
+</a><a href="#h0-2-68" id="h0-2-68" class="i">+            if (context.config.experimental.hiddenSnapchatPlusFeatures.get()) {
+</a><a href="#h0-2-69" id="h0-2-69" class="i">+                customBooleanPropertyRules.add { key -&gt;
+</a><a href="#h0-2-70" id="h0-2-70" class="i">+                    key.category == &quot;PLUS&quot; &amp;&amp; key.name?.endsWith(&quot;_GATE&quot;) == true
+</a>                 }
+             }
+<a href="#h0-2-73" id="h0-2-73" class="i">+        }.onFailure {
+</a><a href="#h0-2-74" id="h0-2-74" class="i">+            context.log.error(&quot;Failed to hook appExperimentProvider&quot;, it)
+</a>         }
+     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SnapchatPlus.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SnapchatPlus.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SnapchatPlus.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/SnapchatPlus.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -26,6 +26,7 @@ class SnapchatPlus: Feature(&quot;SnapchatPlus&quot;, loadParams = FeatureLoadParams.INIT_
+</a>             param.setArg(3, expirationTimeMillis)
+         }
+ 
+<a href="#h1-0-3" id="h1-0-3" class="i">+        // optional as ConfigurationOverride does this too
+</a>         if (context.config.experimental.hiddenSnapchatPlusFeatures.get()) {
+             findClass(&quot;com.snap.plus.FeatureCatalog&quot;).methods.last {
+                 !it.name.contains(&quot;init&quot;) &amp;&amp;
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/hook/Hooker.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/hook/Hooker.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/util/hook/Hooker.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/util/hook/Hooker.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -113,6 +113,18 @@ object Hooker {
+</a>             hookConsumer(param)
+         }.also { unhooks.addAll(it) }
+     }
+<a href="#h2-0-3" id="h2-0-3" class="i">+
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+    inline fun ephemeralHookConstructor(
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+        clazz: Class&lt;*&gt;,
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+        stage: HookStage,
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+        crossinline hookConsumer: (HookAdapter) -&gt; Unit
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+    ) {
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+        val unhooks: MutableSet&lt;XC_MethodHook.Unhook&gt; = HashSet()
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+        hookConstructor(clazz, stage) { param-&gt;
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+            hookConsumer(param)
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+            unhooks.forEach{ it.unhook() }
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+        }.also { unhooks.addAll(it) }
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+    }
+</a> }
+ 
+ fun Class&lt;*&gt;.hookConstructor(
+<b>diff --git a/<a id="h3" href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/MapperContext.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/MapperContext.kt</a> b/<a href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/MapperContext.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/MapperContext.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -20,9 +20,9 @@ class MapperContext(
+</a>         return classMap[name.toString()]
+     }
+ 
+<a href="#h3-0-3" id="h3-0-3" class="d">-    private val mappings = mutableMapOf&lt;String, Any&gt;()
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+    private val mappings = mutableMapOf&lt;String, Any?&gt;()
+</a> 
+<a href="#h3-0-6" id="h3-0-6" class="d">-    fun addMapping(key: String, vararg array: Pair&lt;String, Any&gt;) {
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+    fun addMapping(key: String, vararg array: Pair&lt;String, Any?&gt;) {
+</a>         mappings[key] = array.toMap()
+     }
+ 
+<b>diff --git a/<a id="h4" href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/CompositeConfigurationProviderMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/CompositeConfigurationProviderMapper.kt</a> b/<a href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/CompositeConfigurationProviderMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/CompositeConfigurationProviderMapper.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -1,10 +1,11 @@
+</a> package me.rhunk.snapenhance.mapper.impl
+ 
+ import me.rhunk.snapenhance.mapper.AbstractClassMapper
+<a href="#h4-0-3" id="h4-0-3" class="d">-import me.rhunk.snapenhance.mapper.ext.findConstString
+</a><a href="#h4-0-4" id="h4-0-4" class="d">-import me.rhunk.snapenhance.mapper.ext.getClassName
+</a><a href="#h4-0-5" id="h4-0-5" class="d">-import me.rhunk.snapenhance.mapper.ext.hasStaticConstructorString
+</a><a href="#h4-0-6" id="h4-0-6" class="d">-import me.rhunk.snapenhance.mapper.ext.isEnum
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+import me.rhunk.snapenhance.mapper.ext.*
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+import org.jf.dexlib2.iface.instruction.formats.Instruction21c
+</a><a href="#h4-0-9" id="h4-0-9" class="i">+import org.jf.dexlib2.iface.instruction.formats.Instruction35c
+</a><a href="#h4-0-10" id="h4-0-10" class="i">+import org.jf.dexlib2.iface.reference.FieldReference
+</a><a href="#h4-0-11" id="h4-0-11" class="i">+import org.jf.dexlib2.iface.reference.MethodReference
+</a> import java.lang.reflect.Modifier
+ 
+ class CompositeConfigurationProviderMapper : AbstractClassMapper() {
+<a href="#h4-1" id="h4-1" class="h">@@ -32,7 +33,35 @@ class CompositeConfigurationProviderMapper : AbstractClassMapper() {
+</a>                             it.parameterTypes[2] == enumType.type
+                 }
+ 
+<a href="#h4-1-3" id="h4-1-3" class="i">+                val hasExperimentMethodReference = observePropertyMethod.implementation?.instructions?.firstOrNull { instruction -&gt;
+</a><a href="#h4-1-4" id="h4-1-4" class="i">+                    if (instruction !is Instruction35c) return@firstOrNull false
+</a><a href="#h4-1-5" id="h4-1-5" class="i">+                    (instruction.reference as? MethodReference)?.let { methodRef -&gt;
+</a><a href="#h4-1-6" id="h4-1-6" class="i">+                        methodRef.returnType == &quot;Z&quot; &amp;&amp; methodRef.parameterTypes.size == 1 &amp;&amp; methodRef.parameterTypes[0] == configEnumInterface.type
+</a><a href="#h4-1-7" id="h4-1-7" class="i">+                    } == true
+</a><a href="#h4-1-8" id="h4-1-8" class="i">+                }?.let { (it as Instruction35c).reference as MethodReference }
+</a><a href="#h4-1-9" id="h4-1-9" class="i">+
+</a><a href="#h4-1-10" id="h4-1-10" class="i">+                val getBooleanAppExperimentClass = classDef.methods.first {
+</a><a href="#h4-1-11" id="h4-1-11" class="i">+                    // search for observeBoolean method
+</a><a href="#h4-1-12" id="h4-1-12" class="i">+                    it.parameterTypes.size == 1 &amp;&amp;
+</a><a href="#h4-1-13" id="h4-1-13" class="i">+                    it.parameterTypes[0] == configEnumInterface.type &amp;&amp;
+</a><a href="#h4-1-14" id="h4-1-14" class="i">+                    it.implementation?.findConstString(&quot;observeBoolean&quot;) == true
+</a><a href="#h4-1-15" id="h4-1-15" class="i">+                }.let { method -&gt;
+</a><a href="#h4-1-16" id="h4-1-16" class="i">+                    // search for static field invocation of GetBooleanAppExperiment class
+</a><a href="#h4-1-17" id="h4-1-17" class="i">+                    val getBooleanAppExperimentClassFieldInstruction = method.implementation?.instructions?.firstOrNull { instruction -&gt;
+</a><a href="#h4-1-18" id="h4-1-18" class="i">+                        if (instruction !is Instruction21c) return@firstOrNull false
+</a><a href="#h4-1-19" id="h4-1-19" class="i">+                        val fieldReference = instruction.reference as? FieldReference ?: return@firstOrNull false
+</a><a href="#h4-1-20" id="h4-1-20" class="i">+                        getClass(fieldReference.definingClass)?.methods?.any {
+</a><a href="#h4-1-21" id="h4-1-21" class="i">+                            it.returnType == &quot;Ljava/lang/Object;&quot; &amp;&amp;
+</a><a href="#h4-1-22" id="h4-1-22" class="i">+                            it.parameterTypes.size == 2 &amp;&amp;
+</a><a href="#h4-1-23" id="h4-1-23" class="i">+                            (0..1).all { i -&gt; it.parameterTypes[i] == &quot;Ljava/lang/Object;&quot; }
+</a><a href="#h4-1-24" id="h4-1-24" class="i">+                        } == true
+</a><a href="#h4-1-25" id="h4-1-25" class="i">+                    }?.let { (it as Instruction21c).reference as FieldReference }
+</a><a href="#h4-1-26" id="h4-1-26" class="i">+
+</a><a href="#h4-1-27" id="h4-1-27" class="i">+                    getClass(getBooleanAppExperimentClassFieldInstruction?.definingClass)?.getClassName()
+</a><a href="#h4-1-28" id="h4-1-28" class="i">+                }
+</a><a href="#h4-1-29" id="h4-1-29" class="i">+
+</a>                 val enumGetDefaultValueMethod = configEnumInterface.methods.first { getClass(it.returnType)?.interfaces?.contains(&quot;Ljava/io/Serializable;&quot;) == true }
+<a href="#h4-1-31" id="h4-1-31" class="i">+                val enumGetCategoryMethod = configEnumInterface.methods.first { it.parameterTypes.size == 0 &amp;&amp; getClass(it.returnType)?.isEnum() == true }
+</a>                 val defaultValueField = getClass(enumGetDefaultValueMethod.returnType)!!.fields.first {
+                     Modifier.isFinal(it.accessFlags) &amp;&amp;
+                             Modifier.isPublic(it.accessFlags) &amp;&amp;
+<a href="#h4-2" id="h4-2" class="h">@@ -46,8 +75,16 @@ class CompositeConfigurationProviderMapper : AbstractClassMapper() {
+</a>                     &quot;enum&quot; to mapOf(
+                         &quot;class&quot; to configEnumInterface.getClassName(),
+                         &quot;getValue&quot; to enumGetDefaultValueMethod.name,
+<a href="#h4-2-3" id="h4-2-3" class="i">+                        &quot;getCategory&quot; to enumGetCategoryMethod.name,
+</a>                         &quot;defaultValueField&quot; to defaultValueField.name
+<a href="#h4-2-5" id="h4-2-5" class="d">-                    )
+</a><a href="#h4-2-6" id="h4-2-6" class="i">+                    ),
+</a><a href="#h4-2-7" id="h4-2-7" class="i">+                    &quot;appExperimentProvider&quot; to (hasExperimentMethodReference?.let {
+</a><a href="#h4-2-8" id="h4-2-8" class="i">+                        mapOf(
+</a><a href="#h4-2-9" id="h4-2-9" class="i">+                            &quot;class&quot; to getClass(it.definingClass)?.getClassName(),
+</a><a href="#h4-2-10" id="h4-2-10" class="i">+                            &quot;GetBooleanAppExperimentClass&quot; to getBooleanAppExperimentClass,
+</a><a href="#h4-2-11" id="h4-2-11" class="i">+                            &quot;hasExperimentMethod&quot; to hasExperimentMethodReference.name
+</a><a href="#h4-2-12" id="h4-2-12" class="i">+                        )
+</a><a href="#h4-2-13" id="h4-2-13" class="i">+                    })
+</a>                 )
+                 return@mapper
+             }
+</pre>
+</div>
+</body>
+</html>

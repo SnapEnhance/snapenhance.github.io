@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core/xposed_loader): prevent loading in sub processes - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/d8e98d575bca8cca12c3cfa163ec89cb2abee5fd.html">d8e98d575bca8cca12c3cfa163ec89cb2abee5fd</a>
+<b>parent</b> <a href="../commit/4b93ec7181d02dd11d27039adea082ac91870eaa.html">4b93ec7181d02dd11d27039adea082ac91870eaa</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu, 27 Jun 2024 23:06:29 +0200
+
+fix(core/xposed_loader): prevent loading in sub processes
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></td><td> | </td><td class="num">148</td><td><span class="i">++++++++++++++++++++++++++++++++++++++</span><span class="d">-----------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/XposedLoader.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">+++++++++++</span><span class="d">-</span></td></tr>
+</table></pre><pre>2 files changed, 83 insertions(+), 77 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,7 +1,6 @@
+</a> package me.rhunk.snapenhance.core
+ 
+ import android.app.Activity
+<a href="#h0-0-3" id="h0-0-3" class="d">-import android.app.Application
+</a> import android.content.Context
+ import android.content.res.Resources
+ import android.os.Build
+<a href="#h0-1" id="h0-1" class="h">@@ -53,91 +52,88 @@ class SnapEnhance {
+</a>         }
+     }
+ 
+<a href="#h0-1-3" id="h0-1-3" class="d">-    init {
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-        Application::class.java.hook(&quot;attach&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h0-1-5" id="h0-1-5" class="d">-            appContext = ModContext(
+</a><a href="#h0-1-6" id="h0-1-6" class="d">-                androidContext = param.arg&lt;Context&gt;(0).also { classLoader = it.classLoader }
+</a><a href="#h0-1-7" id="h0-1-7" class="d">-            )
+</a><a href="#h0-1-8" id="h0-1-8" class="d">-            appContext.apply {
+</a><a href="#h0-1-9" id="h0-1-9" class="d">-                bridgeClient = BridgeClient(this)
+</a><a href="#h0-1-10" id="h0-1-10" class="d">-                initConfigListener()
+</a><a href="#h0-1-11" id="h0-1-11" class="d">-                bridgeClient.addOnConnectedCallback {
+</a><a href="#h0-1-12" id="h0-1-12" class="d">-                    bridgeClient.registerMessagingBridge(messagingBridge)
+</a><a href="#h0-1-13" id="h0-1-13" class="d">-                    coroutineScope.launch {
+</a><a href="#h0-1-14" id="h0-1-14" class="d">-                        runCatching {
+</a><a href="#h0-1-15" id="h0-1-15" class="d">-                            syncRemote()
+</a><a href="#h0-1-16" id="h0-1-16" class="d">-                        }.onFailure {
+</a><a href="#h0-1-17" id="h0-1-17" class="d">-                            log.error(&quot;Failed to sync remote&quot;, it)
+</a><a href="#h0-1-18" id="h0-1-18" class="d">-                        }
+</a><a href="#h0-1-19" id="h0-1-19" class="i">+    fun init(context: Context) {
+</a><a href="#h0-1-20" id="h0-1-20" class="i">+        appContext = ModContext(
+</a><a href="#h0-1-21" id="h0-1-21" class="i">+            androidContext = context.also { classLoader = it.classLoader }
+</a><a href="#h0-1-22" id="h0-1-22" class="i">+        )
+</a><a href="#h0-1-23" id="h0-1-23" class="i">+        appContext.apply {
+</a><a href="#h0-1-24" id="h0-1-24" class="i">+            bridgeClient = BridgeClient(this)
+</a><a href="#h0-1-25" id="h0-1-25" class="i">+            initConfigListener()
+</a><a href="#h0-1-26" id="h0-1-26" class="i">+            bridgeClient.addOnConnectedCallback {
+</a><a href="#h0-1-27" id="h0-1-27" class="i">+                bridgeClient.registerMessagingBridge(messagingBridge)
+</a><a href="#h0-1-28" id="h0-1-28" class="i">+                coroutineScope.launch {
+</a><a href="#h0-1-29" id="h0-1-29" class="i">+                    runCatching {
+</a><a href="#h0-1-30" id="h0-1-30" class="i">+                        syncRemote()
+</a><a href="#h0-1-31" id="h0-1-31" class="i">+                    }.onFailure {
+</a><a href="#h0-1-32" id="h0-1-32" class="i">+                        log.error(&quot;Failed to sync remote&quot;, it)
+</a>                     }
+                 }
+             }
+<a href="#h0-1-36" id="h0-1-36" class="i">+        }
+</a> 
+<a href="#h0-1-38" id="h0-1-38" class="d">-            runBlocking {
+</a><a href="#h0-1-39" id="h0-1-39" class="d">-                var throwable: Throwable? = null
+</a><a href="#h0-1-40" id="h0-1-40" class="d">-                val canLoad = appContext.bridgeClient.connect { throwable = it }
+</a><a href="#h0-1-41" id="h0-1-41" class="d">-                if (canLoad == null) {
+</a><a href="#h0-1-42" id="h0-1-42" class="d">-                    InAppOverlay.showCrashOverlay(
+</a><a href="#h0-1-43" id="h0-1-43" class="d">-                        buildString {
+</a><a href="#h0-1-44" id="h0-1-44" class="d">-                            append(&quot;Snapchat timed out while trying to connect to SnapEnhance\n\n&quot;)
+</a><a href="#h0-1-45" id="h0-1-45" class="d">-                            append(&quot;Make sure you:\n&quot;)
+</a><a href="#h0-1-46" id="h0-1-46" class="d">-                            append(&quot; - Have installed the latest SnapEnhance version (https://github.com/rhunk/SnapEnhance)\n&quot;)
+</a><a href="#h0-1-47" id="h0-1-47" class="d">-                            append(&quot; - Disabled battery optimizations\n&quot;)
+</a><a href="#h0-1-48" id="h0-1-48" class="d">-                            append(&quot; - Excluded SnapEnhance and Snapchat in HideMyApplist&quot;)
+</a><a href="#h0-1-49" id="h0-1-49" class="d">-                        },
+</a><a href="#h0-1-50" id="h0-1-50" class="d">-                        throwable
+</a><a href="#h0-1-51" id="h0-1-51" class="d">-                    )
+</a><a href="#h0-1-52" id="h0-1-52" class="d">-                    appContext.logCritical(&quot;Cannot connect to the SnapEnhance app&quot;)
+</a><a href="#h0-1-53" id="h0-1-53" class="d">-                    return@runBlocking
+</a><a href="#h0-1-54" id="h0-1-54" class="d">-                }
+</a><a href="#h0-1-55" id="h0-1-55" class="d">-                if (!canLoad) exitProcess(1)
+</a><a href="#h0-1-56" id="h0-1-56" class="d">-                runCatching {
+</a><a href="#h0-1-57" id="h0-1-57" class="d">-                    LSPatchUpdater.onBridgeConnected(appContext)
+</a><a href="#h0-1-58" id="h0-1-58" class="d">-                }.onFailure {
+</a><a href="#h0-1-59" id="h0-1-59" class="d">-                    appContext.log.error(&quot;Failed to init LSPatchUpdater&quot;, it)
+</a><a href="#h0-1-60" id="h0-1-60" class="d">-                }
+</a><a href="#h0-1-61" id="h0-1-61" class="d">-                jetpackComposeResourceHook()
+</a><a href="#h0-1-62" id="h0-1-62" class="d">-                runCatching {
+</a><a href="#h0-1-63" id="h0-1-63" class="d">-                    measureTimeMillis {
+</a><a href="#h0-1-64" id="h0-1-64" class="d">-                        init(this)
+</a><a href="#h0-1-65" id="h0-1-65" class="d">-                    }.also {
+</a><a href="#h0-1-66" id="h0-1-66" class="d">-                        appContext.log.verbose(&quot;init took ${it}ms&quot;)
+</a><a href="#h0-1-67" id="h0-1-67" class="d">-                    }
+</a><a href="#h0-1-68" id="h0-1-68" class="d">-                }.onSuccess {
+</a><a href="#h0-1-69" id="h0-1-69" class="d">-                    isBridgeInitialized = true
+</a><a href="#h0-1-70" id="h0-1-70" class="d">-                }.onFailure {
+</a><a href="#h0-1-71" id="h0-1-71" class="d">-                    appContext.logCritical(&quot;Failed to initialize bridge&quot;, it)
+</a><a href="#h0-1-72" id="h0-1-72" class="d">-                    InAppOverlay.showCrashOverlay(&quot;SnapEnhance failed to initialize. Please check logs for more details.&quot;, it)
+</a><a href="#h0-1-73" id="h0-1-73" class="d">-                }
+</a><a href="#h0-1-74" id="h0-1-74" class="i">+        runBlocking {
+</a><a href="#h0-1-75" id="h0-1-75" class="i">+            var throwable: Throwable? = null
+</a><a href="#h0-1-76" id="h0-1-76" class="i">+            val canLoad = appContext.bridgeClient.connect { throwable = it }
+</a><a href="#h0-1-77" id="h0-1-77" class="i">+            if (canLoad == null) {
+</a><a href="#h0-1-78" id="h0-1-78" class="i">+                InAppOverlay.showCrashOverlay(
+</a><a href="#h0-1-79" id="h0-1-79" class="i">+                    buildString {
+</a><a href="#h0-1-80" id="h0-1-80" class="i">+                        append(&quot;Snapchat timed out while trying to connect to SnapEnhance\n\n&quot;)
+</a><a href="#h0-1-81" id="h0-1-81" class="i">+                        append(&quot;Make sure you:\n&quot;)
+</a><a href="#h0-1-82" id="h0-1-82" class="i">+                        append(&quot; - Have installed the latest SnapEnhance version (https://github.com/rhunk/SnapEnhance)\n&quot;)
+</a><a href="#h0-1-83" id="h0-1-83" class="i">+                        append(&quot; - Disabled battery optimizations\n&quot;)
+</a><a href="#h0-1-84" id="h0-1-84" class="i">+                        append(&quot; - Excluded SnapEnhance and Snapchat in HideMyApplist&quot;)
+</a><a href="#h0-1-85" id="h0-1-85" class="i">+                    },
+</a><a href="#h0-1-86" id="h0-1-86" class="i">+                    throwable
+</a><a href="#h0-1-87" id="h0-1-87" class="i">+                )
+</a><a href="#h0-1-88" id="h0-1-88" class="i">+                appContext.logCritical(&quot;Cannot connect to the SnapEnhance app&quot;)
+</a><a href="#h0-1-89" id="h0-1-89" class="i">+                return@runBlocking
+</a>             }
+<a href="#h0-1-91" id="h0-1-91" class="d">-        }
+</a><a href="#h0-1-92" id="h0-1-92" class="i">+            if (!canLoad) exitProcess(1)
+</a><a href="#h0-1-93" id="h0-1-93" class="i">+            runCatching {
+</a><a href="#h0-1-94" id="h0-1-94" class="i">+                LSPatchUpdater.onBridgeConnected(appContext)
+</a><a href="#h0-1-95" id="h0-1-95" class="i">+            }.onFailure {
+</a><a href="#h0-1-96" id="h0-1-96" class="i">+                appContext.log.error(&quot;Failed to init LSPatchUpdater&quot;, it)
+</a><a href="#h0-1-97" id="h0-1-97" class="i">+            }
+</a><a href="#h0-1-98" id="h0-1-98" class="i">+            jetpackComposeResourceHook()
+</a><a href="#h0-1-99" id="h0-1-99" class="i">+            runCatching {
+</a><a href="#h0-1-100" id="h0-1-100" class="i">+                measureTimeMillis {
+</a><a href="#h0-1-101" id="h0-1-101" class="i">+                    init(this)
+</a><a href="#h0-1-102" id="h0-1-102" class="i">+                }.also {
+</a><a href="#h0-1-103" id="h0-1-103" class="i">+                    appContext.log.verbose(&quot;init took ${it}ms&quot;)
+</a><a href="#h0-1-104" id="h0-1-104" class="i">+                }
+</a> 
+<a href="#h0-1-106" id="h0-1-106" class="d">-        hookMainActivity(&quot;onCreate&quot;) {
+</a><a href="#h0-1-107" id="h0-1-107" class="d">-            val isMainActivityNotNull = appContext.mainActivity != null
+</a><a href="#h0-1-108" id="h0-1-108" class="d">-            appContext.mainActivity = this
+</a><a href="#h0-1-109" id="h0-1-109" class="d">-            if (isMainActivityNotNull || !appContext.mappings.isMappingsLoaded) return@hookMainActivity
+</a><a href="#h0-1-110" id="h0-1-110" class="d">-            appContext.isMainActivityPaused = false
+</a><a href="#h0-1-111" id="h0-1-111" class="d">-            onActivityCreate()
+</a><a href="#h0-1-112" id="h0-1-112" class="d">-            appContext.actionManager.onNewIntent(intent)
+</a><a href="#h0-1-113" id="h0-1-113" class="d">-        }
+</a><a href="#h0-1-114" id="h0-1-114" class="i">+                hookMainActivity(&quot;onPostCreate&quot;) {
+</a><a href="#h0-1-115" id="h0-1-115" class="i">+                    appContext.mainActivity = this
+</a><a href="#h0-1-116" id="h0-1-116" class="i">+                    if (!appContext.mappings.isMappingsLoaded) return@hookMainActivity
+</a><a href="#h0-1-117" id="h0-1-117" class="i">+                    appContext.isMainActivityPaused = false
+</a><a href="#h0-1-118" id="h0-1-118" class="i">+                    onActivityCreate()
+</a><a href="#h0-1-119" id="h0-1-119" class="i">+                    appContext.actionManager.onNewIntent(intent)
+</a><a href="#h0-1-120" id="h0-1-120" class="i">+                }
+</a> 
+<a href="#h0-1-122" id="h0-1-122" class="d">-        hookMainActivity(&quot;onPause&quot;) {
+</a><a href="#h0-1-123" id="h0-1-123" class="d">-            appContext.bridgeClient.closeOverlay()
+</a><a href="#h0-1-124" id="h0-1-124" class="d">-            appContext.isMainActivityPaused = true
+</a><a href="#h0-1-125" id="h0-1-125" class="d">-        }
+</a><a href="#h0-1-126" id="h0-1-126" class="i">+                hookMainActivity(&quot;onPause&quot;) {
+</a><a href="#h0-1-127" id="h0-1-127" class="i">+                    appContext.bridgeClient.closeOverlay()
+</a><a href="#h0-1-128" id="h0-1-128" class="i">+                    appContext.isMainActivityPaused = true
+</a><a href="#h0-1-129" id="h0-1-129" class="i">+                }
+</a> 
+<a href="#h0-1-131" id="h0-1-131" class="d">-        hookMainActivity(&quot;onNewIntent&quot;) { param -&gt;
+</a><a href="#h0-1-132" id="h0-1-132" class="d">-            appContext.actionManager.onNewIntent(param.argNullable(0))
+</a><a href="#h0-1-133" id="h0-1-133" class="d">-        }
+</a><a href="#h0-1-134" id="h0-1-134" class="i">+                hookMainActivity(&quot;onNewIntent&quot;) { param -&gt;
+</a><a href="#h0-1-135" id="h0-1-135" class="i">+                    appContext.actionManager.onNewIntent(param.argNullable(0))
+</a><a href="#h0-1-136" id="h0-1-136" class="i">+                }
+</a> 
+<a href="#h0-1-138" id="h0-1-138" class="d">-        hookMainActivity(&quot;onResume&quot;) {
+</a><a href="#h0-1-139" id="h0-1-139" class="d">-            if (appContext.isMainActivityPaused.also {
+</a><a href="#h0-1-140" id="h0-1-140" class="d">-                appContext.isMainActivityPaused = false
+</a><a href="#h0-1-141" id="h0-1-141" class="d">-            }) {
+</a><a href="#h0-1-142" id="h0-1-142" class="d">-                appContext.reloadConfig()
+</a><a href="#h0-1-143" id="h0-1-143" class="d">-                appContext.executeAsync {
+</a><a href="#h0-1-144" id="h0-1-144" class="d">-                    syncRemote()
+</a><a href="#h0-1-145" id="h0-1-145" class="i">+                hookMainActivity(&quot;onResume&quot;) {
+</a><a href="#h0-1-146" id="h0-1-146" class="i">+                    if (appContext.isMainActivityPaused.also {
+</a><a href="#h0-1-147" id="h0-1-147" class="i">+                        appContext.isMainActivityPaused = false
+</a><a href="#h0-1-148" id="h0-1-148" class="i">+                    }) {
+</a><a href="#h0-1-149" id="h0-1-149" class="i">+                        appContext.reloadConfig()
+</a><a href="#h0-1-150" id="h0-1-150" class="i">+                        appContext.executeAsync {
+</a><a href="#h0-1-151" id="h0-1-151" class="i">+                            syncRemote()
+</a><a href="#h0-1-152" id="h0-1-152" class="i">+                        }
+</a><a href="#h0-1-153" id="h0-1-153" class="i">+                    }
+</a>                 }
+<a href="#h0-1-155" id="h0-1-155" class="i">+            }.onSuccess {
+</a><a href="#h0-1-156" id="h0-1-156" class="i">+                isBridgeInitialized = true
+</a><a href="#h0-1-157" id="h0-1-157" class="i">+            }.onFailure {
+</a><a href="#h0-1-158" id="h0-1-158" class="i">+                appContext.logCritical(&quot;Failed to initialize bridge&quot;, it)
+</a><a href="#h0-1-159" id="h0-1-159" class="i">+                InAppOverlay.showCrashOverlay(&quot;SnapEnhance failed to initialize. Please check logs for more details.&quot;, it)
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/XposedLoader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/XposedLoader.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/XposedLoader.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/XposedLoader.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,12 +1,22 @@
+</a> package me.rhunk.snapenhance.core
+ 
+<a href="#h1-0-2" id="h1-0-2" class="i">+import android.app.Application
+</a> import de.robv.android.xposed.IXposedHookLoadPackage
+<a href="#h1-0-4" id="h1-0-4" class="i">+import de.robv.android.xposed.XposedBridge
+</a> import de.robv.android.xposed.callbacks.XC_LoadPackage
+<a href="#h1-0-6" id="h1-0-6" class="i">+import me.rhunk.snapenhance.common.BuildConfig
+</a> import me.rhunk.snapenhance.common.Constants
+<a href="#h1-0-8" id="h1-0-8" class="i">+import me.rhunk.snapenhance.core.util.hook.HookStage
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+import me.rhunk.snapenhance.core.util.hook.hook
+</a> 
+ class XposedLoader : IXposedHookLoadPackage {
+     override fun handleLoadPackage(p0: XC_LoadPackage.LoadPackageParam) {
+         if (p0.packageName != Constants.SNAPCHAT_PACKAGE_NAME) return
+<a href="#h1-0-14" id="h1-0-14" class="d">-        SnapEnhance()
+</a><a href="#h1-0-15" id="h1-0-15" class="i">+        // prevent loading in sub-processes
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+        if (p0.processName.contains(&quot;:&quot;)) return
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+        XposedBridge.log(&quot;Loading SnapEnhance v${BuildConfig.VERSION_NAME}#${BuildConfig.GIT_HASH} (package: ${BuildConfig.APPLICATION_ID})&quot;)
+</a><a href="#h1-0-18" id="h1-0-18" class="i">+        Application::class.java.hook(&quot;attach&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h1-0-19" id="h1-0-19" class="i">+            SnapEnhance().init(param.arg(0))
+</a><a href="#h1-0-20" id="h1-0-20" class="i">+        }
+</a>     }
+ } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

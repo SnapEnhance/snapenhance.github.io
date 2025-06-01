@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AccountSwitcher.kt - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../../../../../../../../../../../../logo.png"/>
+<link rel="alternate icon" href="../../../../../../../../../../../../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../../../../../../../../../../../../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../../../../../../../../../../../../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../../../../../../../../../../../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../../../../../../../../../../../../"><img src="../../../../../../../../../../../../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../../../../../../../../../../../../about.html">About</a> | <a href="../../../../../../../../../../../../log.html">Log</a> | <a href="../../../../../../../../../../../../files.html">Files</a> | <a href="../../../../../../../../../../../../refs.html">Refs</a> | <a href="../../../../../../../../../../../../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<p> AccountSwitcher.kt (22223B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/AccountSwitcher.kt">raw</a></p><hr/><pre id="blob">
+<a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core.features.impl.experiments
+<a href="#l2" class="line" id="l2">      2</a> 
+<a href="#l3" class="line" id="l3">      3</a> import android.annotation.SuppressLint
+<a href="#l4" class="line" id="l4">      4</a> import android.app.Activity
+<a href="#l5" class="line" id="l5">      5</a> import android.content.Intent
+<a href="#l6" class="line" id="l6">      6</a> import android.database.sqlite.SQLiteDatabase
+<a href="#l7" class="line" id="l7">      7</a> import android.net.Uri
+<a href="#l8" class="line" id="l8">      8</a> import android.os.ParcelFileDescriptor
+<a href="#l9" class="line" id="l9">      9</a> import androidx.compose.foundation.layout.*
+<a href="#l10" class="line" id="l10">     10</a> import androidx.compose.foundation.lazy.LazyColumn
+<a href="#l11" class="line" id="l11">     11</a> import androidx.compose.foundation.lazy.items
+<a href="#l12" class="line" id="l12">     12</a> import androidx.compose.material.icons.Icons
+<a href="#l13" class="line" id="l13">     13</a> import androidx.compose.material.icons.filled.Delete
+<a href="#l14" class="line" id="l14">     14</a> import androidx.compose.material.icons.filled.SaveAlt
+<a href="#l15" class="line" id="l15">     15</a> import androidx.compose.material3.*
+<a href="#l16" class="line" id="l16">     16</a> import androidx.compose.runtime.*
+<a href="#l17" class="line" id="l17">     17</a> import androidx.compose.ui.Alignment
+<a href="#l18" class="line" id="l18">     18</a> import androidx.compose.ui.Modifier
+<a href="#l19" class="line" id="l19">     19</a> import androidx.compose.ui.text.style.TextAlign
+<a href="#l20" class="line" id="l20">     20</a> import androidx.compose.ui.unit.dp
+<a href="#l21" class="line" id="l21">     21</a> import androidx.compose.ui.unit.sp
+<a href="#l22" class="line" id="l22">     22</a> import kotlinx.coroutines.Dispatchers
+<a href="#l23" class="line" id="l23">     23</a> import kotlinx.coroutines.launch
+<a href="#l24" class="line" id="l24">     24</a> import kotlinx.coroutines.withContext
+<a href="#l25" class="line" id="l25">     25</a> import me.rhunk.snapenhance.common.data.FileType
+<a href="#l26" class="line" id="l26">     26</a> import me.rhunk.snapenhance.common.ui.AppMaterialTheme
+<a href="#l27" class="line" id="l27">     27</a> import me.rhunk.snapenhance.common.ui.createComposeAlertDialog
+<a href="#l28" class="line" id="l28">     28</a> import me.rhunk.snapenhance.common.util.ktx.toParcelFileDescriptor
+<a href="#l29" class="line" id="l29">     29</a> import me.rhunk.snapenhance.common.util.snap.MediaDownloaderHelper
+<a href="#l30" class="line" id="l30">     30</a> import me.rhunk.snapenhance.core.event.events.impl.ActivityResultEvent
+<a href="#l31" class="line" id="l31">     31</a> import me.rhunk.snapenhance.core.event.events.impl.AddViewEvent
+<a href="#l32" class="line" id="l32">     32</a> import me.rhunk.snapenhance.core.features.Feature
+<a href="#l33" class="line" id="l33">     33</a> import me.rhunk.snapenhance.core.ui.CustomComposable
+<a href="#l34" class="line" id="l34">     34</a> import me.rhunk.snapenhance.core.util.hook.HookStage
+<a href="#l35" class="line" id="l35">     35</a> import me.rhunk.snapenhance.core.util.hook.hook
+<a href="#l36" class="line" id="l36">     36</a> import me.rhunk.snapenhance.core.util.ktx.getId
+<a href="#l37" class="line" id="l37">     37</a> import me.rhunk.snapenhance.core.util.ktx.vibrateLongPress
+<a href="#l38" class="line" id="l38">     38</a> import java.io.File
+<a href="#l39" class="line" id="l39">     39</a> import java.util.zip.ZipEntry
+<a href="#l40" class="line" id="l40">     40</a> import java.util.zip.ZipInputStream
+<a href="#l41" class="line" id="l41">     41</a> import java.util.zip.ZipOutputStream
+<a href="#l42" class="line" id="l42">     42</a> import kotlin.random.Random
+<a href="#l43" class="line" id="l43">     43</a> 
+<a href="#l44" class="line" id="l44">     44</a> class AccountSwitcher: Feature(&quot;Account Switcher&quot;) {
+<a href="#l45" class="line" id="l45">     45</a>     private var exportCallback: Pair&lt;Int, String&gt;? = null // requestCode -&gt; userId
+<a href="#l46" class="line" id="l46">     46</a>     private var importRequestCode: Int? = null
+<a href="#l47" class="line" id="l47">     47</a> 
+<a href="#l48" class="line" id="l48">     48</a>     private val accounts = mutableStateListOf&lt;Pair&lt;String, String&gt;&gt;()
+<a href="#l49" class="line" id="l49">     49</a>     private val isLoginActivity get() = context.mainActivity?.javaClass?.name?.endsWith(&quot;LoginSignupActivity&quot;) == true
+<a href="#l50" class="line" id="l50">     50</a> 
+<a href="#l51" class="line" id="l51">     51</a>     private fun updateUsers() {
+<a href="#l52" class="line" id="l52">     52</a>         accounts.clear()
+<a href="#l53" class="line" id="l53">     53</a>         runCatching {
+<a href="#l54" class="line" id="l54">     54</a>             accounts.addAll(context.bridgeClient.getAccountStorage().accounts.map { it.key to it.value })
+<a href="#l55" class="line" id="l55">     55</a>         }.onFailure {
+<a href="#l56" class="line" id="l56">     56</a>             context.log.error(&quot;Failed to update users&quot;, it)
+<a href="#l57" class="line" id="l57">     57</a>         }
+<a href="#l58" class="line" id="l58">     58</a>     }
+<a href="#l59" class="line" id="l59">     59</a> 
+<a href="#l60" class="line" id="l60">     60</a>     @Composable
+<a href="#l61" class="line" id="l61">     61</a>     private fun ManagementPopup() {
+<a href="#l62" class="line" id="l62">     62</a>         LaunchedEffect(Unit) {
+<a href="#l63" class="line" id="l63">     63</a>             withContext(Dispatchers.IO) {
+<a href="#l64" class="line" id="l64">     64</a>                 updateUsers()
+<a href="#l65" class="line" id="l65">     65</a>             }
+<a href="#l66" class="line" id="l66">     66</a>         }
+<a href="#l67" class="line" id="l67">     67</a> 
+<a href="#l68" class="line" id="l68">     68</a> 
+<a href="#l69" class="line" id="l69">     69</a>         Column(
+<a href="#l70" class="line" id="l70">     70</a>             verticalArrangement = Arrangement.SpaceBetween,
+<a href="#l71" class="line" id="l71">     71</a>         ) {
+<a href="#l72" class="line" id="l72">     72</a>             Text(&quot;Account Switcher&quot;, modifier = Modifier
+<a href="#l73" class="line" id="l73">     73</a>                 .padding(16.dp)
+<a href="#l74" class="line" id="l74">     74</a>                 .fillMaxWidth(), textAlign = TextAlign.Center, fontSize = 25.sp)
+<a href="#l75" class="line" id="l75">     75</a> 
+<a href="#l76" class="line" id="l76">     76</a>             LazyColumn(
+<a href="#l77" class="line" id="l77">     77</a>                 modifier = Modifier
+<a href="#l78" class="line" id="l78">     78</a>                     .fillMaxWidth()
+<a href="#l79" class="line" id="l79">     79</a>                     .weight(1f)
+<a href="#l80" class="line" id="l80">     80</a>             ) {
+<a href="#l81" class="line" id="l81">     81</a>                 item {
+<a href="#l82" class="line" id="l82">     82</a>                     if (accounts.isEmpty()) {
+<a href="#l83" class="line" id="l83">     83</a>                         Text(&quot;No accounts found! To start, backup your current account.&quot;, modifier = Modifier
+<a href="#l84" class="line" id="l84">     84</a>                             .padding(16.dp)
+<a href="#l85" class="line" id="l85">     85</a>                             .padding(16.dp)
+<a href="#l86" class="line" id="l86">     86</a>                             .fillMaxWidth(), textAlign = TextAlign.Center)
+<a href="#l87" class="line" id="l87">     87</a>                     }
+<a href="#l88" class="line" id="l88">     88</a>                 }
+<a href="#l89" class="line" id="l89">     89</a> 
+<a href="#l90" class="line" id="l90">     90</a>                 items(accounts) { user -&gt;
+<a href="#l91" class="line" id="l91">     91</a>                     var removeAccountPopup by remember { mutableStateOf(false) }
+<a href="#l92" class="line" id="l92">     92</a> 
+<a href="#l93" class="line" id="l93">     93</a>                     Card(
+<a href="#l94" class="line" id="l94">     94</a>                         modifier = Modifier
+<a href="#l95" class="line" id="l95">     95</a>                             .fillMaxWidth()
+<a href="#l96" class="line" id="l96">     96</a>                             .padding(5.dp),
+<a href="#l97" class="line" id="l97">     97</a>                         colors = CardDefaults.cardColors(
+<a href="#l98" class="line" id="l98">     98</a>                             containerColor = if (!isLoginActivity &amp;&amp; context.database.myUserId == user.first) MaterialTheme.colorScheme.surfaceBright
+<a href="#l99" class="line" id="l99">     99</a>                             else MaterialTheme.colorScheme.surfaceDim
+<a href="#l100" class="line" id="l100">    100</a>                         ) ,
+<a href="#l101" class="line" id="l101">    101</a>                         onClick = {
+<a href="#l102" class="line" id="l102">    102</a>                             runCatching {
+<a href="#l103" class="line" id="l103">    103</a>                                 if (!isLoginActivity &amp;&amp; context.database.myUserId == user.first) {
+<a href="#l104" class="line" id="l104">    104</a>                                     context.shortToast(&quot;Already logged in as ${user.second}&quot;)
+<a href="#l105" class="line" id="l105">    105</a>                                     return@runCatching
+<a href="#l106" class="line" id="l106">    106</a>                                 }
+<a href="#l107" class="line" id="l107">    107</a> 
+<a href="#l108" class="line" id="l108">    108</a>                                 if (!isLoginActivity &amp;&amp; context.config.experimental.accountSwitcher.autoBackupCurrentAccount.get()) {
+<a href="#l109" class="line" id="l109">    109</a>                                     backupCurrentAccount()
+<a href="#l110" class="line" id="l110">    110</a>                                 }
+<a href="#l111" class="line" id="l111">    111</a> 
+<a href="#l112" class="line" id="l112">    112</a>                                 login(userId = user.first, username = user.second)
+<a href="#l113" class="line" id="l113">    113</a>                             }.onFailure {
+<a href="#l114" class="line" id="l114">    114</a>                                 context.shortToast(&quot;Failed to login. Check logs for more info.&quot;)
+<a href="#l115" class="line" id="l115">    115</a>                                 context.log.error(&quot;Failed to login&quot;, it)
+<a href="#l116" class="line" id="l116">    116</a>                             }
+<a href="#l117" class="line" id="l117">    117</a>                         }
+<a href="#l118" class="line" id="l118">    118</a>                     ) {
+<a href="#l119" class="line" id="l119">    119</a>                         Row(
+<a href="#l120" class="line" id="l120">    120</a>                             modifier = Modifier.fillMaxWidth(),
+<a href="#l121" class="line" id="l121">    121</a>                             verticalAlignment = Alignment.CenterVertically
+<a href="#l122" class="line" id="l122">    122</a>                         ) {
+<a href="#l123" class="line" id="l123">    123</a>                             Text(user.second, modifier = Modifier
+<a href="#l124" class="line" id="l124">    124</a>                                 .padding(10.dp)
+<a href="#l125" class="line" id="l125">    125</a>                                 .weight(1f))
+<a href="#l126" class="line" id="l126">    126</a>                             Row(
+<a href="#l127" class="line" id="l127">    127</a>                                 modifier = Modifier
+<a href="#l128" class="line" id="l128">    128</a>                                     .padding(3.dp),
+<a href="#l129" class="line" id="l129">    129</a>                                 horizontalArrangement = Arrangement.spacedBy(5.dp),
+<a href="#l130" class="line" id="l130">    130</a>                             ) {
+<a href="#l131" class="line" id="l131">    131</a>                                 FilledIconButton(onClick = {
+<a href="#l132" class="line" id="l132">    132</a>                                     val requestCode = Random.nextInt(100, 65535)
+<a href="#l133" class="line" id="l133">    133</a>                                     exportCallback = requestCode to user.first
+<a href="#l134" class="line" id="l134">    134</a> 
+<a href="#l135" class="line" id="l135">    135</a>                                     context.mainActivity?.startActivityForResult(
+<a href="#l136" class="line" id="l136">    136</a>                                         Intent.createChooser(
+<a href="#l137" class="line" id="l137">    137</a>                                             Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+<a href="#l138" class="line" id="l138">    138</a>                                                 addCategory(Intent.CATEGORY_OPENABLE)
+<a href="#l139" class="line" id="l139">    139</a>                                                 type = &quot;application/zip&quot;
+<a href="#l140" class="line" id="l140">    140</a>                                                 putExtra(Intent.EXTRA_TITLE, &quot;account_${user.second}.zip&quot;)
+<a href="#l141" class="line" id="l141">    141</a>                                             },
+<a href="#l142" class="line" id="l142">    142</a>                                             &quot;Export account&quot;
+<a href="#l143" class="line" id="l143">    143</a>                                         ),
+<a href="#l144" class="line" id="l144">    144</a>                                         requestCode
+<a href="#l145" class="line" id="l145">    145</a>                                     )
+<a href="#l146" class="line" id="l146">    146</a>                                 }) {
+<a href="#l147" class="line" id="l147">    147</a>                                     Icon(Icons.Default.SaveAlt, contentDescription = &quot;Export account&quot;)
+<a href="#l148" class="line" id="l148">    148</a>                                 }
+<a href="#l149" class="line" id="l149">    149</a>                                 FilledIconButton(onClick = {
+<a href="#l150" class="line" id="l150">    150</a>                                     removeAccountPopup = true
+<a href="#l151" class="line" id="l151">    151</a>                                 }) {
+<a href="#l152" class="line" id="l152">    152</a>                                     Icon(Icons.Default.Delete, contentDescription = &quot;Remove account&quot;)
+<a href="#l153" class="line" id="l153">    153</a>                                 }
+<a href="#l154" class="line" id="l154">    154</a>                             }
+<a href="#l155" class="line" id="l155">    155</a>                         }
+<a href="#l156" class="line" id="l156">    156</a>                     }
+<a href="#l157" class="line" id="l157">    157</a> 
+<a href="#l158" class="line" id="l158">    158</a>                     if (removeAccountPopup) {
+<a href="#l159" class="line" id="l159">    159</a>                         AlertDialog(
+<a href="#l160" class="line" id="l160">    160</a>                             onDismissRequest = { removeAccountPopup = false },
+<a href="#l161" class="line" id="l161">    161</a>                             confirmButton = {
+<a href="#l162" class="line" id="l162">    162</a>                                 Button(onClick = {
+<a href="#l163" class="line" id="l163">    163</a>                                     context.bridgeClient.getAccountStorage().removeAccount(user.first)
+<a href="#l164" class="line" id="l164">    164</a>                                     removeAccountPopup = false
+<a href="#l165" class="line" id="l165">    165</a>                                     updateUsers()
+<a href="#l166" class="line" id="l166">    166</a>                                 }) {
+<a href="#l167" class="line" id="l167">    167</a>                                     Text(&quot;Remove&quot;)
+<a href="#l168" class="line" id="l168">    168</a>                                 }
+<a href="#l169" class="line" id="l169">    169</a>                             },
+<a href="#l170" class="line" id="l170">    170</a>                             title = { Text(&quot;Remove account&quot;) },
+<a href="#l171" class="line" id="l171">    171</a>                             text = { Text(&quot;Are you sure you want to remove ${user.second}?&quot;) },
+<a href="#l172" class="line" id="l172">    172</a>                             dismissButton = {
+<a href="#l173" class="line" id="l173">    173</a>                                 Button(onClick = {
+<a href="#l174" class="line" id="l174">    174</a>                                     removeAccountPopup = false
+<a href="#l175" class="line" id="l175">    175</a>                                 }) {
+<a href="#l176" class="line" id="l176">    176</a>                                     Text(&quot;Cancel&quot;)
+<a href="#l177" class="line" id="l177">    177</a>                                 }
+<a href="#l178" class="line" id="l178">    178</a>                             },
+<a href="#l179" class="line" id="l179">    179</a>                         )
+<a href="#l180" class="line" id="l180">    180</a>                     }
+<a href="#l181" class="line" id="l181">    181</a>                 }
+<a href="#l182" class="line" id="l182">    182</a>             }
+<a href="#l183" class="line" id="l183">    183</a> 
+<a href="#l184" class="line" id="l184">    184</a>             Column(
+<a href="#l185" class="line" id="l185">    185</a>                 modifier = Modifier
+<a href="#l186" class="line" id="l186">    186</a>                     .fillMaxWidth()
+<a href="#l187" class="line" id="l187">    187</a>                     .padding(5.dp),
+<a href="#l188" class="line" id="l188">    188</a>                 verticalArrangement = Arrangement.spacedBy(1.dp)
+<a href="#l189" class="line" id="l189">    189</a>             ) {
+<a href="#l190" class="line" id="l190">    190</a>                 Button(
+<a href="#l191" class="line" id="l191">    191</a>                     modifier = Modifier.fillMaxWidth(),
+<a href="#l192" class="line" id="l192">    192</a>                     onClick = {
+<a href="#l193" class="line" id="l193">    193</a>                         context.mainActivity?.startActivityForResult(
+<a href="#l194" class="line" id="l194">    194</a>                             Intent.createChooser(
+<a href="#l195" class="line" id="l195">    195</a>                                 Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+<a href="#l196" class="line" id="l196">    196</a>                                     addCategory(Intent.CATEGORY_OPENABLE)
+<a href="#l197" class="line" id="l197">    197</a>                                     type = &quot;application/zip&quot;
+<a href="#l198" class="line" id="l198">    198</a>                                 },
+<a href="#l199" class="line" id="l199">    199</a>                                 &quot;Import account&quot;
+<a href="#l200" class="line" id="l200">    200</a>                             ),
+<a href="#l201" class="line" id="l201">    201</a>                             Random.nextInt(100, 65535).also {
+<a href="#l202" class="line" id="l202">    202</a>                                 importRequestCode = it
+<a href="#l203" class="line" id="l203">    203</a>                             }
+<a href="#l204" class="line" id="l204">    204</a>                         )
+<a href="#l205" class="line" id="l205">    205</a>                     }
+<a href="#l206" class="line" id="l206">    206</a>                 ) {
+<a href="#l207" class="line" id="l207">    207</a>                     Text(&quot;Import account&quot;)
+<a href="#l208" class="line" id="l208">    208</a>                 }
+<a href="#l209" class="line" id="l209">    209</a> 
+<a href="#l210" class="line" id="l210">    210</a>                 if (!isLoginActivity) {
+<a href="#l211" class="line" id="l211">    211</a>                     Button(
+<a href="#l212" class="line" id="l212">    212</a>                         modifier = Modifier
+<a href="#l213" class="line" id="l213">    213</a>                             .fillMaxWidth(),
+<a href="#l214" class="line" id="l214">    214</a>                         onClick = {
+<a href="#l215" class="line" id="l215">    215</a>                             backupCurrentAccount()
+<a href="#l216" class="line" id="l216">    216</a>                             updateUsers()
+<a href="#l217" class="line" id="l217">    217</a>                         }
+<a href="#l218" class="line" id="l218">    218</a>                     ) {
+<a href="#l219" class="line" id="l219">    219</a>                         Text(&quot;Backup current account&quot;)
+<a href="#l220" class="line" id="l220">    220</a>                     }
+<a href="#l221" class="line" id="l221">    221</a>                     Button(
+<a href="#l222" class="line" id="l222">    222</a>                         modifier = Modifier
+<a href="#l223" class="line" id="l223">    223</a>                             .fillMaxWidth(),
+<a href="#l224" class="line" id="l224">    224</a>                         onClick = {
+<a href="#l225" class="line" id="l225">    225</a>                             if (context.config.experimental.accountSwitcher.autoBackupCurrentAccount.get()) {
+<a href="#l226" class="line" id="l226">    226</a>                                 backupCurrentAccount()
+<a href="#l227" class="line" id="l227">    227</a>                             }
+<a href="#l228" class="line" id="l228">    228</a>                             logout()
+<a href="#l229" class="line" id="l229">    229</a>                         }
+<a href="#l230" class="line" id="l230">    230</a>                     ) {
+<a href="#l231" class="line" id="l231">    231</a>                         Text(&quot;Logout&quot;)
+<a href="#l232" class="line" id="l232">    232</a>                     }
+<a href="#l233" class="line" id="l233">    233</a>                 }
+<a href="#l234" class="line" id="l234">    234</a>             }
+<a href="#l235" class="line" id="l235">    235</a>         }
+<a href="#l236" class="line" id="l236">    236</a>     }
+<a href="#l237" class="line" id="l237">    237</a> 
+<a href="#l238" class="line" id="l238">    238</a> 
+<a href="#l239" class="line" id="l239">    239</a>     private fun showManagementPopup() {
+<a href="#l240" class="line" id="l240">    240</a>         context.runOnUiThread {
+<a href="#l241" class="line" id="l241">    241</a>             createComposeAlertDialog(context.mainActivity!!) {
+<a href="#l242" class="line" id="l242">    242</a>                 AppMaterialTheme(isDarkTheme = true) {
+<a href="#l243" class="line" id="l243">    243</a>                     Surface(
+<a href="#l244" class="line" id="l244">    244</a>                         modifier = Modifier.fillMaxWidth(),
+<a href="#l245" class="line" id="l245">    245</a>                         color = MaterialTheme.colorScheme.surface
+<a href="#l246" class="line" id="l246">    246</a>                     ) {
+<a href="#l247" class="line" id="l247">    247</a>                         ManagementPopup()
+<a href="#l248" class="line" id="l248">    248</a>                     }
+<a href="#l249" class="line" id="l249">    249</a>                 }
+<a href="#l250" class="line" id="l250">    250</a>             }.show()
+<a href="#l251" class="line" id="l251">    251</a>         }
+<a href="#l252" class="line" id="l252">    252</a>     }
+<a href="#l253" class="line" id="l253">    253</a> 
+<a href="#l254" class="line" id="l254">    254</a>     private fun logout() {
+<a href="#l255" class="line" id="l255">    255</a>         context.androidContext.dataDir.resolve( &quot;shared_prefs/user_session_shared_pref.xml&quot;).takeIf { it.exists() }?.delete()
+<a href="#l256" class="line" id="l256">    256</a>         context.shortToast(&quot;Logged out&quot;)
+<a href="#l257" class="line" id="l257">    257</a>         context.softRestartApp()
+<a href="#l258" class="line" id="l258">    258</a>     }
+<a href="#l259" class="line" id="l259">    259</a> 
+<a href="#l260" class="line" id="l260">    260</a>     private fun login(userId: String, username: String) {
+<a href="#l261" class="line" id="l261">    261</a>         val accountData = context.bridgeClient.getAccountStorage().getAccountData(userId)?.let { pfd -&gt;
+<a href="#l262" class="line" id="l262">    262</a>             ParcelFileDescriptor.AutoCloseInputStream(pfd).use { it.readBytes() }
+<a href="#l263" class="line" id="l263">    263</a>         }
+<a href="#l264" class="line" id="l264">    264</a>         if (accountData == null) {
+<a href="#l265" class="line" id="l265">    265</a>             context.shortToast(&quot;Account data not found&quot;)
+<a href="#l266" class="line" id="l266">    266</a>             return
+<a href="#l267" class="line" id="l267">    267</a>         }
+<a href="#l268" class="line" id="l268">    268</a> 
+<a href="#l269" class="line" id="l269">    269</a>         arrayOf(
+<a href="#l270" class="line" id="l270">    270</a>             context.androidContext.filesDir,
+<a href="#l271" class="line" id="l271">    271</a>             context.androidContext.cacheDir,
+<a href="#l272" class="line" id="l272">    272</a>             context.androidContext.dataDir.resolve(&quot;databases&quot;),
+<a href="#l273" class="line" id="l273">    273</a>         ).forEach { dir -&gt; dir.listFiles()?.forEach { it.deleteRecursively() } }
+<a href="#l274" class="line" id="l274">    274</a> 
+<a href="#l275" class="line" id="l275">    275</a>         val zipInputStream = ZipInputStream(accountData.inputStream())
+<a href="#l276" class="line" id="l276">    276</a>         var entry: ZipEntry?
+<a href="#l277" class="line" id="l277">    277</a>         while (zipInputStream.nextEntry.also { entry = it } != null) {
+<a href="#l278" class="line" id="l278">    278</a>             val file = context.androidContext.dataDir.resolve(entry!!.name)
+<a href="#l279" class="line" id="l279">    279</a>             if (file.exists()) {
+<a href="#l280" class="line" id="l280">    280</a>                 file.delete()
+<a href="#l281" class="line" id="l281">    281</a>             } else {
+<a href="#l282" class="line" id="l282">    282</a>                 file.parentFile?.mkdirs()
+<a href="#l283" class="line" id="l283">    283</a>             }
+<a href="#l284" class="line" id="l284">    284</a>             context.log.debug(&quot;Extracting ${file.absolutePath}&quot;)
+<a href="#l285" class="line" id="l285">    285</a>             file.outputStream().use {
+<a href="#l286" class="line" id="l286">    286</a>                 zipInputStream.copyTo(it)
+<a href="#l287" class="line" id="l287">    287</a>             }
+<a href="#l288" class="line" id="l288">    288</a>         }
+<a href="#l289" class="line" id="l289">    289</a> 
+<a href="#l290" class="line" id="l290">    290</a>         context.log.debug(&quot;Account data restored&quot;)
+<a href="#l291" class="line" id="l291">    291</a>         context.shortToast(&quot;Logged in as $username&quot;)
+<a href="#l292" class="line" id="l292">    292</a>         context.softRestartApp()
+<a href="#l293" class="line" id="l293">    293</a>     }
+<a href="#l294" class="line" id="l294">    294</a> 
+<a href="#l295" class="line" id="l295">    295</a>     private fun getCurrentAccountData(): ParcelFileDescriptor {
+<a href="#l296" class="line" id="l296">    296</a>         val pfd = ParcelFileDescriptor.createPipe()
+<a href="#l297" class="line" id="l297">    297</a> 
+<a href="#l298" class="line" id="l298">    298</a>         context.coroutineScope.launch(Dispatchers.IO) {
+<a href="#l299" class="line" id="l299">    299</a>             val zipOutputStream = ZipOutputStream(ParcelFileDescriptor.AutoCloseOutputStream(pfd[1]))
+<a href="#l300" class="line" id="l300">    300</a> 
+<a href="#l301" class="line" id="l301">    301</a>             fun addFile(path: String, file: File) {
+<a href="#l302" class="line" id="l302">    302</a>                 file.takeIf { it.exists() }?.inputStream()?.use {
+<a href="#l303" class="line" id="l303">    303</a>                     context.log.verbose(&quot;Adding $file to zip&quot;)
+<a href="#l304" class="line" id="l304">    304</a>                     zipOutputStream.putNextEntry(ZipEntry(path))
+<a href="#l305" class="line" id="l305">    305</a>                     it.copyTo(zipOutputStream)
+<a href="#l306" class="line" id="l306">    306</a>                     zipOutputStream.closeEntry()
+<a href="#l307" class="line" id="l307">    307</a>                 }
+<a href="#l308" class="line" id="l308">    308</a>             }
+<a href="#l309" class="line" id="l309">    309</a> 
+<a href="#l310" class="line" id="l310">    310</a>             for (path in arrayOf(
+<a href="#l311" class="line" id="l311">    311</a>                 &quot;databases/main.db&quot;,
+<a href="#l312" class="line" id="l312">    312</a>                 &quot;databases/main.db-shm&quot;,
+<a href="#l313" class="line" id="l313">    313</a>                 &quot;databases/main.db-wal&quot;,
+<a href="#l314" class="line" id="l314">    314</a>                 &quot;databases/core.db&quot;,
+<a href="#l315" class="line" id="l315">    315</a>                 &quot;databases/core.db-wal&quot;,
+<a href="#l316" class="line" id="l316">    316</a>                 &quot;databases/core.db-shm&quot;,
+<a href="#l317" class="line" id="l317">    317</a>                 &quot;databases/fidelius_database.db&quot;,
+<a href="#l318" class="line" id="l318">    318</a>                 &quot;databases/fidelius_database.db-wal&quot;,
+<a href="#l319" class="line" id="l319">    319</a>                 &quot;databases/fidelius_database.db-shm&quot;,
+<a href="#l320" class="line" id="l320">    320</a>                 &quot;shared_prefs/user_session_shared_pref.xml&quot;,
+<a href="#l321" class="line" id="l321">    321</a>                 &quot;shared_prefs/user_device_identity_keys.xml&quot;,
+<a href="#l322" class="line" id="l322">    322</a>                 &quot;shared_prefs/com.google.android.gms.appid.xml&quot;,
+<a href="#l323" class="line" id="l323">    323</a>             )) {
+<a href="#l324" class="line" id="l324">    324</a>                 addFile(path, context.androidContext.dataDir.resolve(path))
+<a href="#l325" class="line" id="l325">    325</a>             }
+<a href="#l326" class="line" id="l326">    326</a> 
+<a href="#l327" class="line" id="l327">    327</a>             context.androidContext.dataDir.resolve(&quot;databases&quot;).listFiles()?.filter {
+<a href="#l328" class="line" id="l328">    328</a>                 it.name.contains(&quot;_fidelius.db&quot;)
+<a href="#l329" class="line" id="l329">    329</a>             }?.forEach {
+<a href="#l330" class="line" id="l330">    330</a>                 addFile(&quot;databases/${it.name}&quot;, it)
+<a href="#l331" class="line" id="l331">    331</a>             }
+<a href="#l332" class="line" id="l332">    332</a> 
+<a href="#l333" class="line" id="l333">    333</a>             zipOutputStream.flush()
+<a href="#l334" class="line" id="l334">    334</a>             zipOutputStream.close()
+<a href="#l335" class="line" id="l335">    335</a>         }
+<a href="#l336" class="line" id="l336">    336</a> 
+<a href="#l337" class="line" id="l337">    337</a>         return pfd[0]
+<a href="#l338" class="line" id="l338">    338</a>     }
+<a href="#l339" class="line" id="l339">    339</a> 
+<a href="#l340" class="line" id="l340">    340</a>     private fun backupCurrentAccount() {
+<a href="#l341" class="line" id="l341">    341</a>         runCatching {
+<a href="#l342" class="line" id="l342">    342</a>             context.bridgeClient.getAccountStorage().addAccount(
+<a href="#l343" class="line" id="l343">    343</a>                 context.database.myUserId,
+<a href="#l344" class="line" id="l344">    344</a>                 context.database.getFriendInfo(context.database.myUserId)?.mutableUsername ?: &quot;Unknown username&quot;,
+<a href="#l345" class="line" id="l345">    345</a>                 getCurrentAccountData()
+<a href="#l346" class="line" id="l346">    346</a>             )
+<a href="#l347" class="line" id="l347">    347</a>             context.shortToast(&quot;Account backed up!&quot;)
+<a href="#l348" class="line" id="l348">    348</a>         }.onFailure {
+<a href="#l349" class="line" id="l349">    349</a>             context.shortToast(&quot;Failed to backup account. Check logs for more info.&quot;)
+<a href="#l350" class="line" id="l350">    350</a>             context.log.error(&quot;Failed to backup account&quot;, it)
+<a href="#l351" class="line" id="l351">    351</a>         }
+<a href="#l352" class="line" id="l352">    352</a>     }
+<a href="#l353" class="line" id="l353">    353</a> 
+<a href="#l354" class="line" id="l354">    354</a>     private fun importAccount(fileUri: Uri) {
+<a href="#l355" class="line" id="l355">    355</a>         var tempZip: File? = null
+<a href="#l356" class="line" id="l356">    356</a>         var mainDbFile: File? = null
+<a href="#l357" class="line" id="l357">    357</a>         var mainDbWalFile: File? = null
+<a href="#l358" class="line" id="l358">    358</a>         var mainDbShmFile: File? = null
+<a href="#l359" class="line" id="l359">    359</a> 
+<a href="#l360" class="line" id="l360">    360</a>         runCatching {
+<a href="#l361" class="line" id="l361">    361</a>             // copy zip file
+<a href="#l362" class="line" id="l362">    362</a>             context.mainActivity!!.contentResolver.openInputStream(fileUri)?.use { input -&gt;
+<a href="#l363" class="line" id="l363">    363</a>                 val bufferedInputStream = input.buffered()
+<a href="#l364" class="line" id="l364">    364</a>                 val fileType = MediaDownloaderHelper.getFileType(bufferedInputStream)
+<a href="#l365" class="line" id="l365">    365</a> 
+<a href="#l366" class="line" id="l366">    366</a>                 if (fileType != FileType.ZIP) {
+<a href="#l367" class="line" id="l367">    367</a>                     throw Exception(&quot;Invalid file type&quot;)
+<a href="#l368" class="line" id="l368">    368</a>                 }
+<a href="#l369" class="line" id="l369">    369</a> 
+<a href="#l370" class="line" id="l370">    370</a>                 context.androidContext.cacheDir.resolve(System.currentTimeMillis().toString()).also {
+<a href="#l371" class="line" id="l371">    371</a>                     tempZip = it
+<a href="#l372" class="line" id="l372">    372</a>                 }.outputStream().use { output -&gt;
+<a href="#l373" class="line" id="l373">    373</a>                     bufferedInputStream.copyTo(output)
+<a href="#l374" class="line" id="l374">    374</a>                 }
+<a href="#l375" class="line" id="l375">    375</a>             }
+<a href="#l376" class="line" id="l376">    376</a> 
+<a href="#l377" class="line" id="l377">    377</a>             context.log.verbose(&quot;Extracting account data&quot;)
+<a href="#l378" class="line" id="l378">    378</a> 
+<a href="#l379" class="line" id="l379">    379</a>             // extract main.db in cache
+<a href="#l380" class="line" id="l380">    380</a>             tempZip?.inputStream().use { fileInputStream -&gt;
+<a href="#l381" class="line" id="l381">    381</a>                 val zipInputStream = ZipInputStream(fileInputStream)
+<a href="#l382" class="line" id="l382">    382</a>                 var entry: ZipEntry?
+<a href="#l383" class="line" id="l383">    383</a>                 while (zipInputStream.nextEntry.also { entry = it } != null) {
+<a href="#l384" class="line" id="l384">    384</a>                     val fileName = entry?.name?.substringAfterLast(&#39;/&#39;) ?: continue
+<a href="#l385" class="line" id="l385">    385</a>                     if (!fileName.startsWith(&quot;main.db&quot;)) continue
+<a href="#l386" class="line" id="l386">    386</a> 
+<a href="#l387" class="line" id="l387">    387</a>                     val file = context.androidContext.cacheDir.resolve(fileName)
+<a href="#l388" class="line" id="l388">    388</a>                     context.log.verbose(&quot;Found ${entry!!.name} in zip file&quot;)
+<a href="#l389" class="line" id="l389">    389</a> 
+<a href="#l390" class="line" id="l390">    390</a>                     when (fileName) {
+<a href="#l391" class="line" id="l391">    391</a>                         &quot;main.db&quot; -&gt; mainDbFile = file
+<a href="#l392" class="line" id="l392">    392</a>                         &quot;main.db-wal&quot; -&gt; mainDbWalFile = file
+<a href="#l393" class="line" id="l393">    393</a>                         &quot;main.db-shm&quot; -&gt; mainDbShmFile = file
+<a href="#l394" class="line" id="l394">    394</a>                     }
+<a href="#l395" class="line" id="l395">    395</a> 
+<a href="#l396" class="line" id="l396">    396</a>                     file.outputStream().use {
+<a href="#l397" class="line" id="l397">    397</a>                         zipInputStream.copyTo(it)
+<a href="#l398" class="line" id="l398">    398</a>                     }
+<a href="#l399" class="line" id="l399">    399</a>                 }
+<a href="#l400" class="line" id="l400">    400</a>             }
+<a href="#l401" class="line" id="l401">    401</a> 
+<a href="#l402" class="line" id="l402">    402</a>             assert(mainDbFile != null) { &quot;main.db not found in zip file&quot; }
+<a href="#l403" class="line" id="l403">    403</a> 
+<a href="#l404" class="line" id="l404">    404</a>             SQLiteDatabase.openDatabase(mainDbFile!!.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use {  sqliteDatabase -&gt;
+<a href="#l405" class="line" id="l405">    405</a>                 val userId = sqliteDatabase.rawQuery(&quot;SELECT userId FROM SnapToken&quot;, null).use {
+<a href="#l406" class="line" id="l406">    406</a>                     if (!it.moveToFirst()) throw Exception(&quot;userId not found in main.db&quot;)
+<a href="#l407" class="line" id="l407">    407</a>                     it.getString(0)
+<a href="#l408" class="line" id="l408">    408</a>                 }
+<a href="#l409" class="line" id="l409">    409</a>                 context.log.verbose(&quot;Found userId $userId&quot;)
+<a href="#l410" class="line" id="l410">    410</a>                 val username = sqliteDatabase.rawQuery(&quot;SELECT username FROM Friend WHERE userId = ?&quot;, arrayOf(userId)).use {
+<a href="#l411" class="line" id="l411">    411</a>                     if (!it.moveToFirst()) throw Exception(&quot;username not found in main.db&quot;)
+<a href="#l412" class="line" id="l412">    412</a>                     it.getString(0)
+<a href="#l413" class="line" id="l413">    413</a>                 }
+<a href="#l414" class="line" id="l414">    414</a>                 context.log.verbose(&quot;Found username $username&quot;)
+<a href="#l415" class="line" id="l415">    415</a>                 tempZip?.inputStream()?.use {
+<a href="#l416" class="line" id="l416">    416</a>                     context.bridgeClient.getAccountStorage().addAccount(
+<a href="#l417" class="line" id="l417">    417</a>                         userId,
+<a href="#l418" class="line" id="l418">    418</a>                         username,
+<a href="#l419" class="line" id="l419">    419</a>                         it.toParcelFileDescriptor(context.coroutineScope)
+<a href="#l420" class="line" id="l420">    420</a>                     )
+<a href="#l421" class="line" id="l421">    421</a>                 }
+<a href="#l422" class="line" id="l422">    422</a>                 context.shortToast(&quot;Imported $username!&quot;)
+<a href="#l423" class="line" id="l423">    423</a>                 updateUsers()
+<a href="#l424" class="line" id="l424">    424</a>             }
+<a href="#l425" class="line" id="l425">    425</a>         }.onFailure {
+<a href="#l426" class="line" id="l426">    426</a>             context.shortToast(&quot;Failed to import account: ${it.message}&quot;)
+<a href="#l427" class="line" id="l427">    427</a>             context.log.error(&quot;Failed to import account&quot;, it)
+<a href="#l428" class="line" id="l428">    428</a>         }
+<a href="#l429" class="line" id="l429">    429</a> 
+<a href="#l430" class="line" id="l430">    430</a>         tempZip?.delete()
+<a href="#l431" class="line" id="l431">    431</a>         mainDbFile?.delete()
+<a href="#l432" class="line" id="l432">    432</a>         mainDbWalFile?.delete()
+<a href="#l433" class="line" id="l433">    433</a>         mainDbShmFile?.delete()
+<a href="#l434" class="line" id="l434">    434</a>     }
+<a href="#l435" class="line" id="l435">    435</a> 
+<a href="#l436" class="line" id="l436">    436</a>     @SuppressLint(&quot;SetTextI18n&quot;)
+<a href="#l437" class="line" id="l437">    437</a>     override fun init() {
+<a href="#l438" class="line" id="l438">    438</a>         if (context.config.experimental.accountSwitcher.globalState != true) return
+<a href="#l439" class="line" id="l439">    439</a> 
+<a href="#l440" class="line" id="l440">    440</a>         onNextActivityCreate {
+<a href="#l441" class="line" id="l441">    441</a>             val hovaHeaderSearchIcon = context.resources.getId(&quot;hova_header_search_icon&quot;)
+<a href="#l442" class="line" id="l442">    442</a> 
+<a href="#l443" class="line" id="l443">    443</a>             context.event.subscribe(AddViewEvent::class) { event -&gt;
+<a href="#l444" class="line" id="l444">    444</a>                 if (event.view.id != hovaHeaderSearchIcon) return@subscribe
+<a href="#l445" class="line" id="l445">    445</a> 
+<a href="#l446" class="line" id="l446">    446</a>                 event.view.setOnLongClickListener {
+<a href="#l447" class="line" id="l447">    447</a>                     context.mainActivity!!.vibrateLongPress()
+<a href="#l448" class="line" id="l448">    448</a>                     showManagementPopup()
+<a href="#l449" class="line" id="l449">    449</a>                     false
+<a href="#l450" class="line" id="l450">    450</a>                 }
+<a href="#l451" class="line" id="l451">    451</a>             }
+<a href="#l452" class="line" id="l452">    452</a>         }
+<a href="#l453" class="line" id="l453">    453</a> 
+<a href="#l454" class="line" id="l454">    454</a>         context.event.subscribe(ActivityResultEvent::class) { event -&gt;
+<a href="#l455" class="line" id="l455">    455</a>             if (importRequestCode == event.requestCode) {
+<a href="#l456" class="line" id="l456">    456</a>                 importRequestCode = null
+<a href="#l457" class="line" id="l457">    457</a>                 if (event.resultCode != Activity.RESULT_OK) return@subscribe
+<a href="#l458" class="line" id="l458">    458</a>                 event.canceled = true
+<a href="#l459" class="line" id="l459">    459</a>                 val uri = event.intent.data ?: return@subscribe
+<a href="#l460" class="line" id="l460">    460</a> 
+<a href="#l461" class="line" id="l461">    461</a>                 context.coroutineScope.launch { importAccount(uri) }
+<a href="#l462" class="line" id="l462">    462</a>             }
+<a href="#l463" class="line" id="l463">    463</a> 
+<a href="#l464" class="line" id="l464">    464</a>             if (exportCallback?.first == event.requestCode) {
+<a href="#l465" class="line" id="l465">    465</a>                 val userId = exportCallback?.second
+<a href="#l466" class="line" id="l466">    466</a>                 exportCallback = null
+<a href="#l467" class="line" id="l467">    467</a>                 event.canceled = true
+<a href="#l468" class="line" id="l468">    468</a>                 if (event.resultCode != Activity.RESULT_OK) return@subscribe
+<a href="#l469" class="line" id="l469">    469</a> 
+<a href="#l470" class="line" id="l470">    470</a>                 context.coroutineScope.launch {
+<a href="#l471" class="line" id="l471">    471</a>                     runCatching {
+<a href="#l472" class="line" id="l472">    472</a>                         event.intent.data?.let { uri -&gt;
+<a href="#l473" class="line" id="l473">    473</a>                             val accountDataPfd = context.bridgeClient.getAccountStorage().getAccountData(userId) ?: throw Exception(&quot;Account data not found&quot;)
+<a href="#l474" class="line" id="l474">    474</a>                             context.androidContext.contentResolver.openOutputStream(uri)?.use { outputStream -&gt;
+<a href="#l475" class="line" id="l475">    475</a>                                 ParcelFileDescriptor.AutoCloseInputStream(accountDataPfd).use {
+<a href="#l476" class="line" id="l476">    476</a>                                     it.copyTo(outputStream)
+<a href="#l477" class="line" id="l477">    477</a>                                 }
+<a href="#l478" class="line" id="l478">    478</a>                             }
+<a href="#l479" class="line" id="l479">    479</a>                             context.shortToast(&quot;Account exported!&quot;)
+<a href="#l480" class="line" id="l480">    480</a>                         }
+<a href="#l481" class="line" id="l481">    481</a>                     }.onFailure {
+<a href="#l482" class="line" id="l482">    482</a>                         context.shortToast(&quot;Failed to export account. Check logs for more info.&quot;)
+<a href="#l483" class="line" id="l483">    483</a>                         context.log.error(&quot;Failed to export account&quot;, it)
+<a href="#l484" class="line" id="l484">    484</a>                     }
+<a href="#l485" class="line" id="l485">    485</a>                 }
+<a href="#l486" class="line" id="l486">    486</a>             }
+<a href="#l487" class="line" id="l487">    487</a>         }
+<a href="#l488" class="line" id="l488">    488</a> 
+<a href="#l489" class="line" id="l489">    489</a>         findClass(&quot;com.snap.identity.service.ForcedLogoutBroadcastReceiver&quot;).hook(&quot;onReceive&quot;, HookStage.BEFORE) { param -&gt;
+<a href="#l490" class="line" id="l490">    490</a>             val intent = param.arg&lt;Intent&gt;(1)
+<a href="#l491" class="line" id="l491">    491</a>             if (isLoginActivity) return@hook
+<a href="#l492" class="line" id="l492">    492</a>             if (intent.getBooleanExtra(&quot;forced&quot;, false) &amp;&amp; !context.config.experimental.preventForcedLogout.get()) {
+<a href="#l493" class="line" id="l493">    493</a>                 runCatching {
+<a href="#l494" class="line" id="l494">    494</a>                     val accountStorage = context.bridgeClient.getAccountStorage()
+<a href="#l495" class="line" id="l495">    495</a> 
+<a href="#l496" class="line" id="l496">    496</a>                     if (accountStorage.isAccountExists(context.database.myUserId)) {
+<a href="#l497" class="line" id="l497">    497</a>                         accountStorage.removeAccount(context.database.myUserId)
+<a href="#l498" class="line" id="l498">    498</a>                         context.shortToast(&quot;Removed account due to forced logout&quot;)
+<a href="#l499" class="line" id="l499">    499</a>                     }
+<a href="#l500" class="line" id="l500">    500</a>                 }
+<a href="#l501" class="line" id="l501">    501</a>                 return@hook
+<a href="#l502" class="line" id="l502">    502</a>             }
+<a href="#l503" class="line" id="l503">    503</a> 
+<a href="#l504" class="line" id="l504">    504</a>             if (context.config.experimental.accountSwitcher.autoBackupCurrentAccount.get()) {
+<a href="#l505" class="line" id="l505">    505</a>                 backupCurrentAccount()
+<a href="#l506" class="line" id="l506">    506</a>             }
+<a href="#l507" class="line" id="l507">    507</a>         }
+<a href="#l508" class="line" id="l508">    508</a> 
+<a href="#l509" class="line" id="l509">    509</a>         val switchButtonComposable: CustomComposable = {
+<a href="#l510" class="line" id="l510">    510</a>             Row(
+<a href="#l511" class="line" id="l511">    511</a>                 modifier = Modifier
+<a href="#l512" class="line" id="l512">    512</a>                     .fillMaxWidth()
+<a href="#l513" class="line" id="l513">    513</a>                     .align(Alignment.TopStart),
+<a href="#l514" class="line" id="l514">    514</a>             ) {
+<a href="#l515" class="line" id="l515">    515</a>                 Button(
+<a href="#l516" class="line" id="l516">    516</a>                     onClick = { showManagementPopup() },
+<a href="#l517" class="line" id="l517">    517</a>                     modifier = Modifier.padding(16.dp)
+<a href="#l518" class="line" id="l518">    518</a>                 ) {
+<a href="#l519" class="line" id="l519">    519</a>                     Text(&quot;Switch Account&quot;)
+<a href="#l520" class="line" id="l520">    520</a>                 }
+<a href="#l521" class="line" id="l521">    521</a>             }
+<a href="#l522" class="line" id="l522">    522</a>         }
+<a href="#l523" class="line" id="l523">    523</a> 
+<a href="#l524" class="line" id="l524">    524</a>         onNextActivityCreate { activity -&gt;
+<a href="#l525" class="line" id="l525">    525</a>             if (!activity.componentName.className.endsWith(&quot;LoginSignupActivity&quot;)) return@onNextActivityCreate
+<a href="#l526" class="line" id="l526">    526</a>             context.inAppOverlay.addCustomComposable(switchButtonComposable)
+<a href="#l527" class="line" id="l527">    527</a>             onNextActivityCreate {
+<a href="#l528" class="line" id="l528">    528</a>                 context.inAppOverlay.removeCustomComposable(switchButtonComposable)
+<a href="#l529" class="line" id="l529">    529</a>             }
+<a href="#l530" class="line" id="l530">    530</a>         }
+<a href="#l531" class="line" id="l531">    531</a>     }
+<a href="#l532" class="line" id="l532">    532</a> }</pre>
+</div>
+</body>
+</html>

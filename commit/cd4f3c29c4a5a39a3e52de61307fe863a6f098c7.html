@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix: pick language screen save config - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/cd4f3c29c4a5a39a3e52de61307fe863a6f098c7.html">cd4f3c29c4a5a39a3e52de61307fe863a6f098c7</a>
+<b>parent</b> <a href="../commit/581b2df37ee4c89ca1b89d5dc9d27ddcddf506a2.html">581b2df37ee4c89ca1b89d5dc9d27ddcddf506a2</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat,  5 Aug 2023 09:55:43 +0200
+
+fix: pick language screen save config
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/SetupActivity.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/SetupScreen.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/PickLanguageScreen.kt</a></td><td> | </td><td class="num">63</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++</span><span class="d">-----------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/bridge/wrapper/LocaleWrapper.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">++</span><span class="d">-------</span></td></tr>
+</table></pre><pre>4 files changed, 44 insertions(+), 30 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/SetupActivity.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/SetupActivity.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/SetupActivity.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/SetupActivity.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -83,6 +83,7 @@ class SetupActivity : ComponentActivity() {
+</a> 
+             fun nextScreen() {
+                 if (!canGoNext.value) return
+<a href="#h0-0-3" id="h0-0-3" class="i">+                requiredScreens.firstOrNull()?.onLeave()
+</a>                 if (requiredScreens.size &gt; 1) {
+                     canGoNext.value = false
+                     requiredScreens.removeFirst()
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/SetupScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/SetupScreen.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/SetupScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/SetupScreen.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -25,6 +25,7 @@ abstract class SetupScreen {
+</a>     }
+ 
+     open fun init() {}
+<a href="#h1-0-3" id="h1-0-3" class="i">+    open fun onLeave() {}
+</a> 
+     @Composable
+     abstract fun Content()
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/PickLanguageScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/PickLanguageScreen.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/PickLanguageScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/PickLanguageScreen.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -12,53 +12,69 @@ import androidx.compose.foundation.lazy.items
+</a> import androidx.compose.foundation.rememberScrollState
+ import androidx.compose.material.Surface
+ import androidx.compose.material.Text
+<a href="#h2-0-3" id="h2-0-3" class="i">+import androidx.compose.material3.Button
+</a> import androidx.compose.material3.MaterialTheme
+<a href="#h2-0-5" id="h2-0-5" class="d">-import androidx.compose.material3.OutlinedButton
+</a> import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.mutableStateOf
+ import androidx.compose.runtime.remember
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+<a href="#h2-0-11" id="h2-0-11" class="d">-import androidx.compose.ui.platform.LocalContext
+</a> import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+ import androidx.compose.ui.window.Dialog
+ import me.rhunk.snapenhance.bridge.wrapper.LocaleWrapper
+<a href="#h2-0-17" id="h2-0-17" class="d">-import me.rhunk.snapenhance.ui.util.ObservableMutableState
+</a> import me.rhunk.snapenhance.ui.setup.screens.SetupScreen
+<a href="#h2-0-19" id="h2-0-19" class="i">+import me.rhunk.snapenhance.ui.util.ObservableMutableState
+</a> import java.util.Locale
+ 
+ 
+ class PickLanguageScreen : SetupScreen(){
+<a href="#h2-0-24" id="h2-0-24" class="d">-    @Composable
+</a><a href="#h2-0-25" id="h2-0-25" class="d">-    override fun Content() {
+</a><a href="#h2-0-26" id="h2-0-26" class="d">-        val androidContext = LocalContext.current
+</a><a href="#h2-0-27" id="h2-0-27" class="d">-        val availableLocales = remember { LocaleWrapper.fetchAvailableLocales(androidContext) }
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+    private val availableLocales by lazy {
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+        LocaleWrapper.fetchAvailableLocales(context.androidContext)
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+    }
+</a> 
+<a href="#h2-0-32" id="h2-0-32" class="d">-        allowNext(true)
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+    private lateinit var selectedLocale: ObservableMutableState&lt;String&gt;
+</a> 
+<a href="#h2-0-35" id="h2-0-35" class="d">-        fun getLocaleDisplayName(locale: String): String {
+</a><a href="#h2-0-36" id="h2-0-36" class="d">-            locale.split(&quot;_&quot;).let {
+</a><a href="#h2-0-37" id="h2-0-37" class="d">-                return Locale(it[0], it[1]).getDisplayName(Locale.getDefault())
+</a><a href="#h2-0-38" id="h2-0-38" class="d">-            }
+</a><a href="#h2-0-39" id="h2-0-39" class="i">+    private fun getLocaleDisplayName(locale: String): String {
+</a><a href="#h2-0-40" id="h2-0-40" class="i">+        locale.split(&quot;_&quot;).let {
+</a><a href="#h2-0-41" id="h2-0-41" class="i">+            return Locale(it[0], it[1]).getDisplayName(Locale.getDefault())
+</a>         }
+<a href="#h2-0-43" id="h2-0-43" class="i">+    }
+</a> 
+<a href="#h2-0-45" id="h2-0-45" class="d">-        val selectedLocale = remember {
+</a><a href="#h2-0-46" id="h2-0-46" class="d">-            val deviceLocale = Locale.getDefault().toString()
+</a><a href="#h2-0-47" id="h2-0-47" class="d">-            fun reloadTranslation(selectedLocale: String) {
+</a><a href="#h2-0-48" id="h2-0-48" class="d">-                context.translation.reloadFromContext(androidContext, selectedLocale)
+</a><a href="#h2-0-49" id="h2-0-49" class="d">-            }
+</a><a href="#h2-0-50" id="h2-0-50" class="i">+    private fun reloadTranslation(selectedLocale: String) {
+</a><a href="#h2-0-51" id="h2-0-51" class="i">+        context.translation.reloadFromContext(context.androidContext, selectedLocale)
+</a><a href="#h2-0-52" id="h2-0-52" class="i">+    }
+</a><a href="#h2-0-53" id="h2-0-53" class="i">+
+</a><a href="#h2-0-54" id="h2-0-54" class="i">+    private fun setLocale(locale: String) {
+</a><a href="#h2-0-55" id="h2-0-55" class="i">+        with(context) {
+</a><a href="#h2-0-56" id="h2-0-56" class="i">+            config.locale = locale
+</a><a href="#h2-0-57" id="h2-0-57" class="i">+            config.writeConfig()
+</a><a href="#h2-0-58" id="h2-0-58" class="i">+            translation.reloadFromContext(androidContext, locale)
+</a><a href="#h2-0-59" id="h2-0-59" class="i">+            reloadTranslation(locale)
+</a><a href="#h2-0-60" id="h2-0-60" class="i">+        }
+</a><a href="#h2-0-61" id="h2-0-61" class="i">+    }
+</a><a href="#h2-0-62" id="h2-0-62" class="i">+
+</a><a href="#h2-0-63" id="h2-0-63" class="i">+    override fun onLeave() {
+</a><a href="#h2-0-64" id="h2-0-64" class="i">+        context.config.locale = selectedLocale.value
+</a><a href="#h2-0-65" id="h2-0-65" class="i">+        context.config.writeConfig()
+</a><a href="#h2-0-66" id="h2-0-66" class="i">+    }
+</a><a href="#h2-0-67" id="h2-0-67" class="i">+
+</a><a href="#h2-0-68" id="h2-0-68" class="i">+    override fun init() {
+</a><a href="#h2-0-69" id="h2-0-69" class="i">+        val deviceLocale = Locale.getDefault().toString()
+</a><a href="#h2-0-70" id="h2-0-70" class="i">+        selectedLocale =
+</a>             ObservableMutableState(
+                 defaultValue = availableLocales.firstOrNull {
+                         locale -&gt; locale == deviceLocale
+                 } ?: LocaleWrapper.DEFAULT_LOCALE
+             ) { _, newValue -&gt;
+<a href="#h2-0-76" id="h2-0-76" class="d">-                context.config.locale = newValue
+</a><a href="#h2-0-77" id="h2-0-77" class="d">-                context.config.writeConfig()
+</a><a href="#h2-0-78" id="h2-0-78" class="d">-                reloadTranslation(newValue)
+</a><a href="#h2-0-79" id="h2-0-79" class="i">+                setLocale(newValue)
+</a>             }.also { reloadTranslation(it.value) }
+<a href="#h2-0-81" id="h2-0-81" class="d">-        }
+</a><a href="#h2-0-82" id="h2-0-82" class="i">+    }
+</a><a href="#h2-0-83" id="h2-0-83" class="i">+
+</a><a href="#h2-0-84" id="h2-0-84" class="i">+    @Composable
+</a><a href="#h2-0-85" id="h2-0-85" class="i">+    override fun Content() {
+</a><a href="#h2-0-86" id="h2-0-86" class="i">+        allowNext(true)
+</a> 
+         DialogText(text = context.translation[&quot;setup.dialogs.select_language&quot;])
+ 
+<a href="#h2-1" id="h2-1" class="h">@@ -105,10 +121,11 @@ class PickLanguageScreen : SetupScreen(){
+</a>                 .fillMaxWidth(),
+             contentAlignment = Alignment.Center
+         ) {
+<a href="#h2-1-3" id="h2-1-3" class="d">-            OutlinedButton(onClick = {
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+            Button(onClick = {
+</a>                 isDialog.value = true
+             }) {
+<a href="#h2-1-7" id="h2-1-7" class="d">-                Text(text = getLocaleDisplayName(selectedLocale.value), fontSize = 16.sp, fontWeight = FontWeight.Light)
+</a><a href="#h2-1-8" id="h2-1-8" class="i">+                Text(text = getLocaleDisplayName(selectedLocale.value), fontSize = 16.sp,
+</a><a href="#h2-1-9" id="h2-1-9" class="i">+                    fontWeight = FontWeight.Normal)
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/bridge/wrapper/LocaleWrapper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/bridge/wrapper/LocaleWrapper.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/bridge/wrapper/LocaleWrapper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/bridge/wrapper/LocaleWrapper.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -37,16 +37,11 @@ class LocaleWrapper {
+</a>     var userLocale = DEFAULT_LOCALE
+ 
+     private val translationMap = linkedMapOf&lt;String, String&gt;()
+<a href="#h3-0-3" id="h3-0-3" class="d">-    private lateinit var _loadedLocaleString: String
+</a> 
+<a href="#h3-0-5" id="h3-0-5" class="d">-    val loadedLocale by lazy {
+</a><a href="#h3-0-6" id="h3-0-6" class="d">-        Locale(_loadedLocaleString.substring(0, 2), _loadedLocaleString.substring(3, 5))
+</a><a href="#h3-0-7" id="h3-0-7" class="d">-    }
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+    lateinit var loadedLocale: Locale
+</a> 
+     private fun load(localePair: LocalePair) {
+<a href="#h3-0-11" id="h3-0-11" class="d">-        if (!::_loadedLocaleString.isInitialized) {
+</a><a href="#h3-0-12" id="h3-0-12" class="d">-            _loadedLocaleString = localePair.locale
+</a><a href="#h3-0-13" id="h3-0-13" class="d">-        }
+</a><a href="#h3-0-14" id="h3-0-14" class="i">+        loadedLocale = localePair.locale.let { Locale(it.substring(0, 2), it.substring(3, 5)) }
+</a> 
+         val translations = JsonParser.parseString(localePair.content).asJsonObject
+         if (translations == null || translations.isJsonNull) {
+</pre>
+</div>
+</body>
+</html>

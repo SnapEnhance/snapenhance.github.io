@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(video_length_bypass): story black videos - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/e144c932808ec9e1ca638d6ce717d55c6fc265cd.html">e144c932808ec9e1ca638d6ce717d55c6fc265cd</a>
+<b>parent</b> <a href="../commit/d3e0c616f8e5388c8aa5ced00fe0bf9ef5ca24f1.html">d3e0c616f8e5388c8aa5ced00fe0bf9ef5ca24f1</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Mon, 28 Aug 2023 18:18:49 +0200
+
+fix(video_length_bypass): story black videos
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">+++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/SendMessageWithContentEvent.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/DisableVideoLengthRestriction.kt</a></td><td> | </td><td class="num">33</td><td><span class="i">+++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>3 files changed, 40 insertions(+), 2 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/EventDispatcher.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -10,6 +10,7 @@ import me.rhunk.snapenhance.core.eventbus.events.impl.OnSnapInteractionEvent
+</a> import me.rhunk.snapenhance.core.eventbus.events.impl.SendMessageWithContentEvent
+ import me.rhunk.snapenhance.core.eventbus.events.impl.SnapWidgetBroadcastReceiveEvent
+ import me.rhunk.snapenhance.data.wrapper.impl.MessageContent
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.data.wrapper.impl.MessageDestinations
+</a> import me.rhunk.snapenhance.data.wrapper.impl.SnapUUID
+ import me.rhunk.snapenhance.hook.HookStage
+ import me.rhunk.snapenhance.hook.hook
+<a href="#h0-1" id="h0-1" class="h">@@ -23,8 +24,10 @@ class EventDispatcher(
+</a> ) : Manager {
+     override fun init() {
+         context.classCache.conversationManager.hook(&quot;sendMessageWithContent&quot;, HookStage.BEFORE) { param -&gt;
+<a href="#h0-1-3" id="h0-1-3" class="d">-            val messageContent = MessageContent(param.arg(1))
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-            context.event.post(SendMessageWithContentEvent(messageContent).apply { adapter = param })?.also {
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+            context.event.post(SendMessageWithContentEvent(
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+                destinations = MessageDestinations(param.arg(0)),
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+                messageContent = MessageContent(param.arg(1))
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+            ).apply { adapter = param })?.also {
+</a>                 if (it.canceled) {
+                     param.setResult(null)
+                 }
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/SendMessageWithContentEvent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/SendMessageWithContentEvent.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/SendMessageWithContentEvent.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/eventbus/events/impl/SendMessageWithContentEvent.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -2,7 +2,9 @@ package me.rhunk.snapenhance.core.eventbus.events.impl
+</a> 
+ import me.rhunk.snapenhance.core.eventbus.events.AbstractHookEvent
+ import me.rhunk.snapenhance.data.wrapper.impl.MessageContent
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.data.wrapper.impl.MessageDestinations
+</a> 
+ class SendMessageWithContentEvent(
+<a href="#h1-0-6" id="h1-0-6" class="i">+    val destinations: MessageDestinations,
+</a>     val messageContent: MessageContent
+ ) : AbstractHookEvent() 
+\ No newline at end of file
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/DisableVideoLengthRestriction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/DisableVideoLengthRestriction.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/DisableVideoLengthRestriction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/features/impl/tweaks/DisableVideoLengthRestriction.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,15 +1,48 @@
+</a> package me.rhunk.snapenhance.features.impl.tweaks
+ 
+<a href="#h2-0-2" id="h2-0-2" class="i">+import android.os.Build
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+import android.os.FileObserver
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import com.google.gson.JsonParser
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+import me.rhunk.snapenhance.Logger
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+import me.rhunk.snapenhance.core.eventbus.events.impl.SendMessageWithContentEvent
+</a> import me.rhunk.snapenhance.features.Feature
+ import me.rhunk.snapenhance.features.FeatureLoadParams
+ import me.rhunk.snapenhance.hook.HookStage
+ import me.rhunk.snapenhance.hook.Hooker
+<a href="#h2-0-11" id="h2-0-11" class="i">+import java.io.File
+</a> 
+ class DisableVideoLengthRestriction : Feature(&quot;DisableVideoLengthRestriction&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_ASYNC) {
+<a href="#h2-0-14" id="h2-0-14" class="i">+    private lateinit var fileObserver: FileObserver
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+
+</a>     override fun asyncOnActivityCreate() {
+         val defaultMediaItem = context.mappings.getMappedClass(&quot;DefaultMediaItem&quot;)
+         val isState by context.config.global.disableVideoLengthRestrictions
+ 
+<a href="#h2-0-20" id="h2-0-20" class="i">+        //fix black videos when story is posted
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+        if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.Q) {
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+            val postedStorySnapFolder = File(context.androidContext.filesDir, &quot;file_manager/posted_story_snap&quot;)
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+            fileObserver = (object : FileObserver(postedStorySnapFolder, MOVED_TO) {
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+                override fun onEvent(event: Int, path: String?) {
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+                    if (event != MOVED_TO || path?.endsWith(&quot;posted_story_snap.2&quot;) != true) return
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+                    fileObserver.stopWatching()
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+                    val file = File(postedStorySnapFolder, path)
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+                    runCatching {
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+                        val fileContent = JsonParser.parseReader(file.reader()).asJsonObject
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+                        if (fileContent[&quot;timerOrDuration&quot;].asLong &lt; 0) file.delete()
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+                    }.onFailure {
+</a><a href="#h2-0-34" id="h2-0-34" class="i">+                        Logger.error(&quot;Failed to read story metadata file&quot;, it)
+</a><a href="#h2-0-35" id="h2-0-35" class="i">+                    }
+</a><a href="#h2-0-36" id="h2-0-36" class="i">+                }
+</a><a href="#h2-0-37" id="h2-0-37" class="i">+            })
+</a><a href="#h2-0-38" id="h2-0-38" class="i">+
+</a><a href="#h2-0-39" id="h2-0-39" class="i">+            context.event.subscribe(SendMessageWithContentEvent::class) { event -&gt;
+</a><a href="#h2-0-40" id="h2-0-40" class="i">+                if (event.destinations.stories.isEmpty()) return@subscribe
+</a><a href="#h2-0-41" id="h2-0-41" class="i">+                fileObserver.startWatching()
+</a><a href="#h2-0-42" id="h2-0-42" class="i">+            }
+</a><a href="#h2-0-43" id="h2-0-43" class="i">+        }
+</a><a href="#h2-0-44" id="h2-0-44" class="i">+
+</a>         Hooker.hookConstructor(defaultMediaItem, HookStage.BEFORE, { isState }) { param -&gt;
+             //set the video length argument
+             param.setArg(5, -1L)
+</pre>
+</div>
+</body>
+</html>

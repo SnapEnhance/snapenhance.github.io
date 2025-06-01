@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(bulk_messaging_action): sort and filter by location - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/8bdc1f6d6a6bd1c9eae215098e4ef12715b579e2.html">8bdc1f6d6a6bd1c9eae215098e4ef12715b579e2</a>
+<b>parent</b> <a href="../commit/1f8b214d4c66a5f723c54f87c6f0160bf745c332.html">1f8b214d4c66a5f723c54f87c6f0160bf745c332</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat,  7 Sep 2024 01:08:52 +0200
+
+feat(bulk_messaging_action): sort and filter by location
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a></td><td> | </td><td class="num">25</td><td><span class="i">++++++++++++++++++++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt</a></td><td> | </td><td class="num">19</td><td><span class="i">+++++++++++++++++</span><span class="d">--</span></td></tr>
+</table></pre><pre>2 files changed, 41 insertions(+), 3 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -47,6 +47,7 @@ import me.rhunk.snapenhance.common.util.ktx.copyToClipboard
+</a> import me.rhunk.snapenhance.common.util.snap.BitmojiSelfie
+ import me.rhunk.snapenhance.core.action.AbstractAction
+ import me.rhunk.snapenhance.core.features.impl.experiments.AddFriendSourceSpoof
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.core.features.impl.experiments.BetterLocation
+</a> import me.rhunk.snapenhance.core.features.impl.messaging.Messaging
+ import me.rhunk.snapenhance.core.ui.ViewAppearanceHelper
+ import me.rhunk.snapenhance.core.util.EvictingMap
+<a href="#h0-1" id="h0-1" class="h">@@ -66,6 +67,7 @@ class BulkMessagingAction : AbstractAction() {
+</a>         STREAK_LENGTH,
+         MOST_MESSAGES_SENT,
+         MOST_RECENT_MESSAGE,
+<a href="#h0-1-3" id="h0-1-3" class="i">+        NEAREST_LOCATION
+</a>     }
+ 
+     enum class Filter {
+<a href="#h0-2" id="h0-2" class="h">@@ -78,9 +80,11 @@ class BulkMessagingAction : AbstractAction() {
+</a>         BUSINESS_ACCOUNTS,
+         STREAKS,
+         NON_STREAKS,
+<a href="#h0-2-3" id="h0-2-3" class="i">+        LOCATION_ON_MAP
+</a>     }
+ 
+     private val translation by lazy { context.translation.getCategory(&quot;bulk_messaging_action&quot;) }
+<a href="#h0-2-7" id="h0-2-7" class="i">+    private val betterLocation by lazy { context.feature(BetterLocation::class) }
+</a> 
+     private fun removeAction(
+         ctx: Context,
+<a href="#h0-3" id="h0-3" class="h">@@ -156,6 +160,7 @@ class BulkMessagingAction : AbstractAction() {
+</a>             &quot;b42f1f70-5a8b-4c53-8c25-34e7ec9e6781&quot;, // myai
+             &quot;84ee8839-3911-492d-8b94-72dd80f3713a&quot;, // teamsnapchat
+         )
+<a href="#h0-3-3" id="h0-3-3" class="i">+
+</a>         return friends.filter { friend -&gt;
+             friend.userId !in userIdBlacklist &amp;&amp; when (filter) {
+                 Filter.ALL -&gt; true
+<a href="#h0-4" id="h0-4" class="h">@@ -167,6 +172,7 @@ class BulkMessagingAction : AbstractAction() {
+</a>                 Filter.BUSINESS_ACCOUNTS -&gt; friend.businessCategory &gt; 0
+                 Filter.STREAKS -&gt; friend.friendLinkType == FriendLinkType.MUTUAL.value &amp;&amp; friend.addedTimestamp &gt; 0 &amp;&amp; friend.streakLength != 0
+                 Filter.NON_STREAKS -&gt; friend.friendLinkType == FriendLinkType.MUTUAL.value&amp;&amp; friend.addedTimestamp &gt; 0 &amp;&amp; friend.streakLength == 0
+<a href="#h0-4-3" id="h0-4-3" class="i">+                Filter.LOCATION_ON_MAP -&gt; betterLocation.locationHistory.contains(friend.userId)
+</a>             } &amp;&amp; nameFilter.takeIf { it.isNotBlank() }?.let { name -&gt;
+                 friend.mutableUsername?.contains(
+                     name,
+<a href="#h0-5" id="h0-5" class="h">@@ -198,6 +204,8 @@ class BulkMessagingAction : AbstractAction() {
+</a>         var nameFilter by remember { mutableStateOf(&quot;&quot;) }
+ 
+         suspend fun refreshList(clearSelected: Boolean = true) {
+<a href="#h0-5-3" id="h0-5-3" class="i">+            val myLocation = betterLocation.locationHistory[context.database.myUserId]
+</a><a href="#h0-5-4" id="h0-5-4" class="i">+
+</a>             withContext(Dispatchers.IO) {
+                 val newFriends = context.database.getAllFriends().let { friends -&gt;
+                     filterFriends(friends, filter, nameFilter)
+<a href="#h0-6" id="h0-6" class="h">@@ -214,6 +222,14 @@ class BulkMessagingAction : AbstractAction() {
+</a>                     SortBy.MOST_RECENT_MESSAGE -&gt; newFriends.sortByDescending {
+                         getDMLastMessage(it.userId)?.creationTimestamp
+                     }
+<a href="#h0-6-3" id="h0-6-3" class="i">+                    SortBy.NEAREST_LOCATION -&gt; {
+</a><a href="#h0-6-4" id="h0-6-4" class="i">+                        if (myLocation != null) {
+</a><a href="#h0-6-5" id="h0-6-5" class="i">+                            newFriends.sortBy {
+</a><a href="#h0-6-6" id="h0-6-6" class="i">+                                betterLocation.locationHistory[it.userId]?.distanceTo(myLocation)
+</a><a href="#h0-6-7" id="h0-6-7" class="i">+                                    ?: Double.MAX_VALUE
+</a><a href="#h0-6-8" id="h0-6-8" class="i">+                            }
+</a><a href="#h0-6-9" id="h0-6-9" class="i">+                        }
+</a><a href="#h0-6-10" id="h0-6-10" class="i">+                    }
+</a>                 }
+                 if (sortReverseOrder) newFriends.reverse()
+                 withContext(Dispatchers.Main) {
+<a href="#h0-7" id="h0-7" class="h">@@ -436,7 +452,14 @@ class BulkMessagingAction : AbstractAction() {
+</a>                                     }
+                                     lastMessage?.let {
+                                         append(&quot;\nSent messages: ${it.serverMessageId}&quot;)
+<a href="#h0-7-3" id="h0-7-3" class="d">-                                        append(&quot;\nLast message date: ${DateFormat.getDateTimeInstance().format(Date(it.creationTimestamp))}&quot;)
+</a><a href="#h0-7-4" id="h0-7-4" class="i">+                                        append(&quot;\nLast message: ${DateFormat.getDateTimeInstance().format(Date(it.creationTimestamp))}&quot;)
+</a><a href="#h0-7-5" id="h0-7-5" class="i">+                                    }
+</a><a href="#h0-7-6" id="h0-7-6" class="i">+                                    betterLocation.locationHistory[context.database.myUserId]?.let { myLocation -&gt;
+</a><a href="#h0-7-7" id="h0-7-7" class="i">+                                        betterLocation.locationHistory[friendInfo.userId]?.let {
+</a><a href="#h0-7-8" id="h0-7-8" class="i">+                                            append(&quot;\n${myLocation.distanceTo(it).let { distance -&gt;
+</a><a href="#h0-7-9" id="h0-7-9" class="i">+                                                if (distance &lt; 1) &quot;${(distance * 1000).toInt()} m&quot; else &quot;${distance.toInt()} km&quot;
+</a><a href="#h0-7-10" id="h0-7-10" class="i">+                                            } } away&quot;)
+</a><a href="#h0-7-11" id="h0-7-11" class="i">+                                        }
+</a>                                     }
+                                 }
+                             }
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterLocation.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -36,6 +36,10 @@ import me.rhunk.snapenhance.core.util.ktx.isDarkTheme
+</a> import me.rhunk.snapenhance.mapper.impl.CallbackMapper
+ import java.nio.ByteBuffer
+ import java.util.UUID
+<a href="#h1-0-3" id="h1-0-3" class="i">+import kotlin.math.atan2
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import kotlin.math.cos
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+import kotlin.math.sin
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+import kotlin.math.sqrt
+</a> 
+ data class FriendLocation(
+     val userId: String,
+<a href="#h1-1" id="h1-1" class="h">@@ -45,10 +49,21 @@ data class FriendLocation(
+</a>     val locality: String?,
+     val localityPieces: List&lt;String&gt;,
+     val batteryLevel: Float,
+<a href="#h1-1-3" id="h1-1-3" class="d">-)
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+) {
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+    fun distanceTo(other: FriendLocation): Double {
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+        val deltaLat = Math.toRadians(other.latitude - this.latitude)
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+        val deltaLong = Math.toRadians(other.longitude - this.longitude)
+</a><a href="#h1-1-8" id="h1-1-8" class="i">+
+</a><a href="#h1-1-9" id="h1-1-9" class="i">+        val a = sin(deltaLat / 2) * sin(deltaLat / 2) +
+</a><a href="#h1-1-10" id="h1-1-10" class="i">+                cos(Math.toRadians(this.latitude)) * cos(Math.toRadians(other.latitude)) *
+</a><a href="#h1-1-11" id="h1-1-11" class="i">+                sin(deltaLong / 2) * sin(deltaLong / 2)
+</a><a href="#h1-1-12" id="h1-1-12" class="i">+
+</a><a href="#h1-1-13" id="h1-1-13" class="i">+        return 6371 * 2 * atan2(sqrt(a), sqrt(1 - a))
+</a><a href="#h1-1-14" id="h1-1-14" class="i">+    }
+</a><a href="#h1-1-15" id="h1-1-15" class="i">+}
+</a> 
+ class BetterLocation : Feature(&quot;Better Location&quot;) {
+<a href="#h1-1-18" id="h1-1-18" class="d">-    private val locationHistory = mutableMapOf&lt;String, FriendLocation&gt;()
+</a><a href="#h1-1-19" id="h1-1-19" class="i">+    val locationHistory = mutableMapOf&lt;String, FriendLocation&gt;()
+</a> 
+     private val walkRadius by lazy {
+         context.config.global.betterLocation.walkRadius.getNullable()
+</pre>
+</div>
+</body>
+</html>

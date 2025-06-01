@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(core): better send override - compose ui - fix &quot;Media Upload&quot; label - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/a877c04461f07e282575ed288e6663b356d14b80.html">a877c04461f07e282575ed288e6663b356d14b80</a>
+<b>parent</b> <a href="../commit/a43e4049a3998f618c03389196299b61e2f5865d.html">a43e4049a3998f618c03389196299b61e2f5865d</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Tue, 20 Aug 2024 00:40:26 +0200
+
+feat(core): better send override
+- compose ui
+- fix &quot;Media Upload&quot; label
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">8</td><td><span class="i">++++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/SendOverride.kt</a></td><td> | </td><td class="num">264</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">---------------</span></td></tr>
+</table></pre><pre>2 files changed, 221 insertions(+), 51 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1524,7 +1524,8 @@
+</a>         &quot;negative&quot;: &quot;No&quot;,
+         &quot;cancel&quot;: &quot;Cancel&quot;,
+         &quot;open&quot;: &quot;Open&quot;,
+<a href="#h0-0-3" id="h0-0-3" class="d">-        &quot;download&quot;: &quot;Download&quot;
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        &quot;download&quot;: &quot;Download&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+        &quot;send&quot;: &quot;Send&quot;
+</a>     },
+ 
+     &quot;better_notifications&quot;: {
+<a href="#h0-1" id="h0-1" class="h">@@ -1698,6 +1699,9 @@
+</a>         &quot;sigColorStoryRingDiscoverTabThumbnailStoryRing&quot;: &quot;Story Ring Discover Tab Thumbnail Story Ring Color&quot;
+     },
+     &quot;send_override_dialog&quot;: {
+<a href="#h0-1-3" id="h0-1-3" class="d">-        &quot;title&quot;: &quot;Send media as ...&quot;
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+        &quot;title&quot;: &quot;Send media as {type}&quot;,
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+        &quot;duration&quot;: &quot;Duration: {duration}&quot;,
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+        &quot;saveable_snap_hint&quot;: &quot;Make Snap saveable in the chat&quot;,
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+        &quot;unlimited_duration&quot;: &quot;Unlimited&quot;
+</a>     }
+ }
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/SendOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/SendOverride.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/SendOverride.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/SendOverride.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,8 +1,23 @@
+</a> package me.rhunk.snapenhance.core.features.impl.messaging
+ 
+<a href="#h1-0-2" id="h1-0-2" class="i">+import androidx.compose.foundation.clickable
+</a><a href="#h1-0-3" id="h1-0-3" class="i">+import androidx.compose.foundation.layout.*
+</a> import androidx.compose.material.icons.Icons
+<a href="#h1-0-5" id="h1-0-5" class="i">+import androidx.compose.material.icons.filled.MusicNote
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+import androidx.compose.material.icons.filled.Photo
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+import androidx.compose.material.icons.filled.PhotoCamera
+</a> import androidx.compose.material.icons.filled.WarningAmber
+<a href="#h1-0-9" id="h1-0-9" class="i">+import androidx.compose.material3.*
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+import androidx.compose.runtime.*
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+import androidx.compose.ui.Alignment
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+import androidx.compose.ui.Modifier
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+import androidx.compose.ui.graphics.vector.ImageVector
+</a><a href="#h1-0-14" id="h1-0-14" class="i">+import androidx.compose.ui.text.font.FontWeight
+</a><a href="#h1-0-15" id="h1-0-15" class="i">+import androidx.compose.ui.text.style.TextAlign
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+import androidx.compose.ui.unit.dp
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+import androidx.compose.ui.unit.sp
+</a> import me.rhunk.snapenhance.common.data.ContentType
+<a href="#h1-0-19" id="h1-0-19" class="i">+import me.rhunk.snapenhance.common.ui.createComposeAlertDialog
+</a> import me.rhunk.snapenhance.common.util.protobuf.ProtoEditor
+ import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.common.util.protobuf.ProtoWriter
+<a href="#h1-1" id="h1-1" class="h">@@ -12,19 +27,17 @@ import me.rhunk.snapenhance.core.event.events.impl.SendMessageWithContentEvent
+</a> import me.rhunk.snapenhance.core.features.Feature
+ import me.rhunk.snapenhance.core.features.impl.experiments.MediaFilePicker
+ import me.rhunk.snapenhance.core.messaging.MessageSender
+<a href="#h1-1-3" id="h1-1-3" class="d">-import me.rhunk.snapenhance.core.ui.ViewAppearanceHelper
+</a><a href="#h1-1-4" id="h1-1-4" class="d">-import me.rhunk.snapenhance.nativelib.NativeLib
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+import me.rhunk.snapenhance.core.util.ktx.getObjectFieldOrNull
+</a> import java.util.Locale
+<a href="#h1-1-7" id="h1-1-7" class="i">+import kotlin.time.DurationUnit
+</a><a href="#h1-1-8" id="h1-1-8" class="i">+import kotlin.time.toDuration
+</a><a href="#h1-1-9" id="h1-1-9" class="i">+
+</a> 
+ class SendOverride : Feature(&quot;Send Override&quot;) {
+<a href="#h1-1-12" id="h1-1-12" class="d">-    private val typeNames by lazy {
+</a><a href="#h1-1-13" id="h1-1-13" class="d">-        mutableListOf(&quot;ORIGINAL&quot;, &quot;SNAP&quot;, &quot;NOTE&quot;).also {
+</a><a href="#h1-1-14" id="h1-1-14" class="d">-            if (NativeLib.initialized) {
+</a><a href="#h1-1-15" id="h1-1-15" class="d">-                it.add(&quot;SAVEABLE_SNAP&quot;)
+</a><a href="#h1-1-16" id="h1-1-16" class="d">-            }
+</a><a href="#h1-1-17" id="h1-1-17" class="d">-        }.associateWith { it }
+</a><a href="#h1-1-18" id="h1-1-18" class="d">-    }
+</a><a href="#h1-1-19" id="h1-1-19" class="i">+    private var selectedType by mutableStateOf(&quot;SNAP&quot;)
+</a><a href="#h1-1-20" id="h1-1-20" class="i">+    private var customDuration by mutableStateOf(10f)
+</a> 
+<a href="#h1-1-22" id="h1-1-22" class="i">+    @OptIn(ExperimentalLayoutApi::class)
+</a>     override fun init() {
+         val stripSnapMetadata = context.config.messaging.stripMediaMetadata.get()
+         var postSavePolicy: Int? = null
+<a href="#h1-2" id="h1-2" class="h">@@ -83,19 +96,28 @@ class SendOverride : Feature(&quot;Send Override&quot;) {
+</a>                 event.onMediaUploaded { result -&gt;
+                     result.messageContent.content = ProtoEditor(result.messageContent.content!!).apply {
+                         edit(11, 5) {
+<a href="#h1-2-3" id="h1-2-3" class="d">-                            // remove media upload hint when viewing snap
+</a>                             edit(1) {
+                                 edit(1) {
+<a href="#h1-2-6" id="h1-2-6" class="i">+                                    snapDocPlayback.getVarInt(2, 99)?.let { customDuration -&gt;
+</a><a href="#h1-2-7" id="h1-2-7" class="i">+                                        remove(15)
+</a><a href="#h1-2-8" id="h1-2-8" class="i">+                                        addVarInt(15, customDuration)
+</a><a href="#h1-2-9" id="h1-2-9" class="i">+                                    }
+</a>                                     remove(27)
+<a href="#h1-2-11" id="h1-2-11" class="i">+                                    remove(26)
+</a>                                     addBuffer(26, byteArrayOf())
+                                 }
+                             }
+ 
+<a href="#h1-2-16" id="h1-2-16" class="i">+                            // set back the original snap duration
+</a>                             remove(2)
+                             snapDocPlayback.getByteArray(2)?.let {
+                                 addBuffer(2, it)
+                             }
+                         }
+<a href="#h1-2-22" id="h1-2-22" class="i">+
+</a><a href="#h1-2-23" id="h1-2-23" class="i">+                        edit(11, 5, 2) {
+</a><a href="#h1-2-24" id="h1-2-24" class="i">+                            remove(99)
+</a><a href="#h1-2-25" id="h1-2-25" class="i">+                        }
+</a>                     }.toByteArray()
+                 }
+             }
+<a href="#h1-3" id="h1-3" class="h">@@ -104,17 +126,17 @@ class SendOverride : Feature(&quot;Send Override&quot;) {
+</a>         context.event.subscribe(NativeUnaryCallEvent::class) { event -&gt;
+             if (event.uri != &quot;/messagingcoreservice.MessagingCoreService/CreateContentMessage&quot;) return@subscribe
+             postSavePolicy?.let { savePolicy -&gt;
+<a href="#h1-3-3" id="h1-3-3" class="d">-                context.log.verbose(&quot;post save policy $savePolicy&quot;)
+</a><a href="#h1-3-4" id="h1-3-4" class="i">+                context.log.verbose(&quot;postSavePolicy=$savePolicy&quot;)
+</a>                 event.buffer = ProtoEditor(event.buffer).apply {
+<a href="#h1-3-6" id="h1-3-6" class="d">-                    edit {
+</a><a href="#h1-3-7" id="h1-3-7" class="d">-                        edit(4) {
+</a><a href="#h1-3-8" id="h1-3-8" class="d">-                            remove(7)
+</a><a href="#h1-3-9" id="h1-3-9" class="d">-                            addVarInt(7, savePolicy)
+</a><a href="#h1-3-10" id="h1-3-10" class="d">-                        }
+</a><a href="#h1-3-11" id="h1-3-11" class="d">-                        add(6) {
+</a><a href="#h1-3-12" id="h1-3-12" class="d">-                            from(9) {
+</a><a href="#h1-3-13" id="h1-3-13" class="d">-                                addVarInt(1, 1)
+</a><a href="#h1-3-14" id="h1-3-14" class="d">-                            }
+</a><a href="#h1-3-15" id="h1-3-15" class="i">+                    edit(4) {
+</a><a href="#h1-3-16" id="h1-3-16" class="i">+                        remove(7)
+</a><a href="#h1-3-17" id="h1-3-17" class="i">+                        addVarInt(7, savePolicy)
+</a><a href="#h1-3-18" id="h1-3-18" class="i">+                    }
+</a><a href="#h1-3-19" id="h1-3-19" class="i">+
+</a><a href="#h1-3-20" id="h1-3-20" class="i">+                    // remove Keep Snaps in Chat ability
+</a><a href="#h1-3-21" id="h1-3-21" class="i">+                    if (savePolicy == 1/* PROHIBITED */) {
+</a><a href="#h1-3-22" id="h1-3-22" class="i">+                        edit(6, 9) {
+</a><a href="#h1-3-23" id="h1-3-23" class="i">+                            remove(1)
+</a>                         }
+                     }
+                 }.toByteArray()
+<a href="#h1-4" id="h1-4" class="h">@@ -125,16 +147,16 @@ class SendOverride : Feature(&quot;Send Override&quot;) {
+</a>             postSavePolicy = null
+             if (event.destinations.stories?.isNotEmpty() == true &amp;&amp; event.destinations.conversations?.isEmpty() == true) return@subscribe
+             val localMessageContent = event.messageContent
+<a href="#h1-4-3" id="h1-4-3" class="d">-            if (localMessageContent.contentType != ContentType.EXTERNAL_MEDIA) return@subscribe
+</a><a href="#h1-4-4" id="h1-4-4" class="d">-
+</a>             //prevent story replies
+<a href="#h1-4-6" id="h1-4-6" class="d">-            val messageProtoReader = ProtoReader(localMessageContent.content!!)
+</a><a href="#h1-4-7" id="h1-4-7" class="i">+            if (localMessageContent.contentType != ContentType.EXTERNAL_MEDIA &amp;&amp; localMessageContent.instanceNonNull().getObjectFieldOrNull(&quot;mExternalContentMetadata&quot;)?.getObjectFieldOrNull(&quot;mContainsExternalContent&quot;) != true) return@subscribe
+</a><a href="#h1-4-8" id="h1-4-8" class="i">+
+</a><a href="#h1-4-9" id="h1-4-9" class="i">+            val messageProtoReader = ProtoReader(localMessageContent.content ?: return@subscribe)
+</a>             if (messageProtoReader.contains(7)) return@subscribe
+ 
+             event.canceled = true
+ 
+<a href="#h1-4-14" id="h1-4-14" class="d">-            fun sendMedia(overrideType: String): Boolean {
+</a><a href="#h1-4-15" id="h1-4-15" class="d">-                if (overrideType != &quot;ORIGINAL&quot; &amp;&amp; messageProtoReader.followPath(3)?.getCount(3) != 1) {
+</a><a href="#h1-4-16" id="h1-4-16" class="i">+            fun sendMedia(overrideType: String, snapDurationMs: Int?): Boolean {
+</a><a href="#h1-4-17" id="h1-4-17" class="i">+                if (overrideType != &quot;ORIGINAL&quot; &amp;&amp; (messageProtoReader.followPath(3)?.getCount(3) ?: 0) &gt; 1) {
+</a>                     context.inAppOverlay.showStatusToast(
+                         icon = Icons.Default.WarningAmber,
+                         context.translation[&quot;gallery_media_send_override.multiple_media_toast&quot;]
+<a href="#h1-5" id="h1-5" class="h">@@ -147,26 +169,49 @@ class SendOverride : Feature(&quot;Send Override&quot;) {
+</a>                         postSavePolicy = if (overrideType == &quot;SAVEABLE_SNAP&quot;) 3 /* VIEW_SESSION */ else 1 /* PROHIBITED */
+ 
+                         val extras = messageProtoReader.followPath(3, 3, 13)?.getBuffer()
+<a href="#h1-5-3" id="h1-5-3" class="d">-                        localMessageContent.contentType = ContentType.SNAP
+</a><a href="#h1-5-4" id="h1-5-4" class="d">-                        localMessageContent.content = ProtoWriter().apply {
+</a><a href="#h1-5-5" id="h1-5-5" class="d">-                            from(11) {
+</a><a href="#h1-5-6" id="h1-5-6" class="d">-                                from(5) {
+</a><a href="#h1-5-7" id="h1-5-7" class="d">-                                    from(1) {
+</a><a href="#h1-5-8" id="h1-5-8" class="i">+
+</a><a href="#h1-5-9" id="h1-5-9" class="i">+                        if (localMessageContent.contentType != ContentType.SNAP) {
+</a><a href="#h1-5-10" id="h1-5-10" class="i">+                            localMessageContent.content = ProtoWriter().apply {
+</a><a href="#h1-5-11" id="h1-5-11" class="i">+                                from(11) {
+</a><a href="#h1-5-12" id="h1-5-12" class="i">+                                    from(5) {
+</a>                                         from(1) {
+<a href="#h1-5-14" id="h1-5-14" class="d">-                                            addVarInt(2, 0)
+</a><a href="#h1-5-15" id="h1-5-15" class="d">-                                            addVarInt(12, 0)
+</a><a href="#h1-5-16" id="h1-5-16" class="d">-                                            addVarInt(15, 0)
+</a><a href="#h1-5-17" id="h1-5-17" class="i">+                                            from(1) {
+</a><a href="#h1-5-18" id="h1-5-18" class="i">+                                                addVarInt(2, 0)
+</a><a href="#h1-5-19" id="h1-5-19" class="i">+                                                addVarInt(12, 0)
+</a><a href="#h1-5-20" id="h1-5-20" class="i">+                                                addVarInt(15, 0)
+</a><a href="#h1-5-21" id="h1-5-21" class="i">+                                            }
+</a><a href="#h1-5-22" id="h1-5-22" class="i">+                                            addVarInt(6, 0)
+</a>                                         }
+<a href="#h1-5-24" id="h1-5-24" class="d">-                                        addVarInt(6, 0)
+</a><a href="#h1-5-25" id="h1-5-25" class="i">+                                        from(2) {}
+</a>                                     }
+<a href="#h1-5-27" id="h1-5-27" class="d">-                                    messageProtoReader.getByteArray(3, 3, 5, 2)?.let {
+</a><a href="#h1-5-28" id="h1-5-28" class="d">-                                        addBuffer(2, it)
+</a><a href="#h1-5-29" id="h1-5-29" class="i">+                                    extras?.let {
+</a><a href="#h1-5-30" id="h1-5-30" class="i">+                                        addBuffer(13, it)
+</a>                                     }
+<a href="#h1-5-32" id="h1-5-32" class="i">+                                    from(22) {}
+</a>                                 }
+<a href="#h1-5-34" id="h1-5-34" class="d">-                                extras?.let {
+</a><a href="#h1-5-35" id="h1-5-35" class="d">-                                    addBuffer(13, it)
+</a><a href="#h1-5-36" id="h1-5-36" class="i">+                            }.toByteArray()
+</a><a href="#h1-5-37" id="h1-5-37" class="i">+                        }
+</a><a href="#h1-5-38" id="h1-5-38" class="i">+
+</a><a href="#h1-5-39" id="h1-5-39" class="i">+                        localMessageContent.contentType = ContentType.SNAP
+</a><a href="#h1-5-40" id="h1-5-40" class="i">+                        localMessageContent.content = ProtoEditor(localMessageContent.content!!).apply {
+</a><a href="#h1-5-41" id="h1-5-41" class="i">+                            edit(11, 5, 2) {
+</a><a href="#h1-5-42" id="h1-5-42" class="i">+                                arrayOf(6, 7, 8).forEach { remove(it) }
+</a><a href="#h1-5-43" id="h1-5-43" class="i">+                                // set snap duration
+</a><a href="#h1-5-44" id="h1-5-44" class="i">+                                if (snapDurationMs != null) {
+</a><a href="#h1-5-45" id="h1-5-45" class="i">+                                    addVarInt(8, snapDurationMs / 1000)
+</a><a href="#h1-5-46" id="h1-5-46" class="i">+                                    if (snapDurationMs / 1000 &lt;= 0) {
+</a><a href="#h1-5-47" id="h1-5-47" class="i">+                                        addVarInt(99, snapDurationMs)
+</a><a href="#h1-5-48" id="h1-5-48" class="i">+                                    }
+</a><a href="#h1-5-49" id="h1-5-49" class="i">+                                } else {
+</a><a href="#h1-5-50" id="h1-5-50" class="i">+                                    addBuffer(6, byteArrayOf())
+</a>                                 }
+                             }
+<a href="#h1-5-53" id="h1-5-53" class="i">+
+</a><a href="#h1-5-54" id="h1-5-54" class="i">+                            // set app source
+</a><a href="#h1-5-55" id="h1-5-55" class="i">+                            edit(11, 22) {
+</a><a href="#h1-5-56" id="h1-5-56" class="i">+                                remove(4)
+</a><a href="#h1-5-57" id="h1-5-57" class="i">+                                addVarInt(4, 5) // APP_SOURCE_CAMERA
+</a><a href="#h1-5-58" id="h1-5-58" class="i">+                            }
+</a>                         }.toByteArray()
+                     }
+                     &quot;NOTE&quot; -&gt; {
+<a href="#h1-6" id="h1-6" class="h">@@ -183,25 +228,146 @@ class SendOverride : Feature(&quot;Send Override&quot;) {
+</a>             }
+ 
+             if (configOverrideType != &quot;always_ask&quot;) {
+<a href="#h1-6-3" id="h1-6-3" class="d">-                if (sendMedia(configOverrideType)) {
+</a><a href="#h1-6-4" id="h1-6-4" class="i">+                if (sendMedia(configOverrideType, 10)) {
+</a>                     event.invokeOriginal()
+                 }
+                 return@subscribe
+             }
+ 
+             context.runOnUiThread {
+<a href="#h1-6-11" id="h1-6-11" class="d">-                ViewAppearanceHelper.newAlertDialogBuilder(context.mainActivity!!)
+</a><a href="#h1-6-12" id="h1-6-12" class="d">-                    .setItems(typeNames.values.map {
+</a><a href="#h1-6-13" id="h1-6-13" class="d">-                        context.translation[&quot;features.options.gallery_media_send_override.$it&quot;]
+</a><a href="#h1-6-14" id="h1-6-14" class="d">-                    }.toTypedArray()) { dialog, which -&gt;
+</a><a href="#h1-6-15" id="h1-6-15" class="d">-                        dialog.dismiss()
+</a><a href="#h1-6-16" id="h1-6-16" class="d">-                        if (sendMedia(typeNames.keys.toTypedArray()[which])) {
+</a><a href="#h1-6-17" id="h1-6-17" class="d">-                            event.invokeOriginal()
+</a><a href="#h1-6-18" id="h1-6-18" class="i">+                createComposeAlertDialog(context.mainActivity!!) { alertDialog -&gt;
+</a><a href="#h1-6-19" id="h1-6-19" class="i">+                    val mainTranslation = remember {
+</a><a href="#h1-6-20" id="h1-6-20" class="i">+                        context.translation.getCategory(&quot;send_override_dialog&quot;)
+</a><a href="#h1-6-21" id="h1-6-21" class="i">+                    }
+</a><a href="#h1-6-22" id="h1-6-22" class="i">+
+</a><a href="#h1-6-23" id="h1-6-23" class="i">+                    @Composable
+</a><a href="#h1-6-24" id="h1-6-24" class="i">+                    fun ActionTile(
+</a><a href="#h1-6-25" id="h1-6-25" class="i">+                        modifier: Modifier = Modifier,
+</a><a href="#h1-6-26" id="h1-6-26" class="i">+                        selected: Boolean = false,
+</a><a href="#h1-6-27" id="h1-6-27" class="i">+                        icon: ImageVector,
+</a><a href="#h1-6-28" id="h1-6-28" class="i">+                        title: String,
+</a><a href="#h1-6-29" id="h1-6-29" class="i">+                        onClick: () -&gt; Unit
+</a><a href="#h1-6-30" id="h1-6-30" class="i">+                    ) {
+</a><a href="#h1-6-31" id="h1-6-31" class="i">+                        Card(
+</a><a href="#h1-6-32" id="h1-6-32" class="i">+                            modifier = modifier,
+</a><a href="#h1-6-33" id="h1-6-33" class="i">+                            onClick = onClick,
+</a><a href="#h1-6-34" id="h1-6-34" class="i">+                            elevation = if (selected) CardDefaults.elevatedCardElevation(disabledElevation = 3.dp) else CardDefaults.cardElevation(),
+</a><a href="#h1-6-35" id="h1-6-35" class="i">+                            colors = if (selected) CardDefaults.elevatedCardColors() else CardDefaults.cardColors()
+</a><a href="#h1-6-36" id="h1-6-36" class="i">+                        ) {
+</a><a href="#h1-6-37" id="h1-6-37" class="i">+                            Column(
+</a><a href="#h1-6-38" id="h1-6-38" class="i">+                                modifier = Modifier
+</a><a href="#h1-6-39" id="h1-6-39" class="i">+                                    .padding(16.dp)
+</a><a href="#h1-6-40" id="h1-6-40" class="i">+                                    .size(75.dp),
+</a><a href="#h1-6-41" id="h1-6-41" class="i">+                                horizontalAlignment = Alignment.CenterHorizontally,
+</a><a href="#h1-6-42" id="h1-6-42" class="i">+                                verticalArrangement = Arrangement.Center
+</a><a href="#h1-6-43" id="h1-6-43" class="i">+                            ) {
+</a><a href="#h1-6-44" id="h1-6-44" class="i">+                                Icon(icon, contentDescription = title, modifier = Modifier
+</a><a href="#h1-6-45" id="h1-6-45" class="i">+                                    .size(32.dp)
+</a><a href="#h1-6-46" id="h1-6-46" class="i">+                                    .padding(4.dp))
+</a><a href="#h1-6-47" id="h1-6-47" class="i">+                                Text(title, modifier = Modifier.fillMaxWidth(), fontSize = 12.sp, fontWeight = FontWeight.Light, softWrap = true, lineHeight = 14.sp, textAlign = TextAlign.Center)
+</a><a href="#h1-6-48" id="h1-6-48" class="i">+                            }
+</a><a href="#h1-6-49" id="h1-6-49" class="i">+                        }
+</a><a href="#h1-6-50" id="h1-6-50" class="i">+                    }
+</a><a href="#h1-6-51" id="h1-6-51" class="i">+
+</a><a href="#h1-6-52" id="h1-6-52" class="i">+                    Column(
+</a><a href="#h1-6-53" id="h1-6-53" class="i">+                        modifier = Modifier
+</a><a href="#h1-6-54" id="h1-6-54" class="i">+                            .fillMaxWidth()
+</a><a href="#h1-6-55" id="h1-6-55" class="i">+                            .padding(8.dp),
+</a><a href="#h1-6-56" id="h1-6-56" class="i">+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+</a><a href="#h1-6-57" id="h1-6-57" class="i">+                    ) {
+</a><a href="#h1-6-58" id="h1-6-58" class="i">+                        val translation = remember {
+</a><a href="#h1-6-59" id="h1-6-59" class="i">+                            context.translation.getCategory(&quot;features.options.gallery_media_send_override&quot;)
+</a><a href="#h1-6-60" id="h1-6-60" class="i">+                        }
+</a><a href="#h1-6-61" id="h1-6-61" class="i">+
+</a><a href="#h1-6-62" id="h1-6-62" class="i">+                        Text(fontSize = 20.sp, fontWeight = FontWeight.Medium, text = &quot;Send as ${
+</a><a href="#h1-6-63" id="h1-6-63" class="i">+                            translation[selectedType]}&quot;, modifier = Modifier.padding(5.dp))
+</a><a href="#h1-6-64" id="h1-6-64" class="i">+                        FlowRow(
+</a><a href="#h1-6-65" id="h1-6-65" class="i">+                            modifier = Modifier.fillMaxWidth(),
+</a><a href="#h1-6-66" id="h1-6-66" class="i">+                            horizontalArrangement = Arrangement.SpaceEvenly
+</a><a href="#h1-6-67" id="h1-6-67" class="i">+                        ) {
+</a><a href="#h1-6-68" id="h1-6-68" class="i">+                            ActionTile(selected = selectedType == &quot;ORIGINAL&quot;, icon = Icons.Filled.Photo, title =
+</a><a href="#h1-6-69" id="h1-6-69" class="i">+                            translation[&quot;ORIGINAL&quot;]) {
+</a><a href="#h1-6-70" id="h1-6-70" class="i">+                                selectedType = &quot;ORIGINAL&quot;
+</a><a href="#h1-6-71" id="h1-6-71" class="i">+                            }
+</a><a href="#h1-6-72" id="h1-6-72" class="i">+                            ActionTile(selected = selectedType == &quot;SNAP&quot; || selectedType == &quot;SAVEABLE_SNAP&quot;, icon = Icons.Filled.PhotoCamera, title = translation[&quot;SNAP&quot;]) {
+</a><a href="#h1-6-73" id="h1-6-73" class="i">+                                selectedType = &quot;SNAP&quot;
+</a><a href="#h1-6-74" id="h1-6-74" class="i">+                            }
+</a><a href="#h1-6-75" id="h1-6-75" class="i">+                            ActionTile(selected = selectedType == &quot;NOTE&quot;, icon = Icons.Filled.MusicNote, title = translation[&quot;NOTE&quot;]) {
+</a><a href="#h1-6-76" id="h1-6-76" class="i">+                                selectedType = &quot;NOTE&quot;
+</a><a href="#h1-6-77" id="h1-6-77" class="i">+                            }
+</a><a href="#h1-6-78" id="h1-6-78" class="i">+                        }
+</a><a href="#h1-6-79" id="h1-6-79" class="i">+
+</a><a href="#h1-6-80" id="h1-6-80" class="i">+                        fun convertDuration(duration: Float): Int? {
+</a><a href="#h1-6-81" id="h1-6-81" class="i">+                            return when  {
+</a><a href="#h1-6-82" id="h1-6-82" class="i">+                                duration in -2f..-1f -&gt; 100
+</a><a href="#h1-6-83" id="h1-6-83" class="i">+                                duration in -1f..-0f -&gt; 250
+</a><a href="#h1-6-84" id="h1-6-84" class="i">+                                duration in -0f..1f -&gt; 500
+</a><a href="#h1-6-85" id="h1-6-85" class="i">+                                duration &gt;= 11f -&gt; null
+</a><a href="#h1-6-86" id="h1-6-86" class="i">+                                else -&gt; ((duration * 1000).toInt() / 1000) * 1000
+</a><a href="#h1-6-87" id="h1-6-87" class="i">+                            }
+</a><a href="#h1-6-88" id="h1-6-88" class="i">+                        }
+</a><a href="#h1-6-89" id="h1-6-89" class="i">+
+</a><a href="#h1-6-90" id="h1-6-90" class="i">+                        when (selectedType) {
+</a><a href="#h1-6-91" id="h1-6-91" class="i">+                            &quot;SNAP&quot;, &quot;SAVEABLE_SNAP&quot; -&gt; {
+</a><a href="#h1-6-92" id="h1-6-92" class="i">+                                fun toggleSaveable() {
+</a><a href="#h1-6-93" id="h1-6-93" class="i">+                                    selectedType = if (selectedType == &quot;SAVEABLE_SNAP&quot;) &quot;SNAP&quot; else &quot;SAVEABLE_SNAP&quot;
+</a><a href="#h1-6-94" id="h1-6-94" class="i">+                                }
+</a><a href="#h1-6-95" id="h1-6-95" class="i">+                                Row(
+</a><a href="#h1-6-96" id="h1-6-96" class="i">+                                    modifier = Modifier.fillMaxWidth().clickable {
+</a><a href="#h1-6-97" id="h1-6-97" class="i">+                                        toggleSaveable()
+</a><a href="#h1-6-98" id="h1-6-98" class="i">+                                    },
+</a><a href="#h1-6-99" id="h1-6-99" class="i">+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+</a><a href="#h1-6-100" id="h1-6-100" class="i">+                                    verticalAlignment = Alignment.CenterVertically
+</a><a href="#h1-6-101" id="h1-6-101" class="i">+                                ){
+</a><a href="#h1-6-102" id="h1-6-102" class="i">+                                    Checkbox(
+</a><a href="#h1-6-103" id="h1-6-103" class="i">+                                        checked = selectedType == &quot;SAVEABLE_SNAP&quot;,
+</a><a href="#h1-6-104" id="h1-6-104" class="i">+                                        onCheckedChange = {
+</a><a href="#h1-6-105" id="h1-6-105" class="i">+                                            toggleSaveable()
+</a><a href="#h1-6-106" id="h1-6-106" class="i">+                                        }
+</a><a href="#h1-6-107" id="h1-6-107" class="i">+                                    )
+</a><a href="#h1-6-108" id="h1-6-108" class="i">+                                    Text(text = mainTranslation[&quot;saveable_snap_hint&quot;], lineHeight = 15.sp)
+</a><a href="#h1-6-109" id="h1-6-109" class="i">+                                }
+</a><a href="#h1-6-110" id="h1-6-110" class="i">+                                Column(
+</a><a href="#h1-6-111" id="h1-6-111" class="i">+                                    modifier = Modifier.padding(start = 8.dp)
+</a><a href="#h1-6-112" id="h1-6-112" class="i">+                                ) {
+</a><a href="#h1-6-113" id="h1-6-113" class="i">+                                    Text(
+</a><a href="#h1-6-114" id="h1-6-114" class="i">+                                        text = mainTranslation.format(&quot;duration&quot;,
+</a><a href="#h1-6-115" id="h1-6-115" class="i">+                                            &quot;duration&quot; to (convertDuration(customDuration)?.toDuration(DurationUnit.MILLISECONDS)?.toString(DurationUnit.SECONDS, 2) ?: mainTranslation[&quot;unlimited_duration&quot;])
+</a><a href="#h1-6-116" id="h1-6-116" class="i">+                                        )
+</a><a href="#h1-6-117" id="h1-6-117" class="i">+                                    )
+</a><a href="#h1-6-118" id="h1-6-118" class="i">+                                    Slider(
+</a><a href="#h1-6-119" id="h1-6-119" class="i">+                                        modifier = Modifier.fillMaxWidth(),
+</a><a href="#h1-6-120" id="h1-6-120" class="i">+                                        value = customDuration,
+</a><a href="#h1-6-121" id="h1-6-121" class="i">+                                        onValueChange = {
+</a><a href="#h1-6-122" id="h1-6-122" class="i">+                                            customDuration = it
+</a><a href="#h1-6-123" id="h1-6-123" class="i">+                                        },
+</a><a href="#h1-6-124" id="h1-6-124" class="i">+                                        valueRange = -2f..11f,
+</a><a href="#h1-6-125" id="h1-6-125" class="i">+                                    )
+</a><a href="#h1-6-126" id="h1-6-126" class="i">+                                }
+</a><a href="#h1-6-127" id="h1-6-127" class="i">+                            }
+</a><a href="#h1-6-128" id="h1-6-128" class="i">+                        }
+</a><a href="#h1-6-129" id="h1-6-129" class="i">+
+</a><a href="#h1-6-130" id="h1-6-130" class="i">+                        Row(
+</a><a href="#h1-6-131" id="h1-6-131" class="i">+                            modifier = Modifier.fillMaxWidth(),
+</a><a href="#h1-6-132" id="h1-6-132" class="i">+                            horizontalArrangement = Arrangement.SpaceEvenly,
+</a><a href="#h1-6-133" id="h1-6-133" class="i">+                            verticalAlignment = Alignment.CenterVertically
+</a><a href="#h1-6-134" id="h1-6-134" class="i">+                        ) {
+</a><a href="#h1-6-135" id="h1-6-135" class="i">+                            OutlinedButton(onClick = {
+</a><a href="#h1-6-136" id="h1-6-136" class="i">+                                alertDialog.dismiss()
+</a><a href="#h1-6-137" id="h1-6-137" class="i">+                            }) {
+</a><a href="#h1-6-138" id="h1-6-138" class="i">+                                Text(context.translation[&quot;button.cancel&quot;])
+</a><a href="#h1-6-139" id="h1-6-139" class="i">+                            }
+</a><a href="#h1-6-140" id="h1-6-140" class="i">+                            Button(onClick = {
+</a><a href="#h1-6-141" id="h1-6-141" class="i">+                                alertDialog.dismiss()
+</a><a href="#h1-6-142" id="h1-6-142" class="i">+                                if (sendMedia(selectedType, convertDuration(customDuration))) {
+</a><a href="#h1-6-143" id="h1-6-143" class="i">+                                    event.invokeOriginal()
+</a><a href="#h1-6-144" id="h1-6-144" class="i">+                                }
+</a><a href="#h1-6-145" id="h1-6-145" class="i">+                            }) {
+</a><a href="#h1-6-146" id="h1-6-146" class="i">+                                Text(context.translation[&quot;button.send&quot;])
+</a><a href="#h1-6-147" id="h1-6-147" class="i">+                            }
+</a>                         }
+                     }
+<a href="#h1-6-150" id="h1-6-150" class="d">-                    .setTitle(context.translation[&quot;send_override_dialog.title&quot;])
+</a><a href="#h1-6-151" id="h1-6-151" class="d">-                    .setNegativeButton(context.translation[&quot;button.cancel&quot;], null)
+</a><a href="#h1-6-152" id="h1-6-152" class="d">-                    .show()
+</a><a href="#h1-6-153" id="h1-6-153" class="i">+                }.show()
+</a>             }
+         }
+     }
+</pre>
+</div>
+</body>
+</html>

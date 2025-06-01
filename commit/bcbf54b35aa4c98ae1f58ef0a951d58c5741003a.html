@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(ui/chat_action_menu): show chat edit history - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/bcbf54b35aa4c98ae1f58ef0a951d58c5741003a.html">bcbf54b35aa4c98ae1f58ef0a951d58c5741003a</a>
+<b>parent</b> <a href="../commit/31ae06ed625d87fa6ab6ced8b774938ddb6c1f24.html">31ae06ed625d87fa6ab6ced8b774938ddb6c1f24</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun,  9 Jun 2024 19:50:28 +0200
+
+feat(ui/chat_action_menu): show chat edit history
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++</span><span class="d">---</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h1">common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/LoggedChatEdit.aidl</a></td><td> | </td><td class="num">7</td><td><span class="i">+++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/LoggerInterface.aidl</a></td><td> | </td><td class="num">3</td><td><span class="i">+++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt</a></td><td> | </td><td class="num">24</td><td><span class="i">++++++++++</span><span class="d">--------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt</a></td><td> | </td><td class="num">25</td><td><span class="i">+++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/NewChatActionMenu.kt</a></td><td> | </td><td class="num">80</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">---------------</span></td></tr>
+</table></pre><pre>8 files changed, 120 insertions(+), 32 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/LoggerHistoryRoot.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -143,7 +143,7 @@ class LoggerHistoryRoot : Routes.Route() {
+</a>                                             })
+ 
+                                         val edits by rememberAsyncMutableState(defaultValue = emptyList()) {
+<a href="#h0-0-3" id="h0-0-3" class="d">-                                            loggerWrapper.getMessageEdits(selectedConversation!!, message.messageId)
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                                            loggerWrapper.getChatEdits(selectedConversation!!, message.messageId)
+</a>                                         }
+                                         edits.forEach { messageEdit -&gt;
+                                             val date = remember {
+<a href="#h0-1" id="h0-1" class="h">@@ -152,10 +152,10 @@ class LoggerHistoryRoot : Routes.Route() {
+</a>                                             Text(
+                                                 modifier = Modifier.pointerInput(Unit) {
+                                                     detectTapGestures(onLongPress = {
+<a href="#h0-1-3" id="h0-1-3" class="d">-                                                        context.androidContext.copyToClipboard(messageEdit.messageText)
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+                                                        context.androidContext.copyToClipboard(messageEdit.message)
+</a>                                                     })
+                                                 }.fillMaxWidth().padding(start = 4.dp),
+<a href="#h0-1-7" id="h0-1-7" class="d">-                                                text = messageEdit.messageText + &quot; (edited at $date)&quot;,
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+                                                text = messageEdit.message + &quot; (edited at $date)&quot;,
+</a>                                                 fontWeight = FontWeight.Light,
+                                                 fontStyle = FontStyle.Italic,
+                                                 fontSize = 12.sp
+<b>diff --git a/<a id="h1" href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/LoggedChatEdit.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/LoggedChatEdit.aidl</a> b/<a href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/LoggedChatEdit.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/LoggedChatEdit.aidl</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -0,0 +1,6 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="i">+package me.rhunk.snapenhance.bridge.logger;
+</a><a href="#h1-0-1" id="h1-0-1" class="i">+
+</a><a href="#h1-0-2" id="h1-0-2" class="i">+parcelable LoggedChatEdit {
+</a><a href="#h1-0-3" id="h1-0-3" class="i">+    long timestamp;
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    String message;
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+}</a><a href="#h1-0-6" id="h1-0-6" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h2" href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/LoggerInterface.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/LoggerInterface.aidl</a> b/<a href="../file/common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/LoggerInterface.aidl.html">common/src/main/aidl/me/rhunk/snapenhance/bridge/logger/LoggerInterface.aidl</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,6 +1,7 @@
+</a> package me.rhunk.snapenhance.bridge.logger;
+ 
+ import me.rhunk.snapenhance.bridge.logger.BridgeLoggedMessage;
+<a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.bridge.logger.LoggedChatEdit;
+</a> 
+ interface LoggerInterface {
+     /**
+<a href="#h2-1" id="h2-1" class="h">@@ -38,4 +39,6 @@ interface LoggerInterface {
+</a>         String eventType,
+         String data
+     );
+<a href="#h2-1-3" id="h2-1-3" class="i">+
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+    List&lt;LoggedChatEdit&gt; getChatEdits(String conversationId, long messageId);
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h3" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -1407,6 +1407,7 @@
+</a>         &quot;preview_button&quot;: &quot;Preview&quot;,
+         &quot;download_button&quot;: &quot;Download&quot;,
+         &quot;delete_logged_message_button&quot;: &quot;Delete Logged Message&quot;,
+<a href="#h3-0-3" id="h3-0-3" class="i">+        &quot;show_chat_edit_history&quot;: &quot;Show Chat Edit History&quot;,
+</a>         &quot;convert_message&quot;: &quot;Convert Message&quot;,
+         &quot;edit_message&quot;: &quot;Edit Message&quot;
+     },
+<b>diff --git a/<a id="h4" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -7,6 +7,7 @@ import com.google.gson.GsonBuilder
+</a> import com.google.gson.JsonObject
+ import kotlinx.coroutines.*
+ import me.rhunk.snapenhance.bridge.logger.BridgeLoggedMessage
+<a href="#h4-0-3" id="h4-0-3" class="i">+import me.rhunk.snapenhance.bridge.logger.LoggedChatEdit
+</a> import me.rhunk.snapenhance.bridge.logger.LoggerInterface
+ import me.rhunk.snapenhance.common.bridge.InternalFileHandleType
+ import me.rhunk.snapenhance.common.data.StoryData
+<a href="#h4-1" id="h4-1" class="h">@@ -20,11 +21,6 @@ import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+</a> import java.io.File
+ import java.util.UUID
+ 
+<a href="#h4-1-3" id="h4-1-3" class="d">-class LoggedMessageEdit(
+</a><a href="#h4-1-4" id="h4-1-4" class="d">-    val timestamp: Long,
+</a><a href="#h4-1-5" id="h4-1-5" class="d">-    val messageText: String
+</a><a href="#h4-1-6" id="h4-1-6" class="d">-)
+</a><a href="#h4-1-7" id="h4-1-7" class="d">-
+</a> class LoggedMessage(
+     val messageId: Long,
+     val conversationId: String,
+<a href="#h4-2" id="h4-2" class="h">@@ -422,17 +418,17 @@ class LoggerWrapper(
+</a>         return ConversationInfo(conversationId, participantSize, groupTitle, usernames)
+     }
+ 
+<a href="#h4-2-3" id="h4-2-3" class="d">-    fun getMessageEdits(conversationId: String, messageId: Long): List&lt;LoggedMessageEdit&gt; {
+</a><a href="#h4-2-4" id="h4-2-4" class="d">-        val edits = mutableListOf&lt;LoggedMessageEdit&gt;()
+</a><a href="#h4-2-5" id="h4-2-5" class="i">+    override fun getChatEdits(conversationId: String, messageId: Long): List&lt;LoggedChatEdit&gt; {
+</a><a href="#h4-2-6" id="h4-2-6" class="i">+        val edits = mutableListOf&lt;LoggedChatEdit&gt;()
+</a>         database.rawQuery(
+<a href="#h4-2-8" id="h4-2-8" class="d">-            &quot;SELECT added_timestamp, message_text FROM chat_edits WHERE conversation_id = ? AND message_id = ?&quot;,
+</a><a href="#h4-2-9" id="h4-2-9" class="i">+            &quot;SELECT added_timestamp, message_text FROM chat_edits WHERE conversation_id = ? AND message_id = ? ORDER BY added_timestamp ASC&quot;,
+</a>             arrayOf(conversationId, messageId.toString())
+<a href="#h4-2-11" id="h4-2-11" class="d">-        ).use {
+</a><a href="#h4-2-12" id="h4-2-12" class="d">-            while (it.moveToNext()) {
+</a><a href="#h4-2-13" id="h4-2-13" class="d">-                edits.add(LoggedMessageEdit(
+</a><a href="#h4-2-14" id="h4-2-14" class="d">-                    timestamp = it.getLongOrNull(&quot;added_timestamp&quot;) ?: continue,
+</a><a href="#h4-2-15" id="h4-2-15" class="d">-                    messageText = it.getStringOrNull(&quot;message_text&quot;) ?: continue
+</a><a href="#h4-2-16" id="h4-2-16" class="d">-                ))
+</a><a href="#h4-2-17" id="h4-2-17" class="i">+        ).use { cursor -&gt;
+</a><a href="#h4-2-18" id="h4-2-18" class="i">+            while (cursor.moveToNext()) {
+</a><a href="#h4-2-19" id="h4-2-19" class="i">+                edits.add(LoggedChatEdit().apply {
+</a><a href="#h4-2-20" id="h4-2-20" class="i">+                    timestamp = cursor.getLongOrNull(&quot;added_timestamp&quot;) ?: return@apply
+</a><a href="#h4-2-21" id="h4-2-21" class="i">+                    message = cursor.getStringOrNull(&quot;message_text&quot;)
+</a><a href="#h4-2-22" id="h4-2-22" class="i">+                }.takeIf { it.timestamp &gt; 0L } ?: continue)
+</a>             }
+         }
+         return edits
+<b>diff --git a/<a id="h5" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/spying/MessageLogger.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -8,6 +8,7 @@ import android.os.DeadObjectException
+</a> import com.google.gson.JsonObject
+ import com.google.gson.JsonParser
+ import me.rhunk.snapenhance.bridge.logger.BridgeLoggedMessage
+<a href="#h5-0-3" id="h5-0-3" class="i">+import me.rhunk.snapenhance.bridge.logger.LoggedChatEdit
+</a> import me.rhunk.snapenhance.common.data.ContentType
+ import me.rhunk.snapenhance.common.data.MessageState
+ import me.rhunk.snapenhance.common.data.QuotedMessageContentStatus
+<a href="#h5-1" id="h5-1" class="h">@@ -76,6 +77,11 @@ class MessageLogger : Feature(&quot;MessageLogger&quot;,
+</a>         }
+     }
+ 
+<a href="#h5-1-3" id="h5-1-3" class="i">+    fun getChatEdits(conversationId: String, clientMessageId: Long): List&lt;LoggedChatEdit&gt; {
+</a><a href="#h5-1-4" id="h5-1-4" class="i">+        val uniqueMessageId = makeUniqueIdentifier(conversationId, clientMessageId) ?: return emptyList()
+</a><a href="#h5-1-5" id="h5-1-5" class="i">+        return loggerInterface.getChatEdits(conversationId, uniqueMessageId)
+</a><a href="#h5-1-6" id="h5-1-6" class="i">+    }
+</a><a href="#h5-1-7" id="h5-1-7" class="i">+
+</a>     private fun computeMessageIdentifier(conversationId: String, orderKey: Long) = (orderKey.toString() + conversationId).longHashCode()
+ 
+     private fun makeUniqueIdentifier(conversationId: String, clientMessageId: Long): Long? {
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/ChatActionMenu.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -5,6 +5,7 @@ import android.view.ViewGroup
+</a> import android.view.ViewGroup.MarginLayoutParams
+ import android.widget.Button
+ import android.widget.LinearLayout
+<a href="#h6-0-3" id="h6-0-3" class="i">+import me.rhunk.snapenhance.bridge.logger.LoggedChatEdit
+</a> import me.rhunk.snapenhance.core.features.impl.downloader.MediaDownloader
+ import me.rhunk.snapenhance.core.features.impl.experiments.ConvertMessageLocally
+ import me.rhunk.snapenhance.core.features.impl.messaging.Messaging
+<a href="#h6-1" id="h6-1" class="h">@@ -131,6 +132,30 @@ class ChatActionMenu : AbstractMenu() {
+</a>                     }
+                 }
+             })
+<a href="#h6-1-3" id="h6-1-3" class="i">+
+</a><a href="#h6-1-4" id="h6-1-4" class="i">+            injectButton(Button(viewGroup.context).apply {
+</a><a href="#h6-1-5" id="h6-1-5" class="i">+                var chatEdits = emptyList&lt;LoggedChatEdit&gt;()
+</a><a href="#h6-1-6" id="h6-1-6" class="i">+                text = this@ChatActionMenu.context.translation[&quot;chat_action_menu.show_chat_edit_history&quot;]
+</a><a href="#h6-1-7" id="h6-1-7" class="i">+                setOnClickListener {
+</a><a href="#h6-1-8" id="h6-1-8" class="i">+                    menuViewInjector.menu(NewChatActionMenu::class)?.showChatEditHistory(chatEdits)
+</a><a href="#h6-1-9" id="h6-1-9" class="i">+                }
+</a><a href="#h6-1-10" id="h6-1-10" class="i">+                addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+</a><a href="#h6-1-11" id="h6-1-11" class="i">+                    override fun onViewAttachedToWindow(v: View) {
+</a><a href="#h6-1-12" id="h6-1-12" class="i">+                        visibility = View.GONE
+</a><a href="#h6-1-13" id="h6-1-13" class="i">+                        chatEdits = this@ChatActionMenu.context.feature(MessageLogger::class).getChatEdits(
+</a><a href="#h6-1-14" id="h6-1-14" class="i">+                            messaging.openedConversationUUID.toString(),
+</a><a href="#h6-1-15" id="h6-1-15" class="i">+                            messaging.lastFocusedMessageId,
+</a><a href="#h6-1-16" id="h6-1-16" class="i">+                        )
+</a><a href="#h6-1-17" id="h6-1-17" class="i">+                        if (chatEdits.isEmpty()) return
+</a><a href="#h6-1-18" id="h6-1-18" class="i">+                        visibility = View.VISIBLE
+</a><a href="#h6-1-19" id="h6-1-19" class="i">+                    }
+</a><a href="#h6-1-20" id="h6-1-20" class="i">+
+</a><a href="#h6-1-21" id="h6-1-21" class="i">+                    override fun onViewDetachedFromWindow(v: View) {
+</a><a href="#h6-1-22" id="h6-1-22" class="i">+                        visibility = View.GONE
+</a><a href="#h6-1-23" id="h6-1-23" class="i">+                        chatEdits = emptyList()
+</a><a href="#h6-1-24" id="h6-1-24" class="i">+                    }
+</a><a href="#h6-1-25" id="h6-1-25" class="i">+                })
+</a><a href="#h6-1-26" id="h6-1-26" class="i">+            })
+</a>         }
+ 
+         if (context.config.experimental.editMessage.get() &amp;&amp; messaging.conversationManager?.isEditMessageSupported() == true) {
+<b>diff --git a/<a id="h7" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/NewChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/NewChatActionMenu.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/NewChatActionMenu.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ui/menu/impl/NewChatActionMenu.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -10,29 +10,32 @@ import androidx.compose.foundation.border
+</a> import androidx.compose.foundation.clickable
+ import androidx.compose.foundation.gestures.detectTapGestures
+ import androidx.compose.foundation.layout.*
+<a href="#h7-0-3" id="h7-0-3" class="i">+import androidx.compose.foundation.lazy.LazyColumn
+</a><a href="#h7-0-4" id="h7-0-4" class="i">+import androidx.compose.foundation.lazy.itemsIndexed
+</a> import androidx.compose.material.icons.Icons
+<a href="#h7-0-6" id="h7-0-6" class="d">-import androidx.compose.material.icons.filled.Download
+</a><a href="#h7-0-7" id="h7-0-7" class="d">-import androidx.compose.material.icons.filled.RemoveRedEye
+</a><a href="#h7-0-8" id="h7-0-8" class="d">-import androidx.compose.material.icons.outlined.Image
+</a><a href="#h7-0-9" id="h7-0-9" class="d">-import androidx.compose.material.icons.rounded.BookmarkRemove
+</a><a href="#h7-0-10" id="h7-0-10" class="d">-import androidx.compose.material.icons.rounded.Edit
+</a><a href="#h7-0-11" id="h7-0-11" class="d">-import androidx.compose.material3.Button
+</a><a href="#h7-0-12" id="h7-0-12" class="d">-import androidx.compose.material3.Card
+</a><a href="#h7-0-13" id="h7-0-13" class="d">-import androidx.compose.material3.Icon
+</a><a href="#h7-0-14" id="h7-0-14" class="d">-import androidx.compose.material3.MaterialTheme
+</a><a href="#h7-0-15" id="h7-0-15" class="d">-import androidx.compose.material3.Text
+</a><a href="#h7-0-16" id="h7-0-16" class="i">+import androidx.compose.material.icons.outlined.*
+</a><a href="#h7-0-17" id="h7-0-17" class="i">+import androidx.compose.material3.*
+</a> import androidx.compose.runtime.Composable
+<a href="#h7-0-19" id="h7-0-19" class="i">+import androidx.compose.runtime.getValue
+</a> import androidx.compose.runtime.remember
+<a href="#h7-0-21" id="h7-0-21" class="i">+import androidx.compose.ui.Alignment
+</a> import androidx.compose.ui.Modifier
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.graphics.vector.ImageVector
+ import androidx.compose.ui.input.pointer.pointerInput
+ import androidx.compose.ui.platform.ComposeView
+<a href="#h7-0-27" id="h7-0-27" class="i">+import androidx.compose.ui.text.font.Font
+</a><a href="#h7-0-28" id="h7-0-28" class="i">+import androidx.compose.ui.text.font.FontFamily
+</a><a href="#h7-0-29" id="h7-0-29" class="i">+import androidx.compose.ui.text.font.FontWeight
+</a> import androidx.compose.ui.unit.dp
+<a href="#h7-0-31" id="h7-0-31" class="i">+import androidx.compose.ui.unit.sp
+</a> import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.launch
+<a href="#h7-0-34" id="h7-0-34" class="i">+import me.rhunk.snapenhance.bridge.logger.LoggedChatEdit
+</a> import me.rhunk.snapenhance.common.data.ContentType
+<a href="#h7-0-36" id="h7-0-36" class="i">+import me.rhunk.snapenhance.common.ui.createComposeAlertDialog
+</a> import me.rhunk.snapenhance.common.ui.createComposeView
+<a href="#h7-0-38" id="h7-0-38" class="i">+import me.rhunk.snapenhance.common.ui.rememberAsyncMutableState
+</a> import me.rhunk.snapenhance.common.util.ktx.copyToClipboard
+ import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.common.util.protobuf.ProtoWriter
+<a href="#h7-1" id="h7-1" class="h">@@ -48,9 +51,11 @@ import me.rhunk.snapenhance.core.ui.debugEditText
+</a> import me.rhunk.snapenhance.core.ui.iterateParent
+ import me.rhunk.snapenhance.core.ui.menu.AbstractMenu
+ import me.rhunk.snapenhance.core.ui.triggerCloseTouchEvent
+<a href="#h7-1-3" id="h7-1-3" class="i">+import me.rhunk.snapenhance.core.util.ktx.getIdentifier
+</a> import me.rhunk.snapenhance.core.util.ktx.isDarkTheme
+ import me.rhunk.snapenhance.core.util.ktx.setObjectField
+ import me.rhunk.snapenhance.core.util.ktx.vibrateLongPress
+<a href="#h7-1-7" id="h7-1-7" class="i">+import java.text.DateFormat
+</a> import java.text.SimpleDateFormat
+ import java.util.Date
+ import kotlin.io.encoding.Base64
+<a href="#h7-2" id="h7-2" class="h">@@ -70,6 +75,32 @@ class NewChatActionMenu : AbstractMenu() {
+</a>         }
+     }
+ 
+<a href="#h7-2-3" id="h7-2-3" class="i">+    fun showChatEditHistory(
+</a><a href="#h7-2-4" id="h7-2-4" class="i">+        edits: List&lt;LoggedChatEdit&gt;,
+</a><a href="#h7-2-5" id="h7-2-5" class="i">+    ) {
+</a><a href="#h7-2-6" id="h7-2-6" class="i">+        createComposeAlertDialog(context.mainActivity!!) {
+</a><a href="#h7-2-7" id="h7-2-7" class="i">+            LazyColumn(
+</a><a href="#h7-2-8" id="h7-2-8" class="i">+                modifier = Modifier.padding(16.dp),
+</a><a href="#h7-2-9" id="h7-2-9" class="i">+            ) {
+</a><a href="#h7-2-10" id="h7-2-10" class="i">+                itemsIndexed(edits) { index, edit -&gt;
+</a><a href="#h7-2-11" id="h7-2-11" class="i">+                    Column(
+</a><a href="#h7-2-12" id="h7-2-12" class="i">+                        modifier = Modifier.padding(8.dp).fillMaxWidth().pointerInput(Unit) {
+</a><a href="#h7-2-13" id="h7-2-13" class="i">+                            detectTapGestures(
+</a><a href="#h7-2-14" id="h7-2-14" class="i">+                                onLongPress = {
+</a><a href="#h7-2-15" id="h7-2-15" class="i">+                                    context.androidContext.copyToClipboard(edit.message)
+</a><a href="#h7-2-16" id="h7-2-16" class="i">+                                }
+</a><a href="#h7-2-17" id="h7-2-17" class="i">+                            )
+</a><a href="#h7-2-18" id="h7-2-18" class="i">+                        },
+</a><a href="#h7-2-19" id="h7-2-19" class="i">+                        horizontalAlignment = Alignment.Start,
+</a><a href="#h7-2-20" id="h7-2-20" class="i">+                    ) {
+</a><a href="#h7-2-21" id="h7-2-21" class="i">+                        Text(edit.message)
+</a><a href="#h7-2-22" id="h7-2-22" class="i">+                        Text(text = DateFormat.getDateTimeInstance().format(edit.timestamp) + &quot; (${index + 1})&quot;, fontSize = 12.sp, fontWeight = FontWeight.Light)
+</a><a href="#h7-2-23" id="h7-2-23" class="i">+                    }
+</a><a href="#h7-2-24" id="h7-2-24" class="i">+                }
+</a><a href="#h7-2-25" id="h7-2-25" class="i">+            }
+</a><a href="#h7-2-26" id="h7-2-26" class="i">+        }.show()
+</a><a href="#h7-2-27" id="h7-2-27" class="i">+    }
+</a><a href="#h7-2-28" id="h7-2-28" class="i">+
+</a>     fun editCurrentMessage(
+         localContext: Context,
+         dismissActionMenu: () -&gt; Unit,
+<a href="#h7-3" id="h7-3" class="h">@@ -267,6 +298,11 @@ class NewChatActionMenu : AbstractMenu() {
+</a> 
+         val composeView = createComposeView(event.view.context) {
+             val primaryColor = remember { if (event.view.context.isDarkTheme()) Color.White else Color.Black }
+<a href="#h7-3-3" id="h7-3-3" class="i">+            val avenirNextMediumFont = remember {
+</a><a href="#h7-3-4" id="h7-3-4" class="i">+                FontFamily(
+</a><a href="#h7-3-5" id="h7-3-5" class="i">+                    Font(context.resources.getIdentifier(&quot;avenir_next_medium&quot;, &quot;font&quot;), FontWeight.Medium)
+</a><a href="#h7-3-6" id="h7-3-6" class="i">+                )
+</a><a href="#h7-3-7" id="h7-3-7" class="i">+            }
+</a> 
+             @Composable
+             fun ListButton(
+<a href="#h7-4" id="h7-4" class="h">@@ -288,7 +324,7 @@ class NewChatActionMenu : AbstractMenu() {
+</a>                         tint = primaryColor,
+                         contentDescription = text
+                     )
+<a href="#h7-4-3" id="h7-4-3" class="d">-                    Text(text, color = primaryColor)
+</a><a href="#h7-4-4" id="h7-4-4" class="i">+                    Text(text, color = primaryColor, fontFamily = avenirNextMediumFont, fontSize = 16.sp)
+</a>                 }
+                 Spacer(modifier = Modifier
+                     .height(1.dp)
+<a href="#h7-5" id="h7-5" class="h">@@ -300,11 +336,11 @@ class NewChatActionMenu : AbstractMenu() {
+</a>                 modifier = Modifier.fillMaxWidth(),
+             ) {
+                 if (context.config.downloader.downloadContextMenu.get()) {
+<a href="#h7-5-3" id="h7-5-3" class="d">-                    ListButton(icon = Icons.Default.RemoveRedEye, text = context.translation[&quot;chat_action_menu.preview_button&quot;], modifier = Modifier.clickable {
+</a><a href="#h7-5-4" id="h7-5-4" class="i">+                    ListButton(icon = Icons.Outlined.RemoveRedEye, text = context.translation[&quot;chat_action_menu.preview_button&quot;], modifier = Modifier.clickable {
+</a>                         closeActionMenu()
+                         mediaDownloader.onMessageActionMenu(true)
+                     })
+<a href="#h7-5-8" id="h7-5-8" class="d">-                    ListButton(icon = Icons.Default.Download, text = context.translation[&quot;chat_action_menu.download_button&quot;], modifier = Modifier.pointerInput(Unit) {
+</a><a href="#h7-5-9" id="h7-5-9" class="i">+                    ListButton(icon = Icons.Outlined.Download, text = context.translation[&quot;chat_action_menu.download_button&quot;], modifier = Modifier.pointerInput(Unit) {
+</a>                         detectTapGestures(
+                             onTap = {
+                                 closeActionMenu()
+<a href="#h7-6" id="h7-6" class="h">@@ -319,7 +355,7 @@ class NewChatActionMenu : AbstractMenu() {
+</a>                 }
+ 
+                 if (context.config.experimental.editMessage.get() &amp;&amp; messaging.conversationManager?.isEditMessageSupported() == true) {
+<a href="#h7-6-3" id="h7-6-3" class="d">-                    ListButton(icon = Icons.Rounded.Edit, text = context.translation[&quot;chat_action_menu.edit_message&quot;], modifier = Modifier.clickable {
+</a><a href="#h7-6-4" id="h7-6-4" class="i">+                    ListButton(icon = Icons.Outlined.Edit, text = context.translation[&quot;chat_action_menu.edit_message&quot;], modifier = Modifier.clickable {
+</a>                         editCurrentMessage(event.view.context) {
+                             context.runOnUiThread {
+                                 closeActionMenu()
+<a href="#h7-7" id="h7-7" class="h">@@ -329,7 +365,21 @@ class NewChatActionMenu : AbstractMenu() {
+</a>                 }
+ 
+                 if (context.config.messaging.messageLogger.globalState == true) {
+<a href="#h7-7-3" id="h7-7-3" class="d">-                    ListButton(icon = Icons.Rounded.BookmarkRemove, text = context.translation[&quot;chat_action_menu.delete_logged_message_button&quot;], modifier = Modifier.clickable {
+</a><a href="#h7-7-4" id="h7-7-4" class="i">+                    val chatEdits by rememberAsyncMutableState(defaultValue = null) {
+</a><a href="#h7-7-5" id="h7-7-5" class="i">+                        context.feature(MessageLogger::class).getChatEdits(
+</a><a href="#h7-7-6" id="h7-7-6" class="i">+                            messaging.openedConversationUUID.toString(),
+</a><a href="#h7-7-7" id="h7-7-7" class="i">+                            messaging.lastFocusedMessageId
+</a><a href="#h7-7-8" id="h7-7-8" class="i">+                        )
+</a><a href="#h7-7-9" id="h7-7-9" class="i">+                    }
+</a><a href="#h7-7-10" id="h7-7-10" class="i">+
+</a><a href="#h7-7-11" id="h7-7-11" class="i">+                    if (chatEdits != null &amp;&amp; chatEdits?.isNotEmpty() == true) {
+</a><a href="#h7-7-12" id="h7-7-12" class="i">+                        ListButton(icon = Icons.Outlined.History, text = context.translation[&quot;chat_action_menu.show_chat_edit_history&quot;], modifier = Modifier.clickable {
+</a><a href="#h7-7-13" id="h7-7-13" class="i">+                            closeActionMenu()
+</a><a href="#h7-7-14" id="h7-7-14" class="i">+                            showChatEditHistory(chatEdits!!)
+</a><a href="#h7-7-15" id="h7-7-15" class="i">+                        })
+</a><a href="#h7-7-16" id="h7-7-16" class="i">+                    }
+</a><a href="#h7-7-17" id="h7-7-17" class="i">+
+</a><a href="#h7-7-18" id="h7-7-18" class="i">+                    ListButton(icon = Icons.Outlined.BookmarkRemove, text = context.translation[&quot;chat_action_menu.delete_logged_message_button&quot;], modifier = Modifier.clickable {
+</a>                         closeActionMenu()
+                         context.executeAsync {
+                             messageLogger.deleteMessage(messaging.openedConversationUUID.toString(), messaging.lastFocusedMessageId)
+</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(scripting): wrapper args - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/c635994e50362395ae42c032a7566260dc31a5e5.html">c635994e50362395ae42c032a7566260dc31a5e5</a>
+<b>parent</b> <a href="../commit/8b9d2e5d5cde6d948ee3128f03561b1d6d9cb585.html">8b9d2e5d5cde6d948ee3128f03561b1d6d9cb585</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Tue, 28 May 2024 00:05:33 +0200
+
+fix(scripting): wrapper args
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a></td><td> | </td><td class="num">19</td><td><span class="i">++++++++</span><span class="d">-----------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/PrimitiveUtil.kt</a></td><td> | </td><td class="num">22</td><td><span class="i">++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>2 files changed, 30 insertions(+), 11 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -118,28 +118,25 @@ class JSModule(
+</a>                 }.getOrNull() ?: return@putFunction Undefined.instance
+ 
+                 scriptableObject(&quot;JavaClassWrapper&quot;) {
+<a href="#h0-0-3" id="h0-0-3" class="d">-                    putFunction(&quot;newInstance&quot;) newInstance@{ args -&gt;
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                    putFunction(&quot;__new__&quot;) { args -&gt;
+</a>                         val constructor = clazz.declaredConstructors.find {
+<a href="#h0-0-6" id="h0-0-6" class="d">-                            it.parameterTypes.zip(args ?: emptyArray()).all { (type, arg) -&gt;
+</a><a href="#h0-0-7" id="h0-0-7" class="d">-                                type.isAssignableFrom(arg?.javaClass ?: return@all false)
+</a><a href="#h0-0-8" id="h0-0-8" class="d">-                            }
+</a><a href="#h0-0-9" id="h0-0-9" class="d">-                        } ?: return@newInstance Undefined.instance
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+                            (args ?: emptyArray()).isSameParameters(it.parameterTypes)
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+                        }?.also { it.isAccessible = true } ?: throw IllegalArgumentException(&quot;Constructor not found with args ${argsToString(args)}&quot;)
+</a>                         constructor.newInstance(*args ?: emptyArray())
+                     }
+ 
+                     clazz.declaredMethods.filter { Modifier.isStatic(it.modifiers) }.forEach { method -&gt;
+                         putFunction(method.name) { args -&gt;
+<a href="#h0-0-17" id="h0-0-17" class="d">-                            clazz.declaredMethods.find {
+</a><a href="#h0-0-18" id="h0-0-18" class="d">-                                it.name == method.name &amp;&amp; it.parameterTypes.zip(args ?: emptyArray()).all { (type, arg) -&gt;
+</a><a href="#h0-0-19" id="h0-0-19" class="d">-                                    type.isAssignableFrom(arg?.javaClass ?: return@all false)
+</a><a href="#h0-0-20" id="h0-0-20" class="d">-                                }
+</a><a href="#h0-0-21" id="h0-0-21" class="d">-                            }?.also { it.isAccessible = true }?.invoke(null, *args ?: emptyArray())
+</a><a href="#h0-0-22" id="h0-0-22" class="i">+                            val declaredMethod = clazz.declaredMethods.find {
+</a><a href="#h0-0-23" id="h0-0-23" class="i">+                                it.name == method.name &amp;&amp; (args ?: emptyArray()).isSameParameters(it.parameterTypes)
+</a><a href="#h0-0-24" id="h0-0-24" class="i">+                            }?.also { it.isAccessible = true } ?: throw IllegalArgumentException(&quot;Method ${method.name} not found with args ${argsToString(args)}&quot;)
+</a><a href="#h0-0-25" id="h0-0-25" class="i">+                            declaredMethod.invoke(null, *args ?: emptyArray())
+</a>                         }
+                     }
+ 
+                     clazz.declaredFields.filter { Modifier.isStatic(it.modifiers) }.forEach { field -&gt;
+                         field.isAccessible = true
+<a href="#h0-0-31" id="h0-0-31" class="d">-                        defineProperty(field.name, { field.get(null)}, { value -&gt; field.set(null, value) }, 0)
+</a><a href="#h0-0-32" id="h0-0-32" class="i">+                        defineProperty(field.name, { field.get(null) }, { value -&gt; field.set(null, value) }, 0)
+</a>                     }
+                 }
+             }
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/PrimitiveUtil.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/PrimitiveUtil.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/PrimitiveUtil.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/PrimitiveUtil.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -14,4 +14,26 @@ fun Any?.toPrimitiveValue(type: Lazy&lt;String&gt;) = when (this) {
+</a>     }
+     is Boolean -&gt; if (type.value == &quot;boolean&quot;) this.toString().toBoolean() else this
+     else -&gt; this
+<a href="#h1-0-3" id="h1-0-3" class="i">+}
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+fun Array&lt;out Any?&gt;.isSameParameters(parameters: Array&lt;Class&lt;*&gt;&gt;): Boolean {
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+    if (this.size != parameters.size) return false
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+    for (i in this.indices) {
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+        val type = parameters[i]
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+        val value = this[i]?.toPrimitiveValue(lazy { type.name }) ?: continue
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+        if (type.isPrimitive) {
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+            when (type.name) {
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+                &quot;byte&quot; -&gt; if (value !is Byte) return false
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+                &quot;short&quot; -&gt; if (value !is Short) return false
+</a><a href="#h1-0-14" id="h1-0-14" class="i">+                &quot;int&quot; -&gt; if (value !is Int) return false
+</a><a href="#h1-0-15" id="h1-0-15" class="i">+                &quot;long&quot; -&gt; if (value !is Long) return false
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+                &quot;float&quot; -&gt; if (value !is Float) return false
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+                &quot;double&quot; -&gt; if (value !is Double) return false
+</a><a href="#h1-0-18" id="h1-0-18" class="i">+                &quot;boolean&quot; -&gt; if (value !is Boolean) return false
+</a><a href="#h1-0-19" id="h1-0-19" class="i">+                &quot;char&quot; -&gt; if (value !is Char) return false
+</a><a href="#h1-0-20" id="h1-0-20" class="i">+                else -&gt; return false
+</a><a href="#h1-0-21" id="h1-0-21" class="i">+            }
+</a><a href="#h1-0-22" id="h1-0-22" class="i">+        } else if (!type.isAssignableFrom(value.javaClass)) return false
+</a><a href="#h1-0-23" id="h1-0-23" class="i">+    }
+</a><a href="#h1-0-24" id="h1-0-24" class="i">+    return true
+</a> } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

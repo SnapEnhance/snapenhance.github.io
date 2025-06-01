@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(setup/permissions): display over other apps - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/2b0e4ad09ae0d954f781ba0e00ad5e658f638560.html">2b0e4ad09ae0d954f781ba0e00ad5e658f638560</a>
+<b>parent</b> <a href="../commit/b92589fa07c6a6fc496433d0e090bc2375ce8277.html">b92589fa07c6a6fc496433d0e090bc2375ce8277</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 14 Oct 2023 15:07:01 +0200
+
+feat(setup/permissions): display over other apps
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/proguard-rules.pro</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/PermissionsScreen.kt</a></td><td> | </td><td class="num">147</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">--------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+</table></pre><pre>3 files changed, 89 insertions(+), 61 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/proguard-rules.pro.html">app/proguard-rules.pro</a> b/<a href="../file/app/proguard-rules.pro.html">app/proguard-rules.pro</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -6,5 +6,5 @@
+</a> -keep class org.jf.dexlib2.** { *; }
+ -keep class org.mozilla.javascript.** { *; }
+ -keep class androidx.compose.material.icons.** { *; }
+<a href="#h0-0-3" id="h0-0-3" class="d">--keep class androidx.navigation.compose.** { *; }
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+-keep class androidx.navigation.** { *; }
+</a> -keep class me.rhunk.snapenhance.** { *; }
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/PermissionsScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/PermissionsScreen.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/PermissionsScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/PermissionsScreen.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -17,7 +17,11 @@ import androidx.compose.material3.Button
+</a> import androidx.compose.material3.Icon
+ import androidx.compose.material3.OutlinedCard
+ import androidx.compose.material3.Text
+<a href="#h1-0-3" id="h1-0-3" class="d">-import androidx.compose.runtime.*
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import androidx.compose.runtime.Composable
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+import androidx.compose.runtime.LaunchedEffect
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+import androidx.compose.runtime.mutableStateMapOf
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+import androidx.compose.runtime.remember
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+import androidx.compose.runtime.rememberCoroutineScope
+</a> import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.unit.dp
+<a href="#h1-1" id="h1-1" class="h">@@ -25,6 +29,12 @@ import kotlinx.coroutines.launch
+</a> import me.rhunk.snapenhance.ui.setup.screens.SetupScreen
+ import me.rhunk.snapenhance.ui.util.ActivityLauncherHelper
+ 
+<a href="#h1-1-3" id="h1-1-3" class="i">+data class PermissionData(
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+    val translationKey: String,
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+    val isPermissionGranted: () -&gt; Boolean,
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+    val requestPermission: (PermissionData) -&gt; Unit,
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+)
+</a><a href="#h1-1-8" id="h1-1-8" class="i">+
+</a> class PermissionsScreen : SetupScreen() {
+     private lateinit var activityLauncherHelper: ActivityLauncherHelper
+ 
+<a href="#h1-2" id="h1-2" class="h">@@ -53,27 +63,73 @@ class PermissionsScreen : SetupScreen() {
+</a>     @SuppressLint(&quot;BatteryLife&quot;)
+     @Composable
+     override fun Content() {
+<a href="#h1-2-3" id="h1-2-3" class="d">-        var notificationPermissionGranted by remember { mutableStateOf(true) }
+</a><a href="#h1-2-4" id="h1-2-4" class="d">-        var isBatteryOptimisationIgnored by remember { mutableStateOf(false) }
+</a>         val coroutineScope = rememberCoroutineScope()
+<a href="#h1-2-6" id="h1-2-6" class="d">-
+</a><a href="#h1-2-7" id="h1-2-7" class="d">-        if (isBatteryOptimisationIgnored &amp;&amp; notificationPermissionGranted) {
+</a><a href="#h1-2-8" id="h1-2-8" class="d">-            allowNext(true)
+</a><a href="#h1-2-9" id="h1-2-9" class="d">-        } else {
+</a><a href="#h1-2-10" id="h1-2-10" class="d">-            allowNext(false)
+</a><a href="#h1-2-11" id="h1-2-11" class="i">+        val grantedPermissions = remember {
+</a><a href="#h1-2-12" id="h1-2-12" class="i">+            mutableStateMapOf&lt;String, Boolean&gt;()
+</a><a href="#h1-2-13" id="h1-2-13" class="i">+        }
+</a><a href="#h1-2-14" id="h1-2-14" class="i">+        val permissions = remember {
+</a><a href="#h1-2-15" id="h1-2-15" class="i">+            listOf(
+</a><a href="#h1-2-16" id="h1-2-16" class="i">+                PermissionData(
+</a><a href="#h1-2-17" id="h1-2-17" class="i">+                    translationKey = &quot;notification_access&quot;,
+</a><a href="#h1-2-18" id="h1-2-18" class="i">+                    isPermissionGranted = {
+</a><a href="#h1-2-19" id="h1-2-19" class="i">+                        if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.TIRAMISU) {
+</a><a href="#h1-2-20" id="h1-2-20" class="i">+                            context.androidContext.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+</a><a href="#h1-2-21" id="h1-2-21" class="i">+                        } else {
+</a><a href="#h1-2-22" id="h1-2-22" class="i">+                            true
+</a><a href="#h1-2-23" id="h1-2-23" class="i">+                        }
+</a><a href="#h1-2-24" id="h1-2-24" class="i">+                    },
+</a><a href="#h1-2-25" id="h1-2-25" class="i">+                    requestPermission = { perm -&gt;
+</a><a href="#h1-2-26" id="h1-2-26" class="i">+                        if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.TIRAMISU) {
+</a><a href="#h1-2-27" id="h1-2-27" class="i">+                            activityLauncherHelper.requestPermission(Manifest.permission.POST_NOTIFICATIONS) { resultCode, _ -&gt;
+</a><a href="#h1-2-28" id="h1-2-28" class="i">+                                coroutineScope.launch {
+</a><a href="#h1-2-29" id="h1-2-29" class="i">+                                    grantedPermissions[perm.translationKey] = resultCode == ComponentActivity.RESULT_OK
+</a><a href="#h1-2-30" id="h1-2-30" class="i">+                                }
+</a><a href="#h1-2-31" id="h1-2-31" class="i">+                            }
+</a><a href="#h1-2-32" id="h1-2-32" class="i">+                        }
+</a><a href="#h1-2-33" id="h1-2-33" class="i">+                    }
+</a><a href="#h1-2-34" id="h1-2-34" class="i">+                ),
+</a><a href="#h1-2-35" id="h1-2-35" class="i">+                PermissionData(
+</a><a href="#h1-2-36" id="h1-2-36" class="i">+                    translationKey = &quot;battery_optimization&quot;,
+</a><a href="#h1-2-37" id="h1-2-37" class="i">+                    isPermissionGranted = {
+</a><a href="#h1-2-38" id="h1-2-38" class="i">+                        val powerManager =
+</a><a href="#h1-2-39" id="h1-2-39" class="i">+                            context.androidContext.getSystemService(Context.POWER_SERVICE) as PowerManager
+</a><a href="#h1-2-40" id="h1-2-40" class="i">+                        powerManager.isIgnoringBatteryOptimizations(context.androidContext.packageName)
+</a><a href="#h1-2-41" id="h1-2-41" class="i">+                    },
+</a><a href="#h1-2-42" id="h1-2-42" class="i">+                    requestPermission = { perm -&gt;
+</a><a href="#h1-2-43" id="h1-2-43" class="i">+                        activityLauncherHelper.launch(Intent().apply {
+</a><a href="#h1-2-44" id="h1-2-44" class="i">+                            action = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+</a><a href="#h1-2-45" id="h1-2-45" class="i">+                            data = Uri.parse(&quot;package:${context.androidContext.packageName}&quot;)
+</a><a href="#h1-2-46" id="h1-2-46" class="i">+                        }) { resultCode, _ -&gt;
+</a><a href="#h1-2-47" id="h1-2-47" class="i">+                            coroutineScope.launch {
+</a><a href="#h1-2-48" id="h1-2-48" class="i">+                                grantedPermissions[perm.translationKey] = resultCode == 0
+</a><a href="#h1-2-49" id="h1-2-49" class="i">+                            }
+</a><a href="#h1-2-50" id="h1-2-50" class="i">+                        }
+</a><a href="#h1-2-51" id="h1-2-51" class="i">+                    }
+</a><a href="#h1-2-52" id="h1-2-52" class="i">+                ),
+</a><a href="#h1-2-53" id="h1-2-53" class="i">+                PermissionData(
+</a><a href="#h1-2-54" id="h1-2-54" class="i">+                    translationKey = &quot;display_over_other_apps&quot;,
+</a><a href="#h1-2-55" id="h1-2-55" class="i">+                    isPermissionGranted = {
+</a><a href="#h1-2-56" id="h1-2-56" class="i">+                        Settings.canDrawOverlays(context.androidContext)
+</a><a href="#h1-2-57" id="h1-2-57" class="i">+                    },
+</a><a href="#h1-2-58" id="h1-2-58" class="i">+                    requestPermission = { perm -&gt;
+</a><a href="#h1-2-59" id="h1-2-59" class="i">+                        activityLauncherHelper.launch(Intent().apply {
+</a><a href="#h1-2-60" id="h1-2-60" class="i">+                            action = Settings.ACTION_MANAGE_OVERLAY_PERMISSION
+</a><a href="#h1-2-61" id="h1-2-61" class="i">+                            data = Uri.parse(&quot;package:${context.androidContext.packageName}&quot;)
+</a><a href="#h1-2-62" id="h1-2-62" class="i">+                        }) { resultCode, _ -&gt;
+</a><a href="#h1-2-63" id="h1-2-63" class="i">+                            coroutineScope.launch {
+</a><a href="#h1-2-64" id="h1-2-64" class="i">+                                grantedPermissions[perm.translationKey] = resultCode == 0
+</a><a href="#h1-2-65" id="h1-2-65" class="i">+                            }
+</a><a href="#h1-2-66" id="h1-2-66" class="i">+                        }
+</a><a href="#h1-2-67" id="h1-2-67" class="i">+                    }
+</a><a href="#h1-2-68" id="h1-2-68" class="i">+                )
+</a><a href="#h1-2-69" id="h1-2-69" class="i">+            )
+</a>         }
+ 
+<a href="#h1-2-72" id="h1-2-72" class="i">+        allowNext(permissions.all { perm -&gt; grantedPermissions[perm.translationKey] == true })
+</a><a href="#h1-2-73" id="h1-2-73" class="i">+
+</a>         LaunchedEffect(Unit) {
+<a href="#h1-2-75" id="h1-2-75" class="d">-            if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.TIRAMISU) {
+</a><a href="#h1-2-76" id="h1-2-76" class="d">-                notificationPermissionGranted =
+</a><a href="#h1-2-77" id="h1-2-77" class="d">-                    context.androidContext.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+</a><a href="#h1-2-78" id="h1-2-78" class="d">-            }
+</a><a href="#h1-2-79" id="h1-2-79" class="d">-            val powerManager =
+</a><a href="#h1-2-80" id="h1-2-80" class="d">-                context.androidContext.getSystemService(Context.POWER_SERVICE) as PowerManager
+</a><a href="#h1-2-81" id="h1-2-81" class="d">-            isBatteryOptimisationIgnored =
+</a><a href="#h1-2-82" id="h1-2-82" class="d">-                powerManager.isIgnoringBatteryOptimizations(context.androidContext.packageName)
+</a><a href="#h1-2-83" id="h1-2-83" class="d">-            if (isBatteryOptimisationIgnored &amp;&amp; notificationPermissionGranted) {
+</a><a href="#h1-2-84" id="h1-2-84" class="d">-                goNext()
+</a><a href="#h1-2-85" id="h1-2-85" class="i">+            permissions.forEach { perm -&gt;
+</a><a href="#h1-2-86" id="h1-2-86" class="i">+                grantedPermissions[perm.translationKey] = perm.isPermissionGranted()
+</a>             }
+         }
+ 
+<a href="#h1-3" id="h1-3" class="h">@@ -88,52 +144,23 @@ class PermissionsScreen : SetupScreen() {
+</a>                 modifier = Modifier
+                     .padding(all = 16.dp),
+             ) {
+<a href="#h1-3-3" id="h1-3-3" class="d">-                Row(
+</a><a href="#h1-3-4" id="h1-3-4" class="d">-                    verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h1-3-5" id="h1-3-5" class="d">-                ) {
+</a><a href="#h1-3-6" id="h1-3-6" class="d">-                    DialogText(
+</a><a href="#h1-3-7" id="h1-3-7" class="d">-                        text = context.translation[&quot;setup.permissions.notification_access&quot;],
+</a><a href="#h1-3-8" id="h1-3-8" class="d">-                        modifier = Modifier.weight(1f)
+</a><a href="#h1-3-9" id="h1-3-9" class="d">-                    )
+</a><a href="#h1-3-10" id="h1-3-10" class="d">-                    if (notificationPermissionGranted) {
+</a><a href="#h1-3-11" id="h1-3-11" class="d">-                        GrantedIcon()
+</a><a href="#h1-3-12" id="h1-3-12" class="d">-                    } else {
+</a><a href="#h1-3-13" id="h1-3-13" class="d">-                        RequestButton {
+</a><a href="#h1-3-14" id="h1-3-14" class="d">-                            if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.TIRAMISU) {
+</a><a href="#h1-3-15" id="h1-3-15" class="d">-                                activityLauncherHelper.requestPermission(Manifest.permission.POST_NOTIFICATIONS) { resultCode, _ -&gt;
+</a><a href="#h1-3-16" id="h1-3-16" class="d">-                                    coroutineScope.launch {
+</a><a href="#h1-3-17" id="h1-3-17" class="d">-                                        notificationPermissionGranted =
+</a><a href="#h1-3-18" id="h1-3-18" class="d">-                                            resultCode == ComponentActivity.RESULT_OK
+</a><a href="#h1-3-19" id="h1-3-19" class="d">-                                    }
+</a><a href="#h1-3-20" id="h1-3-20" class="d">-                                }
+</a><a href="#h1-3-21" id="h1-3-21" class="i">+                permissions.forEach { perm -&gt;
+</a><a href="#h1-3-22" id="h1-3-22" class="i">+                    Row(
+</a><a href="#h1-3-23" id="h1-3-23" class="i">+                        verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h1-3-24" id="h1-3-24" class="i">+                    ) {
+</a><a href="#h1-3-25" id="h1-3-25" class="i">+                        DialogText(
+</a><a href="#h1-3-26" id="h1-3-26" class="i">+                            text = context.translation[&quot;setup.permissions.${perm.translationKey}&quot;],
+</a><a href="#h1-3-27" id="h1-3-27" class="i">+                            modifier = Modifier.weight(1f)
+</a><a href="#h1-3-28" id="h1-3-28" class="i">+                        )
+</a><a href="#h1-3-29" id="h1-3-29" class="i">+                        if (grantedPermissions[perm.translationKey] == true) {
+</a><a href="#h1-3-30" id="h1-3-30" class="i">+                            GrantedIcon()
+</a><a href="#h1-3-31" id="h1-3-31" class="i">+                        } else {
+</a><a href="#h1-3-32" id="h1-3-32" class="i">+                            RequestButton {
+</a><a href="#h1-3-33" id="h1-3-33" class="i">+                                perm.requestPermission(perm)
+</a>                             }
+                         }
+                     }
+                 }
+<a href="#h1-3-38" id="h1-3-38" class="d">-
+</a><a href="#h1-3-39" id="h1-3-39" class="d">-                Row(
+</a><a href="#h1-3-40" id="h1-3-40" class="d">-                    verticalAlignment = Alignment.CenterVertically,
+</a><a href="#h1-3-41" id="h1-3-41" class="d">-                ) {
+</a><a href="#h1-3-42" id="h1-3-42" class="d">-                    DialogText(
+</a><a href="#h1-3-43" id="h1-3-43" class="d">-                        text = context.translation[&quot;setup.permissions.battery_optimization&quot;],
+</a><a href="#h1-3-44" id="h1-3-44" class="d">-                        modifier = Modifier.weight(1f)
+</a><a href="#h1-3-45" id="h1-3-45" class="d">-                    )
+</a><a href="#h1-3-46" id="h1-3-46" class="d">-                    if (isBatteryOptimisationIgnored) {
+</a><a href="#h1-3-47" id="h1-3-47" class="d">-                        GrantedIcon()
+</a><a href="#h1-3-48" id="h1-3-48" class="d">-                    } else {
+</a><a href="#h1-3-49" id="h1-3-49" class="d">-                        RequestButton {
+</a><a href="#h1-3-50" id="h1-3-50" class="d">-                            activityLauncherHelper.launch(Intent().apply {
+</a><a href="#h1-3-51" id="h1-3-51" class="d">-                                action = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+</a><a href="#h1-3-52" id="h1-3-52" class="d">-                                data = Uri.parse(&quot;package:${context.androidContext.packageName}&quot;)
+</a><a href="#h1-3-53" id="h1-3-53" class="d">-                            }) { resultCode, _ -&gt;
+</a><a href="#h1-3-54" id="h1-3-54" class="d">-                                coroutineScope.launch {
+</a><a href="#h1-3-55" id="h1-3-55" class="d">-                                    isBatteryOptimisationIgnored = resultCode == 0
+</a><a href="#h1-3-56" id="h1-3-56" class="d">-                                }
+</a><a href="#h1-3-57" id="h1-3-57" class="d">-                            }
+</a><a href="#h1-3-58" id="h1-3-58" class="d">-                        }
+</a><a href="#h1-3-59" id="h1-3-59" class="d">-                    }
+</a><a href="#h1-3-60" id="h1-3-60" class="d">-
+</a><a href="#h1-3-61" id="h1-3-61" class="d">-                }
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h2" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -16,6 +16,7 @@
+</a>             &quot;dialog&quot;: &quot;To continue you need to fit the following requirements:&quot;,
+             &quot;notification_access&quot;: &quot;Notification Access&quot;,
+             &quot;battery_optimization&quot;: &quot;Battery Optimization&quot;,
+<a href="#h2-0-3" id="h2-0-3" class="i">+            &quot;display_over_other_apps&quot;: &quot;Display Over Other Apps&quot;,
+</a>             &quot;request_button&quot;: &quot;Request&quot;
+         }
+     },
+</pre>
+</div>
+</body>
+</html>

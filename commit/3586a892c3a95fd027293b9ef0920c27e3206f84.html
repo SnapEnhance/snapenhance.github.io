@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(native): remap crash - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/3586a892c3a95fd027293b9ef0920c27e3206f84.html">3586a892c3a95fd027293b9ef0920c27e3206f84</a>
+<b>parent</b> <a href="../commit/4a121a4a21a96f2a107a9941dd95f8b94759ff44.html">4a121a4a21a96f2a107a9941dd95f8b94759ff44</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 28 Apr 2024 12:09:52 +0200
+
+fix(native): remap crash
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">native/jni/src/hooks/composer_hook.h</a></td><td> | </td><td class="num">10</td><td><span class="i">++++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">native/jni/src/library.cpp</a></td><td> | </td><td class="num">3</td><td><span class="i">+</span><span class="d">--</span></td></tr>
+</table></pre><pre>2 files changed, 7 insertions(+), 6 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/native/jni/src/hooks/composer_hook.h.html">native/jni/src/hooks/composer_hook.h</a> b/<a href="../file/native/jni/src/hooks/composer_hook.h.html">native/jni/src/hooks/composer_hook.h</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -91,12 +91,12 @@ namespace ComposerHook {
+</a>         JSValue global_var_obj;
+     };
+ 
+<a href="#h0-0-3" id="h0-0-3" class="d">-    static uintptr_t global_instance;
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+    static void* global_instance;
+</a>     static JSContext *global_ctx;
+     static std::string* composer_loader;
+ 
+<a href="#h0-0-8" id="h0-0-8" class="d">-    HOOK_DEF(JSValue, js_eval, uintptr_t instance, JSContext *ctx, uintptr_t this_obj, char *input, uintptr_t input_len, const char *filename, unsigned int flags, unsigned int scope_idx) {
+</a><a href="#h0-0-9" id="h0-0-9" class="d">-        if (global_instance == 0 || global_ctx == nullptr) {
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+    HOOK_DEF(JSValue, js_eval, void* instance, JSContext *ctx, void* this_obj, char *input, uintptr_t input_len, const char *filename, unsigned int flags, unsigned int scope_idx) {
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+        if (global_instance == nullptr || global_ctx == nullptr) {
+</a>             global_instance = instance;
+             global_ctx = ctx;
+ 
+<a href="#h0-1" id="h0-1" class="h">@@ -118,6 +118,8 @@ namespace ComposerHook {
+</a>     }
+ 
+     void setComposerLoader(JNIEnv *env, jobject, jstring code) {
+<a href="#h0-1-3" id="h0-1-3" class="i">+        global_instance = nullptr;
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+        global_ctx = nullptr;
+</a>         auto code_str = env-&gt;GetStringUTFChars(code, nullptr);
+         composer_loader = new std::string(code_str, env-&gt;GetStringUTFLength(code));
+         env-&gt;ReleaseStringUTFChars(code, code_str);
+<a href="#h0-2" id="h0-2" class="h">@@ -131,7 +133,7 @@ namespace ComposerHook {
+</a> 
+         auto script_str = env-&gt;GetStringUTFChars(script, nullptr);
+         auto length = env-&gt;GetStringUTFLength(script);
+<a href="#h0-2-3" id="h0-2-3" class="d">-        auto jsvalue = js_eval_original(global_instance, global_ctx, (uintptr_t) &amp;global_ctx-&gt;global_obj, (char *) script_str, length, &quot;&lt;eval&gt;&quot;, 0, 0);
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+        auto jsvalue = js_eval_original(global_instance, global_ctx, (void*) &amp;global_ctx-&gt;global_obj, (char *) script_str, length, &quot;&lt;eval&gt;&quot;, 0, 0);
+</a>         env-&gt;ReleaseStringUTFChars(script, script_str);
+ 
+         if (jsvalue.tag == JS_TAG_STRING) {
+<b>diff --git a/<a id="h1" href="../file/native/jni/src/library.cpp.html">native/jni/src/library.cpp</a> b/<a href="../file/native/jni/src/library.cpp.html">native/jni/src/library.cpp</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -29,8 +29,6 @@ bool JNICALL init(JNIEnv *env, jobject clazz) {
+</a> 
+     LOGD(&quot;client_module offset=0x%lx, size=0x%zx&quot;, client_module.base, client_module.size);
+ 
+<a href="#h1-0-3" id="h1-0-3" class="d">-    util::remap_sections(BUILD_PACKAGE);
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-
+</a>     UnaryCallHook::init(env);
+     FstatHook::init();
+     SqliteMutexHook::init();
+<a href="#h1-1" id="h1-1" class="h">@@ -86,5 +84,6 @@ extern &quot;C&quot; JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *_) {
+</a>     methods.push_back({&quot;composerEval&quot;, &quot;(Ljava/lang/String;)Ljava/lang/String;&quot;,(void *) ComposerHook::composerEval});
+ 
+     env-&gt;RegisterNatives(env-&gt;FindClass(std::string(BUILD_NAMESPACE &quot;/NativeLib&quot;).c_str()), methods.data(), methods.size());
+<a href="#h1-1-3" id="h1-1-3" class="i">+    util::remap_sections(BUILD_PACKAGE);
+</a>     return JNI_VERSION_1_6;
+ }
+</pre>
+</div>
+</body>
+</html>

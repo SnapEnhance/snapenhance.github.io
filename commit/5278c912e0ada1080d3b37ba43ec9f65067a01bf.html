@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ui: save config - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/5278c912e0ada1080d3b37ba43ec9f65067a01bf.html">5278c912e0ada1080d3b37ba43ec9f65067a01bf</a>
+<b>parent</b> <a href="../commit/5e41ccffd7d15351597959c3f5e253b4c67ff81d.html">5e41ccffd7d15351597959c3f5e253b4c67ff81d</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 29 Jul 2023 01:39:29 +0200
+
+ui: save config
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/manager/sections/FeaturesSection.kt</a></td><td> | </td><td class="num">70</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">----------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/bridge/wrapper/ConfigWrapper.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+</table></pre><pre>2 files changed, 58 insertions(+), 16 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/sections/FeaturesSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/sections/FeaturesSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/sections/FeaturesSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/sections/FeaturesSection.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -10,22 +10,32 @@ import androidx.compose.foundation.layout.fillMaxWidth
+</a> import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.lazy.LazyColumn
+ import androidx.compose.foundation.lazy.items
+<a href="#h0-0-3" id="h0-0-3" class="i">+import androidx.compose.foundation.shape.RoundedCornerShape
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+import androidx.compose.material.MaterialTheme
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+import androidx.compose.material.SnackbarHost
+</a> import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.filled.OpenInNew
+<a href="#h0-0-8" id="h0-0-8" class="i">+import androidx.compose.material.icons.rounded.Save
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+import androidx.compose.material.rememberScaffoldState
+</a> import androidx.compose.material3.Card
+ import androidx.compose.material3.FilledIconButton
+<a href="#h0-0-12" id="h0-0-12" class="i">+import androidx.compose.material3.FloatingActionButton
+</a> import androidx.compose.material3.Icon
+ import androidx.compose.material3.IconButton
+<a href="#h0-0-15" id="h0-0-15" class="i">+import androidx.compose.material3.Scaffold
+</a> import androidx.compose.material3.Switch
+ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.mutableStateOf
+ import androidx.compose.runtime.remember
+<a href="#h0-0-21" id="h0-0-21" class="i">+import androidx.compose.runtime.rememberCoroutineScope
+</a> import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+<a href="#h0-0-24" id="h0-0-24" class="i">+import androidx.compose.ui.text.font.FontWeight
+</a> import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+<a href="#h0-0-28" id="h0-0-28" class="i">+import kotlinx.coroutines.launch
+</a> import me.rhunk.snapenhance.config.ConfigProperty
+ import me.rhunk.snapenhance.config.impl.ConfigIntegerValue
+ import me.rhunk.snapenhance.config.impl.ConfigStateListValue
+<a href="#h0-1" id="h0-1" class="h">@@ -109,7 +119,7 @@ class FeaturesSection : Section() {
+</a>                         .weight(1f, fill = true)
+                         .padding(all = 10.dp)
+                 ) {
+<a href="#h0-1-3" id="h0-1-3" class="d">-                    Text(text = manager.translation.propertyName(item), fontSize = 16.sp)
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+                    Text(text = manager.translation.propertyName(item), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+</a>                     Text(
+                         text = manager.translation.propertyDescription(item),
+                         fontSize = 12.sp,
+<a href="#h0-2" id="h0-2" class="h">@@ -132,28 +142,56 @@ class FeaturesSection : Section() {
+</a>     }
+ 
+ 
+<a href="#h0-2-3" id="h0-2-3" class="d">-
+</a>     @Composable
+     @Preview
+     override fun Content() {
+         val configItems = remember {
+             ConfigProperty.sortedByCategory()
+         }
+<a href="#h0-2-10" id="h0-2-10" class="d">-        Column {
+</a><a href="#h0-2-11" id="h0-2-11" class="d">-            Text(
+</a><a href="#h0-2-12" id="h0-2-12" class="d">-                text = &quot;Features&quot;,
+</a><a href="#h0-2-13" id="h0-2-13" class="d">-                modifier = Modifier.padding(all = 15.dp),
+</a><a href="#h0-2-14" id="h0-2-14" class="d">-                fontSize = 20.sp
+</a><a href="#h0-2-15" id="h0-2-15" class="d">-            )
+</a><a href="#h0-2-16" id="h0-2-16" class="d">-            LazyColumn(
+</a><a href="#h0-2-17" id="h0-2-17" class="d">-                modifier = Modifier
+</a><a href="#h0-2-18" id="h0-2-18" class="d">-                    .fillMaxSize(),
+</a><a href="#h0-2-19" id="h0-2-19" class="d">-                verticalArrangement = Arrangement.Center
+</a><a href="#h0-2-20" id="h0-2-20" class="d">-            ) {
+</a><a href="#h0-2-21" id="h0-2-21" class="d">-                items(configItems) { item -&gt;
+</a><a href="#h0-2-22" id="h0-2-22" class="d">-                    PropertyCard(item)
+</a><a href="#h0-2-23" id="h0-2-23" class="i">+        val scope = rememberCoroutineScope()
+</a><a href="#h0-2-24" id="h0-2-24" class="i">+        val scaffoldState = rememberScaffoldState()
+</a><a href="#h0-2-25" id="h0-2-25" class="i">+        Scaffold(
+</a><a href="#h0-2-26" id="h0-2-26" class="i">+            snackbarHost = { SnackbarHost(scaffoldState.snackbarHostState) },
+</a><a href="#h0-2-27" id="h0-2-27" class="i">+            floatingActionButton = {
+</a><a href="#h0-2-28" id="h0-2-28" class="i">+                FloatingActionButton(
+</a><a href="#h0-2-29" id="h0-2-29" class="i">+                    onClick = {
+</a><a href="#h0-2-30" id="h0-2-30" class="i">+                        manager.config.save()
+</a><a href="#h0-2-31" id="h0-2-31" class="i">+                        scope.launch {
+</a><a href="#h0-2-32" id="h0-2-32" class="i">+                            scaffoldState.snackbarHostState.showSnackbar(&quot;Saved&quot;)
+</a><a href="#h0-2-33" id="h0-2-33" class="i">+                        }
+</a><a href="#h0-2-34" id="h0-2-34" class="i">+                    },
+</a><a href="#h0-2-35" id="h0-2-35" class="i">+                    containerColor = MaterialTheme.colors.primary,
+</a><a href="#h0-2-36" id="h0-2-36" class="i">+                    shape = RoundedCornerShape(16.dp),
+</a><a href="#h0-2-37" id="h0-2-37" class="i">+                ) {
+</a><a href="#h0-2-38" id="h0-2-38" class="i">+                    Icon(
+</a><a href="#h0-2-39" id="h0-2-39" class="i">+                        imageVector = Icons.Rounded.Save,
+</a><a href="#h0-2-40" id="h0-2-40" class="i">+                        contentDescription = null
+</a><a href="#h0-2-41" id="h0-2-41" class="i">+                    )
+</a><a href="#h0-2-42" id="h0-2-42" class="i">+                }
+</a><a href="#h0-2-43" id="h0-2-43" class="i">+            },
+</a><a href="#h0-2-44" id="h0-2-44" class="i">+            modifier = Modifier.fillMaxSize(),
+</a><a href="#h0-2-45" id="h0-2-45" class="i">+            content = { innerPadding -&gt;
+</a><a href="#h0-2-46" id="h0-2-46" class="i">+                Column(
+</a><a href="#h0-2-47" id="h0-2-47" class="i">+                    modifier = Modifier
+</a><a href="#h0-2-48" id="h0-2-48" class="i">+                        .fillMaxSize()
+</a><a href="#h0-2-49" id="h0-2-49" class="i">+                        .padding(innerPadding)
+</a><a href="#h0-2-50" id="h0-2-50" class="i">+                ) {
+</a><a href="#h0-2-51" id="h0-2-51" class="i">+                    Text(
+</a><a href="#h0-2-52" id="h0-2-52" class="i">+                        text = &quot;Features&quot;,
+</a><a href="#h0-2-53" id="h0-2-53" class="i">+                        modifier = Modifier.padding(all = 10.dp),
+</a><a href="#h0-2-54" id="h0-2-54" class="i">+                        fontSize = 20.sp
+</a><a href="#h0-2-55" id="h0-2-55" class="i">+                    )
+</a><a href="#h0-2-56" id="h0-2-56" class="i">+                    LazyColumn(
+</a><a href="#h0-2-57" id="h0-2-57" class="i">+                        modifier = Modifier
+</a><a href="#h0-2-58" id="h0-2-58" class="i">+                            .fillMaxSize(),
+</a><a href="#h0-2-59" id="h0-2-59" class="i">+                        verticalArrangement = Arrangement.Center
+</a><a href="#h0-2-60" id="h0-2-60" class="i">+                    ) {
+</a><a href="#h0-2-61" id="h0-2-61" class="i">+                        items(configItems) { item -&gt;
+</a><a href="#h0-2-62" id="h0-2-62" class="i">+                            PropertyCard(item)
+</a><a href="#h0-2-63" id="h0-2-63" class="i">+                        }
+</a><a href="#h0-2-64" id="h0-2-64" class="i">+                    }
+</a>                 }
+             }
+<a href="#h0-2-67" id="h0-2-67" class="d">-        }
+</a><a href="#h0-2-68" id="h0-2-68" class="i">+        )
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/bridge/wrapper/ConfigWrapper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/bridge/wrapper/ConfigWrapper.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/bridge/wrapper/ConfigWrapper.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/bridge/wrapper/ConfigWrapper.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -35,6 +35,10 @@ class ConfigWrapper: ConfigAccessor() {
+</a>         }
+     }
+ 
+<a href="#h1-0-3" id="h1-0-3" class="i">+    fun save() {
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+        writeConfig()
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+    }
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+
+</a>     private fun loadConfig() {
+         val configContent = file.read()
+ 
+</pre>
+</div>
+</body>
+</html>

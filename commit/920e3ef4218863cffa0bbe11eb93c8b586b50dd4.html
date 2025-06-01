@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(mapper): unique build hash - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/920e3ef4218863cffa0bbe11eb93c8b586b50dd4.html">920e3ef4218863cffa0bbe11eb93c8b586b50dd4</a>
+<b>parent</b> <a href="../commit/8aa2e572272d1fe40605bcfaa2624904a2b0d0cd.html">8aa2e572272d1fe40605bcfaa2624904a2b0d0cd</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 22 Oct 2023 18:48:12 +0200
+
+fix(mapper): unique build hash
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/build.gradle.kts</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">build.gradle.kts</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/build.gradle.kts</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MappingsWrapper.kt</a></td><td> | </td><td class="num">29</td><td><span class="i">++++++++++++</span><span class="d">-----------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">native/build.gradle.kts</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+</table></pre><pre>5 files changed, 16 insertions(+), 20 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/build.gradle.kts.html">app/build.gradle.kts</a> b/<a href="../file/app/build.gradle.kts.html">app/build.gradle.kts</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -112,7 +112,7 @@ android {
+</a> androidComponents {
+     onVariants(selector().withFlavor(&quot;abi&quot;, &quot;core&quot;)) {
+         it.packaging.jniLibs.apply {
+<a href="#h0-0-3" id="h0-0-3" class="d">-            pickFirsts.set(listOf(&quot;**/lib${rootProject.ext[&quot;nativeName&quot;]}.so&quot;))
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+            pickFirsts.set(listOf(&quot;**/lib${rootProject.ext[&quot;buildHash&quot;]}.so&quot;))
+</a>             excludes.set(listOf(&quot;**/*.so&quot;))
+         }
+     }
+<b>diff --git a/<a id="h1" href="../file/build.gradle.kts.html">build.gradle.kts</a> b/<a href="../file/build.gradle.kts.html">build.gradle.kts</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -11,7 +11,7 @@ var versionCode = 1 //&quot;1&quot; for now until stable release
+</a> rootProject.ext.set(&quot;appVersionName&quot;, versionName)
+ rootProject.ext.set(&quot;appVersionCode&quot;, versionCode)
+ rootProject.ext.set(&quot;applicationId&quot;, &quot;me.rhunk.snapenhance&quot;)
+<a href="#h1-0-3" id="h1-0-3" class="d">-rootProject.ext.set(&quot;nativeName&quot;, properties[&quot;custom_native_name&quot;] ?: java.security.SecureRandom().nextLong(1000000000, 99999999999).toString(16))
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+rootProject.ext.set(&quot;buildHash&quot;, properties[&quot;custom_build_hash&quot;] ?: java.security.SecureRandom().nextLong(1000000000, 99999999999).toString(16))
+</a> 
+ tasks.register(&quot;getVersion&quot;) {
+     doLast {
+<b>diff --git a/<a id="h2" href="../file/common/build.gradle.kts.html">common/build.gradle.kts</a> b/<a href="../file/common/build.gradle.kts.html">common/build.gradle.kts</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -18,6 +18,7 @@ android {
+</a>         buildConfigField(&quot;int&quot;, &quot;VERSION_CODE&quot;, &quot;${rootProject.ext[&quot;appVersionCode&quot;]}&quot;)
+         buildConfigField(&quot;String&quot;, &quot;APPLICATION_ID&quot;, &quot;\&quot;${rootProject.ext[&quot;applicationId&quot;]}\&quot;&quot;)
+         buildConfigField(&quot;int&quot;, &quot;BUILD_DATE&quot;, &quot;${System.currentTimeMillis() / 1000}&quot;)
+<a href="#h2-0-3" id="h2-0-3" class="i">+        buildConfigField(&quot;String&quot;, &quot;BUILD_HASH&quot;, &quot;\&quot;${rootProject.ext[&quot;buildHash&quot;]}\&quot;&quot;)
+</a>     }
+ 
+     kotlinOptions {
+<b>diff --git a/<a id="h3" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MappingsWrapper.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MappingsWrapper.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MappingsWrapper.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/MappingsWrapper.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -4,6 +4,7 @@ import android.content.Context
+</a> import com.google.gson.GsonBuilder
+ import com.google.gson.JsonElement
+ import com.google.gson.JsonParser
+<a href="#h3-0-3" id="h3-0-3" class="i">+import me.rhunk.snapenhance.common.BuildConfig
+</a> import me.rhunk.snapenhance.common.Constants
+ import me.rhunk.snapenhance.common.bridge.FileLoaderWrapper
+ import me.rhunk.snapenhance.common.bridge.types.BridgeFileType
+<a href="#h3-1" id="h3-1" class="h">@@ -35,11 +36,13 @@ class MappingsWrapper : FileLoaderWrapper(BridgeFileType.MAPPINGS, &quot;{}&quot;.toByteAr
+</a>     private lateinit var context: Context
+ 
+     private val mappings = ConcurrentHashMap&lt;String, Any&gt;()
+<a href="#h3-1-3" id="h3-1-3" class="d">-    private var snapBuildNumber: Long = 0
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+    private var mappingUniqueHash: Long = 0
+</a><a href="#h3-1-5" id="h3-1-5" class="i">+
+</a><a href="#h3-1-6" id="h3-1-6" class="i">+    private fun getUniqueBuildId() = (getSnapchatPackageInfo()?.longVersionCode ?: -1) xor BuildConfig.BUILD_HASH.hashCode().toLong()
+</a> 
+     fun init(context: Context) {
+         this.context = context
+<a href="#h3-1-10" id="h3-1-10" class="d">-        snapBuildNumber = getSnapchatVersionCode()
+</a><a href="#h3-1-11" id="h3-1-11" class="i">+        mappingUniqueHash = getUniqueBuildId()
+</a> 
+         if (isFileExists()) {
+             runCatching {
+<a href="#h3-2" id="h3-2" class="h">@@ -57,24 +60,16 @@ class MappingsWrapper : FileLoaderWrapper(BridgeFileType.MAPPINGS, &quot;{}&quot;.toByteAr
+</a>         )
+     }.getOrNull()
+ 
+<a href="#h3-2-3" id="h3-2-3" class="d">-    fun getSnapchatVersionCode() = getSnapchatPackageInfo()?.longVersionCode ?: -1
+</a><a href="#h3-2-4" id="h3-2-4" class="d">-    fun getApplicationSourceDir() = getSnapchatPackageInfo()?.applicationInfo?.sourceDir
+</a><a href="#h3-2-5" id="h3-2-5" class="d">-    fun getGeneratedBuildNumber() = snapBuildNumber
+</a><a href="#h3-2-6" id="h3-2-6" class="d">-
+</a><a href="#h3-2-7" id="h3-2-7" class="d">-    fun isMappingsOutdated(): Boolean {
+</a><a href="#h3-2-8" id="h3-2-8" class="d">-        return snapBuildNumber != getSnapchatVersionCode() || isMappingsLoaded().not()
+</a><a href="#h3-2-9" id="h3-2-9" class="d">-    }
+</a><a href="#h3-2-10" id="h3-2-10" class="d">-
+</a><a href="#h3-2-11" id="h3-2-11" class="d">-    fun isMappingsLoaded(): Boolean {
+</a><a href="#h3-2-12" id="h3-2-12" class="d">-        return mappings.isNotEmpty()
+</a><a href="#h3-2-13" id="h3-2-13" class="d">-    }
+</a><a href="#h3-2-14" id="h3-2-14" class="i">+    fun getGeneratedBuildNumber() = mappingUniqueHash
+</a><a href="#h3-2-15" id="h3-2-15" class="i">+    fun isMappingsOutdated() = mappingUniqueHash != getUniqueBuildId() || isMappingsLoaded().not()
+</a><a href="#h3-2-16" id="h3-2-16" class="i">+    fun isMappingsLoaded() = mappings.isNotEmpty()
+</a> 
+     private fun loadCached() {
+         if (!isFileExists()) {
+             throw Exception(&quot;Mappings file does not exist&quot;)
+         }
+         val mappingsObject = JsonParser.parseString(read().toString(Charsets.UTF_8)).asJsonObject.also {
+<a href="#h3-2-23" id="h3-2-23" class="d">-            snapBuildNumber = it[&quot;snap_build_number&quot;].asLong
+</a><a href="#h3-2-24" id="h3-2-24" class="i">+            mappingUniqueHash = it[&quot;unique_hash&quot;].asLong
+</a>         }
+ 
+         mappingsObject.entrySet().forEach { (key, value): Map.Entry&lt;String, JsonElement&gt; -&gt;
+<a href="#h3-3" id="h3-3" class="h">@@ -91,18 +86,18 @@ class MappingsWrapper : FileLoaderWrapper(BridgeFileType.MAPPINGS, &quot;{}&quot;.toByteAr
+</a>     }
+ 
+     fun refresh() {
+<a href="#h3-3-3" id="h3-3-3" class="d">-        snapBuildNumber = getSnapchatVersionCode()
+</a><a href="#h3-3-4" id="h3-3-4" class="i">+        mappingUniqueHash = getUniqueBuildId()
+</a>         val mapper = Mapper(*mappers)
+ 
+         runCatching {
+<a href="#h3-3-8" id="h3-3-8" class="d">-            mapper.loadApk(getApplicationSourceDir() ?: throw Exception(&quot;Failed to get APK&quot;))
+</a><a href="#h3-3-9" id="h3-3-9" class="i">+            mapper.loadApk(getSnapchatPackageInfo()?.applicationInfo?.sourceDir ?: throw Exception(&quot;Failed to get APK&quot;))
+</a>         }.onFailure {
+             throw Exception(&quot;Failed to load APK&quot;, it)
+         }
+ 
+         measureTimeMillis {
+             val result = mapper.start().apply {
+<a href="#h3-3-16" id="h3-3-16" class="d">-                addProperty(&quot;snap_build_number&quot;, snapBuildNumber)
+</a><a href="#h3-3-17" id="h3-3-17" class="i">+                addProperty(&quot;unique_hash&quot;, mappingUniqueHash)
+</a>             }
+             write(result.toString().toByteArray())
+         }
+<b>diff --git a/<a id="h4" href="../file/native/build.gradle.kts.html">native/build.gradle.kts</a> b/<a href="../file/native/build.gradle.kts.html">native/build.gradle.kts</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -3,7 +3,7 @@ plugins {
+</a>     alias(libs.plugins.kotlinAndroid)
+ }
+ 
+<a href="#h4-0-3" id="h4-0-3" class="d">-val nativeName = rootProject.ext.get(&quot;nativeName&quot;)
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+val nativeName = rootProject.ext.get(&quot;buildHash&quot;)
+</a> 
+ android {
+     namespace = rootProject.ext[&quot;applicationId&quot;].toString() + &quot;.nativelib&quot;
+</pre>
+</div>
+</body>
+</html>

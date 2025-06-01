@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(scripting): dead objects - add no args emit - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/e79aba81653d50c218a37f9d5e1975cfd49f3d69.html">e79aba81653d50c218a37f9d5e1975cfd49f3d69</a>
+<b>parent</b> <a href="../commit/08cd7917f334c9e9ae9b92948af32fb645001eed.html">08cd7917f334c9e9ae9b92948af32fb645001eed</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 17 Sep 2023 02:50:44 +0200
+
+fix(scripting): dead objects
+- add no args emit
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/scripting/IRemoteIPC.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">+++++++++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></td><td> | </td><td class="num">21</td><td><span class="i">+++++++++++++++++</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/scripting/IPCInterface.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">++++++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptRuntime.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">+++++++</span><span class="d">-</span></td></tr>
+</table></pre><pre>5 files changed, 40 insertions(+), 12 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/IRemoteIPC.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/IRemoteIPC.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/IRemoteIPC.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/IRemoteIPC.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,13 +1,19 @@
+</a> package me.rhunk.snapenhance.scripting
+ 
+<a href="#h0-0-2" id="h0-0-2" class="d">-class IRemoteIPC : IPCInterface {
+</a><a href="#h0-0-3" id="h0-0-3" class="d">-    private val listeners = mutableMapOf&lt;String, MutableSet&lt;Listener&gt;&gt;()
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+import java.util.concurrent.ConcurrentHashMap
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+class IRemoteIPC : IPCInterface() {
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+    private val listeners = ConcurrentHashMap&lt;String, MutableSet&lt;Listener&gt;&gt;()
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+    fun removeListener(eventName: String, listener: Listener) {
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+        listeners[eventName]?.remove(listener)
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+    }
+</a> 
+     override fun on(eventName: String, listener: Listener) {
+         listeners.getOrPut(eventName) { mutableSetOf() }.add(listener)
+     }
+ 
+     override fun emit(eventName: String, args: Array&lt;out String?&gt;) {
+<a href="#h0-0-18" id="h0-0-18" class="d">-        listeners[eventName]?.forEach { it(args) }
+</a><a href="#h0-0-19" id="h0-0-19" class="i">+        listeners[eventName]?.toList()?.forEach { it(args) }
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,6 +1,7 @@
+</a> package me.rhunk.snapenhance.scripting
+ 
+ import android.net.Uri
+<a href="#h1-0-3" id="h1-0-3" class="i">+import android.os.DeadObjectException
+</a> import androidx.documentfile.provider.DocumentFile
+ import me.rhunk.snapenhance.RemoteSideContext
+ import me.rhunk.snapenhance.bridge.scripting.IPCListener
+<a href="#h1-1" id="h1-1" class="h">@@ -75,12 +76,24 @@ class RemoteScriptManager(
+</a>     }
+ 
+     override fun registerIPCListener(eventName: String, listener: IPCListener) {
+<a href="#h1-1-3" id="h1-1-3" class="d">-        runtime.ipcManager.on(eventName) { args -&gt;
+</a><a href="#h1-1-4" id="h1-1-4" class="d">-            listener.onMessage(args)
+</a><a href="#h1-1-5" id="h1-1-5" class="d">-        }
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+        runtime.ipcManager.on(eventName, object: Listener {
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+            override fun invoke(args: Array&lt;out String?&gt;) {
+</a><a href="#h1-1-8" id="h1-1-8" class="i">+                try {
+</a><a href="#h1-1-9" id="h1-1-9" class="i">+                    listener.onMessage(args)
+</a><a href="#h1-1-10" id="h1-1-10" class="i">+                } catch (e: DeadObjectException) {
+</a><a href="#h1-1-11" id="h1-1-11" class="i">+                    (runtime.ipcManager as IRemoteIPC).removeListener(eventName, this)
+</a><a href="#h1-1-12" id="h1-1-12" class="i">+                } catch (t: Throwable) {
+</a><a href="#h1-1-13" id="h1-1-13" class="i">+                    context.log.error(&quot;Failed to invoke $eventName&quot;, t)
+</a><a href="#h1-1-14" id="h1-1-14" class="i">+                }
+</a><a href="#h1-1-15" id="h1-1-15" class="i">+            }
+</a><a href="#h1-1-16" id="h1-1-16" class="i">+        })
+</a>     }
+ 
+     override fun sendIPCMessage(eventName: String, args: Array&lt;out String&gt;) {
+<a href="#h1-1-20" id="h1-1-20" class="d">-        runtime.ipcManager.emit(eventName, args)
+</a><a href="#h1-1-21" id="h1-1-21" class="i">+        runCatching {
+</a><a href="#h1-1-22" id="h1-1-22" class="i">+            runtime.ipcManager.emit(eventName, *args)
+</a><a href="#h1-1-23" id="h1-1-23" class="i">+        }.onFailure {
+</a><a href="#h1-1-24" id="h1-1-24" class="i">+            context.log.error(&quot;Failed to send message for $eventName&quot;, it)
+</a><a href="#h1-1-25" id="h1-1-25" class="i">+        }
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/SnapEnhance.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -125,7 +125,7 @@ class SnapEnhance {
+</a>                         }
+                     })
+ 
+<a href="#h2-0-3" id="h2-0-3" class="d">-                    scriptRuntime.ipcManager = object: IPCInterface {
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+                    scriptRuntime.ipcManager = object: IPCInterface() {
+</a>                         override fun on(eventName: String, listener: Listener) {
+                             registerIPCListener(eventName, object: IPCListener.Stub() {
+                                 override fun onMessage(args: Array&lt;out String?&gt;) {
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/scripting/IPCInterface.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/scripting/IPCInterface.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/scripting/IPCInterface.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/scripting/IPCInterface.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -2,7 +2,10 @@ package me.rhunk.snapenhance.scripting
+</a> 
+ typealias Listener = (Array&lt;out String?&gt;) -&gt; Unit
+ 
+<a href="#h3-0-3" id="h3-0-3" class="d">-interface IPCInterface {
+</a><a href="#h3-0-4" id="h3-0-4" class="d">-    fun on(eventName: String, listener: Listener)
+</a><a href="#h3-0-5" id="h3-0-5" class="d">-    fun emit(eventName: String, args: Array&lt;out String?&gt;)
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+abstract class IPCInterface {
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+    abstract fun on(eventName: String, listener: Listener)
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+    abstract fun emit(eventName: String, vararg args: String?)
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+    
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+    fun emit(eventName: String) = emit(eventName, *emptyArray())
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptRuntime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptRuntime.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptRuntime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/scripting/ScriptRuntime.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -13,7 +13,13 @@ class ScriptRuntime(
+</a>     private val modules = mutableMapOf&lt;String, JSModule&gt;()
+ 
+     fun eachModule(f: JSModule.() -&gt; Unit) {
+<a href="#h4-0-3" id="h4-0-3" class="d">-        modules.values.forEach(f)
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+        modules.values.forEach { module -&gt;
+</a><a href="#h4-0-5" id="h4-0-5" class="i">+            runCatching {
+</a><a href="#h4-0-6" id="h4-0-6" class="i">+                module.f()
+</a><a href="#h4-0-7" id="h4-0-7" class="i">+            }.onFailure {
+</a><a href="#h4-0-8" id="h4-0-8" class="i">+                logger.error(&quot;Failed to run module function in ${module.moduleInfo.name}&quot;, it)
+</a><a href="#h4-0-9" id="h4-0-9" class="i">+            }
+</a><a href="#h4-0-10" id="h4-0-10" class="i">+        }
+</a>     }
+ 
+     private fun readModuleInfo(reader: BufferedReader): ModuleInfo {
+</pre>
+</div>
+</body>
+</html>

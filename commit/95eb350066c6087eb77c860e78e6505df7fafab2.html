@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(scripting): protobuf bindings - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/95eb350066c6087eb77c860e78e6505df7fafab2.html">95eb350066c6087eb77c860e78e6505df7fafab2</a>
+<b>parent</b> <a href="../commit/4beb63e7aa73e54499f32891c29401e92fc253f6.html">4beb63e7aa73e54499f32891c29401e92fc253f6</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat, 22 Jun 2024 00:00:42 +0200
+
+feat(scripting): protobuf bindings
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/impl/Protobuf.kt</a></td><td> | </td><td class="num">70</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/GrpcReader.kt</a></td><td> | </td><td class="num">5</td><td><span class="i">+++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/GrpcWriter.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">+++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoEditor.kt</a></td><td> | </td><td class="num">21</td><td><span class="i">+++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoReader.kt</a></td><td> | </td><td class="num">23</td><td><span class="i">+++++++++++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoWriter.kt</a></td><td> | </td><td class="num">11</td><td><span class="i">+++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>7 files changed, 135 insertions(+), 0 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -6,6 +6,7 @@ import me.rhunk.snapenhance.common.scripting.bindings.AbstractBinding
+</a> import me.rhunk.snapenhance.common.scripting.bindings.BindingsContext
+ import me.rhunk.snapenhance.common.scripting.impl.JavaInterfaces
+ import me.rhunk.snapenhance.common.scripting.impl.Networking
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.common.scripting.impl.Protobuf
+</a> import me.rhunk.snapenhance.common.scripting.ktx.contextScope
+ import me.rhunk.snapenhance.common.scripting.ktx.putFunction
+ import me.rhunk.snapenhance.common.scripting.ktx.scriptable
+<a href="#h0-1" id="h0-1" class="h">@@ -69,6 +70,7 @@ class JSModule(
+</a>                 JavaInterfaces(),
+                 InterfaceManager(),
+                 Networking(),
+<a href="#h0-1-3" id="h0-1-3" class="i">+                Protobuf()
+</a>             )
+ 
+             moduleObject.putFunction(&quot;setField&quot;) { args -&gt;
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/impl/Protobuf.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/impl/Protobuf.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/impl/Protobuf.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/impl/Protobuf.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -0,0 +1,69 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="i">+package me.rhunk.snapenhance.common.scripting.impl
+</a><a href="#h1-0-1" id="h1-0-1" class="i">+
+</a><a href="#h1-0-2" id="h1-0-2" class="i">+import me.rhunk.snapenhance.common.scripting.bindings.AbstractBinding
+</a><a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.common.scripting.bindings.BindingSide
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import me.rhunk.snapenhance.common.scripting.ktx.putFunction
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+import me.rhunk.snapenhance.common.scripting.ktx.scriptableObject
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+import me.rhunk.snapenhance.common.util.protobuf.*
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+import org.mozilla.javascript.NativeArray
+</a><a href="#h1-0-8" id="h1-0-8" class="i">+import java.io.InputStream
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+class Protobuf : AbstractBinding(&quot;protobuf&quot;, BindingSide.COMMON) {
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+    private fun parseInput(input: Any?): ByteArray? {
+</a><a href="#h1-0-13" id="h1-0-13" class="i">+        return when (input) {
+</a><a href="#h1-0-14" id="h1-0-14" class="i">+            is ByteArray -&gt; input
+</a><a href="#h1-0-15" id="h1-0-15" class="i">+            is InputStream -&gt; input.readBytes()
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+            is NativeArray -&gt; input.toArray().map { it as Byte }.toByteArray()
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+            else -&gt; {
+</a><a href="#h1-0-18" id="h1-0-18" class="i">+                context.runtime.logger.error(&quot;Invalid input type for buffer: $input&quot;)
+</a><a href="#h1-0-19" id="h1-0-19" class="i">+                null
+</a><a href="#h1-0-20" id="h1-0-20" class="i">+            }
+</a><a href="#h1-0-21" id="h1-0-21" class="i">+        }
+</a><a href="#h1-0-22" id="h1-0-22" class="i">+    }
+</a><a href="#h1-0-23" id="h1-0-23" class="i">+
+</a><a href="#h1-0-24" id="h1-0-24" class="i">+    override fun getObject(): Any {
+</a><a href="#h1-0-25" id="h1-0-25" class="i">+        return scriptableObject {
+</a><a href="#h1-0-26" id="h1-0-26" class="i">+            putFunction(&quot;reader&quot;) { args -&gt;
+</a><a href="#h1-0-27" id="h1-0-27" class="i">+                val input = args?.get(0) ?: return@putFunction null
+</a><a href="#h1-0-28" id="h1-0-28" class="i">+
+</a><a href="#h1-0-29" id="h1-0-29" class="i">+                val buffer = parseInput(input) ?: run {
+</a><a href="#h1-0-30" id="h1-0-30" class="i">+                    return@putFunction null
+</a><a href="#h1-0-31" id="h1-0-31" class="i">+                }
+</a><a href="#h1-0-32" id="h1-0-32" class="i">+
+</a><a href="#h1-0-33" id="h1-0-33" class="i">+                ProtoReader(buffer)
+</a><a href="#h1-0-34" id="h1-0-34" class="i">+            }
+</a><a href="#h1-0-35" id="h1-0-35" class="i">+            putFunction(&quot;writer&quot;) {
+</a><a href="#h1-0-36" id="h1-0-36" class="i">+                ProtoWriter()
+</a><a href="#h1-0-37" id="h1-0-37" class="i">+            }
+</a><a href="#h1-0-38" id="h1-0-38" class="i">+            putFunction(&quot;editor&quot;) { args -&gt;
+</a><a href="#h1-0-39" id="h1-0-39" class="i">+                val input = args?.get(0) ?: return@putFunction null
+</a><a href="#h1-0-40" id="h1-0-40" class="i">+
+</a><a href="#h1-0-41" id="h1-0-41" class="i">+                val buffer = parseInput(input) ?: run {
+</a><a href="#h1-0-42" id="h1-0-42" class="i">+                    return@putFunction null
+</a><a href="#h1-0-43" id="h1-0-43" class="i">+                }
+</a><a href="#h1-0-44" id="h1-0-44" class="i">+                ProtoEditor(buffer)
+</a><a href="#h1-0-45" id="h1-0-45" class="i">+            }
+</a><a href="#h1-0-46" id="h1-0-46" class="i">+
+</a><a href="#h1-0-47" id="h1-0-47" class="i">+            putFunction(&quot;grpcWriter&quot;) { args -&gt;
+</a><a href="#h1-0-48" id="h1-0-48" class="i">+                val messages = args?.mapNotNull {
+</a><a href="#h1-0-49" id="h1-0-49" class="i">+                    parseInput(it)
+</a><a href="#h1-0-50" id="h1-0-50" class="i">+                }?.toTypedArray() ?: run {
+</a><a href="#h1-0-51" id="h1-0-51" class="i">+                    return@putFunction null
+</a><a href="#h1-0-52" id="h1-0-52" class="i">+                }
+</a><a href="#h1-0-53" id="h1-0-53" class="i">+
+</a><a href="#h1-0-54" id="h1-0-54" class="i">+                GrpcWriter(*messages)
+</a><a href="#h1-0-55" id="h1-0-55" class="i">+            }
+</a><a href="#h1-0-56" id="h1-0-56" class="i">+
+</a><a href="#h1-0-57" id="h1-0-57" class="i">+            putFunction(&quot;grpcReader&quot;) { args -&gt;
+</a><a href="#h1-0-58" id="h1-0-58" class="i">+                val input = args?.get(0) ?: return@putFunction null
+</a><a href="#h1-0-59" id="h1-0-59" class="i">+
+</a><a href="#h1-0-60" id="h1-0-60" class="i">+                val buffer = parseInput(input) ?: run {
+</a><a href="#h1-0-61" id="h1-0-61" class="i">+                    return@putFunction null
+</a><a href="#h1-0-62" id="h1-0-62" class="i">+                }
+</a><a href="#h1-0-63" id="h1-0-63" class="i">+
+</a><a href="#h1-0-64" id="h1-0-64" class="i">+                GrpcReader(buffer)
+</a><a href="#h1-0-65" id="h1-0-65" class="i">+            }
+</a><a href="#h1-0-66" id="h1-0-66" class="i">+        }
+</a><a href="#h1-0-67" id="h1-0-67" class="i">+    }
+</a><a href="#h1-0-68" id="h1-0-68" class="i">+}</a><a href="#h1-0-69" id="h1-0-69" class="i">+
+\ No newline at end of file
+</a><b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/GrpcReader.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/GrpcReader.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/GrpcReader.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/GrpcReader.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,14 +1,19 @@
+</a> package me.rhunk.snapenhance.common.util.protobuf
+ 
+<a href="#h2-0-2" id="h2-0-2" class="i">+import org.mozilla.javascript.annotations.JSFunction
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+
+</a> class GrpcReader(
+     private val buffer: ByteArray
+ ) {
+     private val _messages = mutableListOf&lt;ProtoReader&gt;()
+     private val _headers = mutableMapOf&lt;String, String&gt;()
+ 
+<a href="#h2-0-10" id="h2-0-10" class="i">+    @get:JSFunction
+</a>     val headers get() = _headers.toMap()
+<a href="#h2-0-12" id="h2-0-12" class="i">+    @get:JSFunction
+</a>     val messages get() = _messages.toList()
+ 
+<a href="#h2-0-15" id="h2-0-15" class="i">+    @JSFunction
+</a>     fun read(reader: ProtoReader.() -&gt; Unit) {
+         messages.forEach { message -&gt;
+             message.reader()
+<b>diff --git a/<a id="h3" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/GrpcWriter.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/GrpcWriter.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/GrpcWriter.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/GrpcWriter.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -1,5 +1,6 @@
+</a> package me.rhunk.snapenhance.common.util.protobuf
+ 
+<a href="#h3-0-2" id="h3-0-2" class="i">+import org.mozilla.javascript.annotations.JSFunction
+</a> import java.io.ByteArrayOutputStream
+ 
+ fun ProtoWriter.toGrpcWriter() = GrpcWriter(toByteArray())
+<a href="#h3-1" id="h3-1" class="h">@@ -9,10 +10,12 @@ class GrpcWriter(
+</a> ) {
+     private val headers = mutableMapOf&lt;String, String&gt;()
+ 
+<a href="#h3-1-3" id="h3-1-3" class="i">+    @JSFunction
+</a>     fun addHeader(key: String, value: String) {
+         headers[key] = value
+     }
+ 
+<a href="#h3-1-8" id="h3-1-8" class="i">+    @JSFunction
+</a>     fun toByteArray(): ByteArray {
+         val stream = ByteArrayOutputStream()
+ 
+<b>diff --git a/<a id="h4" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoEditor.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoEditor.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoEditor.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoEditor.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -1,32 +1,49 @@
+</a> package me.rhunk.snapenhance.common.util.protobuf
+ 
+<a href="#h4-0-2" id="h4-0-2" class="i">+import org.mozilla.javascript.annotations.JSFunction
+</a><a href="#h4-0-3" id="h4-0-3" class="i">+
+</a> 
+ typealias WireCallback = EditorContext.() -&gt; Unit
+ 
+ class EditorContext(
+     private val wires: MutableMap&lt;Int, MutableList&lt;Wire&gt;&gt;
+ ) {
+<a href="#h4-0-10" id="h4-0-10" class="i">+    @JSFunction
+</a>     fun clear() {
+         wires.clear()
+     }
+<a href="#h4-0-14" id="h4-0-14" class="i">+    @JSFunction
+</a>     fun addWire(wire: Wire) {
+         wires.getOrPut(wire.id) { mutableListOf() }.add(wire)
+     }
+<a href="#h4-0-18" id="h4-0-18" class="i">+    @JSFunction
+</a>     fun addVarInt(id: Int, value: Int) = addVarInt(id, value.toLong())
+<a href="#h4-0-20" id="h4-0-20" class="i">+    @JSFunction
+</a>     fun addVarInt(id: Int, value: Long) = addWire(Wire(id, WireType.VARINT, value))
+<a href="#h4-0-22" id="h4-0-22" class="i">+    @JSFunction
+</a>     fun addBuffer(id: Int, value: ByteArray) = addWire(Wire(id, WireType.CHUNK, value))
+<a href="#h4-0-24" id="h4-0-24" class="i">+    @JSFunction
+</a>     fun add(id: Int, content: ProtoWriter.() -&gt; Unit) = addBuffer(id, ProtoWriter().apply(content).toByteArray())
+<a href="#h4-0-26" id="h4-0-26" class="i">+    @JSFunction
+</a>     fun addString(id: Int, value: String) = addBuffer(id, value.toByteArray())
+<a href="#h4-0-28" id="h4-0-28" class="i">+    @JSFunction
+</a>     fun addFixed64(id: Int, value: Long) = addWire(Wire(id, WireType.FIXED64, value))
+<a href="#h4-0-30" id="h4-0-30" class="i">+    @JSFunction
+</a>     fun addFixed32(id: Int, value: Float) = addWire(Wire(id, WireType.FIXED32, value.toRawBits()))
+ 
+<a href="#h4-0-33" id="h4-0-33" class="i">+    @JSFunction
+</a>     fun firstOrNull(id: Int) = wires[id]?.firstOrNull()
+<a href="#h4-0-35" id="h4-0-35" class="i">+    @JSFunction
+</a>     fun getOrNull(id: Int) = wires[id]
+<a href="#h4-0-37" id="h4-0-37" class="i">+    @JSFunction
+</a>     fun get(id: Int) = wires[id]!!
+ 
+<a href="#h4-0-40" id="h4-0-40" class="i">+    @JSFunction
+</a>     fun remove(id: Int) = wires.remove(id)
+<a href="#h4-0-42" id="h4-0-42" class="i">+    @JSFunction
+</a>     fun remove(id: Int, index: Int) = wires[id]?.removeAt(index)
+ 
+<a href="#h4-0-45" id="h4-0-45" class="i">+    @JSFunction
+</a>     fun edit(id: Int, callback: EditorContext.() -&gt; Unit) {
+         val wire = wires[id]?.firstOrNull() ?: return
+         val editor = ProtoEditor(wire.value as ByteArray)
+<a href="#h4-1" id="h4-1" class="h">@@ -37,6 +54,7 @@ class EditorContext(
+</a>         addBuffer(id, editor.toByteArray())
+     }
+ 
+<a href="#h4-1-3" id="h4-1-3" class="i">+    @JSFunction
+</a>     fun editEach(id: Int, callback: EditorContext.() -&gt; Unit) {
+         val wires = wires[id] ?: return
+         val newWires = mutableListOf&lt;Wire&gt;()
+<a href="#h4-2" id="h4-2" class="h">@@ -61,6 +79,7 @@ class EditorContext(
+</a> class ProtoEditor(
+     private var buffer: ByteArray
+ ) {
+<a href="#h4-2-3" id="h4-2-3" class="i">+    @JSFunction
+</a>     fun edit(vararg path: Int, callback: WireCallback) {
+         buffer = writeAtPath(path, 0, ProtoReader(buffer), callback)
+     }
+<a href="#h4-3" id="h4-3" class="h">@@ -93,7 +112,9 @@ class ProtoEditor(
+</a>         return output.toByteArray()
+     }
+ 
+<a href="#h4-3-3" id="h4-3-3" class="i">+    @JSFunction
+</a>     fun toByteArray() = buffer
+ 
+<a href="#h4-3-6" id="h4-3-6" class="i">+    @JSFunction
+</a>     override fun toString() = ProtoReader(buffer).toString()
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h5" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoReader.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoReader.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoReader.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoReader.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -1,9 +1,11 @@
+</a> package me.rhunk.snapenhance.common.util.protobuf
+ 
+<a href="#h5-0-2" id="h5-0-2" class="i">+import org.mozilla.javascript.annotations.JSFunction
+</a> import java.nio.ByteBuffer
+ import java.util.UUID
+ 
+ data class Wire(val id: Int, val type: WireType, val value: Any) {
+<a href="#h5-0-7" id="h5-0-7" class="i">+    @JSFunction
+</a>     fun toReader() = ProtoReader(value as ByteArray)
+ }
+ 
+<a href="#h5-1" id="h5-1" class="h">@@ -15,6 +17,7 @@ class ProtoReader(private val buffer: ByteArray) {
+</a>         read()
+     }
+ 
+<a href="#h5-1-3" id="h5-1-3" class="i">+    @JSFunction
+</a>     fun getBuffer() = buffer
+ 
+     private fun readByte() = buffer[offset++]
+<a href="#h5-2" id="h5-2" class="h">@@ -84,6 +87,7 @@ class ProtoReader(private val buffer: ByteArray) {
+</a>         }
+     }
+ 
+<a href="#h5-2-3" id="h5-2-3" class="i">+    @JSFunction
+</a>     fun followPath(vararg ids: Int, excludeLast: Boolean = false, reader: (ProtoReader.() -&gt; Unit)? = null): ProtoReader? {
+         var thisReader = this
+         ids.let {
+<a href="#h5-3" id="h5-3" class="h">@@ -104,6 +108,7 @@ class ProtoReader(private val buffer: ByteArray) {
+</a>         return thisReader
+     }
+ 
+<a href="#h5-3-3" id="h5-3-3" class="i">+    @JSFunction
+</a>     fun containsPath(vararg ids: Int): Boolean {
+         var thisReader = this
+         ids.forEach { id -&gt;
+<a href="#h5-4" id="h5-4" class="h">@@ -115,6 +120,7 @@ class ProtoReader(private val buffer: ByteArray) {
+</a>         return true
+     }
+ 
+<a href="#h5-4-3" id="h5-4-3" class="i">+    @JSFunction
+</a>     fun forEach(reader: (Int, Wire) -&gt; Unit) {
+         values.forEach { (id, wires) -&gt;
+             wires.forEach { wire -&gt;
+<a href="#h5-5" id="h5-5" class="h">@@ -123,12 +129,14 @@ class ProtoReader(private val buffer: ByteArray) {
+</a>         }
+     }
+ 
+<a href="#h5-5-3" id="h5-5-3" class="i">+    @JSFunction
+</a>     fun forEach(vararg id: Int, reader: ProtoReader.() -&gt; Unit) {
+         followPath(*id)?.eachBuffer { _, buffer -&gt;
+             ProtoReader(buffer).reader()
+         }
+     }
+ 
+<a href="#h5-5-10" id="h5-5-10" class="i">+    @JSFunction
+</a>     fun eachBuffer(vararg ids: Int, reader: ProtoReader.() -&gt; Unit) {
+         followPath(*ids, excludeLast = true)?.eachBuffer { id, buffer -&gt;
+             if (id == ids.last()) {
+<a href="#h5-6" id="h5-6" class="h">@@ -137,6 +145,7 @@ class ProtoReader(private val buffer: ByteArray) {
+</a>         }
+     }
+ 
+<a href="#h5-6-3" id="h5-6-3" class="i">+    @JSFunction
+</a>     fun eachBuffer(reader: (Int, ByteArray) -&gt; Unit) {
+         values.forEach { (id, wires) -&gt;
+             wires.forEach { wire -&gt;
+<a href="#h5-7" id="h5-7" class="h">@@ -147,18 +156,29 @@ class ProtoReader(private val buffer: ByteArray) {
+</a>         }
+     }
+ 
+<a href="#h5-7-3" id="h5-7-3" class="i">+    @JSFunction
+</a>     fun contains(id: Int) = values.containsKey(id)
+ 
+<a href="#h5-7-6" id="h5-7-6" class="i">+    @JSFunction
+</a>     fun getWire(id: Int) = values[id]?.firstOrNull()
+<a href="#h5-7-8" id="h5-7-8" class="i">+    @JSFunction
+</a>     fun getRawValue(id: Int) = getWire(id)?.value
+<a href="#h5-7-10" id="h5-7-10" class="i">+    @JSFunction
+</a>     fun getByteArray(id: Int) = getRawValue(id) as? ByteArray
+<a href="#h5-7-12" id="h5-7-12" class="i">+    @JSFunction
+</a>     fun getByteArray(vararg ids: Int) = followPath(*ids, excludeLast = true)?.getByteArray(ids.last())
+<a href="#h5-7-14" id="h5-7-14" class="i">+    @JSFunction
+</a>     fun getString(id: Int) = getByteArray(id)?.toString(Charsets.UTF_8)
+<a href="#h5-7-16" id="h5-7-16" class="i">+    @JSFunction
+</a>     fun getString(vararg ids: Int) = followPath(*ids, excludeLast = true)?.getString(ids.last())
+<a href="#h5-7-18" id="h5-7-18" class="i">+    @JSFunction
+</a>     fun getVarInt(id: Int) = getRawValue(id) as? Long
+<a href="#h5-7-20" id="h5-7-20" class="i">+    @JSFunction
+</a>     fun getVarInt(vararg ids: Int) = followPath(*ids, excludeLast = true)?.getVarInt(ids.last())
+<a href="#h5-7-22" id="h5-7-22" class="i">+    @JSFunction
+</a>     fun getCount(id: Int) = values[id]?.size ?: 0
+ 
+<a href="#h5-7-25" id="h5-7-25" class="i">+    @JSFunction
+</a>     fun getFixed64(id: Int): Long {
+         val bytes = getByteArray(id) ?: return 0L
+         var value = 0L
+<a href="#h5-8" id="h5-8" class="h">@@ -167,9 +187,11 @@ class ProtoReader(private val buffer: ByteArray) {
+</a>         }
+         return value
+     }
+<a href="#h5-8-3" id="h5-8-3" class="i">+    @JSFunction
+</a>     fun getFixed64(vararg ids: Int) = followPath(*ids, excludeLast = true)?.getFixed64(ids.last())
+ 
+ 
+<a href="#h5-8-7" id="h5-8-7" class="i">+    @JSFunction
+</a>     fun getFixed32(id: Int): Int {
+         val bytes = getByteArray(id) ?: return 0
+         var value = 0
+<a href="#h5-9" id="h5-9" class="h">@@ -247,5 +269,6 @@ class ProtoReader(private val buffer: ByteArray) {
+</a>         return stringBuilder.toString()
+     }
+ 
+<a href="#h5-9-3" id="h5-9-3" class="i">+    @JSFunction
+</a>     override fun toString() = prettyPrint(0)
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h6" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoWriter.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoWriter.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoWriter.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoWriter.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -1,5 +1,6 @@
+</a> package me.rhunk.snapenhance.common.util.protobuf
+ 
+<a href="#h6-0-2" id="h6-0-2" class="i">+import org.mozilla.javascript.annotations.JSFunction
+</a> import java.io.ByteArrayOutputStream
+ 
+ class ProtoWriter {
+<a href="#h6-1" id="h6-1" class="h">@@ -23,21 +24,26 @@ class ProtoWriter {
+</a>         stream.write(v.toInt())
+     }
+ 
+<a href="#h6-1-3" id="h6-1-3" class="i">+    @JSFunction
+</a>     fun addBuffer(id: Int, value: ByteArray) {
+         writeVarInt(id shl 3 or WireType.CHUNK.value)
+         writeVarInt(value.size)
+         stream.write(value)
+     }
+ 
+<a href="#h6-1-10" id="h6-1-10" class="i">+    @JSFunction
+</a>     fun addVarInt(id: Int, value: Int) = addVarInt(id, value.toLong())
+ 
+<a href="#h6-1-13" id="h6-1-13" class="i">+    @JSFunction
+</a>     fun addVarInt(id: Int, value: Long) {
+         writeVarInt(id shl 3)
+         writeVarLong(value)
+     }
+ 
+<a href="#h6-1-19" id="h6-1-19" class="i">+    @JSFunction
+</a>     fun addString(id: Int, value: String) = addBuffer(id, value.toByteArray())
+ 
+<a href="#h6-1-22" id="h6-1-22" class="i">+    @JSFunction
+</a>     fun addFixed32(id: Int, value: Int) {
+         writeVarInt(id shl 3 or WireType.FIXED32.value)
+         val bytes = ByteArray(4)
+<a href="#h6-2" id="h6-2" class="h">@@ -47,6 +53,7 @@ class ProtoWriter {
+</a>         stream.write(bytes)
+     }
+ 
+<a href="#h6-2-3" id="h6-2-3" class="i">+    @JSFunction
+</a>     fun addFixed64(id: Int, value: Long) {
+         writeVarInt(id shl 3 or WireType.FIXED64.value)
+         val bytes = ByteArray(8)
+<a href="#h6-3" id="h6-3" class="h">@@ -56,12 +63,14 @@ class ProtoWriter {
+</a>         stream.write(bytes)
+     }
+ 
+<a href="#h6-3-3" id="h6-3-3" class="i">+    @JSFunction
+</a>     fun from(id: Int, writer: ProtoWriter.() -&gt; Unit) {
+         val writerStream = ProtoWriter()
+         writer(writerStream)
+         addBuffer(id, writerStream.stream.toByteArray())
+     }
+ 
+<a href="#h6-3-10" id="h6-3-10" class="i">+    @JSFunction
+</a>     fun from(vararg ids: Int, writer: ProtoWriter.() -&gt; Unit) {
+         val writerStream = ProtoWriter()
+         writer(writerStream)
+<a href="#h6-4" id="h6-4" class="h">@@ -75,6 +84,7 @@ class ProtoWriter {
+</a>         stream.let(this.stream::write)
+     }
+ 
+<a href="#h6-4-3" id="h6-4-3" class="i">+    @JSFunction
+</a>     fun addWire(wire: Wire) {
+         writeVarInt(wire.id shl 3 or wire.type.value)
+         when (wire.type) {
+<a href="#h6-5" id="h6-5" class="h">@@ -111,6 +121,7 @@ class ProtoWriter {
+</a>         }
+     }
+ 
+<a href="#h6-5-3" id="h6-5-3" class="i">+    @JSFunction
+</a>     fun toByteArray(): ByteArray {
+         return stream.toByteArray()
+     }
+</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(mapper): streaks expiration - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/a633f913d3a77add7259eea6ea4dd3a08e3315f6.html">a633f913d3a77add7259eea6ea4dd3a08e3315f6</a>
+<b>parent</b> <a href="../commit/47a549ea2d101816a8f9c0bb900c19d7ec3f1487.html">47a549ea2d101816a8f9c0bb900c19d7ec3f1487</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed,  5 Jun 2024 17:04:51 +0200
+
+fix(mapper): streaks expiration
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/ext/DexMethod.kt</a></td><td> | </td><td class="num">15</td><td><span class="i">+++++++++</span><span class="d">------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/StreaksExpirationMapper.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+</table></pre><pre>2 files changed, 10 insertions(+), 7 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/ext/DexMethod.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/ext/DexMethod.kt</a> b/<a href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/ext/DexMethod.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/ext/DexMethod.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -6,13 +6,16 @@ import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction22c
+</a> import com.android.tools.smali.dexlib2.iface.reference.FieldReference
+ import com.android.tools.smali.dexlib2.iface.reference.StringReference
+ 
+<a href="#h0-0-3" id="h0-0-3" class="d">-fun MethodImplementation.findConstString(string: String, contains: Boolean = false): Boolean = instructions.filterIsInstance(Instruction21c::class.java).any {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+fun MethodImplementation.findConstString(
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+    string: String,
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+    contains: Boolean = false,
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+    startsWith: Boolean = false,
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+    ignoreCase: Boolean = false
+</a><a href="#h0-0-9" id="h0-0-9" class="i">+): Boolean = instructions.filterIsInstance&lt;Instruction21c&gt;().any {
+</a>      (it.reference as? StringReference)?.string?.let { str -&gt;
+<a href="#h0-0-11" id="h0-0-11" class="d">-        if (contains) {
+</a><a href="#h0-0-12" id="h0-0-12" class="d">-            str.contains(string)
+</a><a href="#h0-0-13" id="h0-0-13" class="d">-        } else {
+</a><a href="#h0-0-14" id="h0-0-14" class="d">-            str == string
+</a><a href="#h0-0-15" id="h0-0-15" class="d">-        }
+</a><a href="#h0-0-16" id="h0-0-16" class="i">+        if (contains &amp;&amp; str.contains(string, ignoreCase = ignoreCase)) return@any true
+</a><a href="#h0-0-17" id="h0-0-17" class="i">+        if (startsWith &amp;&amp; str.startsWith(string, ignoreCase = ignoreCase)) return@any true
+</a><a href="#h0-0-18" id="h0-0-18" class="i">+        str == string
+</a>     } == true
+ }
+ 
+<b>diff --git a/<a id="h1" href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/StreaksExpirationMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/StreaksExpirationMapper.kt</a> b/<a href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/StreaksExpirationMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/StreaksExpirationMapper.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -21,7 +21,7 @@ class StreaksExpirationMapper: AbstractClassMapper(&quot;StreaksExpirationMapper&quot;) {
+</a>             var streaksResultClass: String? = null
+             for (clazz in classes) {
+                 val toStringMethod = clazz.methods.firstOrNull { it.name == &quot;toString&quot; } ?: continue
+<a href="#h1-0-3" id="h1-0-3" class="d">-                if (toStringMethod.implementation?.findConstString(&quot;StreaksResult(&quot;, contains = true) != true) continue
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+                if (toStringMethod.implementation?.findConstString(&quot;StreaksResult(&quot;, startsWith = true) != true) continue
+</a>                 streaksResultClass = clazz.type
+                 break
+             }
+</pre>
+</div>
+</body>
+</html>

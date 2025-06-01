@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core/e2ee): ignore encryption of stories - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/3fc06550bf02d96f845abe0b541e775d8c2378e4.html">3fc06550bf02d96f845abe0b541e775d8c2378e4</a>
+<b>parent</b> <a href="../commit/a63bca978238ffc6adec2997e1c3f7e30c9c4727.html">a63bca978238ffc6adec2997e1c3f7e30c9c4727</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu,  2 Nov 2023 16:22:00 +0100
+
+fix(core/e2ee): ignore encryption of stories
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt</a></td><td> | </td><td class="num">24</td><td><span class="i">+++++++++++++++++</span><span class="d">-------</span></td></tr>
+</table></pre><pre>1 file changed, 17 insertions(+), 7 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/EndToEndEncryption.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -369,7 +369,7 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>     }
+ 
+     private fun messageHook(conversationId: String, messageId: Long, senderId: String, messageContent: MessageContent) {
+<a href="#h0-0-3" id="h0-0-3" class="d">-        val (contentType, buffer) = tryDecryptMessage(senderId, messageId, conversationId, messageContent.contentType ?: ContentType.CHAT, messageContent.content)
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+        val (contentType, buffer) = tryDecryptMessage(senderId, messageId, conversationId, messageContent.contentType ?: ContentType.CHAT, messageContent.content!!)
+</a>         messageContent.contentType = contentType
+         messageContent.content = buffer
+     }
+<a href="#h0-1" id="h0-1" class="h">@@ -383,11 +383,11 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>             val messageContent = event.messageContent
+             val destinations = event.destinations
+ 
+<a href="#h0-1-3" id="h0-1-3" class="d">-            val e2eeConversations = destinations.conversations.filter { getState(it.toString()) &amp;&amp; getE2EParticipants(it.toString()).isNotEmpty() }
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+            val e2eeConversations = destinations.conversations!!.filter { getState(it.toString()) &amp;&amp; getE2EParticipants(it.toString()).isNotEmpty() }
+</a> 
+             if (e2eeConversations.isEmpty()) return@subscribe
+ 
+<a href="#h0-1-8" id="h0-1-8" class="d">-            if (e2eeConversations.size != destinations.conversations.size) {
+</a><a href="#h0-1-9" id="h0-1-9" class="i">+            if (e2eeConversations.size != destinations.conversations!!.size || destinations.stories?.isNotEmpty() == true) {
+</a>                 if (!forceMessageEncryption) return@subscribe
+                 context.longToast(&quot;You can&#39;t send encrypted content to both encrypted and unencrypted conversations!&quot;)
+                 event.canceled = true
+<a href="#h0-2" id="h0-2" class="h">@@ -414,12 +414,22 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>         context.event.subscribe(UnaryCallEvent::class) { event -&gt;
+             if (event.uri != &quot;/messagingcoreservice.MessagingCoreService/CreateContentMessage&quot;) return@subscribe
+             val protoReader = ProtoReader(event.buffer)
+<a href="#h0-2-3" id="h0-2-3" class="i">+            var hasStory = false
+</a> 
+             val conversationIds = mutableListOf&lt;SnapUUID&gt;()
+             protoReader.eachBuffer(3) {
+<a href="#h0-2-7" id="h0-2-7" class="i">+                if (contains(2)) {
+</a><a href="#h0-2-8" id="h0-2-8" class="i">+                    hasStory = true
+</a><a href="#h0-2-9" id="h0-2-9" class="i">+                    return@eachBuffer
+</a><a href="#h0-2-10" id="h0-2-10" class="i">+                }
+</a>                 conversationIds.add(SnapUUID.fromBytes(getByteArray(1, 1, 1) ?: return@eachBuffer))
+             }
+ 
+<a href="#h0-2-14" id="h0-2-14" class="i">+            if (hasStory) {
+</a><a href="#h0-2-15" id="h0-2-15" class="i">+                context.log.debug(&quot;Skipping encryption for story message&quot;)
+</a><a href="#h0-2-16" id="h0-2-16" class="i">+                return@subscribe
+</a><a href="#h0-2-17" id="h0-2-17" class="i">+            }
+</a><a href="#h0-2-18" id="h0-2-18" class="i">+
+</a>             if (conversationIds.any { !getState(it.toString()) || getE2EParticipants(it.toString()).isEmpty() }) {
+                 context.log.debug(&quot;Skipping encryption for conversation ids: ${conversationIds.joinToString(&quot;, &quot;)}&quot;)
+                 return@subscribe
+<a href="#h0-3" id="h0-3" class="h">@@ -490,15 +500,15 @@ class EndToEndEncryption : MessagingRuleFeature(
+</a>         context.event.subscribe(BuildMessageEvent::class, priority = 0) { event -&gt;
+             val message = event.message
+             if (message.messageState != MessageState.COMMITTED) return@subscribe
+<a href="#h0-3-3" id="h0-3-3" class="d">-            val conversationId = message.messageDescriptor.conversationId.toString()
+</a><a href="#h0-3-4" id="h0-3-4" class="i">+            val conversationId = message.messageDescriptor!!.conversationId.toString()
+</a>             messageHook(
+                 conversationId = conversationId,
+<a href="#h0-3-7" id="h0-3-7" class="d">-                messageId = message.messageDescriptor.messageId,
+</a><a href="#h0-3-8" id="h0-3-8" class="i">+                messageId = message.messageDescriptor!!.messageId!!,
+</a>                 senderId = message.senderId.toString(),
+<a href="#h0-3-10" id="h0-3-10" class="d">-                messageContent = message.messageContent
+</a><a href="#h0-3-11" id="h0-3-11" class="i">+                messageContent = message.messageContent!!
+</a>             )
+ 
+<a href="#h0-3-14" id="h0-3-14" class="d">-            message.messageContent.instanceNonNull()
+</a><a href="#h0-3-15" id="h0-3-15" class="i">+            message.messageContent!!.instanceNonNull()
+</a>                 .getObjectField(&quot;mQuotedMessage&quot;)
+                 ?.getObjectField(&quot;mContent&quot;)
+                 ?.also { quotedMessage -&gt;
+</pre>
+</div>
+</body>
+</html>

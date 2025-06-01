@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix: activity launcher helper crashes - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/12eacf5e53aef2e0a27495de75df9a4d20a43273.html">12eacf5e53aef2e0a27495de75df9a4d20a43273</a>
+<b>parent</b> <a href="../commit/ae70b2918012a9d332d5cfd071d04441514b8820.html">ae70b2918012a9d332d5cfd071d04441514b8820</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 23 Aug 2023 00:59:15 +0200
+
+fix: activity launcher helper crashes
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></td><td> | </td><td class="num">20</td><td><span class="i">+++++++</span><span class="d">-------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/features/FeaturesSection.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">+++++++++</span><span class="d">---</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SaveFolderScreen.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++++</span><span class="d">-</span></td></tr>
+</table></pre><pre>3 files changed, 21 insertions(+), 17 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -22,23 +22,17 @@ import me.rhunk.snapenhance.ui.manager.data.ModMappingsInfo
+</a> import me.rhunk.snapenhance.ui.manager.data.SnapchatAppInfo
+ import me.rhunk.snapenhance.ui.setup.Requirements
+ import me.rhunk.snapenhance.ui.setup.SetupActivity
+<a href="#h0-0-3" id="h0-0-3" class="d">-import me.rhunk.snapenhance.ui.util.ActivityLauncherHelper
+</a> import java.lang.ref.WeakReference
+ 
+ class RemoteSideContext(
+     val androidContext: Context
+ ) {
+<a href="#h0-0-9" id="h0-0-9" class="d">-    private var _activity: WeakReference&lt;Activity&gt;? = null
+</a><a href="#h0-0-10" id="h0-0-10" class="i">+    private var _activity: WeakReference&lt;ComponentActivity&gt;? = null
+</a>     lateinit var bridgeService: BridgeService
+ 
+<a href="#h0-0-13" id="h0-0-13" class="d">-    lateinit var activityLauncherHelper: ActivityLauncherHelper
+</a><a href="#h0-0-14" id="h0-0-14" class="d">-    var activity: Activity?
+</a><a href="#h0-0-15" id="h0-0-15" class="i">+    var activity: ComponentActivity?
+</a>         get() = _activity?.get()
+<a href="#h0-0-17" id="h0-0-17" class="d">-        set(value) {
+</a><a href="#h0-0-18" id="h0-0-18" class="d">-            _activity?.clear();
+</a><a href="#h0-0-19" id="h0-0-19" class="d">-            _activity = WeakReference(value)
+</a><a href="#h0-0-20" id="h0-0-20" class="d">-            activityLauncherHelper = ActivityLauncherHelper(value as ComponentActivity)
+</a><a href="#h0-0-21" id="h0-0-21" class="d">-        }
+</a><a href="#h0-0-22" id="h0-0-22" class="i">+        set(value) { _activity?.clear(); _activity = WeakReference(value) }
+</a> 
+     val config = ModConfig()
+     val translation = LocaleWrapper()
+<a href="#h0-1" id="h0-1" class="h">@@ -93,15 +87,15 @@ class RemoteSideContext(
+</a>     )
+ 
+     fun longToast(message: Any) {
+<a href="#h0-1-3" id="h0-1-3" class="d">-        activity?.runOnUiThread {
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-            Toast.makeText(activity, message.toString(), Toast.LENGTH_LONG).show()
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+        androidContext.mainExecutor.execute {
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+            Toast.makeText(androidContext, message.toString(), Toast.LENGTH_LONG).show()
+</a>         }
+         Logger.debug(message.toString())
+     }
+ 
+     fun shortToast(message: Any) {
+<a href="#h0-1-12" id="h0-1-12" class="d">-        activity?.runOnUiThread {
+</a><a href="#h0-1-13" id="h0-1-13" class="d">-            Toast.makeText(activity, message.toString(), Toast.LENGTH_SHORT).show()
+</a><a href="#h0-1-14" id="h0-1-14" class="i">+        androidContext.mainExecutor.execute {
+</a><a href="#h0-1-15" id="h0-1-15" class="i">+            Toast.makeText(androidContext, message.toString(), Toast.LENGTH_SHORT).show()
+</a>         }
+         Logger.debug(message.toString())
+     }
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/features/FeaturesSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/features/FeaturesSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/features/FeaturesSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/features/FeaturesSection.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -80,6 +80,7 @@ import me.rhunk.snapenhance.core.config.PropertyKey
+</a> import me.rhunk.snapenhance.core.config.PropertyPair
+ import me.rhunk.snapenhance.core.config.PropertyValue
+ import me.rhunk.snapenhance.ui.manager.Section
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.ui.util.ActivityLauncherHelper
+</a> import me.rhunk.snapenhance.ui.util.chooseFolder
+ import me.rhunk.snapenhance.ui.util.openFile
+ import me.rhunk.snapenhance.ui.util.saveFile
+<a href="#h1-1" id="h1-1" class="h">@@ -95,6 +96,7 @@ class FeaturesSection : Section() {
+</a>     }
+ 
+ 
+<a href="#h1-1-3" id="h1-1-3" class="i">+    private lateinit var activityLauncherHelper: ActivityLauncherHelper
+</a>     private val featuresRouteName by lazy { context.translation[&quot;manager.routes.features&quot;] }
+ 
+     private lateinit var rememberScaffoldState: BottomSheetScaffoldState
+<a href="#h1-2" id="h1-2" class="h">@@ -135,6 +137,10 @@ class FeaturesSection : Section() {
+</a>         return featuresRouteName
+     }
+ 
+<a href="#h1-2-3" id="h1-2-3" class="i">+    override fun init() {
+</a><a href="#h1-2-4" id="h1-2-4" class="i">+        activityLauncherHelper = ActivityLauncherHelper(context.activity!!)
+</a><a href="#h1-2-5" id="h1-2-5" class="i">+    }
+</a><a href="#h1-2-6" id="h1-2-6" class="i">+
+</a>     override fun build(navGraphBuilder: NavGraphBuilder) {
+         navGraphBuilder.navigation(route = enumSection.route, startDestination = MAIN_ROUTE) {
+             composable(MAIN_ROUTE) {
+<a href="#h1-3" id="h1-3" class="h">@@ -186,7 +192,7 @@ class FeaturesSection : Section() {
+</a> 
+         if (property.key.params.flags.contains(ConfigFlag.FOLDER)) {
+             IconButton(onClick = registerClickCallback {
+<a href="#h1-3-3" id="h1-3-3" class="d">-                context.activityLauncherHelper.chooseFolder { uri -&gt;
+</a><a href="#h1-3-4" id="h1-3-4" class="i">+                activityLauncherHelper.chooseFolder { uri -&gt;
+</a>                     propertyValue.setAny(uri)
+                 }
+             }.let { { it.invoke(true) } }) {
+<a href="#h1-4" id="h1-4" class="h">@@ -449,7 +455,7 @@ class FeaturesSection : Section() {
+</a>         val actions = remember {
+             mapOf(
+                 &quot;Export&quot; to {
+<a href="#h1-4-3" id="h1-4-3" class="d">-                    context.activityLauncherHelper.saveFile(&quot;config.json&quot;, &quot;application/json&quot;) { uri -&gt;
+</a><a href="#h1-4-4" id="h1-4-4" class="i">+                    activityLauncherHelper.saveFile(&quot;config.json&quot;, &quot;application/json&quot;) { uri -&gt;
+</a>                         context.androidContext.contentResolver.openOutputStream(Uri.parse(uri))?.use {
+                             context.config.writeConfig()
+                             context.config.exportToString().byteInputStream().copyTo(it)
+<a href="#h1-5" id="h1-5" class="h">@@ -458,7 +464,7 @@ class FeaturesSection : Section() {
+</a>                     }
+                 },
+                 &quot;Import&quot; to {
+<a href="#h1-5-3" id="h1-5-3" class="d">-                    context.activityLauncherHelper.openFile(&quot;application/json&quot;) { uri -&gt;
+</a><a href="#h1-5-4" id="h1-5-4" class="i">+                    activityLauncherHelper.openFile(&quot;application/json&quot;) { uri -&gt;
+</a>                         context.androidContext.contentResolver.openInputStream(Uri.parse(uri))?.use {
+                             runCatching {
+                                 context.config.loadFromString(it.readBytes().toString(Charsets.UTF_8))
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SaveFolderScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SaveFolderScreen.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SaveFolderScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SaveFolderScreen.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -9,13 +9,17 @@ import androidx.compose.ui.Modifier
+</a> import androidx.compose.ui.unit.dp
+ import me.rhunk.snapenhance.Logger
+ import me.rhunk.snapenhance.ui.setup.screens.SetupScreen
+<a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.ui.util.ActivityLauncherHelper
+</a> import me.rhunk.snapenhance.ui.util.ObservableMutableState
+ import me.rhunk.snapenhance.ui.util.chooseFolder
+ 
+ class SaveFolderScreen : SetupScreen() {
+     private lateinit var saveFolder: ObservableMutableState&lt;String&gt;
+ 
+<a href="#h2-0-10" id="h2-0-10" class="i">+    private lateinit var activityLauncherHelper: ActivityLauncherHelper
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+
+</a>     override fun init() {
+<a href="#h2-0-13" id="h2-0-13" class="i">+        activityLauncherHelper = ActivityLauncherHelper(context.activity!!)
+</a>         saveFolder = ObservableMutableState(
+                 defaultValue = &quot;&quot;,
+                 onChange = { _, newValue -&gt;
+<a href="#h2-1" id="h2-1" class="h">@@ -34,7 +38,7 @@ class SaveFolderScreen : SetupScreen() {
+</a>         DialogText(text = context.translation[&quot;setup.dialogs.save_folder&quot;])
+         Spacer(modifier = Modifier.height(16.dp))
+         Button(onClick = {
+<a href="#h2-1-3" id="h2-1-3" class="d">-            context.activityLauncherHelper.chooseFolder {
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+            activityLauncherHelper.chooseFolder {
+</a>                 saveFolder.value = it
+             }
+         }) {
+</pre>
+</div>
+</body>
+</html>

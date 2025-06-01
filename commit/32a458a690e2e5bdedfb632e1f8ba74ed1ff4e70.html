@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>refactor: location spoofer - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/32a458a690e2e5bdedfb632e1f8ba74ed1ff4e70.html">32a458a690e2e5bdedfb632e1f8ba74ed1ff4e70</a>
+<b>parent</b> <a href="../commit/1a7755e45cc02081c9e3a6bf57a938beae6c3947.html">1a7755e45cc02081c9e3a6bf57a938beae6c3947</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 11 Oct 2023 16:53:53 +0200
+
+refactor: location spoofer
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/AndroidManifest.xml</a></td><td> | </td><td class="num">4</td><td><span class="i"></span><span class="d">----</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/ui/MapActivity.kt</a></td><td> | </td><td class="num">98</td><td><span class="i"></span><span class="d">-------------------------------------------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/features/FeaturesSection.kt</a></td><td> | </td><td class="num">23</td><td><span class="i">++++++++++++++++++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/AlertDialogs.kt</a></td><td> | </td><td class="num">174</td><td><span class="i">++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">-----</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h4">app/src/main/res/layout/map.xml</a></td><td> | </td><td class="num">44</td><td><span class="i"></span><span class="d">--------------------------------------------</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h5">app/src/main/res/layout/precise_location_dialog.xml</a></td><td> | </td><td class="num">29</td><td><span class="i"></span><span class="d">-----------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">24</td><td><span class="i">++++++++++</span><span class="d">--------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">common/src/main/kotlin/me/rhunk/snapenhance/common/action/EnumAction.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">+</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">common/src/main/kotlin/me/rhunk/snapenhance/common/config/ConfigContainer.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">common/src/main/kotlin/me/rhunk/snapenhance/common/config/DataProcessors.kt</a></td><td> | </td><td class="num">15</td><td><span class="i">+++++++++++++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h11">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Spoof.kt</a></td><td> | </td><td class="num">6</td><td><span class="i"></span><span class="d">------</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h12">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/OpenMap.kt</a></td><td> | </td><td class="num">22</td><td><span class="i"></span><span class="d">----------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h13">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/LocationSpoofer.kt</a></td><td> | </td><td class="num">43</td><td><span class="i">+++++++++++++++</span><span class="d">----------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h14">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/ActionManager.kt</a></td><td> | </td><td class="num">2</td><td><span class="i"></span><span class="d">--</span></td></tr>
+</table></pre><pre>15 files changed, 238 insertions(+), 259 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/AndroidManifest.xml.html">app/src/main/AndroidManifest.xml</a> b/<a href="../file/app/src/main/AndroidManifest.xml.html">app/src/main/AndroidManifest.xml</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -52,10 +52,6 @@
+</a>             android:exported=&quot;true&quot;
+             android:theme=&quot;@style/AppTheme&quot;
+             android:excludeFromRecents=&quot;true&quot; /&gt;
+<a href="#h0-0-3" id="h0-0-3" class="d">-        &lt;activity
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-            android:name=&quot;.ui.MapActivity&quot;
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-            android:exported=&quot;true&quot;
+</a><a href="#h0-0-6" id="h0-0-6" class="d">-            android:excludeFromRecents=&quot;true&quot; /&gt;
+</a>         &lt;activity android:name=&quot;.bridge.ForceStartActivity&quot;
+             android:theme=&quot;@android:style/Theme.NoDisplay&quot;
+             android:excludeFromRecents=&quot;true&quot;
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/MapActivity.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/MapActivity.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/MapActivity.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/MapActivity.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,98 +0,0 @@
+</a><a href="#h1-0-0" id="h1-0-0" class="d">-package me.rhunk.snapenhance.ui
+</a><a href="#h1-0-1" id="h1-0-1" class="d">-
+</a><a href="#h1-0-2" id="h1-0-2" class="d">-import android.annotation.SuppressLint
+</a><a href="#h1-0-3" id="h1-0-3" class="d">-import android.app.Activity
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-import android.app.AlertDialog
+</a><a href="#h1-0-5" id="h1-0-5" class="d">-import android.content.Context
+</a><a href="#h1-0-6" id="h1-0-6" class="d">-import android.os.Bundle
+</a><a href="#h1-0-7" id="h1-0-7" class="d">-import android.view.MotionEvent
+</a><a href="#h1-0-8" id="h1-0-8" class="d">-import android.widget.Button
+</a><a href="#h1-0-9" id="h1-0-9" class="d">-import android.widget.EditText
+</a><a href="#h1-0-10" id="h1-0-10" class="d">-import me.rhunk.snapenhance.R
+</a><a href="#h1-0-11" id="h1-0-11" class="d">-import org.osmdroid.config.Configuration
+</a><a href="#h1-0-12" id="h1-0-12" class="d">-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+</a><a href="#h1-0-13" id="h1-0-13" class="d">-import org.osmdroid.util.GeoPoint
+</a><a href="#h1-0-14" id="h1-0-14" class="d">-import org.osmdroid.views.MapView
+</a><a href="#h1-0-15" id="h1-0-15" class="d">-import org.osmdroid.views.Projection
+</a><a href="#h1-0-16" id="h1-0-16" class="d">-import org.osmdroid.views.overlay.Marker
+</a><a href="#h1-0-17" id="h1-0-17" class="d">-import org.osmdroid.views.overlay.Overlay
+</a><a href="#h1-0-18" id="h1-0-18" class="d">-
+</a><a href="#h1-0-19" id="h1-0-19" class="d">-
+</a><a href="#h1-0-20" id="h1-0-20" class="d">-class MapActivity : Activity() {
+</a><a href="#h1-0-21" id="h1-0-21" class="d">-
+</a><a href="#h1-0-22" id="h1-0-22" class="d">-    private lateinit var mapView: MapView
+</a><a href="#h1-0-23" id="h1-0-23" class="d">-
+</a><a href="#h1-0-24" id="h1-0-24" class="d">-    @SuppressLint(&quot;MissingInflatedId&quot;, &quot;ResourceType&quot;)
+</a><a href="#h1-0-25" id="h1-0-25" class="d">-    override fun onCreate(savedInstanceState: Bundle?) {
+</a><a href="#h1-0-26" id="h1-0-26" class="d">-        super.onCreate(savedInstanceState)
+</a><a href="#h1-0-27" id="h1-0-27" class="d">-
+</a><a href="#h1-0-28" id="h1-0-28" class="d">-        val contextBundle = intent.extras?.getBundle(&quot;location&quot;) ?: return
+</a><a href="#h1-0-29" id="h1-0-29" class="d">-        val locationLatitude = contextBundle.getDouble(&quot;latitude&quot;)
+</a><a href="#h1-0-30" id="h1-0-30" class="d">-        val locationLongitude = contextBundle.getDouble(&quot;longitude&quot;)
+</a><a href="#h1-0-31" id="h1-0-31" class="d">-
+</a><a href="#h1-0-32" id="h1-0-32" class="d">-        Configuration.getInstance().load(applicationContext, getSharedPreferences(&quot;osmdroid&quot;, Context.MODE_PRIVATE))
+</a><a href="#h1-0-33" id="h1-0-33" class="d">-
+</a><a href="#h1-0-34" id="h1-0-34" class="d">-        setContentView(R.layout.map)
+</a><a href="#h1-0-35" id="h1-0-35" class="d">-
+</a><a href="#h1-0-36" id="h1-0-36" class="d">-        mapView = findViewById(R.id.mapView)
+</a><a href="#h1-0-37" id="h1-0-37" class="d">-        mapView.setMultiTouchControls(true);
+</a><a href="#h1-0-38" id="h1-0-38" class="d">-        mapView.setTileSource(TileSourceFactory.MAPNIK)
+</a><a href="#h1-0-39" id="h1-0-39" class="d">-
+</a><a href="#h1-0-40" id="h1-0-40" class="d">-        val startPoint = GeoPoint(locationLatitude, locationLongitude)
+</a><a href="#h1-0-41" id="h1-0-41" class="d">-        mapView.controller.setZoom(10.0)
+</a><a href="#h1-0-42" id="h1-0-42" class="d">-        mapView.controller.setCenter(startPoint)
+</a><a href="#h1-0-43" id="h1-0-43" class="d">-
+</a><a href="#h1-0-44" id="h1-0-44" class="d">-        val marker = Marker(mapView)
+</a><a href="#h1-0-45" id="h1-0-45" class="d">-        marker.isDraggable = true
+</a><a href="#h1-0-46" id="h1-0-46" class="d">-        marker.position = startPoint
+</a><a href="#h1-0-47" id="h1-0-47" class="d">-        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+</a><a href="#h1-0-48" id="h1-0-48" class="d">-
+</a><a href="#h1-0-49" id="h1-0-49" class="d">-        mapView.overlays.add(object: Overlay() {
+</a><a href="#h1-0-50" id="h1-0-50" class="d">-            override fun onSingleTapConfirmed(e: MotionEvent?, mapView: MapView?): Boolean {
+</a><a href="#h1-0-51" id="h1-0-51" class="d">-                val proj: Projection = mapView!!.projection
+</a><a href="#h1-0-52" id="h1-0-52" class="d">-                val loc = proj.fromPixels(e!!.x.toInt(), e.y.toInt()) as GeoPoint
+</a><a href="#h1-0-53" id="h1-0-53" class="d">-                marker.position = loc
+</a><a href="#h1-0-54" id="h1-0-54" class="d">-                mapView.invalidate()
+</a><a href="#h1-0-55" id="h1-0-55" class="d">-                return true
+</a><a href="#h1-0-56" id="h1-0-56" class="d">-            }
+</a><a href="#h1-0-57" id="h1-0-57" class="d">-        })
+</a><a href="#h1-0-58" id="h1-0-58" class="d">-
+</a><a href="#h1-0-59" id="h1-0-59" class="d">-        mapView.overlays.add(marker)
+</a><a href="#h1-0-60" id="h1-0-60" class="d">-
+</a><a href="#h1-0-61" id="h1-0-61" class="d">-        val applyButton = findViewById&lt;Button&gt;(R.id.apply_location_button)
+</a><a href="#h1-0-62" id="h1-0-62" class="d">-        applyButton.setOnClickListener {
+</a><a href="#h1-0-63" id="h1-0-63" class="d">-            val bundle = Bundle()
+</a><a href="#h1-0-64" id="h1-0-64" class="d">-            bundle.putFloat(&quot;latitude&quot;, marker.position.latitude.toFloat())
+</a><a href="#h1-0-65" id="h1-0-65" class="d">-            bundle.putFloat(&quot;longitude&quot;, marker.position.longitude.toFloat())
+</a><a href="#h1-0-66" id="h1-0-66" class="d">-            setResult(RESULT_OK, intent.putExtra(&quot;location&quot;, bundle))
+</a><a href="#h1-0-67" id="h1-0-67" class="d">-            finish()
+</a><a href="#h1-0-68" id="h1-0-68" class="d">-        }
+</a><a href="#h1-0-69" id="h1-0-69" class="d">-
+</a><a href="#h1-0-70" id="h1-0-70" class="d">-        val setPreciseLocationButton = findViewById&lt;Button&gt;(R.id.set_precise_location_button)
+</a><a href="#h1-0-71" id="h1-0-71" class="d">-
+</a><a href="#h1-0-72" id="h1-0-72" class="d">-        setPreciseLocationButton.setOnClickListener {
+</a><a href="#h1-0-73" id="h1-0-73" class="d">-            val locationDialog = layoutInflater.inflate(R.layout.precise_location_dialog, null)
+</a><a href="#h1-0-74" id="h1-0-74" class="d">-            val dialogLatitude = locationDialog.findViewById&lt;EditText&gt;(R.id.dialog_latitude).also { it.setText(marker.position.latitude.toString()) }
+</a><a href="#h1-0-75" id="h1-0-75" class="d">-            val dialogLongitude = locationDialog.findViewById&lt;EditText&gt;(R.id.dialog_longitude).also { it.setText(marker.position.longitude.toString()) }
+</a><a href="#h1-0-76" id="h1-0-76" class="d">-
+</a><a href="#h1-0-77" id="h1-0-77" class="d">-            AlertDialog.Builder(this)
+</a><a href="#h1-0-78" id="h1-0-78" class="d">-                .setView(locationDialog)
+</a><a href="#h1-0-79" id="h1-0-79" class="d">-                .setTitle(&quot;Set a precise location&quot;)
+</a><a href="#h1-0-80" id="h1-0-80" class="d">-                .setPositiveButton(&quot;Set&quot;) { _, _ -&gt;
+</a><a href="#h1-0-81" id="h1-0-81" class="d">-                    val latitude = dialogLatitude.text.toString().toDoubleOrNull()
+</a><a href="#h1-0-82" id="h1-0-82" class="d">-                    val longitude = dialogLongitude.text.toString().toDoubleOrNull()
+</a><a href="#h1-0-83" id="h1-0-83" class="d">-                    if (latitude != null &amp;&amp; longitude != null) {
+</a><a href="#h1-0-84" id="h1-0-84" class="d">-                        val preciseLocation = GeoPoint(latitude, longitude)
+</a><a href="#h1-0-85" id="h1-0-85" class="d">-                        mapView.controller.setCenter(preciseLocation)
+</a><a href="#h1-0-86" id="h1-0-86" class="d">-                        marker.position = preciseLocation
+</a><a href="#h1-0-87" id="h1-0-87" class="d">-                        mapView.invalidate()
+</a><a href="#h1-0-88" id="h1-0-88" class="d">-                    }
+</a><a href="#h1-0-89" id="h1-0-89" class="d">-                }.setNegativeButton(&quot;Cancel&quot;) { _, _ -&gt; }.show()
+</a><a href="#h1-0-90" id="h1-0-90" class="d">-        }
+</a><a href="#h1-0-91" id="h1-0-91" class="d">-    }
+</a><a href="#h1-0-92" id="h1-0-92" class="d">-
+</a><a href="#h1-0-93" id="h1-0-93" class="d">-    override fun onDestroy() {
+</a><a href="#h1-0-94" id="h1-0-94" class="d">-        super.onDestroy()
+</a><a href="#h1-0-95" id="h1-0-95" class="d">-        mapView.onDetach()
+</a><a href="#h1-0-96" id="h1-0-96" class="d">-    }
+</a><a href="#h1-0-97" id="h1-0-97" class="d">-}
+</a><b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/features/FeaturesSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/features/FeaturesSection.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/features/FeaturesSection.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/sections/features/FeaturesSection.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -149,7 +149,10 @@ class FeaturesSection : Section() {
+</a> 
+         if (showDialog) {
+             Dialog(
+<a href="#h2-0-3" id="h2-0-3" class="d">-                onDismissRequest = { showDialog = false }
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+                properties = DialogProperties(
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+                    usePlatformDefaultWidth = false
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+                ),
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+                onDismissRequest = { showDialog = false },
+</a>             ) {
+                 dialogComposable()
+             }
+<a href="#h2-1" id="h2-1" class="h">@@ -182,6 +185,24 @@ class FeaturesSection : Section() {
+</a>                 )
+             }
+ 
+<a href="#h2-1-3" id="h2-1-3" class="i">+            DataProcessors.Type.MAP_COORDINATES -&gt; {
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+                registerDialogOnClickCallback()
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+                dialogComposable = {
+</a><a href="#h2-1-6" id="h2-1-6" class="i">+                    alertDialogs.ChooseLocationDialog(property) {
+</a><a href="#h2-1-7" id="h2-1-7" class="i">+                        showDialog = false
+</a><a href="#h2-1-8" id="h2-1-8" class="i">+                    }
+</a><a href="#h2-1-9" id="h2-1-9" class="i">+                }
+</a><a href="#h2-1-10" id="h2-1-10" class="i">+
+</a><a href="#h2-1-11" id="h2-1-11" class="i">+                Text(
+</a><a href="#h2-1-12" id="h2-1-12" class="i">+                    overflow = TextOverflow.Ellipsis,
+</a><a href="#h2-1-13" id="h2-1-13" class="i">+                    maxLines = 1,
+</a><a href="#h2-1-14" id="h2-1-14" class="i">+                    modifier = Modifier.widthIn(0.dp, 120.dp),
+</a><a href="#h2-1-15" id="h2-1-15" class="i">+                    text = (propertyValue.get() as Pair&lt;*, *&gt;).let {
+</a><a href="#h2-1-16" id="h2-1-16" class="i">+                        &quot;${it.first.toString().toFloatOrNull() ?: 0F}, ${it.second.toString().toFloatOrNull() ?: 0F}&quot;
+</a><a href="#h2-1-17" id="h2-1-17" class="i">+                    }
+</a><a href="#h2-1-18" id="h2-1-18" class="i">+                )
+</a><a href="#h2-1-19" id="h2-1-19" class="i">+            }
+</a><a href="#h2-1-20" id="h2-1-20" class="i">+
+</a>             DataProcessors.Type.STRING_UNIQUE_SELECTION -&gt; {
+                 registerDialogOnClickCallback()
+ 
+<b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/util/AlertDialogs.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/AlertDialogs.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/util/AlertDialogs.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/util/AlertDialogs.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -1,41 +1,52 @@
+</a> package me.rhunk.snapenhance.ui.util
+ 
+<a href="#h3-0-2" id="h3-0-2" class="i">+import android.content.Context
+</a><a href="#h3-0-3" id="h3-0-3" class="i">+import android.view.MotionEvent
+</a> import androidx.compose.foundation.ScrollState
+ import androidx.compose.foundation.clickable
+ import androidx.compose.foundation.layout.*
+ import androidx.compose.foundation.text.KeyboardOptions
+ import androidx.compose.foundation.verticalScroll
+<a href="#h3-0-9" id="h3-0-9" class="i">+import androidx.compose.material.icons.Icons
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+import androidx.compose.material.icons.filled.Check
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+import androidx.compose.material.icons.filled.Edit
+</a> import androidx.compose.material3.*
+<a href="#h3-0-13" id="h3-0-13" class="d">-import androidx.compose.runtime.Composable
+</a><a href="#h3-0-14" id="h3-0-14" class="d">-import androidx.compose.runtime.getValue
+</a><a href="#h3-0-15" id="h3-0-15" class="d">-import androidx.compose.runtime.mutableStateOf
+</a><a href="#h3-0-16" id="h3-0-16" class="d">-import androidx.compose.runtime.remember
+</a><a href="#h3-0-17" id="h3-0-17" class="d">-import androidx.compose.runtime.setValue
+</a><a href="#h3-0-18" id="h3-0-18" class="i">+import androidx.compose.runtime.*
+</a> import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.focus.FocusRequester
+ import androidx.compose.ui.focus.focusRequester
+ import androidx.compose.ui.layout.onGloballyPositioned
+<a href="#h3-0-24" id="h3-0-24" class="i">+import androidx.compose.ui.platform.LocalContext
+</a> import androidx.compose.ui.text.TextRange
+ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.text.input.KeyboardType
+ import androidx.compose.ui.text.input.TextFieldValue
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+<a href="#h3-0-31" id="h3-0-31" class="i">+import androidx.compose.ui.viewinterop.AndroidView
+</a> import me.rhunk.snapenhance.common.bridge.wrapper.LocaleWrapper
+ import me.rhunk.snapenhance.common.config.DataProcessors
+ import me.rhunk.snapenhance.common.config.PropertyPair
+<a href="#h3-0-35" id="h3-0-35" class="i">+import org.osmdroid.config.Configuration
+</a><a href="#h3-0-36" id="h3-0-36" class="i">+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+</a><a href="#h3-0-37" id="h3-0-37" class="i">+import org.osmdroid.util.GeoPoint
+</a><a href="#h3-0-38" id="h3-0-38" class="i">+import org.osmdroid.views.CustomZoomButtonsController
+</a><a href="#h3-0-39" id="h3-0-39" class="i">+import org.osmdroid.views.MapView
+</a><a href="#h3-0-40" id="h3-0-40" class="i">+import org.osmdroid.views.overlay.Marker
+</a><a href="#h3-0-41" id="h3-0-41" class="i">+import org.osmdroid.views.overlay.Overlay
+</a> 
+ 
+ class AlertDialogs(
+     private val translation: LocaleWrapper,
+ ){
+     @Composable
+<a href="#h3-0-48" id="h3-0-48" class="d">-    fun DefaultDialogCard(content: @Composable ColumnScope.() -&gt; Unit) {
+</a><a href="#h3-0-49" id="h3-0-49" class="i">+    fun DefaultDialogCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -&gt; Unit) {
+</a>         Card(
+             shape = MaterialTheme.shapes.medium,
+             modifier = Modifier
+<a href="#h3-0-53" id="h3-0-53" class="d">-                .padding(10.dp, 5.dp, 10.dp, 10.dp),
+</a><a href="#h3-0-54" id="h3-0-54" class="i">+                .padding(10.dp, 5.dp, 10.dp, 10.dp)
+</a><a href="#h3-0-55" id="h3-0-55" class="i">+                .then(modifier),
+</a>         ) {
+             Column(
+                 modifier = Modifier
+<a href="#h3-1" id="h3-1" class="h">@@ -195,7 +206,9 @@ class AlertDialogs(
+</a>             )
+ 
+             Row(
+<a href="#h3-1-3" id="h3-1-3" class="d">-                modifier = Modifier.padding(top = 10.dp).fillMaxWidth(),
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+                modifier = Modifier
+</a><a href="#h3-1-5" id="h3-1-5" class="i">+                    .padding(top = 10.dp)
+</a><a href="#h3-1-6" id="h3-1-6" class="i">+                    .fillMaxWidth(),
+</a>                 horizontalArrangement = Arrangement.SpaceEvenly,
+             ) {
+                 Button(onClick = { dismiss() }) {
+<a href="#h3-2" id="h3-2" class="h">@@ -252,7 +265,9 @@ class AlertDialogs(
+</a>             )
+ 
+             Row(
+<a href="#h3-2-3" id="h3-2-3" class="d">-                modifier = Modifier.padding(top = 10.dp).fillMaxWidth(),
+</a><a href="#h3-2-4" id="h3-2-4" class="i">+                modifier = Modifier
+</a><a href="#h3-2-5" id="h3-2-5" class="i">+                    .padding(top = 10.dp)
+</a><a href="#h3-2-6" id="h3-2-6" class="i">+                    .fillMaxWidth(),
+</a>                 horizontalArrangement = Arrangement.SpaceEvenly,
+             ) {
+                 Button(onClick = { onDismiss() }) {
+<a href="#h3-3" id="h3-3" class="h">@@ -305,4 +320,145 @@ class AlertDialogs(
+</a>             }
+         }
+     }
+<a href="#h3-3-3" id="h3-3-3" class="i">+
+</a><a href="#h3-3-4" id="h3-3-4" class="i">+    @Composable
+</a><a href="#h3-3-5" id="h3-3-5" class="i">+    fun ChooseLocationDialog(property: PropertyPair&lt;*&gt;, dismiss: () -&gt; Unit = {}) {
+</a><a href="#h3-3-6" id="h3-3-6" class="i">+        val coordinates = remember {
+</a><a href="#h3-3-7" id="h3-3-7" class="i">+            (property.value.get() as Pair&lt;*, *&gt;).let {
+</a><a href="#h3-3-8" id="h3-3-8" class="i">+                it.first.toString().toDouble() to it.second.toString().toDouble()
+</a><a href="#h3-3-9" id="h3-3-9" class="i">+            }
+</a><a href="#h3-3-10" id="h3-3-10" class="i">+        }
+</a><a href="#h3-3-11" id="h3-3-11" class="i">+        val context = LocalContext.current
+</a><a href="#h3-3-12" id="h3-3-12" class="i">+
+</a><a href="#h3-3-13" id="h3-3-13" class="i">+        LaunchedEffect(Unit) {
+</a><a href="#h3-3-14" id="h3-3-14" class="i">+            Configuration.getInstance().load(context, context.getSharedPreferences(&quot;osmdroid&quot;, Context.MODE_PRIVATE))
+</a><a href="#h3-3-15" id="h3-3-15" class="i">+        }
+</a><a href="#h3-3-16" id="h3-3-16" class="i">+
+</a><a href="#h3-3-17" id="h3-3-17" class="i">+        var marker by remember { mutableStateOf&lt;Marker?&gt;(null) }
+</a><a href="#h3-3-18" id="h3-3-18" class="i">+        val mapView = remember {
+</a><a href="#h3-3-19" id="h3-3-19" class="i">+            MapView(context).apply {
+</a><a href="#h3-3-20" id="h3-3-20" class="i">+                setMultiTouchControls(true)
+</a><a href="#h3-3-21" id="h3-3-21" class="i">+                zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
+</a><a href="#h3-3-22" id="h3-3-22" class="i">+                setTileSource(TileSourceFactory.MAPNIK)
+</a><a href="#h3-3-23" id="h3-3-23" class="i">+
+</a><a href="#h3-3-24" id="h3-3-24" class="i">+                val startPoint = GeoPoint(coordinates.first, coordinates.second)
+</a><a href="#h3-3-25" id="h3-3-25" class="i">+                controller.setZoom(10.0)
+</a><a href="#h3-3-26" id="h3-3-26" class="i">+                controller.setCenter(startPoint)
+</a><a href="#h3-3-27" id="h3-3-27" class="i">+
+</a><a href="#h3-3-28" id="h3-3-28" class="i">+                marker = Marker(this).apply {
+</a><a href="#h3-3-29" id="h3-3-29" class="i">+                    isDraggable = true
+</a><a href="#h3-3-30" id="h3-3-30" class="i">+                    position = startPoint
+</a><a href="#h3-3-31" id="h3-3-31" class="i">+                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+</a><a href="#h3-3-32" id="h3-3-32" class="i">+                }
+</a><a href="#h3-3-33" id="h3-3-33" class="i">+
+</a><a href="#h3-3-34" id="h3-3-34" class="i">+                overlays.add(object: Overlay() {
+</a><a href="#h3-3-35" id="h3-3-35" class="i">+                    override fun onSingleTapConfirmed(e: MotionEvent, mapView: MapView): Boolean {
+</a><a href="#h3-3-36" id="h3-3-36" class="i">+                        marker?.position = mapView.projection.fromPixels(e.x.toInt(), e.y.toInt()) as GeoPoint
+</a><a href="#h3-3-37" id="h3-3-37" class="i">+                        mapView.invalidate()
+</a><a href="#h3-3-38" id="h3-3-38" class="i">+                        return true
+</a><a href="#h3-3-39" id="h3-3-39" class="i">+                    }
+</a><a href="#h3-3-40" id="h3-3-40" class="i">+                })
+</a><a href="#h3-3-41" id="h3-3-41" class="i">+
+</a><a href="#h3-3-42" id="h3-3-42" class="i">+                overlays.add(marker)
+</a><a href="#h3-3-43" id="h3-3-43" class="i">+            }
+</a><a href="#h3-3-44" id="h3-3-44" class="i">+        }
+</a><a href="#h3-3-45" id="h3-3-45" class="i">+
+</a><a href="#h3-3-46" id="h3-3-46" class="i">+        DisposableEffect(Unit) {
+</a><a href="#h3-3-47" id="h3-3-47" class="i">+            onDispose {
+</a><a href="#h3-3-48" id="h3-3-48" class="i">+                mapView.onDetach()
+</a><a href="#h3-3-49" id="h3-3-49" class="i">+            }
+</a><a href="#h3-3-50" id="h3-3-50" class="i">+        }
+</a><a href="#h3-3-51" id="h3-3-51" class="i">+
+</a><a href="#h3-3-52" id="h3-3-52" class="i">+        var customCoordinatesDialog by remember { mutableStateOf(false) }
+</a><a href="#h3-3-53" id="h3-3-53" class="i">+
+</a><a href="#h3-3-54" id="h3-3-54" class="i">+        Box(
+</a><a href="#h3-3-55" id="h3-3-55" class="i">+            modifier = Modifier.fillMaxWidth().fillMaxHeight(fraction = 0.9f),
+</a><a href="#h3-3-56" id="h3-3-56" class="i">+        ) {
+</a><a href="#h3-3-57" id="h3-3-57" class="i">+            AndroidView(
+</a><a href="#h3-3-58" id="h3-3-58" class="i">+                factory = { mapView }
+</a><a href="#h3-3-59" id="h3-3-59" class="i">+            )
+</a><a href="#h3-3-60" id="h3-3-60" class="i">+            Row(
+</a><a href="#h3-3-61" id="h3-3-61" class="i">+                modifier = Modifier
+</a><a href="#h3-3-62" id="h3-3-62" class="i">+                    .align(Alignment.BottomEnd)
+</a><a href="#h3-3-63" id="h3-3-63" class="i">+                    .padding(10.dp),
+</a><a href="#h3-3-64" id="h3-3-64" class="i">+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+</a><a href="#h3-3-65" id="h3-3-65" class="i">+            ) {
+</a><a href="#h3-3-66" id="h3-3-66" class="i">+                FilledIconButton(
+</a><a href="#h3-3-67" id="h3-3-67" class="i">+                    onClick = {
+</a><a href="#h3-3-68" id="h3-3-68" class="i">+                        val lat = marker?.position?.latitude ?: coordinates.first
+</a><a href="#h3-3-69" id="h3-3-69" class="i">+                        val lon = marker?.position?.longitude ?: coordinates.second
+</a><a href="#h3-3-70" id="h3-3-70" class="i">+                        property.value.setAny(lat to lon)
+</a><a href="#h3-3-71" id="h3-3-71" class="i">+                        dismiss()
+</a><a href="#h3-3-72" id="h3-3-72" class="i">+                    }) {
+</a><a href="#h3-3-73" id="h3-3-73" class="i">+                    Icon(
+</a><a href="#h3-3-74" id="h3-3-74" class="i">+                        modifier = Modifier
+</a><a href="#h3-3-75" id="h3-3-75" class="i">+                            .size(60.dp)
+</a><a href="#h3-3-76" id="h3-3-76" class="i">+                            .padding(5.dp),
+</a><a href="#h3-3-77" id="h3-3-77" class="i">+                        imageVector = Icons.Filled.Check,
+</a><a href="#h3-3-78" id="h3-3-78" class="i">+                        contentDescription = null
+</a><a href="#h3-3-79" id="h3-3-79" class="i">+                    )
+</a><a href="#h3-3-80" id="h3-3-80" class="i">+                }
+</a><a href="#h3-3-81" id="h3-3-81" class="i">+
+</a><a href="#h3-3-82" id="h3-3-82" class="i">+                FilledIconButton(
+</a><a href="#h3-3-83" id="h3-3-83" class="i">+                    onClick = {
+</a><a href="#h3-3-84" id="h3-3-84" class="i">+                        customCoordinatesDialog = true
+</a><a href="#h3-3-85" id="h3-3-85" class="i">+                    }) {
+</a><a href="#h3-3-86" id="h3-3-86" class="i">+                    Icon(
+</a><a href="#h3-3-87" id="h3-3-87" class="i">+                        modifier = Modifier
+</a><a href="#h3-3-88" id="h3-3-88" class="i">+                            .size(60.dp)
+</a><a href="#h3-3-89" id="h3-3-89" class="i">+                            .padding(5.dp),
+</a><a href="#h3-3-90" id="h3-3-90" class="i">+                        imageVector = Icons.Filled.Edit,
+</a><a href="#h3-3-91" id="h3-3-91" class="i">+                        contentDescription = null
+</a><a href="#h3-3-92" id="h3-3-92" class="i">+                    )
+</a><a href="#h3-3-93" id="h3-3-93" class="i">+                }
+</a><a href="#h3-3-94" id="h3-3-94" class="i">+            }
+</a><a href="#h3-3-95" id="h3-3-95" class="i">+
+</a><a href="#h3-3-96" id="h3-3-96" class="i">+            if (customCoordinatesDialog) {
+</a><a href="#h3-3-97" id="h3-3-97" class="i">+                val lat = remember { mutableStateOf(coordinates.first.toString()) }
+</a><a href="#h3-3-98" id="h3-3-98" class="i">+                val lon = remember { mutableStateOf(coordinates.second.toString()) }
+</a><a href="#h3-3-99" id="h3-3-99" class="i">+
+</a><a href="#h3-3-100" id="h3-3-100" class="i">+                DefaultDialogCard(
+</a><a href="#h3-3-101" id="h3-3-101" class="i">+                    modifier = Modifier.align(Alignment.Center)
+</a><a href="#h3-3-102" id="h3-3-102" class="i">+                ) {
+</a><a href="#h3-3-103" id="h3-3-103" class="i">+                    TextField(
+</a><a href="#h3-3-104" id="h3-3-104" class="i">+                        modifier = Modifier
+</a><a href="#h3-3-105" id="h3-3-105" class="i">+                            .fillMaxWidth()
+</a><a href="#h3-3-106" id="h3-3-106" class="i">+                            .padding(all = 10.dp),
+</a><a href="#h3-3-107" id="h3-3-107" class="i">+                        value = lat.value,
+</a><a href="#h3-3-108" id="h3-3-108" class="i">+                        onValueChange = { lat.value = it },
+</a><a href="#h3-3-109" id="h3-3-109" class="i">+                        label = { Text(text = &quot;Latitude&quot;) },
+</a><a href="#h3-3-110" id="h3-3-110" class="i">+                        singleLine = true
+</a><a href="#h3-3-111" id="h3-3-111" class="i">+                    )
+</a><a href="#h3-3-112" id="h3-3-112" class="i">+                    TextField(
+</a><a href="#h3-3-113" id="h3-3-113" class="i">+                        modifier = Modifier
+</a><a href="#h3-3-114" id="h3-3-114" class="i">+                            .fillMaxWidth()
+</a><a href="#h3-3-115" id="h3-3-115" class="i">+                            .padding(all = 10.dp),
+</a><a href="#h3-3-116" id="h3-3-116" class="i">+                        value = lon.value,
+</a><a href="#h3-3-117" id="h3-3-117" class="i">+                        onValueChange = { lon.value = it },
+</a><a href="#h3-3-118" id="h3-3-118" class="i">+                        label = { Text(text = &quot;Longitude&quot;) },
+</a><a href="#h3-3-119" id="h3-3-119" class="i">+                        singleLine = true
+</a><a href="#h3-3-120" id="h3-3-120" class="i">+                    )
+</a><a href="#h3-3-121" id="h3-3-121" class="i">+                    Row(
+</a><a href="#h3-3-122" id="h3-3-122" class="i">+                        modifier = Modifier.fillMaxWidth(),
+</a><a href="#h3-3-123" id="h3-3-123" class="i">+                        horizontalArrangement = Arrangement.SpaceEvenly,
+</a><a href="#h3-3-124" id="h3-3-124" class="i">+                    ) {
+</a><a href="#h3-3-125" id="h3-3-125" class="i">+                        Button(onClick = {
+</a><a href="#h3-3-126" id="h3-3-126" class="i">+                            customCoordinatesDialog = false
+</a><a href="#h3-3-127" id="h3-3-127" class="i">+                        }) {
+</a><a href="#h3-3-128" id="h3-3-128" class="i">+                            Text(text = translation[&quot;button.cancel&quot;])
+</a><a href="#h3-3-129" id="h3-3-129" class="i">+                        }
+</a><a href="#h3-3-130" id="h3-3-130" class="i">+
+</a><a href="#h3-3-131" id="h3-3-131" class="i">+                        Button(onClick = {
+</a><a href="#h3-3-132" id="h3-3-132" class="i">+                            marker?.position = GeoPoint(lat.value.toDouble(), lon.value.toDouble())
+</a><a href="#h3-3-133" id="h3-3-133" class="i">+                            mapView.controller.setCenter(marker?.position)
+</a><a href="#h3-3-134" id="h3-3-134" class="i">+                            mapView.invalidate()
+</a><a href="#h3-3-135" id="h3-3-135" class="i">+                            customCoordinatesDialog = false
+</a><a href="#h3-3-136" id="h3-3-136" class="i">+                        }) {
+</a><a href="#h3-3-137" id="h3-3-137" class="i">+                            Text(text = translation[&quot;button.ok&quot;])
+</a><a href="#h3-3-138" id="h3-3-138" class="i">+                        }
+</a><a href="#h3-3-139" id="h3-3-139" class="i">+                    }
+</a><a href="#h3-3-140" id="h3-3-140" class="i">+                }
+</a><a href="#h3-3-141" id="h3-3-141" class="i">+            }
+</a><a href="#h3-3-142" id="h3-3-142" class="i">+        }
+</a><a href="#h3-3-143" id="h3-3-143" class="i">+    }
+</a> }
+<b>diff --git a/<a id="h4" href="../file/app/src/main/res/layout/map.xml.html">app/src/main/res/layout/map.xml</a> b/<a href="../file/app/src/main/res/layout/map.xml.html">app/src/main/res/layout/map.xml</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -1,44 +0,0 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="d">-&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+</a><a href="#h4-0-1" id="h4-0-1" class="d">-&lt;FrameLayout xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+</a><a href="#h4-0-2" id="h4-0-2" class="d">-    xmlns:tools=&quot;http://schemas.android.com/tools&quot;
+</a><a href="#h4-0-3" id="h4-0-3" class="d">-    android:layout_width=&quot;match_parent&quot;
+</a><a href="#h4-0-4" id="h4-0-4" class="d">-    android:layout_height=&quot;match_parent&quot;&gt;
+</a><a href="#h4-0-5" id="h4-0-5" class="d">-
+</a><a href="#h4-0-6" id="h4-0-6" class="d">-    &lt;org.osmdroid.views.MapView
+</a><a href="#h4-0-7" id="h4-0-7" class="d">-        android:id=&quot;@+id/mapView&quot;
+</a><a href="#h4-0-8" id="h4-0-8" class="d">-        android:layout_width=&quot;match_parent&quot;
+</a><a href="#h4-0-9" id="h4-0-9" class="d">-        android:layout_height=&quot;match_parent&quot; &gt;
+</a><a href="#h4-0-10" id="h4-0-10" class="d">-
+</a><a href="#h4-0-11" id="h4-0-11" class="d">-    &lt;/org.osmdroid.views.MapView&gt;
+</a><a href="#h4-0-12" id="h4-0-12" class="d">-
+</a><a href="#h4-0-13" id="h4-0-13" class="d">-    &lt;FrameLayout
+</a><a href="#h4-0-14" id="h4-0-14" class="d">-        android:layout_width=&quot;match_parent&quot;
+</a><a href="#h4-0-15" id="h4-0-15" class="d">-        android:layout_height=&quot;wrap_content&quot;&gt;
+</a><a href="#h4-0-16" id="h4-0-16" class="d">-
+</a><a href="#h4-0-17" id="h4-0-17" class="d">-        &lt;Button
+</a><a href="#h4-0-18" id="h4-0-18" class="d">-            android:id=&quot;@+id/set_precise_location_button&quot;
+</a><a href="#h4-0-19" id="h4-0-19" class="d">-            android:layout_width=&quot;wrap_content&quot;
+</a><a href="#h4-0-20" id="h4-0-20" class="d">-            android:layout_height=&quot;match_parent&quot;
+</a><a href="#h4-0-21" id="h4-0-21" class="d">-            android:layout_gravity=&quot;left&quot;
+</a><a href="#h4-0-22" id="h4-0-22" class="d">-            android:layout_marginStart=&quot;20dp&quot;
+</a><a href="#h4-0-23" id="h4-0-23" class="d">-            android:layout_marginTop=&quot;20dp&quot;
+</a><a href="#h4-0-24" id="h4-0-24" class="d">-            android:padding=&quot;10dp&quot;
+</a><a href="#h4-0-25" id="h4-0-25" class="d">-            android:background=&quot;@android:color/white&quot;
+</a><a href="#h4-0-26" id="h4-0-26" class="d">-            android:text=&quot;Set Precise Location&quot;
+</a><a href="#h4-0-27" id="h4-0-27" class="d">-            android:textSize=&quot;20sp&quot;
+</a><a href="#h4-0-28" id="h4-0-28" class="d">-            tools:ignore=&quot;HardcodedText,RtlHardcoded&quot; /&gt;
+</a><a href="#h4-0-29" id="h4-0-29" class="d">-
+</a><a href="#h4-0-30" id="h4-0-30" class="d">-        &lt;Button
+</a><a href="#h4-0-31" id="h4-0-31" class="d">-            android:id=&quot;@+id/apply_location_button&quot;
+</a><a href="#h4-0-32" id="h4-0-32" class="d">-            android:layout_width=&quot;wrap_content&quot;
+</a><a href="#h4-0-33" id="h4-0-33" class="d">-            android:layout_height=&quot;wrap_content&quot;
+</a><a href="#h4-0-34" id="h4-0-34" class="d">-            android:layout_gravity=&quot;right&quot;
+</a><a href="#h4-0-35" id="h4-0-35" class="d">-            android:layout_marginTop=&quot;20dp&quot;
+</a><a href="#h4-0-36" id="h4-0-36" class="d">-            android:layout_marginRight=&quot;20dp&quot;
+</a><a href="#h4-0-37" id="h4-0-37" class="d">-            android:background=&quot;@android:color/white&quot;
+</a><a href="#h4-0-38" id="h4-0-38" class="d">-            android:text=&quot;Apply&quot;
+</a><a href="#h4-0-39" id="h4-0-39" class="d">-            android:textSize=&quot;20sp&quot;
+</a><a href="#h4-0-40" id="h4-0-40" class="d">-            tools:ignore=&quot;HardcodedText,RtlHardcoded&quot; /&gt;
+</a><a href="#h4-0-41" id="h4-0-41" class="d">-    &lt;/FrameLayout&gt;
+</a><a href="#h4-0-42" id="h4-0-42" class="d">-
+</a><a href="#h4-0-43" id="h4-0-43" class="d">-&lt;/FrameLayout&gt;
+</a><b>diff --git a/<a id="h5" href="../file/app/src/main/res/layout/precise_location_dialog.xml.html">app/src/main/res/layout/precise_location_dialog.xml</a> b/<a href="../file/app/src/main/res/layout/precise_location_dialog.xml.html">app/src/main/res/layout/precise_location_dialog.xml</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -1,28 +0,0 @@
+</a><a href="#h5-0-0" id="h5-0-0" class="d">-&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+</a><a href="#h5-0-1" id="h5-0-1" class="d">-&lt;LinearLayout xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+</a><a href="#h5-0-2" id="h5-0-2" class="d">-    xmlns:tools=&quot;http://schemas.android.com/tools&quot;
+</a><a href="#h5-0-3" id="h5-0-3" class="d">-    android:layout_width=&quot;match_parent&quot;
+</a><a href="#h5-0-4" id="h5-0-4" class="d">-    android:layout_height=&quot;match_parent&quot;
+</a><a href="#h5-0-5" id="h5-0-5" class="d">-    android:padding=&quot;20dp&quot;
+</a><a href="#h5-0-6" id="h5-0-6" class="d">-    android:orientation=&quot;vertical&quot;
+</a><a href="#h5-0-7" id="h5-0-7" class="d">-    tools:ignore=&quot;HardcodedText&quot;&gt;
+</a><a href="#h5-0-8" id="h5-0-8" class="d">-
+</a><a href="#h5-0-9" id="h5-0-9" class="d">-    &lt;EditText
+</a><a href="#h5-0-10" id="h5-0-10" class="d">-        android:id=&quot;@+id/dialog_latitude&quot;
+</a><a href="#h5-0-11" id="h5-0-11" class="d">-        android:layout_width=&quot;match_parent&quot;
+</a><a href="#h5-0-12" id="h5-0-12" class="d">-        android:layout_height=&quot;wrap_content&quot;
+</a><a href="#h5-0-13" id="h5-0-13" class="d">-        android:autofillHints=&quot;&quot;
+</a><a href="#h5-0-14" id="h5-0-14" class="d">-        android:ems=&quot;10&quot;
+</a><a href="#h5-0-15" id="h5-0-15" class="d">-        android:hint=&quot;Latitude&quot;
+</a><a href="#h5-0-16" id="h5-0-16" class="d">-        android:inputType=&quot;number|numberDecimal|numberSigned&quot; /&gt;
+</a><a href="#h5-0-17" id="h5-0-17" class="d">-
+</a><a href="#h5-0-18" id="h5-0-18" class="d">-    &lt;EditText
+</a><a href="#h5-0-19" id="h5-0-19" class="d">-        android:id=&quot;@+id/dialog_longitude&quot;
+</a><a href="#h5-0-20" id="h5-0-20" class="d">-        android:layout_width=&quot;match_parent&quot;
+</a><a href="#h5-0-21" id="h5-0-21" class="d">-        android:layout_height=&quot;wrap_content&quot;
+</a><a href="#h5-0-22" id="h5-0-22" class="d">-        android:autofillHints=&quot;&quot;
+</a><a href="#h5-0-23" id="h5-0-23" class="d">-        android:ems=&quot;10&quot;
+</a><a href="#h5-0-24" id="h5-0-24" class="d">-        android:hint=&quot;Longitude&quot;
+</a><a href="#h5-0-25" id="h5-0-25" class="d">-        android:inputType=&quot;number|numberDecimal|numberSigned&quot; /&gt;
+</a><a href="#h5-0-26" id="h5-0-26" class="d">-
+</a><a href="#h5-0-27" id="h5-0-27" class="d">-&lt;/LinearLayout&gt;</a><a href="#h5-0-28" id="h5-0-28" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h6" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -356,6 +356,16 @@
+</a>                 &quot;name&quot;: &quot;Global&quot;,
+                 &quot;description&quot;: &quot;Tweak Global Snapchat Settings&quot;,
+                 &quot;properties&quot;: {
+<a href="#h6-0-3" id="h6-0-3" class="i">+                    &quot;spoofLocation&quot;: {
+</a><a href="#h6-0-4" id="h6-0-4" class="i">+                        &quot;name&quot;: &quot;Location&quot;,
+</a><a href="#h6-0-5" id="h6-0-5" class="i">+                        &quot;description&quot;: &quot;Spoof your location&quot;,
+</a><a href="#h6-0-6" id="h6-0-6" class="i">+                        &quot;properties&quot;: {
+</a><a href="#h6-0-7" id="h6-0-7" class="i">+                            &quot;coordinates&quot;: {
+</a><a href="#h6-0-8" id="h6-0-8" class="i">+                                &quot;name&quot;: &quot;Coordinates&quot;,
+</a><a href="#h6-0-9" id="h6-0-9" class="i">+                                &quot;description&quot;: &quot;Set the coordinates&quot;
+</a><a href="#h6-0-10" id="h6-0-10" class="i">+                            }
+</a><a href="#h6-0-11" id="h6-0-11" class="i">+                        }
+</a><a href="#h6-0-12" id="h6-0-12" class="i">+                    },
+</a>                     &quot;snapchat_plus&quot;: {
+                         &quot;name&quot;: &quot;Snapchat Plus&quot;,
+                         &quot;description&quot;: &quot;Enables Snapchat Plus features\nSome Server-sided features may not work&quot;
+<a href="#h6-1" id="h6-1" class="h">@@ -464,20 +474,6 @@
+</a>                         &quot;name&quot;: &quot;Spoof&quot;,
+                         &quot;description&quot;: &quot;Spoof various information about you&quot;,
+                         &quot;properties&quot;: {
+<a href="#h6-1-3" id="h6-1-3" class="d">-                            &quot;location&quot;: {
+</a><a href="#h6-1-4" id="h6-1-4" class="d">-                                &quot;name&quot;: &quot;Location&quot;,
+</a><a href="#h6-1-5" id="h6-1-5" class="d">-                                &quot;description&quot;: &quot;Spoof your location&quot;,
+</a><a href="#h6-1-6" id="h6-1-6" class="d">-                                &quot;properties&quot;: {
+</a><a href="#h6-1-7" id="h6-1-7" class="d">-                                    &quot;location_latitude&quot;: {
+</a><a href="#h6-1-8" id="h6-1-8" class="d">-                                        &quot;name&quot;: &quot;Latitude&quot;,
+</a><a href="#h6-1-9" id="h6-1-9" class="d">-                                        &quot;description&quot;: &quot;The latitude of the location&quot;
+</a><a href="#h6-1-10" id="h6-1-10" class="d">-                                    },
+</a><a href="#h6-1-11" id="h6-1-11" class="d">-                                    &quot;location_longitude&quot;: {
+</a><a href="#h6-1-12" id="h6-1-12" class="d">-                                        &quot;name&quot;: &quot;Longitude&quot;,
+</a><a href="#h6-1-13" id="h6-1-13" class="d">-                                        &quot;description&quot;: &quot;The longitude of the location&quot;
+</a><a href="#h6-1-14" id="h6-1-14" class="d">-                                    }
+</a><a href="#h6-1-15" id="h6-1-15" class="d">-                                }
+</a><a href="#h6-1-16" id="h6-1-16" class="d">-                            },
+</a>                             &quot;device&quot;: {
+                                 &quot;name&quot;: &quot;Device&quot;,
+                                 &quot;description&quot;: &quot;Spoof your device information&quot;,
+<b>diff --git a/<a id="h7" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/action/EnumAction.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/action/EnumAction.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/action/EnumAction.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/action/EnumAction.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -8,8 +8,7 @@ enum class EnumAction(
+</a>     val isCritical: Boolean = false,
+ ) {
+     CLEAN_CACHE(&quot;clean_snapchat_cache&quot;, exitOnFinish = true),
+<a href="#h7-0-3" id="h7-0-3" class="d">-    EXPORT_CHAT_MESSAGES(&quot;export_chat_messages&quot;),
+</a><a href="#h7-0-4" id="h7-0-4" class="d">-    OPEN_MAP(&quot;open_map&quot;);
+</a><a href="#h7-0-5" id="h7-0-5" class="i">+    EXPORT_CHAT_MESSAGES(&quot;export_chat_messages&quot;);
+</a> 
+     companion object {
+         const val ACTION_PARAMETER = &quot;se_action&quot;
+<b>diff --git a/<a id="h8" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/ConfigContainer.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/ConfigContainer.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/ConfigContainer.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/ConfigContainer.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -60,6 +60,12 @@ open class ConfigContainer(
+</a>         container.parentContainerKey = it
+     }.get()
+ 
+<a href="#h8-0-3" id="h8-0-3" class="i">+    protected fun mapCoordinates(
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+        key: String,
+</a><a href="#h8-0-5" id="h8-0-5" class="i">+        defaultValue: Pair&lt;Double, Double&gt; = 0.0 to 0.0,
+</a><a href="#h8-0-6" id="h8-0-6" class="i">+        params: ConfigParamsBuilder = {}
+</a><a href="#h8-0-7" id="h8-0-7" class="i">+    ) = registerProperty(key, DataProcessors.MAP_COORDINATES, PropertyValue(defaultValue), params)
+</a><a href="#h8-0-8" id="h8-0-8" class="i">+
+</a>     fun toJson(): JsonObject {
+         val json = JsonObject()
+         properties.forEach { (propertyKey, propertyValue) -&gt;
+<b>diff --git a/<a id="h9" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/DataProcessors.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/DataProcessors.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/DataProcessors.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/DataProcessors.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -14,6 +14,7 @@ object DataProcessors {
+</a>         FLOAT,
+         STRING_MULTIPLE_SELECTION,
+         STRING_UNIQUE_SELECTION,
+<a href="#h9-0-3" id="h9-0-3" class="i">+        MAP_COORDINATES,
+</a>         CONTAINER,
+     }
+ 
+<a href="#h9-1" id="h9-1" class="h">@@ -75,6 +76,20 @@ object DataProcessors {
+</a>         deserialize = { obj -&gt; obj.takeIf { !it.isJsonNull }?.asString }
+     )
+ 
+<a href="#h9-1-3" id="h9-1-3" class="i">+    val MAP_COORDINATES = PropertyDataProcessor(
+</a><a href="#h9-1-4" id="h9-1-4" class="i">+        type = Type.MAP_COORDINATES,
+</a><a href="#h9-1-5" id="h9-1-5" class="i">+        serialize = {
+</a><a href="#h9-1-6" id="h9-1-6" class="i">+            JsonObject().apply {
+</a><a href="#h9-1-7" id="h9-1-7" class="i">+                addProperty(&quot;lat&quot;, it.first)
+</a><a href="#h9-1-8" id="h9-1-8" class="i">+                addProperty(&quot;lng&quot;, it.second)
+</a><a href="#h9-1-9" id="h9-1-9" class="i">+            }
+</a><a href="#h9-1-10" id="h9-1-10" class="i">+        },
+</a><a href="#h9-1-11" id="h9-1-11" class="i">+        deserialize = { obj -&gt;
+</a><a href="#h9-1-12" id="h9-1-12" class="i">+            val jsonObject = obj.asJsonObject
+</a><a href="#h9-1-13" id="h9-1-13" class="i">+            jsonObject[&quot;lat&quot;].asDouble to jsonObject[&quot;lng&quot;].asDouble
+</a><a href="#h9-1-14" id="h9-1-14" class="i">+        },
+</a><a href="#h9-1-15" id="h9-1-15" class="i">+    )
+</a><a href="#h9-1-16" id="h9-1-16" class="i">+
+</a>     fun &lt;T : ConfigContainer&gt; container(container: T) = PropertyDataProcessor(
+         type = Type.CONTAINER,
+         serialize = {
+<b>diff --git a/<a id="h10" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -4,6 +4,10 @@ import me.rhunk.snapenhance.common.config.ConfigContainer
+</a> import me.rhunk.snapenhance.common.config.FeatureNotice
+ 
+ class Global : ConfigContainer() {
+<a href="#h10-0-3" id="h10-0-3" class="i">+    inner class SpoofLocation : ConfigContainer(hasGlobalState = true) {
+</a><a href="#h10-0-4" id="h10-0-4" class="i">+        val coordinates = mapCoordinates(&quot;coordinates&quot;, 0.0 to 0.0) { requireRestart()} // lat, long
+</a><a href="#h10-0-5" id="h10-0-5" class="i">+    }
+</a><a href="#h10-0-6" id="h10-0-6" class="i">+    val spoofLocation = container(&quot;spoofLocation&quot;, SpoofLocation())
+</a>     val snapchatPlus = boolean(&quot;snapchat_plus&quot;) { addNotices(FeatureNotice.BAN_RISK); requireRestart() }
+     val disableMetrics = boolean(&quot;disable_metrics&quot;)
+     val blockAds = boolean(&quot;block_ads&quot;)
+<b>diff --git a/<a id="h11" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Spoof.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Spoof.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Spoof.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Spoof.kt</a></b>
+<a href="#h11-0" id="h11-0" class="h">@@ -4,12 +4,6 @@ import me.rhunk.snapenhance.common.config.ConfigContainer
+</a> import me.rhunk.snapenhance.common.config.FeatureNotice
+ 
+ class Spoof : ConfigContainer() {
+<a href="#h11-0-3" id="h11-0-3" class="d">-    inner class Location : ConfigContainer(hasGlobalState = true) {
+</a><a href="#h11-0-4" id="h11-0-4" class="d">-        val latitude = float(&quot;location_latitude&quot;)
+</a><a href="#h11-0-5" id="h11-0-5" class="d">-        val longitude = float(&quot;location_longitude&quot;)
+</a><a href="#h11-0-6" id="h11-0-6" class="d">-    }
+</a><a href="#h11-0-7" id="h11-0-7" class="d">-    val location = container(&quot;location&quot;, Location())
+</a><a href="#h11-0-8" id="h11-0-8" class="d">-
+</a>     inner class Device : ConfigContainer(hasGlobalState = true) {
+         val fingerprint = string(&quot;fingerprint&quot;)
+         val androidId = string(&quot;android_id&quot;)
+<b>diff --git a/<a id="h12" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/OpenMap.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/OpenMap.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/OpenMap.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/OpenMap.kt</a></b>
+<a href="#h12-0" id="h12-0" class="h">@@ -1,21 +0,0 @@
+</a><a href="#h12-0-0" id="h12-0-0" class="d">-package me.rhunk.snapenhance.core.action.impl
+</a><a href="#h12-0-1" id="h12-0-1" class="d">-
+</a><a href="#h12-0-2" id="h12-0-2" class="d">-import android.content.Intent
+</a><a href="#h12-0-3" id="h12-0-3" class="d">-import android.os.Bundle
+</a><a href="#h12-0-4" id="h12-0-4" class="d">-import me.rhunk.snapenhance.common.BuildConfig
+</a><a href="#h12-0-5" id="h12-0-5" class="d">-import me.rhunk.snapenhance.core.action.AbstractAction
+</a><a href="#h12-0-6" id="h12-0-6" class="d">-
+</a><a href="#h12-0-7" id="h12-0-7" class="d">-class OpenMap: AbstractAction() {
+</a><a href="#h12-0-8" id="h12-0-8" class="d">-    override fun run() {
+</a><a href="#h12-0-9" id="h12-0-9" class="d">-        context.runOnUiThread {
+</a><a href="#h12-0-10" id="h12-0-10" class="d">-            val mapActivityIntent = Intent()
+</a><a href="#h12-0-11" id="h12-0-11" class="d">-            mapActivityIntent.setClassName(BuildConfig.APPLICATION_ID, BuildConfig.APPLICATION_ID + &quot;.ui.MapActivity&quot;)
+</a><a href="#h12-0-12" id="h12-0-12" class="d">-            mapActivityIntent.putExtra(&quot;location&quot;, Bundle().apply {
+</a><a href="#h12-0-13" id="h12-0-13" class="d">-                putDouble(&quot;latitude&quot;, context.config.experimental.spoof.location.latitude.get().toDouble())
+</a><a href="#h12-0-14" id="h12-0-14" class="d">-                putDouble(&quot;longitude&quot;, context.config.experimental.spoof.location.longitude.get().toDouble())
+</a><a href="#h12-0-15" id="h12-0-15" class="d">-            })
+</a><a href="#h12-0-16" id="h12-0-16" class="d">-
+</a><a href="#h12-0-17" id="h12-0-17" class="d">-            context.mainActivity!!.startActivityForResult(mapActivityIntent, 0x1337)
+</a><a href="#h12-0-18" id="h12-0-18" class="d">-        }
+</a><a href="#h12-0-19" id="h12-0-19" class="d">-    }
+</a><a href="#h12-0-20" id="h12-0-20" class="d">-}</a><a href="#h12-0-21" id="h12-0-21" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h13" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/LocationSpoofer.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/LocationSpoofer.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/LocationSpoofer.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/LocationSpoofer.kt</a></b>
+<a href="#h13-0" id="h13-0" class="h">@@ -1,41 +1,28 @@
+</a> package me.rhunk.snapenhance.core.features.impl.global
+ 
+<a href="#h13-0-2" id="h13-0-2" class="d">-import android.content.Intent
+</a><a href="#h13-0-3" id="h13-0-3" class="i">+import android.location.Location
+</a><a href="#h13-0-4" id="h13-0-4" class="i">+import android.location.LocationManager
+</a> import me.rhunk.snapenhance.core.features.Feature
+ import me.rhunk.snapenhance.core.features.FeatureLoadParams
+ import me.rhunk.snapenhance.core.util.hook.HookStage
+<a href="#h13-0-8" id="h13-0-8" class="d">-import me.rhunk.snapenhance.core.util.hook.Hooker
+</a> import me.rhunk.snapenhance.core.util.hook.hook
+ 
+<a href="#h13-0-11" id="h13-0-11" class="d">-class LocationSpoofer: Feature(&quot;LocationSpoof&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_ASYNC) {
+</a><a href="#h13-0-12" id="h13-0-12" class="d">-    override fun asyncOnActivityCreate() {
+</a><a href="#h13-0-13" id="h13-0-13" class="d">-        Hooker.hook(context.mainActivity!!.javaClass, &quot;onActivityResult&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h13-0-14" id="h13-0-14" class="d">-            val intent = param.argNullable&lt;Intent&gt;(2) ?: return@hook
+</a><a href="#h13-0-15" id="h13-0-15" class="d">-            val bundle = intent.getBundleExtra(&quot;location&quot;) ?: return@hook
+</a><a href="#h13-0-16" id="h13-0-16" class="d">-            param.setResult(null)
+</a><a href="#h13-0-17" id="h13-0-17" class="i">+class LocationSpoofer: Feature(&quot;LocationSpoof&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+</a><a href="#h13-0-18" id="h13-0-18" class="i">+    override fun onActivityCreate() {
+</a><a href="#h13-0-19" id="h13-0-19" class="i">+        if (context.config.global.spoofLocation.globalState != true) return
+</a> 
+<a href="#h13-0-21" id="h13-0-21" class="d">-            with(context.config.experimental.spoof.location) {
+</a><a href="#h13-0-22" id="h13-0-22" class="d">-                latitude.set(bundle.getFloat(&quot;latitude&quot;))
+</a><a href="#h13-0-23" id="h13-0-23" class="d">-                longitude.set(bundle.getFloat(&quot;longitude&quot;))
+</a><a href="#h13-0-24" id="h13-0-24" class="i">+        val coordinates by context.config.global.spoofLocation.coordinates
+</a> 
+<a href="#h13-0-26" id="h13-0-26" class="d">-                context.longToast(&quot;Location set to $latitude, $longitude&quot;)
+</a><a href="#h13-0-27" id="h13-0-27" class="d">-            }
+</a><a href="#h13-0-28" id="h13-0-28" class="i">+        Location::class.java.apply {
+</a><a href="#h13-0-29" id="h13-0-29" class="i">+            hook(&quot;getLatitude&quot;, HookStage.BEFORE) { it.setResult(coordinates.first) }
+</a><a href="#h13-0-30" id="h13-0-30" class="i">+            hook(&quot;getLongitude&quot;, HookStage.BEFORE) { it.setResult(coordinates.second) }
+</a><a href="#h13-0-31" id="h13-0-31" class="i">+            hook(&quot;getAccuracy&quot;, HookStage.BEFORE) { it.setResult(0.0F) }
+</a>         }
+ 
+<a href="#h13-0-34" id="h13-0-34" class="d">-        if (context.config.experimental.spoof.location.globalState != true) return
+</a><a href="#h13-0-35" id="h13-0-35" class="d">-
+</a><a href="#h13-0-36" id="h13-0-36" class="d">-        val latitude by context.config.experimental.spoof.location.latitude
+</a><a href="#h13-0-37" id="h13-0-37" class="d">-        val longitude by context.config.experimental.spoof.location.longitude
+</a><a href="#h13-0-38" id="h13-0-38" class="d">-
+</a><a href="#h13-0-39" id="h13-0-39" class="d">-        val locationClass = android.location.Location::class.java
+</a><a href="#h13-0-40" id="h13-0-40" class="d">-        val locationManagerClass = android.location.LocationManager::class.java
+</a><a href="#h13-0-41" id="h13-0-41" class="d">-
+</a><a href="#h13-0-42" id="h13-0-42" class="d">-        locationClass.hook(&quot;getLatitude&quot;, HookStage.BEFORE) { it.setResult(latitude.toDouble()) }
+</a><a href="#h13-0-43" id="h13-0-43" class="d">-        locationClass.hook(&quot;getLongitude&quot;, HookStage.BEFORE) { it.setResult(longitude.toDouble()) }
+</a><a href="#h13-0-44" id="h13-0-44" class="d">-        locationClass.hook(&quot;getAccuracy&quot;, HookStage.BEFORE) { it.setResult(0.0F) }
+</a><a href="#h13-0-45" id="h13-0-45" class="d">-
+</a><a href="#h13-0-46" id="h13-0-46" class="d">-        //Might be redundant because it calls isProviderEnabledForUser which we also hook, meaning if isProviderEnabledForUser returns true this will also return true
+</a><a href="#h13-0-47" id="h13-0-47" class="d">-        locationManagerClass.hook(&quot;isProviderEnabled&quot;, HookStage.BEFORE) { it.setResult(true) }
+</a><a href="#h13-0-48" id="h13-0-48" class="d">-        locationManagerClass.hook(&quot;isProviderEnabledForUser&quot;, HookStage.BEFORE) { it.setResult(true) }
+</a><a href="#h13-0-49" id="h13-0-49" class="i">+        LocationManager::class.java.apply {
+</a><a href="#h13-0-50" id="h13-0-50" class="i">+            //Might be redundant because it calls isProviderEnabledForUser which we also hook, meaning if isProviderEnabledForUser returns true this will also return true
+</a><a href="#h13-0-51" id="h13-0-51" class="i">+            hook(&quot;isProviderEnabled&quot;, HookStage.BEFORE) { it.setResult(true) }
+</a><a href="#h13-0-52" id="h13-0-52" class="i">+            hook(&quot;isProviderEnabledForUser&quot;, HookStage.BEFORE) { it.setResult(true) }
+</a><a href="#h13-0-53" id="h13-0-53" class="i">+        }
+</a>     }
+ } 
+\ No newline at end of file
+<b>diff --git a/<a id="h14" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/ActionManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/ActionManager.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/ActionManager.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/manager/impl/ActionManager.kt</a></b>
+<a href="#h14-0" id="h14-0" class="h">@@ -5,7 +5,6 @@ import me.rhunk.snapenhance.common.action.EnumAction
+</a> import me.rhunk.snapenhance.core.ModContext
+ import me.rhunk.snapenhance.core.action.impl.CleanCache
+ import me.rhunk.snapenhance.core.action.impl.ExportChatMessages
+<a href="#h14-0-3" id="h14-0-3" class="d">-import me.rhunk.snapenhance.core.action.impl.OpenMap
+</a> import me.rhunk.snapenhance.core.manager.Manager
+ 
+ class ActionManager(
+<a href="#h14-1" id="h14-1" class="h">@@ -16,7 +15,6 @@ class ActionManager(
+</a>         mapOf(
+             EnumAction.CLEAN_CACHE to CleanCache::class,
+             EnumAction.EXPORT_CHAT_MESSAGES to ExportChatMessages::class,
+<a href="#h14-1-3" id="h14-1-3" class="d">-            EnumAction.OPEN_MAP to OpenMap::class,
+</a>         ).map {
+             it.key to it.value.java.getConstructor().newInstance().apply {
+                 this.context = modContext
+</pre>
+</div>
+</body>
+</html>

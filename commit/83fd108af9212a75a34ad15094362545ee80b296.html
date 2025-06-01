@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix: metrics - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/83fd108af9212a75a34ad15094362545ee80b296.html">83fd108af9212a75a34ad15094362545ee80b296</a>
+<b>parent</b> <a href="../commit/1241d68d3cacb114540b0624612ca4f0855a5bf9.html">1241d68d3cacb114540b0624612ca4f0855a5bf9</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu,  4 Jan 2024 01:36:03 +0100
+
+fix: metrics
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/DisableMetrics.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+</table></pre><pre>3 files changed, 4 insertions(+), 4 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Global.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -11,7 +11,7 @@ class Global : ConfigContainer() {
+</a>     val suspendLocationUpdates = boolean(&quot;suspend_location_updates&quot;) { requireRestart() }
+     val snapchatPlus = boolean(&quot;snapchat_plus&quot;) { requireRestart() }
+     val disableConfirmationDialogs = multiple(&quot;disable_confirmation_dialogs&quot;, &quot;remove_friend&quot;, &quot;block_friend&quot;, &quot;ignore_friend&quot;, &quot;hide_friend&quot;, &quot;hide_conversation&quot;, &quot;clear_conversation&quot;) { requireRestart() }
+<a href="#h0-0-3" id="h0-0-3" class="d">-    val disableMetrics = boolean(&quot;disable_metrics&quot;)
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+    val disableMetrics = boolean(&quot;disable_metrics&quot;) { requireRestart() }
+</a>     val disablePublicStories = boolean(&quot;disable_public_stories&quot;) { requireRestart(); requireCleanCache() }
+     val blockAds = boolean(&quot;block_ads&quot;)
+     val spotlightCommentsUsername = boolean(&quot;spotlight_comments_username&quot;) { requireRestart() }
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/DisableMetrics.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/DisableMetrics.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/DisableMetrics.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/global/DisableMetrics.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -6,9 +6,9 @@ import me.rhunk.snapenhance.core.features.FeatureLoadParams
+</a> 
+ class DisableMetrics : Feature(&quot;DisableMetrics&quot;, loadParams = FeatureLoadParams.INIT_SYNC) {
+     override fun init() {
+<a href="#h1-0-3" id="h1-0-3" class="d">-        val disableMetrics by context.config.global.disableMetrics
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+        if (!context.config.global.disableMetrics.get()) return
+</a> 
+<a href="#h1-0-6" id="h1-0-6" class="d">-        context.event.subscribe(NetworkApiRequestEvent::class, { disableMetrics }) { param -&gt;
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+        context.event.subscribe(NetworkApiRequestEvent::class) { param -&gt;
+</a>             val url = param.url
+             if (url.contains(&quot;app-analytics&quot;) || url.endsWith(&quot;metrics&quot;)) {
+                 param.canceled = true
+<b>diff --git a/<a id="h2" href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a> b/<a href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -31,7 +31,7 @@ class NativeLib {
+</a>         }.onFailure {
+             Log.e(&quot;SnapEnhance&quot;, &quot;nativeUnaryCallCallback failed&quot;, it)
+         }
+<a href="#h2-0-3" id="h2-0-3" class="d">-        if (!nativeRequestData.buffer.contentEquals(buffer) || nativeRequestData.canceled) return nativeRequestData
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+        if (nativeRequestData.canceled || !nativeRequestData.buffer.contentEquals(buffer)) return nativeRequestData
+</a>         return null
+     }
+ 
+</pre>
+</div>
+</body>
+</html>

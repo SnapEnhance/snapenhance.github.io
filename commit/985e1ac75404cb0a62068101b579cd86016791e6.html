@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix: proto pretty print - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/985e1ac75404cb0a62068101b579cd86016791e6.html">985e1ac75404cb0a62068101b579cd86016791e6</a>
+<b>parent</b> <a href="../commit/853580f2f6084e66df2f24c655a54fd26199f458.html">853580f2f6084e66df2f24c655a54fd26199f458</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Tue, 19 Mar 2024 23:04:01 +0100
+
+fix: proto pretty print
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoEditor.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">+++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoReader.kt</a></td><td> | </td><td class="num">63</td><td><span class="i">++++++++++++++++++++++++++++</span><span class="d">-----------------------------------</span></td></tr>
+</table></pre><pre>2 files changed, 35 insertions(+), 36 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoEditor.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoEditor.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoEditor.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoEditor.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -18,7 +18,7 @@ class EditorContext(
+</a>     fun add(id: Int, content: ProtoWriter.() -&gt; Unit) = addBuffer(id, ProtoWriter().apply(content).toByteArray())
+     fun addString(id: Int, value: String) = addBuffer(id, value.toByteArray())
+     fun addFixed64(id: Int, value: Long) = addWire(Wire(id, WireType.FIXED64, value))
+<a href="#h0-0-3" id="h0-0-3" class="d">-    fun addFixed32(id: Int, value: Int) = addWire(Wire(id, WireType.FIXED32, value))
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+    fun addFixed32(id: Int, value: Float) = addWire(Wire(id, WireType.FIXED32, value.toRawBits()))
+</a> 
+     fun firstOrNull(id: Int) = wires[id]?.firstOrNull()
+     fun getOrNull(id: Int) = wires[id]
+<a href="#h0-1" id="h0-1" class="h">@@ -50,6 +50,12 @@ class EditorContext(
+</a>         wires.clear()
+         wires.addAll(newWires)
+     }
+<a href="#h0-1-3" id="h0-1-3" class="i">+
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+    override fun toString(): String {
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+        return ProtoWriter().apply {
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+            wires.values.flatten().forEach { addWire(it) }
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+        }.toByteArray().let { ProtoReader(it).toString() }
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+    }
+</a> }
+ 
+ class ProtoEditor(
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoReader.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoReader.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoReader.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/protobuf/ProtoReader.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,5 +1,6 @@
+</a> package me.rhunk.snapenhance.common.util.protobuf
+ 
+<a href="#h1-0-2" id="h1-0-2" class="i">+import java.nio.ByteBuffer
+</a> import java.util.UUID
+ 
+ data class Wire(val id: Int, val type: WireType, val value: Any) {
+<a href="#h1-1" id="h1-1" class="h">@@ -180,50 +181,24 @@ class ProtoReader(private val buffer: ByteArray) {
+</a>     private fun prettyPrint(tabSize: Int): String {
+         val tabLine = &quot;    &quot;.repeat(tabSize)
+         val stringBuilder = StringBuilder()
+<a href="#h1-1-3" id="h1-1-3" class="d">-        values.forEach { (id, wires) -&gt;
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+        values.forEach v@{ (id, wires) -&gt;
+</a>             wires.forEach { wire -&gt;
+                 stringBuilder.append(tabLine)
+                 stringBuilder.append(&quot;$id &lt;${wire.type.name.lowercase()}&gt; = &quot;)
+                 when (wire.type) {
+                     WireType.VARINT -&gt; stringBuilder.append(&quot;${wire.value}\n&quot;)
+                     WireType.FIXED64, WireType.FIXED32 -&gt; {
+<a href="#h1-1-11" id="h1-1-11" class="d">-                        //print as double, int, floating point
+</a><a href="#h1-1-12" id="h1-1-12" class="d">-                        val doubleValue = run {
+</a><a href="#h1-1-13" id="h1-1-13" class="d">-                            val bytes = wire.value as ByteArray
+</a><a href="#h1-1-14" id="h1-1-14" class="d">-                            var value = 0L
+</a><a href="#h1-1-15" id="h1-1-15" class="d">-                            for (i in bytes.indices) {
+</a><a href="#h1-1-16" id="h1-1-16" class="d">-                                value = value or ((bytes[i].toLong() and 0xFF) shl (i * 8))
+</a><a href="#h1-1-17" id="h1-1-17" class="d">-                            }
+</a><a href="#h1-1-18" id="h1-1-18" class="d">-                            value
+</a><a href="#h1-1-19" id="h1-1-19" class="d">-                        }.let {
+</a><a href="#h1-1-20" id="h1-1-20" class="d">-                            if (wire.type == WireType.FIXED32) {
+</a><a href="#h1-1-21" id="h1-1-21" class="d">-                                it.toInt()
+</a><a href="#h1-1-22" id="h1-1-22" class="d">-                            } else {
+</a><a href="#h1-1-23" id="h1-1-23" class="d">-                                it
+</a><a href="#h1-1-24" id="h1-1-24" class="d">-                            }
+</a><a href="#h1-1-25" id="h1-1-25" class="d">-                        }
+</a><a href="#h1-1-26" id="h1-1-26" class="d">-
+</a><a href="#h1-1-27" id="h1-1-27" class="d">-                        stringBuilder.append(&quot;$doubleValue/${doubleValue.toDouble().toBits().toString(16)}\n&quot;)
+</a><a href="#h1-1-28" id="h1-1-28" class="i">+                        val byteBuffer = ByteBuffer.wrap(wire.value as ByteArray).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+</a><a href="#h1-1-29" id="h1-1-29" class="i">+                        val hexValue = wire.value.joinToString(&quot;&quot;) { byte -&gt; &quot;%02x&quot;.format(byte) }
+</a><a href="#h1-1-30" id="h1-1-30" class="i">+                        val intValue = if (wire.type == WireType.FIXED32) byteBuffer.int else byteBuffer.long
+</a><a href="#h1-1-31" id="h1-1-31" class="i">+                        byteBuffer.position(0)
+</a><a href="#h1-1-32" id="h1-1-32" class="i">+                        val decimalValue = if (wire.type == WireType.FIXED32) byteBuffer.float else byteBuffer.double
+</a><a href="#h1-1-33" id="h1-1-33" class="i">+                        stringBuilder.append(&quot;$intValue/0x$hexValue/$decimalValue\n&quot;)
+</a>                     }
+                     WireType.CHUNK -&gt; {
+<a href="#h1-1-36" id="h1-1-36" class="d">-                        fun printArray() {
+</a><a href="#h1-1-37" id="h1-1-37" class="d">-                            stringBuilder.append(&quot;\n&quot;)
+</a><a href="#h1-1-38" id="h1-1-38" class="d">-                            stringBuilder.append(&quot;$tabLine    &quot;)
+</a><a href="#h1-1-39" id="h1-1-39" class="d">-                            stringBuilder.append((wire.value as ByteArray).joinToString(&quot; &quot;) { byte -&gt; &quot;%02x&quot;.format(byte) })
+</a><a href="#h1-1-40" id="h1-1-40" class="d">-                            stringBuilder.append(&quot;\n&quot;)
+</a><a href="#h1-1-41" id="h1-1-41" class="d">-                        }
+</a><a href="#h1-1-42" id="h1-1-42" class="d">-                        runCatching {
+</a><a href="#h1-1-43" id="h1-1-43" class="d">-                            val array = (wire.value as ByteArray)
+</a><a href="#h1-1-44" id="h1-1-44" class="d">-                            if (array.isEmpty()) {
+</a><a href="#h1-1-45" id="h1-1-45" class="d">-                                stringBuilder.append(&quot;empty\n&quot;)
+</a><a href="#h1-1-46" id="h1-1-46" class="d">-                                return@runCatching
+</a><a href="#h1-1-47" id="h1-1-47" class="d">-                            }
+</a><a href="#h1-1-48" id="h1-1-48" class="d">-                            //auto detect ascii strings
+</a><a href="#h1-1-49" id="h1-1-49" class="d">-                            if (array.all { it in (0x20..0x7E) || it == 0x0A.toByte() || it == 0x0D.toByte() }) {
+</a><a href="#h1-1-50" id="h1-1-50" class="d">-                                stringBuilder.append(&quot;string: ${array.toString(Charsets.UTF_8)}\n&quot;)
+</a><a href="#h1-1-51" id="h1-1-51" class="d">-                                return@runCatching
+</a><a href="#h1-1-52" id="h1-1-52" class="d">-                            }
+</a><a href="#h1-1-53" id="h1-1-53" class="i">+                        val array = (wire.value as? ByteArray) ?: return@forEach
+</a> 
+<a href="#h1-1-55" id="h1-1-55" class="i">+                        fun printArray() {
+</a>                             // auto detect uuids
+                             if (array.size == 16) {
+                                 val longs = LongArray(2)
+<a href="#h1-2" id="h1-2" class="h">@@ -234,6 +209,24 @@ class ProtoReader(private val buffer: ByteArray) {
+</a>                                     longs[1] = longs[1] or ((array[i].toLong() and 0xFF) shl ((15 - i) * 8))
+                                 }
+                                 stringBuilder.append(&quot;uuid: ${UUID(longs[0], longs[1])}\n&quot;)
+<a href="#h1-2-3" id="h1-2-3" class="i">+                                return
+</a><a href="#h1-2-4" id="h1-2-4" class="i">+                            }
+</a><a href="#h1-2-5" id="h1-2-5" class="i">+
+</a><a href="#h1-2-6" id="h1-2-6" class="i">+                            //auto detect ascii strings
+</a><a href="#h1-2-7" id="h1-2-7" class="i">+                            if (array.all { it in (0x20..0x7E) || it == 0x0A.toByte() || it == 0x0D.toByte() }) {
+</a><a href="#h1-2-8" id="h1-2-8" class="i">+                                stringBuilder.append(&quot;string: ${array.toString(Charsets.UTF_8)}\n&quot;)
+</a><a href="#h1-2-9" id="h1-2-9" class="i">+                                return
+</a><a href="#h1-2-10" id="h1-2-10" class="i">+                            }
+</a><a href="#h1-2-11" id="h1-2-11" class="i">+
+</a><a href="#h1-2-12" id="h1-2-12" class="i">+                            stringBuilder.append(&quot;\n&quot;)
+</a><a href="#h1-2-13" id="h1-2-13" class="i">+                            stringBuilder.append(&quot;$tabLine    &quot;)
+</a><a href="#h1-2-14" id="h1-2-14" class="i">+                            stringBuilder.append(array.joinToString(&quot; &quot;) { byte -&gt; &quot;%02x&quot;.format(byte) })
+</a><a href="#h1-2-15" id="h1-2-15" class="i">+                            stringBuilder.append(&quot;\n&quot;)
+</a><a href="#h1-2-16" id="h1-2-16" class="i">+                        }
+</a><a href="#h1-2-17" id="h1-2-17" class="i">+
+</a><a href="#h1-2-18" id="h1-2-18" class="i">+                        runCatching {
+</a><a href="#h1-2-19" id="h1-2-19" class="i">+                            if (array.isEmpty()) {
+</a><a href="#h1-2-20" id="h1-2-20" class="i">+                                stringBuilder.append(&quot;empty\n&quot;)
+</a>                                 return@runCatching
+                             }
+ 
+</pre>
+</div>
+</body>
+</html>

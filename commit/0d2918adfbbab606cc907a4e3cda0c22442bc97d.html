@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(native): load config before init - add native remap apk - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/0d2918adfbbab606cc907a4e3cda0c22442bc97d.html">0d2918adfbbab606cc907a4e3cda0c22442bc97d</a>
+<b>parent</b> <a href="../commit/97806d693e3cbf8e8cfe57bee4d414a80fe15651.html">97806d693e3cbf8e8cfe57bee4d414a80fe15651</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 10 Mar 2024 16:42:39 +0100
+
+fix(native): load config before init
+- add native remap apk
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">+++++++</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">native/build.gradle.kts</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">native/jni/CMakeLists.txt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">native/jni/src/common.h</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">native/jni/src/library.cpp</a></td><td> | </td><td class="num">6</td><td><span class="i">+++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">native/jni/src/util.h</a></td><td> | </td><td class="num">39</td><td><span class="i">++++++++++++++++++++++++++++++++++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeConfig.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">++++</span><span class="d">--</span></td></tr>
+</table></pre><pre>11 files changed, 69 insertions(+), 10 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -627,6 +627,10 @@
+</a>                             &quot;disable_bitmoji&quot;: {
+                                 &quot;name&quot;: &quot;Disable Bitmoji&quot;,
+                                 &quot;description&quot;: &quot;Disables Friends Profile Bitmoji&quot;
+<a href="#h0-0-3" id="h0-0-3" class="i">+                            },
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                            &quot;remap_apk&quot;: {
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+                                &quot;name&quot;: &quot;Remap APK&quot;,
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                                &quot;description&quot;: &quot;Hides SnapEnhance apk path in /proc/self/maps&quot;
+</a>                             }
+                         }
+                     },
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -11,6 +11,7 @@ class Experimental : ConfigContainer() {
+</a> 
+     class NativeHooks : ConfigContainer(hasGlobalState = true) {
+         val disableBitmoji = boolean(&quot;disable_bitmoji&quot;)
+<a href="#h1-0-3" id="h1-0-3" class="i">+        val remapApk = boolean(&quot;remap_apk&quot;) { addNotices(FeatureNotice.UNSTABLE) }
+</a>     }
+ 
+     class E2EEConfig : ConfigContainer(hasGlobalState = true) {
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -147,11 +147,16 @@ class ModContext(
+</a>         _config.loadFromCallback { file -&gt;
+             file.loadFromBridge(bridgeClient)
+         }
+<a href="#h2-0-3" id="h2-0-3" class="i">+        reloadNativeConfig()
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+    }
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+    fun reloadNativeConfig() {
+</a>         native.loadNativeConfig(
+             NativeConfig(
+                 disableBitmoji = config.experimental.nativeHooks.disableBitmoji.get(),
+                 disableMetrics = config.global.disableMetrics.get(),
+<a href="#h2-0-11" id="h2-0-11" class="d">-                hookAssetOpen = config.experimental.disableComposerModules.get().isNotEmpty()
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+                hookAssetOpen = config.experimental.disableComposerModules.get().isNotEmpty(),
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+                remapApk = config.experimental.nativeHooks.remapApk.get(),
+</a>             )
+         )
+     }
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -190,12 +190,14 @@ class SnapEnhance {
+</a>             val libName = param.arg&lt;String&gt;(1)
+             if (libName != &quot;client&quot;) return@hook
+             unhook()
+<a href="#h3-0-3" id="h3-0-3" class="d">-            appContext.native.initOnce()
+</a><a href="#h3-0-4" id="h3-0-4" class="d">-            appContext.native.nativeUnaryCallCallback = { request -&gt;
+</a><a href="#h3-0-5" id="h3-0-5" class="d">-                appContext.event.post(NativeUnaryCallEvent(request.uri, request.buffer)) {
+</a><a href="#h3-0-6" id="h3-0-6" class="d">-                    request.buffer = buffer
+</a><a href="#h3-0-7" id="h3-0-7" class="d">-                    request.canceled = canceled
+</a><a href="#h3-0-8" id="h3-0-8" class="i">+            appContext.native.initOnce {
+</a><a href="#h3-0-9" id="h3-0-9" class="i">+                nativeUnaryCallCallback = { request -&gt;
+</a><a href="#h3-0-10" id="h3-0-10" class="i">+                    appContext.event.post(NativeUnaryCallEvent(request.uri, request.buffer)) {
+</a><a href="#h3-0-11" id="h3-0-11" class="i">+                        request.buffer = buffer
+</a><a href="#h3-0-12" id="h3-0-12" class="i">+                        request.canceled = canceled
+</a><a href="#h3-0-13" id="h3-0-13" class="i">+                    }
+</a>                 }
+<a href="#h3-0-15" id="h3-0-15" class="i">+                appContext.reloadNativeConfig()
+</a>             }
+         }.also { unhook = { it.unhook() } }
+     }
+<b>diff --git a/<a id="h4" href="../file/native/build.gradle.kts.html">native/build.gradle.kts</a> b/<a href="../file/native/build.gradle.kts.html">native/build.gradle.kts</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -24,6 +24,7 @@ android {
+</a>             cmake {
+                 arguments += listOf(
+                     &quot;-DOBFUSCATED_NAME=$nativeName&quot;,
+<a href="#h4-0-3" id="h4-0-3" class="i">+                    &quot;-DBUILD_PACKAGE=${rootProject.ext[&quot;applicationId&quot;]}&quot;,
+</a>                     &quot;-DBUILD_NAMESPACE=${namespace!!.replace(&quot;.&quot;, &quot;/&quot;)}&quot;
+                 )
+             }
+<b>diff --git a/<a id="h5" href="../file/native/jni/CMakeLists.txt.html">native/jni/CMakeLists.txt</a> b/<a href="../file/native/jni/CMakeLists.txt.html">native/jni/CMakeLists.txt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -16,6 +16,7 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
+</a>     )
+ 
+ add_compile_definitions(BUILD_NAMESPACE=&quot;${BUILD_NAMESPACE}&quot;)
+<a href="#h5-0-3" id="h5-0-3" class="i">+add_compile_definitions(BUILD_PACKAGE=&quot;${BUILD_PACKAGE}&quot;)
+</a> target_link_libraries(${CMAKE_PROJECT_NAME}
+         android
+         log
+<b>diff --git a/<a id="h6" href="../file/native/jni/src/common.h.html">native/jni/src/common.h</a> b/<a href="../file/native/jni/src/common.h.html">native/jni/src/common.h</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -13,6 +13,7 @@ typedef struct {
+</a>     bool disable_bitmoji;
+     bool disable_metrics;
+     bool hook_asset_open;
+<a href="#h6-0-3" id="h6-0-3" class="i">+    bool remap_apk;
+</a> } native_config_t;
+ 
+ namespace common {
+<b>diff --git a/<a id="h7" href="../file/native/jni/src/library.cpp.html">native/jni/src/library.cpp</a> b/<a href="../file/native/jni/src/library.cpp.html">native/jni/src/library.cpp</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -15,7 +15,6 @@ void JNICALL init(JNIEnv *env, jobject clazz) {
+</a>     LOGD(&quot;Initializing native&quot;);
+     using namespace common;
+ 
+<a href="#h7-0-3" id="h7-0-3" class="d">-    native_config = new native_config_t;
+</a>     native_lib_object = env-&gt;NewGlobalRef(clazz);
+     client_module = util::get_module(&quot;libclient.so&quot;);
+ 
+<a href="#h7-1" id="h7-1" class="h">@@ -32,6 +31,10 @@ void JNICALL init(JNIEnv *env, jobject clazz) {
+</a>     SqliteMutexHook::init();
+     DuplexHook::init(env);
+ 
+<a href="#h7-1-3" id="h7-1-3" class="i">+    if (native_config-&gt;remap_apk) {
+</a><a href="#h7-1-4" id="h7-1-4" class="i">+        util::remap_sections(BUILD_PACKAGE);
+</a><a href="#h7-1-5" id="h7-1-5" class="i">+    }
+</a><a href="#h7-1-6" id="h7-1-6" class="i">+
+</a>     LOGD(&quot;Native initialized&quot;);
+ }
+ 
+<a href="#h7-2" id="h7-2" class="h">@@ -43,6 +46,7 @@ void JNICALL load_config(JNIEnv *env, jobject _, jobject config_object) {
+</a>     native_config-&gt;disable_bitmoji = GET_CONFIG_BOOL(&quot;disableBitmoji&quot;);
+     native_config-&gt;disable_metrics = GET_CONFIG_BOOL(&quot;disableMetrics&quot;);
+     native_config-&gt;hook_asset_open = GET_CONFIG_BOOL(&quot;hookAssetOpen&quot;);
+<a href="#h7-2-3" id="h7-2-3" class="i">+    native_config-&gt;remap_apk = GET_CONFIG_BOOL(&quot;remapApk&quot;);
+</a> }
+ 
+ void JNICALL lock_database(JNIEnv *env, jobject _, jstring database_name, jobject runnable) {
+<b>diff --git a/<a id="h8" href="../file/native/jni/src/util.h.html">native/jni/src/util.h</a> b/<a href="../file/native/jni/src/util.h.html">native/jni/src/util.h</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -1,6 +1,7 @@
+</a> #pragma once
+ 
+ #include &lt;unistd.h&gt;
+<a href="#h8-0-3" id="h8-0-3" class="i">+#include &lt;sys/mman.h&gt;
+</a> 
+ #define HOOK_DEF(ret, func, ...) ret (*func##_original)(__VA_ARGS__); ret func(__VA_ARGS__)
+ 
+<a href="#h8-1" id="h8-1" class="h">@@ -51,7 +52,43 @@ namespace util {
+</a>         return { start_offset, end_offset - start_offset };
+     }
+ 
+<a href="#h8-1-3" id="h8-1-3" class="d">-    uintptr_t find_signature(uintptr_t module_base, uintptr_t size, const std::string &amp;pattern, int offset = 0) {
+</a><a href="#h8-1-4" id="h8-1-4" class="i">+    static void remap_sections(const char* path) {
+</a><a href="#h8-1-5" id="h8-1-5" class="i">+        char buff[256];
+</a><a href="#h8-1-6" id="h8-1-6" class="i">+        auto maps = fopen(&quot;/proc/self/maps&quot;, &quot;rt&quot;);
+</a><a href="#h8-1-7" id="h8-1-7" class="i">+
+</a><a href="#h8-1-8" id="h8-1-8" class="i">+        while (fgets(buff, sizeof buff, maps) != NULL) {
+</a><a href="#h8-1-9" id="h8-1-9" class="i">+            int len = strlen(buff);
+</a><a href="#h8-1-10" id="h8-1-10" class="i">+            if (len &gt; 0 &amp;&amp; buff[len - 1] == &#39;\n&#39;) buff[--len] = &#39;\0&#39;;
+</a><a href="#h8-1-11" id="h8-1-11" class="i">+            if (strstr(buff, path) == nullptr) continue;
+</a><a href="#h8-1-12" id="h8-1-12" class="i">+
+</a><a href="#h8-1-13" id="h8-1-13" class="i">+            size_t start, end, offset;
+</a><a href="#h8-1-14" id="h8-1-14" class="i">+            char flags[4];
+</a><a href="#h8-1-15" id="h8-1-15" class="i">+
+</a><a href="#h8-1-16" id="h8-1-16" class="i">+            if (sscanf(buff, &quot;%zx-%zx %c%c%c%c %zx&quot;, &amp;start, &amp;end,
+</a><a href="#h8-1-17" id="h8-1-17" class="i">+                       &amp;flags[0], &amp;flags[1], &amp;flags[2], &amp;flags[3], &amp;offset) != 7) continue;
+</a><a href="#h8-1-18" id="h8-1-18" class="i">+
+</a><a href="#h8-1-19" id="h8-1-19" class="i">+            LOGD(&quot;Remapping 0x%zx-0x%zx&quot;, start, end);
+</a><a href="#h8-1-20" id="h8-1-20" class="i">+
+</a><a href="#h8-1-21" id="h8-1-21" class="i">+            auto section_size = end - start;
+</a><a href="#h8-1-22" id="h8-1-22" class="i">+            auto section_ptr = mmap(0, section_size, PROT_READ | PROT_EXEC | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+</a><a href="#h8-1-23" id="h8-1-23" class="i">+
+</a><a href="#h8-1-24" id="h8-1-24" class="i">+            if (section_ptr == MAP_FAILED) {
+</a><a href="#h8-1-25" id="h8-1-25" class="i">+                LOGE(&quot;mmap failed: %s&quot;, strerror(errno));
+</a><a href="#h8-1-26" id="h8-1-26" class="i">+                return;
+</a><a href="#h8-1-27" id="h8-1-27" class="i">+            }
+</a><a href="#h8-1-28" id="h8-1-28" class="i">+
+</a><a href="#h8-1-29" id="h8-1-29" class="i">+            memcpy(section_ptr, (void *)start, section_size);
+</a><a href="#h8-1-30" id="h8-1-30" class="i">+
+</a><a href="#h8-1-31" id="h8-1-31" class="i">+            if (mremap(section_ptr, section_size, section_size, MREMAP_MAYMOVE | MREMAP_FIXED, start) == MAP_FAILED) {
+</a><a href="#h8-1-32" id="h8-1-32" class="i">+                LOGE(&quot;mremap failed: %s&quot;, strerror(errno));
+</a><a href="#h8-1-33" id="h8-1-33" class="i">+                return;
+</a><a href="#h8-1-34" id="h8-1-34" class="i">+            }
+</a><a href="#h8-1-35" id="h8-1-35" class="i">+
+</a><a href="#h8-1-36" id="h8-1-36" class="i">+            mprotect((void *)start, section_size, (flags[0] == &#39;r&#39; ? PROT_READ : 0) | (flags[1] == &#39;w&#39; ? PROT_WRITE : 0) | (flags[2] == &#39;x&#39; ? PROT_EXEC : 0));
+</a><a href="#h8-1-37" id="h8-1-37" class="i">+        }
+</a><a href="#h8-1-38" id="h8-1-38" class="i">+    }
+</a><a href="#h8-1-39" id="h8-1-39" class="i">+
+</a><a href="#h8-1-40" id="h8-1-40" class="i">+    static uintptr_t find_signature(uintptr_t module_base, uintptr_t size, const std::string &amp;pattern, int offset = 0) {
+</a>         std::vector&lt;char&gt; bytes;
+         std::vector&lt;char&gt; mask;
+         for (size_t i = 0; i &lt; pattern.size(); i += 3) {
+<b>diff --git a/<a id="h9" href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeConfig.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeConfig.kt</a> b/<a href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeConfig.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeConfig.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -4,4 +4,5 @@ data class NativeConfig(
+</a>     val disableBitmoji: Boolean = false,
+     val disableMetrics: Boolean = false,
+     val hookAssetOpen: Boolean = false,
+<a href="#h9-0-3" id="h9-0-3" class="i">+    val remapApk: Boolean = false,
+</a> ) 
+\ No newline at end of file
+<b>diff --git a/<a id="h10" href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a> b/<a href="../file/native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt.html">native/src/main/kotlin/me/rhunk/snapenhance/nativelib/NativeLib.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -11,13 +11,15 @@ class NativeLib {
+</a>             private set
+     }
+ 
+<a href="#h10-0-3" id="h10-0-3" class="d">-    fun initOnce() {
+</a><a href="#h10-0-4" id="h10-0-4" class="i">+    fun initOnce(callback: NativeLib.() -&gt; Unit) {
+</a>         if (initialized) throw IllegalStateException(&quot;NativeLib already initialized&quot;)
+         runCatching {
+             System.loadLibrary(BuildConfig.NATIVE_NAME)
+<a href="#h10-0-8" id="h10-0-8" class="d">-            init()
+</a>             initialized = true
+<a href="#h10-0-10" id="h10-0-10" class="i">+            callback(this)
+</a><a href="#h10-0-11" id="h10-0-11" class="i">+            init()
+</a>         }.onFailure {
+<a href="#h10-0-13" id="h10-0-13" class="i">+            initialized = false
+</a>             Log.e(&quot;SnapEnhance&quot;, &quot;NativeLib init failed&quot;)
+         }
+     }
+</pre>
+</div>
+</body>
+</html>

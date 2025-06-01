@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(native): custom font hook crash - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/bc9af4105c60c4b7a5a4a6ed0e1ac0c583a35890.html">bc9af4105c60c4b7a5a4a6ed0e1ac0c583a35890</a>
+<b>parent</b> <a href="../commit/8c4e32d614f5a913eb81eabb5a32a57b3120fcd4.html">8c4e32d614f5a913eb81eabb5a32a57b3120fcd4</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 28 Jul 2024 19:43:31 +0200
+
+fix(native): custom font hook crash
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">native/rust/src/modules/custom_font_hook.rs</a></td><td> | </td><td class="num">15</td><td><span class="i">+++++++++</span><span class="d">------</span></td></tr>
+</table></pre><pre>1 file changed, 9 insertions(+), 6 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/native/rust/src/modules/custom_font_hook.rs.html">native/rust/src/modules/custom_font_hook.rs</a> b/<a href="../file/native/rust/src/modules/custom_font_hook.rs.html">native/rust/src/modules/custom_font_hook.rs</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,19 +1,18 @@
+</a> use std::{ffi::CStr, fs};
+ 
+<a href="#h0-0-2" id="h0-0-2" class="i">+use nix::libc::{self, c_uint};
+</a><a href="#h0-0-3" id="h0-0-3" class="i">+
+</a> use crate::{config, def_hook, dobby_hook_sym};
+ 
+ def_hook!(
+     open_hook,
+     i32,
+<a href="#h0-0-9" id="h0-0-9" class="d">-    |path: *const u8, flags: i32| {
+</a><a href="#h0-0-10" id="h0-0-10" class="d">-        let mut path = path;
+</a><a href="#h0-0-11" id="h0-0-11" class="d">-        
+</a><a href="#h0-0-12" id="h0-0-12" class="i">+    |path: *const u8, flags: i32, mode: c_uint| {
+</a>         if let Ok(pathname) = CStr::from_ptr(path).to_str() {
+             if pathname == &quot;/system/fonts/NotoColorEmoji.ttf&quot;  {
+                 if let Some(font_path) = config::native_config().custom_emoji_font_path {
+                     if fs::metadata(&amp;font_path).is_ok() {
+<a href="#h0-0-17" id="h0-0-17" class="d">-                        path = (font_path.to_owned() + &quot;\0&quot;).as_ptr();
+</a><a href="#h0-0-18" id="h0-0-18" class="d">-                        debug!(&quot;open {}&quot;, font_path);
+</a><a href="#h0-0-19" id="h0-0-19" class="i">+                        return libc::openat(libc::AT_FDCWD, font_path.as_ptr() as *const u8, flags, mode);
+</a>                     } else {
+                         warn!(&quot;custom emoji font path does not exist: {}&quot;, font_path);
+                     }
+<a href="#h0-1" id="h0-1" class="h">@@ -21,11 +20,15 @@ def_hook!(
+</a>             }
+         }
+ 
+<a href="#h0-1-3" id="h0-1-3" class="d">-        open_hook_original.unwrap()(path, flags)
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+        open_hook_original.unwrap()(path, flags, mode)
+</a>     }
+ );
+ 
+ 
+ pub fn init() {
+<a href="#h0-1-10" id="h0-1-10" class="i">+    if config::native_config().custom_emoji_font_path.is_none() {
+</a><a href="#h0-1-11" id="h0-1-11" class="i">+        return;
+</a><a href="#h0-1-12" id="h0-1-12" class="i">+    }
+</a><a href="#h0-1-13" id="h0-1-13" class="i">+
+</a>     dobby_hook_sym!(&quot;libc.so&quot;, &quot;open&quot;, open_hook);
+ } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>

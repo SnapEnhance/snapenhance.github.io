@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat: remote media resolver - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/d3d8e22957af1617b25982d4f23dc7d9a06c98cf.html">d3d8e22957af1617b25982d4f23dc7d9a06c98cf</a>
+<b>parent</b> <a href="../commit/cb55923fd86dd5b5fb36799d483b9c4f98a7855b.html">cb55923fd86dd5b5fb36799d483b9c4f98a7855b</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Thu,  1 Jun 2023 22:48:06 +0200
+
+feat: remote media resolver
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/build.gradle</a></td><td> | </td><td class="num">3</td><td><span class="i">+</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/Constants.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">+++++</span><span class="d">-------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/MediaQualityLevelOverride.kt</a></td><td> | </td><td class="num">1</td><td><span class="i"></span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/Notifications.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">+++</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/ViewAppearanceHelper.kt</a></td><td> | </td><td class="num">1</td><td><span class="i"></span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/EnumMapper.kt</a></td><td> | </td><td class="num">1</td><td><span class="i"></span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">app/src/main/kotlin/me/rhunk/snapenhance/util/MediaDownloaderHelper.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++</span><span class="d">----</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h9">app/src/main/kotlin/me/rhunk/snapenhance/util/download/CdnDownloader.kt</a></td><td> | </td><td class="num">39</td><td><span class="i"></span><span class="d">---------------------------------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h10">app/src/main/kotlin/me/rhunk/snapenhance/util/download/RemoteMediaResolver.kt</a></td><td> | </td><td class="num">51</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>11 files changed, 67 insertions(+), 63 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/build.gradle.html">app/build.gradle</a> b/<a href="../file/app/build.gradle.html">app/build.gradle</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,5 +1,3 @@
+</a><a href="#h0-0-0" id="h0-0-0" class="d">-import groovy.json.JsonSlurper
+</a><a href="#h0-0-1" id="h0-0-1" class="d">-
+</a> plugins {
+     id &#39;com.android.application&#39;
+     id &#39;org.jetbrains.kotlin.android&#39;
+<a href="#h0-1" id="h0-1" class="h">@@ -102,4 +100,5 @@ dependencies {
+</a>     implementation &#39;com.google.code.gson:gson:2.10.1&#39;
+     implementation &#39;com.arthenica:ffmpeg-kit-full-gpl:5.1.LTS&#39;
+     implementation &#39;org.osmdroid:osmdroid-android:6.1.16&#39;
+<a href="#h0-1-3" id="h0-1-3" class="i">+    implementation &#39;com.squareup.okhttp3:okhttp:5.0.0-alpha.11&#39;
+</a> }
+<b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/Constants.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/Constants.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/Constants.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/Constants.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -13,7 +13,7 @@ object Constants {
+</a>     val MESSAGE_EXTERNAL_MEDIA_ENCRYPTION_PROTO_PATH = intArrayOf(3, 3, 5, 1, 1)
+     val ARROYO_EXTERNAL_MEDIA_ENCRYPTION_PROTO_PATH = intArrayOf(4, 4, 3, 3, 5, 1, 1)
+     val ARROYO_STRING_CHAT_MESSAGE_PROTO = intArrayOf(4, 4, 2, 1)
+<a href="#h1-0-3" id="h1-0-3" class="d">-    val ARROYO_URL_KEY_PROTO_PATH = intArrayOf(4, 5, 1, 3, 2, 2)
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+    val ARROYO_URL_KEY_PROTO_PATH = intArrayOf(4, 5, 1, 3)
+</a> 
+     const val ARROYO_ENCRYPTION_PROTO_INDEX = 19
+     const val ARROYO_ENCRYPTION_PROTO_INDEX_V2 = 4
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/downloader/MediaDownloader.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -29,14 +29,13 @@ import me.rhunk.snapenhance.util.EncryptionUtils
+</a> import me.rhunk.snapenhance.util.MediaDownloaderHelper
+ import me.rhunk.snapenhance.util.MediaType
+ import me.rhunk.snapenhance.util.PreviewUtils
+<a href="#h2-0-3" id="h2-0-3" class="d">-import me.rhunk.snapenhance.util.download.CdnDownloader
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import me.rhunk.snapenhance.util.download.RemoteMediaResolver
+</a> import me.rhunk.snapenhance.util.getObjectField
+ import me.rhunk.snapenhance.util.protobuf.ProtoReader
+ import java.io.ByteArrayOutputStream
+ import java.io.File
+ import java.io.FileOutputStream
+ import java.io.InputStream
+<a href="#h2-0-11" id="h2-0-11" class="d">-import java.lang.StringBuilder
+</a> import java.net.HttpURLConnection
+ import java.net.URL
+ import java.nio.file.Paths
+<a href="#h2-1" id="h2-1" class="h">@@ -308,7 +307,7 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a>             for (i in 0 until baseUrlNodeList.length) {
+                 val baseUrlNode = baseUrlNodeList.item(i)
+                 val baseUrl = baseUrlNode.textContent
+<a href="#h2-1-3" id="h2-1-3" class="d">-                baseUrlNode.textContent = &quot;${CdnDownloader.CF_ST_CDN_D}$baseUrl&quot;
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+                baseUrlNode.textContent = &quot;${RemoteMediaResolver.CF_ST_CDN_D}$baseUrl&quot;
+</a>             }
+ 
+             val xmlData = ByteArrayOutputStream()
+<a href="#h2-2" id="h2-2" class="h">@@ -405,14 +404,13 @@ class MediaDownloader : Feature(&quot;MediaDownloader&quot;, loadParams = FeatureLoadParam
+</a>             return
+         }
+         val messageReader = ProtoReader(message.message_content!!)
+<a href="#h2-2-3" id="h2-2-3" class="d">-        val urlKey: String = messageReader.getString(*ARROYO_URL_KEY_PROTO_PATH)!!
+</a><a href="#h2-2-4" id="h2-2-4" class="i">+        val urlProto: ByteArray = messageReader.getByteArray(*ARROYO_URL_KEY_PROTO_PATH)!!
+</a> 
+         //download the message content
+         try {
+<a href="#h2-2-8" id="h2-2-8" class="d">-            context.shortToast(&quot;Querying $urlKey&quot;)
+</a><a href="#h2-2-9" id="h2-2-9" class="d">-            val downloadedMedia = MediaDownloaderHelper.downloadMediaFromKey(urlKey, canMergeOverlay(), isPreviewMode) {
+</a><a href="#h2-2-10" id="h2-2-10" class="i">+            val downloadedMedia = MediaDownloaderHelper.downloadMediaFromReference(urlProto, canMergeOverlay(), isPreviewMode) {
+</a>                 EncryptionUtils.decryptInputStreamFromArroyo(it, contentType, messageReader)
+<a href="#h2-2-12" id="h2-2-12" class="d">-            }[MediaType.ORIGINAL] ?: throw Exception(&quot;Failed to download media for key $urlKey&quot;)
+</a><a href="#h2-2-13" id="h2-2-13" class="i">+            }[MediaType.ORIGINAL] ?: throw Exception(&quot;Failed to download media&quot;)
+</a>             val fileType = FileType.fromByteArray(downloadedMedia)
+ 
+             if (isPreviewMode) {
+<b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/MediaQualityLevelOverride.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/MediaQualityLevelOverride.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/MediaQualityLevelOverride.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/MediaQualityLevelOverride.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -1,6 +1,5 @@
+</a> package me.rhunk.snapenhance.features.impl.extras
+ 
+<a href="#h3-0-2" id="h3-0-2" class="d">-import me.rhunk.snapenhance.Logger
+</a> import me.rhunk.snapenhance.config.ConfigProperty
+ import me.rhunk.snapenhance.features.Feature
+ import me.rhunk.snapenhance.features.FeatureLoadParams
+<b>diff --git a/<a id="h4" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/Notifications.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/Notifications.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/Notifications.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/extras/Notifications.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -189,9 +189,8 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>                         .flatten()
+ 
+                     mediaReferences.forEach { media -&gt;
+<a href="#h4-0-3" id="h4-0-3" class="d">-                        val mediaContent = media.asJsonObject[&quot;mContentObject&quot;].asJsonArray.map { it.asByte }.toByteArray()
+</a><a href="#h4-0-4" id="h4-0-4" class="i">+                        val protoMediaReference = media.asJsonObject[&quot;mContentObject&quot;].asJsonArray.map { it.asByte }.toByteArray()
+</a>                         val mediaType = MediaReferenceType.valueOf(media.asJsonObject[&quot;mMediaType&quot;].asString)
+<a href="#h4-0-6" id="h4-0-6" class="d">-                        val urlKey = ProtoReader(mediaContent).getString(2, 2) ?: return@forEach
+</a>                         runCatching {
+                             //download the media
+                             val mediaInfo = ProtoReader(contentData).let {
+<a href="#h4-1" id="h4-1" class="h">@@ -201,11 +200,11 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>                                     return@let it.readPath(*Constants.MESSAGE_SNAP_ENCRYPTION_PROTO_PATH)
+                             }?: return@runCatching
+ 
+<a href="#h4-1-3" id="h4-1-3" class="d">-                            val downloadedMedia = MediaDownloaderHelper.downloadMediaFromKey(urlKey, mergeOverlay = false, isPreviewMode = false) {
+</a><a href="#h4-1-4" id="h4-1-4" class="i">+                            val downloadedMedia = MediaDownloaderHelper.downloadMediaFromReference(protoMediaReference, mergeOverlay = false, isPreviewMode = false) {
+</a>                                 if (mediaInfo.exists(Constants.ARROYO_ENCRYPTION_PROTO_INDEX))
+                                     EncryptionUtils.decryptInputStream(it, false, mediaInfo, Constants.ARROYO_ENCRYPTION_PROTO_INDEX)
+                                 else it
+<a href="#h4-1-8" id="h4-1-8" class="d">-                            }[MediaType.ORIGINAL] ?: throw Throwable(&quot;Failed to download media from key $urlKey&quot;)
+</a><a href="#h4-1-9" id="h4-1-9" class="i">+                            }[MediaType.ORIGINAL] ?: throw Throwable(&quot;Failed to download media&quot;)
+</a> 
+                             val bitmapPreview = PreviewUtils.createPreview(downloadedMedia, mediaType == MediaReferenceType.VIDEO)!!
+                             val notificationBuilder = XposedHelpers.newInstance(
+<a href="#h4-2" id="h4-2" class="h">@@ -220,7 +219,6 @@ class Notifications : Feature(&quot;Notifications&quot;, loadParams = FeatureLoadParams.IN
+</a>                             return@onEach
+                         }.onFailure {
+                             Logger.xposedLog(&quot;Failed to send preview notification&quot;, it)
+<a href="#h4-2-3" id="h4-2-3" class="d">-                            Logger.xposedLog(&quot;urlKey: $urlKey&quot;)
+</a>                         }
+                     }
+                 }
+<b>diff --git a/<a id="h5" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/ViewAppearanceHelper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/ViewAppearanceHelper.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/ViewAppearanceHelper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/features/impl/ui/menus/ViewAppearanceHelper.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -3,7 +3,6 @@ package me.rhunk.snapenhance.features.impl.ui.menus
+</a> import android.annotation.SuppressLint
+ import android.content.res.ColorStateList
+ import android.graphics.Color
+<a href="#h5-0-3" id="h5-0-3" class="d">-import android.graphics.Typeface
+</a> import android.view.Gravity
+ import android.view.View
+ import android.widget.Switch
+<b>diff --git a/<a id="h6" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/manager/impl/FeatureManager.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -5,12 +5,12 @@ import me.rhunk.snapenhance.ModContext
+</a> import me.rhunk.snapenhance.features.Feature
+ import me.rhunk.snapenhance.features.FeatureLoadParams
+ import me.rhunk.snapenhance.features.impl.ConfigEnumKeys
+<a href="#h6-0-3" id="h6-0-3" class="d">-import me.rhunk.snapenhance.features.impl.experiments.MeoPasscodeBypass
+</a> import me.rhunk.snapenhance.features.impl.Messaging
+ import me.rhunk.snapenhance.features.impl.downloader.AntiAutoDownload
+ import me.rhunk.snapenhance.features.impl.downloader.MediaDownloader
+<a href="#h6-0-7" id="h6-0-7" class="d">-import me.rhunk.snapenhance.features.impl.extras.AntiAutoSave
+</a> import me.rhunk.snapenhance.features.impl.experiments.AppPasscode
+<a href="#h6-0-9" id="h6-0-9" class="i">+import me.rhunk.snapenhance.features.impl.experiments.MeoPasscodeBypass
+</a><a href="#h6-0-10" id="h6-0-10" class="i">+import me.rhunk.snapenhance.features.impl.extras.AntiAutoSave
+</a> import me.rhunk.snapenhance.features.impl.extras.AutoSave
+ import me.rhunk.snapenhance.features.impl.extras.DisableVideoLengthRestriction
+ import me.rhunk.snapenhance.features.impl.extras.GalleryMediaSendOverride
+<b>diff --git a/<a id="h7" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/EnumMapper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/EnumMapper.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/EnumMapper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/mapping/impl/EnumMapper.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -1,6 +1,5 @@
+</a> package me.rhunk.snapenhance.mapping.impl
+ 
+<a href="#h7-0-2" id="h7-0-2" class="d">-import me.rhunk.snapenhance.Logger
+</a> import me.rhunk.snapenhance.Logger.debug
+ import me.rhunk.snapenhance.mapping.Mapper
+ import java.lang.reflect.Method
+<b>diff --git a/<a id="h8" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/util/MediaDownloaderHelper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/util/MediaDownloaderHelper.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/util/MediaDownloaderHelper.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/util/MediaDownloaderHelper.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -3,7 +3,7 @@ package me.rhunk.snapenhance.util
+</a> import com.arthenica.ffmpegkit.FFmpegKit
+ import me.rhunk.snapenhance.Logger
+ import me.rhunk.snapenhance.data.FileType
+<a href="#h8-0-3" id="h8-0-3" class="d">-import me.rhunk.snapenhance.util.download.CdnDownloader
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+import me.rhunk.snapenhance.util.download.RemoteMediaResolver
+</a> import java.io.ByteArrayInputStream
+ import java.io.File
+ import java.io.FileInputStream
+<a href="#h8-1" id="h8-1" class="h">@@ -16,9 +16,9 @@ enum class MediaType {
+</a>     ORIGINAL, OVERLAY
+ }
+ object MediaDownloaderHelper {
+<a href="#h8-1-3" id="h8-1-3" class="d">-    fun downloadMediaFromKey(key: String, mergeOverlay: Boolean, isPreviewMode: Boolean, decryptionCallback: (InputStream) -&gt; InputStream): Map&lt;MediaType, ByteArray&gt; {
+</a><a href="#h8-1-4" id="h8-1-4" class="d">-        val inputStream: InputStream = CdnDownloader.downloadWithDefaultEndpoints(key) ?: throw FileNotFoundException(&quot;Unable to get $key from cdn list. Check the logs for more info&quot;)
+</a><a href="#h8-1-5" id="h8-1-5" class="d">-        val content = decryptionCallback(inputStream).readBytes().also { inputStream.close() }
+</a><a href="#h8-1-6" id="h8-1-6" class="i">+    fun downloadMediaFromReference(mediaReference: ByteArray, mergeOverlay: Boolean, isPreviewMode: Boolean, decryptionCallback: (InputStream) -&gt; InputStream): Map&lt;MediaType, ByteArray&gt; {
+</a><a href="#h8-1-7" id="h8-1-7" class="i">+        val inputStream: InputStream = RemoteMediaResolver.downloadBoltMedia(mediaReference) ?: throw FileNotFoundException(&quot;Unable to get media key. Check the logs for more info&quot;)
+</a><a href="#h8-1-8" id="h8-1-8" class="i">+        val content = decryptionCallback(inputStream).readBytes()
+</a>         val fileType = FileType.fromByteArray(content)
+         val isZipFile = fileType == FileType.ZIP
+ 
+<b>diff --git a/<a id="h9" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/util/download/CdnDownloader.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/util/download/CdnDownloader.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/util/download/CdnDownloader.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/util/download/CdnDownloader.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -1,39 +0,0 @@
+</a><a href="#h9-0-0" id="h9-0-0" class="d">-package me.rhunk.snapenhance.util.download
+</a><a href="#h9-0-1" id="h9-0-1" class="d">-
+</a><a href="#h9-0-2" id="h9-0-2" class="d">-import me.rhunk.snapenhance.Constants
+</a><a href="#h9-0-3" id="h9-0-3" class="d">-import me.rhunk.snapenhance.util.protobuf.ProtoWriter
+</a><a href="#h9-0-4" id="h9-0-4" class="d">-import java.io.InputStream
+</a><a href="#h9-0-5" id="h9-0-5" class="d">-import java.net.URL
+</a><a href="#h9-0-6" id="h9-0-6" class="d">-import java.util.Base64
+</a><a href="#h9-0-7" id="h9-0-7" class="d">-import javax.net.ssl.HttpsURLConnection
+</a><a href="#h9-0-8" id="h9-0-8" class="d">-
+</a><a href="#h9-0-9" id="h9-0-9" class="d">-object CdnDownloader {
+</a><a href="#h9-0-10" id="h9-0-10" class="d">-    private const val BOLT_HTTP_RESOLVER_URL = &quot;https://aws.api.snapchat.com/bolt-http&quot;
+</a><a href="#h9-0-11" id="h9-0-11" class="d">-    const val CF_ST_CDN_D = &quot;https://cf-st.sc-cdn.net/d/&quot;
+</a><a href="#h9-0-12" id="h9-0-12" class="d">-
+</a><a href="#h9-0-13" id="h9-0-13" class="d">-    private fun queryRemoteContent(url: String): InputStream? {
+</a><a href="#h9-0-14" id="h9-0-14" class="d">-        try {
+</a><a href="#h9-0-15" id="h9-0-15" class="d">-            val connection = URL(url).openConnection() as HttpsURLConnection
+</a><a href="#h9-0-16" id="h9-0-16" class="d">-            connection.requestMethod = &quot;GET&quot;
+</a><a href="#h9-0-17" id="h9-0-17" class="d">-            connection.instanceFollowRedirects = true
+</a><a href="#h9-0-18" id="h9-0-18" class="d">-            connection.setRequestProperty(&quot;User-Agent&quot;, Constants.USER_AGENT)
+</a><a href="#h9-0-19" id="h9-0-19" class="d">-            return connection.inputStream
+</a><a href="#h9-0-20" id="h9-0-20" class="d">-        } catch (ignored: Throwable) {
+</a><a href="#h9-0-21" id="h9-0-21" class="d">-        }
+</a><a href="#h9-0-22" id="h9-0-22" class="d">-        return null
+</a><a href="#h9-0-23" id="h9-0-23" class="d">-    }
+</a><a href="#h9-0-24" id="h9-0-24" class="d">-
+</a><a href="#h9-0-25" id="h9-0-25" class="d">-    fun downloadWithDefaultEndpoints(key: String): InputStream? {
+</a><a href="#h9-0-26" id="h9-0-26" class="d">-        val payload = ProtoWriter().apply {
+</a><a href="#h9-0-27" id="h9-0-27" class="d">-            write(2) {
+</a><a href="#h9-0-28" id="h9-0-28" class="d">-                writeString(2, key)
+</a><a href="#h9-0-29" id="h9-0-29" class="d">-                writeBuffer(3, byteArrayOf())
+</a><a href="#h9-0-30" id="h9-0-30" class="d">-                writeBuffer(3, byteArrayOf())
+</a><a href="#h9-0-31" id="h9-0-31" class="d">-                writeConstant(6, 6)
+</a><a href="#h9-0-32" id="h9-0-32" class="d">-                writeConstant(10, 4)
+</a><a href="#h9-0-33" id="h9-0-33" class="d">-                writeConstant(12, 1)
+</a><a href="#h9-0-34" id="h9-0-34" class="d">-            }
+</a><a href="#h9-0-35" id="h9-0-35" class="d">-        }.toByteArray()
+</a><a href="#h9-0-36" id="h9-0-36" class="d">-        return queryRemoteContent(BOLT_HTTP_RESOLVER_URL + &quot;/resolve?co=&quot; + Base64.getUrlEncoder().encodeToString(payload))
+</a><a href="#h9-0-37" id="h9-0-37" class="d">-    }
+</a><a href="#h9-0-38" id="h9-0-38" class="d">-}
+</a><b>diff --git a/<a id="h10" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/util/download/RemoteMediaResolver.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/util/download/RemoteMediaResolver.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/util/download/RemoteMediaResolver.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/util/download/RemoteMediaResolver.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -0,0 +1,51 @@
+</a><a href="#h10-0-0" id="h10-0-0" class="i">+package me.rhunk.snapenhance.util.download
+</a><a href="#h10-0-1" id="h10-0-1" class="i">+
+</a><a href="#h10-0-2" id="h10-0-2" class="i">+import me.rhunk.snapenhance.Constants
+</a><a href="#h10-0-3" id="h10-0-3" class="i">+import me.rhunk.snapenhance.Logger
+</a><a href="#h10-0-4" id="h10-0-4" class="i">+import okhttp3.OkHttpClient
+</a><a href="#h10-0-5" id="h10-0-5" class="i">+import okhttp3.Request
+</a><a href="#h10-0-6" id="h10-0-6" class="i">+import java.io.ByteArrayInputStream
+</a><a href="#h10-0-7" id="h10-0-7" class="i">+import java.io.InputStream
+</a><a href="#h10-0-8" id="h10-0-8" class="i">+import java.util.Base64
+</a><a href="#h10-0-9" id="h10-0-9" class="i">+
+</a><a href="#h10-0-10" id="h10-0-10" class="i">+object RemoteMediaResolver {
+</a><a href="#h10-0-11" id="h10-0-11" class="i">+    private const val BOLT_HTTP_RESOLVER_URL = &quot;https://aws.api.snapchat.com/bolt-http&quot;
+</a><a href="#h10-0-12" id="h10-0-12" class="i">+    const val CF_ST_CDN_D = &quot;https://cf-st.sc-cdn.net/d/&quot;
+</a><a href="#h10-0-13" id="h10-0-13" class="i">+
+</a><a href="#h10-0-14" id="h10-0-14" class="i">+    private val urlCache = mutableMapOf&lt;String, String&gt;()
+</a><a href="#h10-0-15" id="h10-0-15" class="i">+
+</a><a href="#h10-0-16" id="h10-0-16" class="i">+    private val okHttpClient = OkHttpClient.Builder()
+</a><a href="#h10-0-17" id="h10-0-17" class="i">+        .followRedirects(true)
+</a><a href="#h10-0-18" id="h10-0-18" class="i">+        .addInterceptor { chain -&gt;
+</a><a href="#h10-0-19" id="h10-0-19" class="i">+            val request = chain.request()
+</a><a href="#h10-0-20" id="h10-0-20" class="i">+            val requestUrl = request.url.toString()
+</a><a href="#h10-0-21" id="h10-0-21" class="i">+
+</a><a href="#h10-0-22" id="h10-0-22" class="i">+            if (urlCache.containsKey(requestUrl)) {
+</a><a href="#h10-0-23" id="h10-0-23" class="i">+                val cachedUrl = urlCache[requestUrl]!!
+</a><a href="#h10-0-24" id="h10-0-24" class="i">+                return@addInterceptor chain.proceed(request.newBuilder().url(cachedUrl).build())
+</a><a href="#h10-0-25" id="h10-0-25" class="i">+            }
+</a><a href="#h10-0-26" id="h10-0-26" class="i">+
+</a><a href="#h10-0-27" id="h10-0-27" class="i">+            chain.proceed(request).apply {
+</a><a href="#h10-0-28" id="h10-0-28" class="i">+                val responseUrl = this.request.url.toString()
+</a><a href="#h10-0-29" id="h10-0-29" class="i">+                if (responseUrl.startsWith(&quot;https://cf-st.sc-cdn.net&quot;)) {
+</a><a href="#h10-0-30" id="h10-0-30" class="i">+                    urlCache[requestUrl] = responseUrl
+</a><a href="#h10-0-31" id="h10-0-31" class="i">+                }
+</a><a href="#h10-0-32" id="h10-0-32" class="i">+            }
+</a><a href="#h10-0-33" id="h10-0-33" class="i">+        }
+</a><a href="#h10-0-34" id="h10-0-34" class="i">+        .build()
+</a><a href="#h10-0-35" id="h10-0-35" class="i">+
+</a><a href="#h10-0-36" id="h10-0-36" class="i">+    fun downloadBoltMedia(protoKey: ByteArray): InputStream? {
+</a><a href="#h10-0-37" id="h10-0-37" class="i">+        val request = Request.Builder()
+</a><a href="#h10-0-38" id="h10-0-38" class="i">+            .url(BOLT_HTTP_RESOLVER_URL + &quot;/resolve?co=&quot; + Base64.getUrlEncoder().encodeToString(protoKey))
+</a><a href="#h10-0-39" id="h10-0-39" class="i">+            .addHeader(&quot;User-Agent&quot;, Constants.USER_AGENT)
+</a><a href="#h10-0-40" id="h10-0-40" class="i">+            .build()
+</a><a href="#h10-0-41" id="h10-0-41" class="i">+
+</a><a href="#h10-0-42" id="h10-0-42" class="i">+        okHttpClient.newCall(request).execute().use { response -&gt;
+</a><a href="#h10-0-43" id="h10-0-43" class="i">+            if (!response.isSuccessful) {
+</a><a href="#h10-0-44" id="h10-0-44" class="i">+                Logger.log(&quot;Unexpected code $response&quot;)
+</a><a href="#h10-0-45" id="h10-0-45" class="i">+                return null
+</a><a href="#h10-0-46" id="h10-0-46" class="i">+            }
+</a><a href="#h10-0-47" id="h10-0-47" class="i">+            return ByteArrayInputStream(response.body.bytes())
+</a><a href="#h10-0-48" id="h10-0-48" class="i">+        }
+</a><a href="#h10-0-49" id="h10-0-49" class="i">+    }
+</a><a href="#h10-0-50" id="h10-0-50" class="i">+}
+</a></pre>
+</div>
+</body>
+</html>

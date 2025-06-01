@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>refactor(composer_hooks): module export - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/2bb055f4642bdcc02c24117be6794ac73c420e90.html">2bb055f4642bdcc02c24117be6794ac73c420e90</a>
+<b>parent</b> <a href="../commit/cce64bb246958555c9a37a519f474a892216bc11.html">cce64bb246958555c9a37a519f474a892216bc11</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Mon, 22 Apr 2024 18:50:28 +0200
+
+refactor(composer_hooks): module export
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/assets/composer/loader.js</a></td><td> | </td><td class="num">44</td><td><span class="i">+++++++++++++</span><span class="d">-------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a></td><td> | </td><td class="num">115</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">------------------------</span></td></tr>
+<tr><td class="A">A</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/composer/ComposerMarshaller.kt</a></td><td> | </td><td class="num">14</td><td><span class="i">++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>3 files changed, 108 insertions(+), 65 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/assets/composer/loader.js.html">core/src/main/assets/composer/loader.js</a> b/<a href="../file/core/src/main/assets/composer/loader.js.html">core/src/main/assets/composer/loader.js</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,37 +1,22 @@
+</a><a href="#h0-0-0" id="h0-0-0" class="d">-const deviceBridge = require(&#39;composer_core/src/DeviceBridge&#39;);
+</a><a href="#h0-0-1" id="h0-0-1" class="i">+const callExport = require(&#39;composer_core/src/DeviceBridge&#39;)[EXPORTED_FUNCTION_NAME];
+</a> 
+<a href="#h0-0-3" id="h0-0-3" class="d">-if (LOADER_CONFIG.logPrefix) {
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-    function internalLog(logLevel, args) {
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-        deviceBridge.copyToClipBoard(LOADER_CONFIG.logPrefix + &quot;|&quot; + logLevel + &quot;|&quot; + Array.from(args).join(&quot; &quot;));
+</a><a href="#h0-0-6" id="h0-0-6" class="d">-    }
+</a><a href="#h0-0-7" id="h0-0-7" class="d">-
+</a><a href="#h0-0-8" id="h0-0-8" class="d">-    console.log = function() {
+</a><a href="#h0-0-9" id="h0-0-9" class="d">-        internalLog(&quot;info&quot;, arguments);
+</a><a href="#h0-0-10" id="h0-0-10" class="d">-    }
+</a><a href="#h0-0-11" id="h0-0-11" class="d">-
+</a><a href="#h0-0-12" id="h0-0-12" class="d">-    console.error = function() {
+</a><a href="#h0-0-13" id="h0-0-13" class="d">-        internalLog(&quot;error&quot;, arguments);
+</a><a href="#h0-0-14" id="h0-0-14" class="d">-    }
+</a><a href="#h0-0-15" id="h0-0-15" class="d">-
+</a><a href="#h0-0-16" id="h0-0-16" class="d">-    console.warn = function() {
+</a><a href="#h0-0-17" id="h0-0-17" class="d">-        internalLog(&quot;warn&quot;, arguments);
+</a><a href="#h0-0-18" id="h0-0-18" class="d">-    }
+</a><a href="#h0-0-19" id="h0-0-19" class="i">+if (!callExport) {
+</a><a href="#h0-0-20" id="h0-0-20" class="i">+    return &quot;No export function found&quot;;
+</a><a href="#h0-0-21" id="h0-0-21" class="i">+}
+</a> 
+<a href="#h0-0-23" id="h0-0-23" class="d">-    console.info = function() {
+</a><a href="#h0-0-24" id="h0-0-24" class="d">-        internalLog(&quot;info&quot;, arguments);
+</a><a href="#h0-0-25" id="h0-0-25" class="d">-    }
+</a><a href="#h0-0-26" id="h0-0-26" class="i">+const config = callExport(&quot;getConfig&quot;);
+</a> 
+<a href="#h0-0-28" id="h0-0-28" class="d">-    console.debug = function() {
+</a><a href="#h0-0-29" id="h0-0-29" class="d">-        internalLog(&quot;debug&quot;, arguments);
+</a><a href="#h0-0-30" id="h0-0-30" class="d">-    }
+</a><a href="#h0-0-31" id="h0-0-31" class="i">+if (config.composerLogs) {
+</a><a href="#h0-0-32" id="h0-0-32" class="i">+    [&quot;log&quot;, &quot;error&quot;, &quot;warn&quot;, &quot;info&quot;, &quot;debug&quot;].forEach(method =&gt; {
+</a><a href="#h0-0-33" id="h0-0-33" class="i">+        console[method] = (...args) =&gt; callExport(&quot;log&quot;, method, Array.from(args).join(&quot; &quot;));
+</a><a href="#h0-0-34" id="h0-0-34" class="i">+    })
+</a> 
+<a href="#h0-0-36" id="h0-0-36" class="d">-    console.stacktrace = function() {
+</a><a href="#h0-0-37" id="h0-0-37" class="d">-        return new Error().stack;
+</a><a href="#h0-0-38" id="h0-0-38" class="d">-    }
+</a><a href="#h0-0-39" id="h0-0-39" class="i">+    console.stacktrace = () =&gt; new Error().stack;
+</a><a href="#h0-0-40" id="h0-0-40" class="i">+    console.info(&quot;loader.js loaded&quot;);
+</a> }
+ 
+<a href="#h0-0-43" id="h0-0-43" class="d">-if (LOADER_CONFIG.bypassCameraRollLimit) {
+</a><a href="#h0-0-44" id="h0-0-44" class="d">-    ((module) =&gt; {
+</a><a href="#h0-0-45" id="h0-0-45" class="i">+if (config.bypassCameraRollLimit) {
+</a><a href="#h0-0-46" id="h0-0-46" class="i">+    (module =&gt; {
+</a>         module.MultiSelectClickHandler = new Proxy(module.MultiSelectClickHandler, {
+             construct: function(target, args, newTarget) {
+                 args[1].selectionLimit = 9999999;
+<a href="#h0-1" id="h0-1" class="h">@@ -40,5 +25,3 @@ if (LOADER_CONFIG.bypassCameraRollLimit) {
+</a>         });
+     })(require(&#39;memories_ui/src/clickhandlers/MultiSelectClickHandler&#39;))
+ }
+<a href="#h0-1-3" id="h0-1-3" class="d">-
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-console.info(&quot;loader.js loaded&quot;);</a><a href="#h0-1-5" id="h0-1-5" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,7 +1,5 @@
+</a> package me.rhunk.snapenhance.core.features.impl.experiments
+ 
+<a href="#h1-0-2" id="h1-0-2" class="d">-import android.content.ClipData
+</a><a href="#h1-0-3" id="h1-0-3" class="d">-import android.content.ClipboardManager
+</a> import android.widget.FrameLayout
+ import androidx.compose.foundation.layout.Arrangement
+ import androidx.compose.foundation.layout.Column
+<a href="#h1-1" id="h1-1" class="h">@@ -12,7 +10,11 @@ import androidx.compose.foundation.rememberScrollState
+</a> import androidx.compose.foundation.verticalScroll
+ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.filled.BugReport
+<a href="#h1-1-3" id="h1-1-3" class="d">-import androidx.compose.material3.*
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+import androidx.compose.material3.Button
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+import androidx.compose.material3.FilledIconButton
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+import androidx.compose.material3.Icon
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+import androidx.compose.material3.Text
+</a><a href="#h1-1-8" id="h1-1-8" class="i">+import androidx.compose.material3.TextField
+</a> import androidx.compose.runtime.getValue
+ import androidx.compose.runtime.mutableStateOf
+ import androidx.compose.runtime.remember
+<a href="#h1-2" id="h1-2" class="h">@@ -22,7 +24,6 @@ import androidx.compose.ui.text.TextStyle
+</a> import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+<a href="#h1-2-3" id="h1-2-3" class="d">-import com.google.gson.JsonObject
+</a> import kotlinx.coroutines.launch
+ import me.rhunk.snapenhance.common.ui.AppMaterialTheme
+ import me.rhunk.snapenhance.common.ui.createComposeAlertDialog
+<a href="#h1-3" id="h1-3" class="h">@@ -30,13 +31,17 @@ import me.rhunk.snapenhance.common.ui.createComposeView
+</a> import me.rhunk.snapenhance.core.features.Feature
+ import me.rhunk.snapenhance.core.features.FeatureLoadParams
+ import me.rhunk.snapenhance.core.util.hook.HookStage
+<a href="#h1-3-3" id="h1-3-3" class="i">+import me.rhunk.snapenhance.core.util.hook.Hooker
+</a> import me.rhunk.snapenhance.core.util.hook.hook
+<a href="#h1-3-5" id="h1-3-5" class="i">+import me.rhunk.snapenhance.core.wrapper.impl.composer.ComposerMarshaller
+</a> import me.rhunk.snapenhance.nativelib.NativeLib
+<a href="#h1-3-7" id="h1-3-7" class="i">+import java.lang.reflect.Proxy
+</a><a href="#h1-3-8" id="h1-3-8" class="i">+import kotlin.math.absoluteValue
+</a> import kotlin.random.Random
+<a href="#h1-3-10" id="h1-3-10" class="d">-import kotlin.random.nextInt
+</a> 
+ class ComposerHooks: Feature(&quot;ComposerHooks&quot;, loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+     private val config by lazy { context.config.experimental.nativeHooks.composerHooks }
+<a href="#h1-3-14" id="h1-3-14" class="i">+    private val exportedFunctionName = Random.nextInt().absoluteValue.toString(16)
+</a> 
+     private val composerConsole by lazy {
+         createComposeAlertDialog(context.mainActivity!!) {
+<a href="#h1-4" id="h1-4" class="h">@@ -114,46 +119,75 @@ class ComposerHooks: Feature(&quot;ComposerHooks&quot;, loadParams = FeatureLoadParams.ACT
+</a>         }
+     }
+ 
+<a href="#h1-4-3" id="h1-4-3" class="d">-    private fun loadHooks() {
+</a><a href="#h1-4-4" id="h1-4-4" class="d">-        val loaderConfig = JsonObject()
+</a><a href="#h1-4-5" id="h1-4-5" class="d">-
+</a><a href="#h1-4-6" id="h1-4-6" class="d">-        if (config.composerLogs.get()) {
+</a><a href="#h1-4-7" id="h1-4-7" class="d">-            val logPrefix = Random.nextInt(100000..999999).toString()
+</a><a href="#h1-4-8" id="h1-4-8" class="d">-            val logTag = &quot;ComposerLogs&quot;
+</a><a href="#h1-4-9" id="h1-4-9" class="d">-
+</a><a href="#h1-4-10" id="h1-4-10" class="d">-            ClipboardManager::class.java.hook(&quot;setPrimaryClip&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h1-4-11" id="h1-4-11" class="d">-                val clipData = param.arg&lt;ClipData&gt;(0).takeIf { it.itemCount == 1 } ?: return@hook
+</a><a href="#h1-4-12" id="h1-4-12" class="d">-                val logText = clipData.getItemAt(0).text ?: return@hook
+</a><a href="#h1-4-13" id="h1-4-13" class="d">-                if (!logText.startsWith(&quot;$logPrefix|&quot;)) return@hook
+</a><a href="#h1-4-14" id="h1-4-14" class="d">-
+</a><a href="#h1-4-15" id="h1-4-15" class="d">-                val logContainer = logText.removePrefix(&quot;$logPrefix|&quot;).toString()
+</a><a href="#h1-4-16" id="h1-4-16" class="d">-                val logType = logContainer.substringBefore(&quot;|&quot;)
+</a><a href="#h1-4-17" id="h1-4-17" class="d">-                val content = logContainer.substringAfter(&quot;|&quot;)
+</a><a href="#h1-4-18" id="h1-4-18" class="d">-
+</a><a href="#h1-4-19" id="h1-4-19" class="d">-                when (logType) {
+</a><a href="#h1-4-20" id="h1-4-20" class="d">-                    &quot;verbose&quot; -&gt; context.log.verbose(content, logTag)
+</a><a href="#h1-4-21" id="h1-4-21" class="d">-                    &quot;info&quot; -&gt; context.log.info(content, logTag)
+</a><a href="#h1-4-22" id="h1-4-22" class="d">-                    &quot;debug&quot; -&gt; context.log.debug(content, logTag)
+</a><a href="#h1-4-23" id="h1-4-23" class="d">-                    &quot;warn&quot; -&gt; context.log.warn(content, logTag)
+</a><a href="#h1-4-24" id="h1-4-24" class="d">-                    &quot;error&quot; -&gt; context.log.error(content, logTag)
+</a><a href="#h1-4-25" id="h1-4-25" class="d">-                    else -&gt; context.log.info(logContainer, logTag)
+</a><a href="#h1-4-26" id="h1-4-26" class="i">+    private fun newComposerFunction(block: (composerMarshaller: ComposerMarshaller) -&gt; Boolean): Any {
+</a><a href="#h1-4-27" id="h1-4-27" class="i">+        val composerFunctionClass = findClass(&quot;com.snap.composer.callable.ComposerFunction&quot;)
+</a><a href="#h1-4-28" id="h1-4-28" class="i">+        return Proxy.newProxyInstance(
+</a><a href="#h1-4-29" id="h1-4-29" class="i">+            composerFunctionClass.classLoader,
+</a><a href="#h1-4-30" id="h1-4-30" class="i">+            arrayOf(composerFunctionClass)
+</a><a href="#h1-4-31" id="h1-4-31" class="i">+        ) { _, method, args -&gt;
+</a><a href="#h1-4-32" id="h1-4-32" class="i">+            if (method.name != &quot;perform&quot;) return@newProxyInstance null
+</a><a href="#h1-4-33" id="h1-4-33" class="i">+            block(ComposerMarshaller(args?.get(0) ?: return@newProxyInstance false))
+</a><a href="#h1-4-34" id="h1-4-34" class="i">+        }
+</a><a href="#h1-4-35" id="h1-4-35" class="i">+    }
+</a><a href="#h1-4-36" id="h1-4-36" class="i">+
+</a><a href="#h1-4-37" id="h1-4-37" class="i">+    private fun handleExportCall(composerMarshaller: ComposerMarshaller): Boolean {
+</a><a href="#h1-4-38" id="h1-4-38" class="i">+        val argc = composerMarshaller.getSize()
+</a><a href="#h1-4-39" id="h1-4-39" class="i">+        if (argc &lt; 1) return false
+</a><a href="#h1-4-40" id="h1-4-40" class="i">+        val action = composerMarshaller.getUntyped(0) as? String ?: return false
+</a><a href="#h1-4-41" id="h1-4-41" class="i">+
+</a><a href="#h1-4-42" id="h1-4-42" class="i">+        when (action) {
+</a><a href="#h1-4-43" id="h1-4-43" class="i">+            &quot;getConfig&quot; -&gt; {
+</a><a href="#h1-4-44" id="h1-4-44" class="i">+                composerMarshaller.pushUntyped(
+</a><a href="#h1-4-45" id="h1-4-45" class="i">+                    HashMap&lt;String, Any&gt;().apply {
+</a><a href="#h1-4-46" id="h1-4-46" class="i">+                        put(&quot;bypassCameraRollLimit&quot;, config.bypassCameraRollLimit.get())
+</a><a href="#h1-4-47" id="h1-4-47" class="i">+                        put(&quot;composerConsole&quot;, config.composerConsole.get())
+</a><a href="#h1-4-48" id="h1-4-48" class="i">+                        put(&quot;composerLogs&quot;, config.composerLogs.get())
+</a><a href="#h1-4-49" id="h1-4-49" class="i">+                    }
+</a><a href="#h1-4-50" id="h1-4-50" class="i">+                )
+</a><a href="#h1-4-51" id="h1-4-51" class="i">+            }
+</a><a href="#h1-4-52" id="h1-4-52" class="i">+            &quot;showToast&quot; -&gt; {
+</a><a href="#h1-4-53" id="h1-4-53" class="i">+                if (argc &lt; 2) return false
+</a><a href="#h1-4-54" id="h1-4-54" class="i">+                val message = composerMarshaller.getUntyped(1) as? String ?: return false
+</a><a href="#h1-4-55" id="h1-4-55" class="i">+                context.shortToast(message)
+</a><a href="#h1-4-56" id="h1-4-56" class="i">+            }
+</a><a href="#h1-4-57" id="h1-4-57" class="i">+            &quot;log&quot; -&gt; {
+</a><a href="#h1-4-58" id="h1-4-58" class="i">+                if (argc &lt; 3) return false
+</a><a href="#h1-4-59" id="h1-4-59" class="i">+                val logLevel = composerMarshaller.getUntyped(1) as? String ?: return false
+</a><a href="#h1-4-60" id="h1-4-60" class="i">+                val message = composerMarshaller.getUntyped(2) as? String ?: return false
+</a><a href="#h1-4-61" id="h1-4-61" class="i">+
+</a><a href="#h1-4-62" id="h1-4-62" class="i">+                val tag = &quot;ComposerLogs&quot;
+</a><a href="#h1-4-63" id="h1-4-63" class="i">+
+</a><a href="#h1-4-64" id="h1-4-64" class="i">+                when (logLevel) {
+</a><a href="#h1-4-65" id="h1-4-65" class="i">+                    &quot;log&quot; -&gt; context.log.verbose(message, tag)
+</a><a href="#h1-4-66" id="h1-4-66" class="i">+                    &quot;debug&quot; -&gt; context.log.debug(message, tag)
+</a><a href="#h1-4-67" id="h1-4-67" class="i">+                    &quot;info&quot; -&gt; context.log.info(message, tag)
+</a><a href="#h1-4-68" id="h1-4-68" class="i">+                    &quot;warn&quot; -&gt; context.log.warn(message, tag)
+</a><a href="#h1-4-69" id="h1-4-69" class="i">+                    &quot;error&quot; -&gt; context.log.error(message, tag)
+</a><a href="#h1-4-70" id="h1-4-70" class="i">+                }
+</a><a href="#h1-4-71" id="h1-4-71" class="i">+            }
+</a><a href="#h1-4-72" id="h1-4-72" class="i">+            &quot;eval&quot; -&gt; {
+</a><a href="#h1-4-73" id="h1-4-73" class="i">+                if (argc &lt; 2) return false
+</a><a href="#h1-4-74" id="h1-4-74" class="i">+                val code = composerMarshaller.getUntyped(1) as? String ?: return false
+</a><a href="#h1-4-75" id="h1-4-75" class="i">+                runCatching {
+</a><a href="#h1-4-76" id="h1-4-76" class="i">+                    composerMarshaller.pushUntyped(context.native.composerEval(code))
+</a><a href="#h1-4-77" id="h1-4-77" class="i">+                }.onFailure {
+</a><a href="#h1-4-78" id="h1-4-78" class="i">+                    composerMarshaller.pushUntyped(it.toString())
+</a>                 }
+<a href="#h1-4-80" id="h1-4-80" class="d">-                param.setResult(null)
+</a>             }
+<a href="#h1-4-82" id="h1-4-82" class="d">-            loaderConfig.addProperty(&quot;logPrefix&quot;, logPrefix)
+</a><a href="#h1-4-83" id="h1-4-83" class="i">+            else -&gt; context.log.warn(&quot;Unknown action: $action&quot;, &quot;Composer&quot;)
+</a>         }
+ 
+<a href="#h1-4-86" id="h1-4-86" class="d">-        if (config.bypassCameraRollLimit.get()) {
+</a><a href="#h1-4-87" id="h1-4-87" class="d">-            loaderConfig.addProperty(&quot;bypassCameraRollLimit&quot;, true)
+</a><a href="#h1-4-88" id="h1-4-88" class="d">-        }
+</a><a href="#h1-4-89" id="h1-4-89" class="i">+        return true
+</a><a href="#h1-4-90" id="h1-4-90" class="i">+    }
+</a> 
+<a href="#h1-4-92" id="h1-4-92" class="i">+    private fun loadHooks() {
+</a>         val loaderScript = context.scriptRuntime.scripting.getScriptContent(&quot;composer/loader.js&quot;) ?: run {
+             context.log.error(&quot;Failed to load composer loader script&quot;)
+             return
+         }
+ 
+         val hookResult = context.native.composerEval(&quot;&quot;&quot;
+<a href="#h1-4-99" id="h1-4-99" class="d">-            (() =&gt; { try { const LOADER_CONFIG = $loaderConfig; $loaderScript
+</a><a href="#h1-4-100" id="h1-4-100" class="i">+            (() =&gt; { try { const EXPORTED_FUNCTION_NAME = &quot;$exportedFunctionName&quot;; $loaderScript
+</a>                 } catch (e) {
+                     return e.toString() + &quot;\n&quot; + e.stack;
+                 }
+<a href="#h1-5" id="h1-5" class="h">@@ -172,8 +206,21 @@ class ComposerHooks: Feature(&quot;ComposerHooks&quot;, loadParams = FeatureLoadParams.ACT
+</a>         }
+     }
+ 
+<a href="#h1-5-3" id="h1-5-3" class="i">+    @Suppress(&quot;UNCHECKED_CAST&quot;)
+</a>     override fun onActivityCreate() {
+         if (!NativeLib.initialized || config.globalState != true) return
+<a href="#h1-5-6" id="h1-5-6" class="i">+
+</a><a href="#h1-5-7" id="h1-5-7" class="i">+        findClass(&quot;com.snapchat.client.composer.NativeBridge&quot;).hook(&quot;registerNativeModuleFactory&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h1-5-8" id="h1-5-8" class="i">+            val moduleFactory = param.argNullable&lt;Any&gt;(1) ?: return@hook
+</a><a href="#h1-5-9" id="h1-5-9" class="i">+            if (moduleFactory.javaClass.getMethod(&quot;getModulePath&quot;).invoke(moduleFactory)?.toString() != &quot;DeviceBridge&quot;) return@hook
+</a><a href="#h1-5-10" id="h1-5-10" class="i">+            Hooker.ephemeralHookObjectMethod(moduleFactory.javaClass, moduleFactory, &quot;loadModule&quot;, HookStage.AFTER) { methodParam -&gt;
+</a><a href="#h1-5-11" id="h1-5-11" class="i">+                val functions = methodParam.getResult() as? MutableMap&lt;String, Any&gt; ?: return@ephemeralHookObjectMethod
+</a><a href="#h1-5-12" id="h1-5-12" class="i">+                functions[exportedFunctionName] = newComposerFunction {
+</a><a href="#h1-5-13" id="h1-5-13" class="i">+                    handleExportCall(it)
+</a><a href="#h1-5-14" id="h1-5-14" class="i">+                }
+</a><a href="#h1-5-15" id="h1-5-15" class="i">+            }
+</a><a href="#h1-5-16" id="h1-5-16" class="i">+        }
+</a><a href="#h1-5-17" id="h1-5-17" class="i">+
+</a>         var composerThreadTask: (() -&gt; Unit)? = null
+ 
+         findClass(&quot;com.snap.composer.callable.ComposerFunctionNative&quot;).hook(&quot;nativePerform&quot;, HookStage.BEFORE) {
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/composer/ComposerMarshaller.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/composer/ComposerMarshaller.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/composer/ComposerMarshaller.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/wrapper/impl/composer/ComposerMarshaller.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -0,0 +1,13 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="i">+package me.rhunk.snapenhance.core.wrapper.impl.composer
+</a><a href="#h2-0-1" id="h2-0-1" class="i">+
+</a><a href="#h2-0-2" id="h2-0-2" class="i">+import me.rhunk.snapenhance.core.wrapper.AbstractWrapper
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+class ComposerMarshaller(obj: Any): AbstractWrapper(obj) {
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+    private val getUntypedMethod by lazy { instanceNonNull().javaClass.methods.first { it.name == &quot;getUntyped&quot; } }
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+    private val getSizeMethod by lazy { instanceNonNull().javaClass.methods.first { it.name == &quot;getSize&quot; } }
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+    private val pushUntypedMethod by lazy { instanceNonNull().javaClass.methods.first { it.name == &quot;pushUntyped&quot; } }
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+    fun getUntyped(index: Int): Any? = getUntypedMethod.invoke(instanceNonNull(), index)
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+    fun getSize() = getSizeMethod.invoke(instanceNonNull()) as Int
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+    fun pushUntyped(value: Any?): Any? = pushUntypedMethod.invoke(instanceNonNull(), value)
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+}</a><a href="#h2-0-13" id="h2-0-13" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

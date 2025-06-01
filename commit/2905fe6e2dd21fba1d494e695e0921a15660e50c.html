@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(camera): custom frame rate - experimental disable cameras - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/2905fe6e2dd21fba1d494e695e0921a15660e50c.html">2905fe6e2dd21fba1d494e695e0921a15660e50c</a>
+<b>parent</b> <a href="../commit/1f4eb18aa832630ee88951cad1d50d259c4228f2.html">1f4eb18aa832630ee88951cad1d50d259c4228f2</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun, 14 Jan 2024 00:35:55 +0100
+
+feat(camera): custom frame rate
+- experimental disable cameras
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">20</td><td><span class="i">++++++++++++++</span><span class="d">------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Camera.kt</a></td><td> | </td><td class="num">10</td><td><span class="i">+++++</span><span class="d">-----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/CameraTweaks.kt</a></td><td> | </td><td class="num">60</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">---------------</span></td></tr>
+</table></pre><pre>3 files changed, 64 insertions(+), 26 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -532,9 +532,9 @@
+</a>                 &quot;name&quot;: &quot;Camera&quot;,
+                 &quot;description&quot;: &quot;Adjust the right settings for the perfect snap&quot;,
+                 &quot;properties&quot;: {
+<a href="#h0-0-3" id="h0-0-3" class="d">-                    &quot;disable_camera&quot;: {
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-                        &quot;name&quot;: &quot;Disable Camera&quot;,
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-                        &quot;description&quot;: &quot;Prevents Snapchat from using the cameras available on your device&quot;
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+                    &quot;disable_cameras&quot;: {
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+                        &quot;name&quot;: &quot;Disable Cameras&quot;,
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+                        &quot;description&quot;: &quot;Prevents Snapchat from using the selected cameras&quot;
+</a>                     },
+                     &quot;black_photos&quot;: {
+                         &quot;name&quot;: &quot;Black Photos&quot;,
+<a href="#h0-1" id="h0-1" class="h">@@ -556,9 +556,13 @@
+</a>                         &quot;name&quot;: &quot;Custom Resolution&quot;,
+                         &quot;description&quot;: &quot;Sets a custom camera resolution, width x height (e.g. 1920x1080).\nThe custom resolution must be supported by your device&quot;
+                     },
+<a href="#h0-1-3" id="h0-1-3" class="d">-                    &quot;custom_frame_rate&quot;: {
+</a><a href="#h0-1-4" id="h0-1-4" class="d">-                        &quot;name&quot;: &quot;Custom Frame Rate&quot;,
+</a><a href="#h0-1-5" id="h0-1-5" class="d">-                        &quot;description&quot;: &quot;Overrides the camera frame rate&quot;
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+                    &quot;front_custom_frame_rate&quot;: {
+</a><a href="#h0-1-7" id="h0-1-7" class="i">+                        &quot;name&quot;: &quot;Front Custom Frame Rate&quot;,
+</a><a href="#h0-1-8" id="h0-1-8" class="i">+                        &quot;description&quot;: &quot;Overrides the front camera frame rate&quot;
+</a><a href="#h0-1-9" id="h0-1-9" class="i">+                    },
+</a><a href="#h0-1-10" id="h0-1-10" class="i">+                    &quot;back_custom_frame_rate&quot;: {
+</a><a href="#h0-1-11" id="h0-1-11" class="i">+                        &quot;name&quot;: &quot;Back Custom Frame Rate&quot;,
+</a><a href="#h0-1-12" id="h0-1-12" class="i">+                        &quot;description&quot;: &quot;Overrides the back camera frame rate&quot;
+</a>                     },
+                     &quot;force_camera_source_encoding&quot;: {
+                         &quot;name&quot;: &quot;Force Camera Source Encoding&quot;,
+<a href="#h0-2" id="h0-2" class="h">@@ -866,6 +870,10 @@
+</a>                 &quot;friends&quot;: &quot;Friends&quot;,
+                 &quot;following&quot;: &quot;Following&quot;,
+                 &quot;discover&quot;: &quot;Discover&quot;
+<a href="#h0-2-3" id="h0-2-3" class="i">+            },
+</a><a href="#h0-2-4" id="h0-2-4" class="i">+            &quot;disable_cameras&quot;:{
+</a><a href="#h0-2-5" id="h0-2-5" class="i">+                &quot;front&quot;: &quot;Front Camera&quot;,
+</a><a href="#h0-2-6" id="h0-2-6" class="i">+                &quot;back&quot;: &quot;Back Camera&quot;
+</a>             }
+         }
+     },
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Camera.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Camera.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Camera.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Camera.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -13,6 +13,7 @@ import me.rhunk.snapenhance.common.logger.AbstractLogger
+</a> class Camera : ConfigContainer() {
+     companion object {
+         private val defaultResolutions = listOf(&quot;3264x2448&quot;, &quot;3264x1840&quot;, &quot;3264x1504&quot;, &quot;2688x1512&quot;, &quot;2560x1920&quot;, &quot;2448x2448&quot;, &quot;2340x1080&quot;, &quot;2160x1080&quot;, &quot;1920x1440&quot;, &quot;1920x1080&quot;, &quot;1600x1200&quot;, &quot;1600x960&quot;, &quot;1600x900&quot;, &quot;1600x736&quot;, &quot;1600x720&quot;, &quot;1560x720&quot;, &quot;1520x720&quot;, &quot;1440x1080&quot;, &quot;1440x720&quot;, &quot;1280x720&quot;, &quot;1080x1080&quot;, &quot;1080x720&quot;, &quot;960x720&quot;, &quot;720x720&quot;, &quot;720x480&quot;, &quot;640x480&quot;, &quot;352x288&quot;, &quot;320x240&quot;, &quot;176x144&quot;).toTypedArray()
+<a href="#h1-0-3" id="h1-0-3" class="i">+        private val customFrameRates = arrayOf(&quot;5&quot;, &quot;10&quot;, &quot;20&quot;, &quot;25&quot;, &quot;30&quot;, &quot;48&quot;, &quot;60&quot;, &quot;90&quot;, &quot;120&quot;)
+</a>     }
+ 
+     private lateinit var _overrideFrontResolution: PropertyValue&lt;String&gt;
+<a href="#h1-1" id="h1-1" class="h">@@ -49,13 +50,12 @@ class Camera : ConfigContainer() {
+</a>             { addFlags(ConfigFlag.NO_TRANSLATE) }
+     }
+ 
+<a href="#h1-1-3" id="h1-1-3" class="d">-    val disable = boolean(&quot;disable_camera&quot;)
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+    val disableCameras = multiple(&quot;disable_cameras&quot;, &quot;front&quot;, &quot;back&quot;) { addNotices(FeatureNotice.INTERNAL_BEHAVIOR); requireRestart() }
+</a>     val immersiveCameraPreview = boolean(&quot;immersive_camera_preview&quot;) { addNotices(FeatureNotice.UNSTABLE) }
+     val blackPhotos = boolean(&quot;black_photos&quot;)
+<a href="#h1-1-7" id="h1-1-7" class="d">-    val customFrameRate = unique(&quot;custom_frame_rate&quot;,
+</a><a href="#h1-1-8" id="h1-1-8" class="d">-        &quot;5&quot;, &quot;10&quot;, &quot;20&quot;, &quot;25&quot;, &quot;30&quot;, &quot;48&quot;, &quot;60&quot;, &quot;90&quot;, &quot;120&quot;
+</a><a href="#h1-1-9" id="h1-1-9" class="d">-    ) { addNotices(FeatureNotice.UNSTABLE); addFlags(ConfigFlag.NO_TRANSLATE) }
+</a><a href="#h1-1-10" id="h1-1-10" class="d">-    val hevcRecording = boolean(&quot;hevc_recording&quot;) { requireRestart(); addNotices(FeatureNotice.UNSTABLE) }
+</a><a href="#h1-1-11" id="h1-1-11" class="i">+    val frontCustomFrameRate = unique(&quot;front_custom_frame_rate&quot;, *customFrameRates) { requireRestart(); addFlags(ConfigFlag.NO_TRANSLATE) }
+</a><a href="#h1-1-12" id="h1-1-12" class="i">+    val backCustomFrameRate = unique(&quot;back_custom_frame_rate&quot;, *customFrameRates) { requireRestart(); addFlags(ConfigFlag.NO_TRANSLATE) }
+</a><a href="#h1-1-13" id="h1-1-13" class="i">+    val hevcRecording = boolean(&quot;hevc_recording&quot;) { requireRestart() }
+</a>     val forceCameraSourceEncoding = boolean(&quot;force_camera_source_encoding&quot;)
+     val overrideFrontResolution get() = _overrideFrontResolution
+     val overrideBackResolution get() = _overrideBackResolution
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/CameraTweaks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/CameraTweaks.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/CameraTweaks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/CameraTweaks.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -28,25 +28,41 @@ class CameraTweaks : Feature(&quot;Camera Tweaks&quot;, loadParams = FeatureLoadParams.ACT
+</a>     @SuppressLint(&quot;MissingPermission&quot;, &quot;DiscouragedApi&quot;)
+     override fun onActivityCreate() {
+         val config = context.config.camera
+<a href="#h2-0-3" id="h2-0-3" class="d">-        if (config.disable.get()) {
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+        val frontCameraId = runCatching { context.androidContext.getSystemService(CameraManager::class.java).run {
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+            cameraIdList.firstOrNull { getCameraCharacteristics(it).get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT }
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+        } }.getOrNull()
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+        if (config.disableCameras.get().isNotEmpty() &amp;&amp; frontCameraId != null) {
+</a>             ContextWrapper::class.java.hook(&quot;checkPermission&quot;, HookStage.BEFORE) { param -&gt;
+                 val permission = param.arg&lt;String&gt;(0)
+                 if (permission == Manifest.permission.CAMERA) {
+                     param.setResult(PackageManager.PERMISSION_GRANTED)
+                 }
+             }
+<a href="#h2-0-16" id="h2-0-16" class="d">-
+</a>         }
+ 
+         var isLastCameraFront = false
+ 
+         CameraManager::class.java.hook(&quot;openCamera&quot;, HookStage.BEFORE) { param -&gt;
+<a href="#h2-0-22" id="h2-0-22" class="d">-            if (config.disable.get()) {
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+            val cameraManager = param.thisObject() as? CameraManager ?: return@hook
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+            val cameraId = param.arg&lt;String&gt;(0)
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+            val disabledCameras = config.disableCameras.get()
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+            if (disabledCameras.size &gt;= 2) {
+</a>                 param.setResult(null)
+                 return@hook
+             }
+<a href="#h2-0-31" id="h2-0-31" class="d">-            val cameraManager = param.thisObject() as? CameraManager ?: return@hook
+</a><a href="#h2-0-32" id="h2-0-32" class="d">-            isLastCameraFront = cameraManager.getCameraCharacteristics(param.arg(0)).get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+
+</a><a href="#h2-0-34" id="h2-0-34" class="i">+            isLastCameraFront = cameraId == frontCameraId
+</a><a href="#h2-0-35" id="h2-0-35" class="i">+
+</a><a href="#h2-0-36" id="h2-0-36" class="i">+            if (disabledCameras.size != 1) return@hook
+</a><a href="#h2-0-37" id="h2-0-37" class="i">+
+</a><a href="#h2-0-38" id="h2-0-38" class="i">+            // trick to replace unwanted camera with another one
+</a><a href="#h2-0-39" id="h2-0-39" class="i">+            if ((disabledCameras.contains(&quot;front&quot;) &amp;&amp; isLastCameraFront) || (disabledCameras.contains(&quot;back&quot;) &amp;&amp; !isLastCameraFront)) {
+</a><a href="#h2-0-40" id="h2-0-40" class="i">+                param.setArg(0, cameraManager.cameraIdList.filterNot { it == cameraId }.firstOrNull() ?: return@hook)
+</a><a href="#h2-0-41" id="h2-0-41" class="i">+                isLastCameraFront = !isLastCameraFront
+</a><a href="#h2-0-42" id="h2-0-42" class="i">+            }
+</a>         }
+ 
+         ImageReader::class.java.hook(&quot;newInstance&quot;, HookStage.BEFORE) { param -&gt;
+<a href="#h2-1" id="h2-1" class="h">@@ -56,19 +72,33 @@ class CameraTweaks : Feature(&quot;Camera Tweaks&quot;, loadParams = FeatureLoadParams.ACT
+</a>             param.setArg(1, captureResolutionConfig[1])
+         }
+ 
+<a href="#h2-1-3" id="h2-1-3" class="d">-        config.customFrameRate.getNullable()?.also { value -&gt;
+</a><a href="#h2-1-4" id="h2-1-4" class="d">-            val customFrameRate = value.toInt()
+</a><a href="#h2-1-5" id="h2-1-5" class="d">-            CameraCharacteristics::class.java.hook(&quot;get&quot;, HookStage.AFTER)  { param -&gt;
+</a><a href="#h2-1-6" id="h2-1-6" class="d">-                val key = param.arg&lt;Key&lt;*&gt;&gt;(0)
+</a><a href="#h2-1-7" id="h2-1-7" class="d">-                if (key == CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES) {
+</a><a href="#h2-1-8" id="h2-1-8" class="d">-                    val fpsRanges = param.getResult() as? Array&lt;*&gt; ?: return@hook
+</a><a href="#h2-1-9" id="h2-1-9" class="d">-                    fpsRanges.forEach {
+</a><a href="#h2-1-10" id="h2-1-10" class="d">-                        val range = it as? Range&lt;*&gt; ?: return@forEach
+</a><a href="#h2-1-11" id="h2-1-11" class="d">-                        range.setObjectField(&quot;mUpper&quot;, customFrameRate)
+</a><a href="#h2-1-12" id="h2-1-12" class="d">-                        range.setObjectField(&quot;mLower&quot;, customFrameRate)
+</a><a href="#h2-1-13" id="h2-1-13" class="i">+        CameraCharacteristics::class.java.hook(&quot;get&quot;, HookStage.AFTER)  { param -&gt;
+</a><a href="#h2-1-14" id="h2-1-14" class="i">+            val key = param.argNullable&lt;Key&lt;*&gt;&gt;(0) ?: return@hook
+</a><a href="#h2-1-15" id="h2-1-15" class="i">+
+</a><a href="#h2-1-16" id="h2-1-16" class="i">+            if (key == CameraCharacteristics.LENS_FACING) {
+</a><a href="#h2-1-17" id="h2-1-17" class="i">+                val disabledCameras = config.disableCameras.get()
+</a><a href="#h2-1-18" id="h2-1-18" class="i">+                //FIXME: unexpected behavior when app is resumed
+</a><a href="#h2-1-19" id="h2-1-19" class="i">+                if (disabledCameras.size == 1) {
+</a><a href="#h2-1-20" id="h2-1-20" class="i">+                    val isFrontCamera = param.getResult() as? Int == CameraCharacteristics.LENS_FACING_FRONT
+</a><a href="#h2-1-21" id="h2-1-21" class="i">+                    if ((disabledCameras.contains(&quot;front&quot;) &amp;&amp; isFrontCamera) || (disabledCameras.contains(&quot;back&quot;) &amp;&amp; !isFrontCamera)) {
+</a><a href="#h2-1-22" id="h2-1-22" class="i">+                        param.setResult(if (isFrontCamera) CameraCharacteristics.LENS_FACING_BACK else CameraCharacteristics.LENS_FACING_FRONT)
+</a>                     }
+                 }
+             }
+<a href="#h2-1-26" id="h2-1-26" class="i">+
+</a><a href="#h2-1-27" id="h2-1-27" class="i">+            if (key == CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES) {
+</a><a href="#h2-1-28" id="h2-1-28" class="i">+                val isFrontCamera = param.invokeOriginal(
+</a><a href="#h2-1-29" id="h2-1-29" class="i">+                    arrayOf(CameraCharacteristics.LENS_FACING)
+</a><a href="#h2-1-30" id="h2-1-30" class="i">+                ) == CameraCharacteristics.LENS_FACING_FRONT
+</a><a href="#h2-1-31" id="h2-1-31" class="i">+                val customFrameRate = (if (isFrontCamera) config.frontCustomFrameRate.getNullable() else config.backCustomFrameRate.getNullable())?.toIntOrNull() ?: return@hook
+</a><a href="#h2-1-32" id="h2-1-32" class="i">+                val fpsRanges = param.getResult() as? Array&lt;*&gt; ?: return@hook
+</a><a href="#h2-1-33" id="h2-1-33" class="i">+
+</a><a href="#h2-1-34" id="h2-1-34" class="i">+                fpsRanges.forEach {
+</a><a href="#h2-1-35" id="h2-1-35" class="i">+                    val range = it as? Range&lt;*&gt; ?: return@forEach
+</a><a href="#h2-1-36" id="h2-1-36" class="i">+                    range.setObjectField(&quot;mUpper&quot;, customFrameRate)
+</a><a href="#h2-1-37" id="h2-1-37" class="i">+                    range.setObjectField(&quot;mLower&quot;, customFrameRate)
+</a><a href="#h2-1-38" id="h2-1-38" class="i">+                }
+</a><a href="#h2-1-39" id="h2-1-39" class="i">+            }
+</a>         }
+ 
+         if (config.blackPhotos.get()) {
+</pre>
+</div>
+</body>
+</html>
