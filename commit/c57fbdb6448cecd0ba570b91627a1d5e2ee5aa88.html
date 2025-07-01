@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(common): bolt resolver api - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/c57fbdb6448cecd0ba570b91627a1d5e2ee5aa88.html">c57fbdb6448cecd0ba570b91627a1d5e2ee5aa88</a>
+<b>parent</b> <a href="../commit/0a395627efc5740e9d99c1c09d230419d0dfafff.html">0a395627efc5740e9d99c1c09d230419d0dfafff</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Tue,  1 Jul 2025 11:27:09 +0200
+
+feat(common): bolt resolver api
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/kotlin/me/rhunk/snapenhance/common/util/snap/RemoteMediaResolver.kt</a></td><td> | </td><td class="num">36</td><td><span class="i">++++++++++++++</span><span class="d">----------------------</span></td></tr>
+</table></pre><pre>1 file changed, 14 insertions(+), 22 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/snap/RemoteMediaResolver.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/snap/RemoteMediaResolver.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/snap/RemoteMediaResolver.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/snap/RemoteMediaResolver.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -2,6 +2,7 @@ package me.rhunk.snapenhance.common.util.snap
+</a> 
+ import me.rhunk.snapenhance.common.Constants
+ import me.rhunk.snapenhance.common.util.ktx.await
+<a href="#h0-0-3" id="h0-0-3" class="i">+import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+</a> import okhttp3.Headers
+ import okhttp3.OkHttpClient
+ import okhttp3.Request
+<a href="#h0-1" id="h0-1" class="h">@@ -9,37 +10,28 @@ import java.io.InputStream
+</a> import java.util.Base64
+ 
+ object RemoteMediaResolver {
+<a href="#h0-1-3" id="h0-1-3" class="d">-    private const val BOLT_HTTP_RESOLVER_URL = &quot;https://web.snapchat.com/bolt-http&quot;
+</a>     const val CF_ST_CDN_D = &quot;https://cf-st.sc-cdn.net/d/&quot;
+ 
+<a href="#h0-1-6" id="h0-1-6" class="d">-    private val urlCache = mutableMapOf&lt;String, String&gt;()
+</a><a href="#h0-1-7" id="h0-1-7" class="d">-
+</a>     val okHttpClient = OkHttpClient.Builder()
+         .followRedirects(true)
+         .retryOnConnectionFailure(true)
+         .readTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+<a href="#h0-1-12" id="h0-1-12" class="d">-        .addInterceptor { chain -&gt;
+</a><a href="#h0-1-13" id="h0-1-13" class="d">-            val request = chain.request()
+</a><a href="#h0-1-14" id="h0-1-14" class="d">-            val requestUrl = request.url.toString()
+</a><a href="#h0-1-15" id="h0-1-15" class="d">-
+</a><a href="#h0-1-16" id="h0-1-16" class="d">-            if (urlCache.containsKey(requestUrl)) {
+</a><a href="#h0-1-17" id="h0-1-17" class="d">-                val cachedUrl = urlCache[requestUrl]!!
+</a><a href="#h0-1-18" id="h0-1-18" class="d">-                return@addInterceptor chain.proceed(request.newBuilder().url(cachedUrl).build())
+</a><a href="#h0-1-19" id="h0-1-19" class="d">-            }
+</a><a href="#h0-1-20" id="h0-1-20" class="i">+        .build()
+</a> 
+<a href="#h0-1-22" id="h0-1-22" class="d">-            chain.proceed(request).apply {
+</a><a href="#h0-1-23" id="h0-1-23" class="d">-                val responseUrl = this.request.url.toString()
+</a><a href="#h0-1-24" id="h0-1-24" class="d">-                if (responseUrl.startsWith(&quot;https://cf-st.sc-cdn.net&quot;)) {
+</a><a href="#h0-1-25" id="h0-1-25" class="d">-                    urlCache[requestUrl] = responseUrl
+</a><a href="#h0-1-26" id="h0-1-26" class="d">-                }
+</a><a href="#h0-1-27" id="h0-1-27" class="d">-            }
+</a><a href="#h0-1-28" id="h0-1-28" class="i">+    fun newResolveRequest(protoKey: ByteArray): Request {
+</a><a href="#h0-1-29" id="h0-1-29" class="i">+        val protoReader = ProtoReader(protoKey)
+</a><a href="#h0-1-30" id="h0-1-30" class="i">+        val url = if (!protoReader.containsPath(2, 3)) {
+</a><a href="#h0-1-31" id="h0-1-31" class="i">+            &quot;https://bolt-gcdn.sc-cdn.net/br/&quot; + protoReader.getString(2, 2)
+</a><a href="#h0-1-32" id="h0-1-32" class="i">+        }
+</a><a href="#h0-1-33" id="h0-1-33" class="i">+        else {
+</a><a href="#h0-1-34" id="h0-1-34" class="i">+            &quot;https://gcp.api.snapchat.com/bolt-http/resolve?co=&quot; + Base64.getUrlEncoder().encodeToString(protoKey)
+</a>         }
+<a href="#h0-1-36" id="h0-1-36" class="d">-        .build()
+</a> 
+<a href="#h0-1-38" id="h0-1-38" class="d">-    fun newResolveRequest(protoKey: ByteArray) = Request.Builder()
+</a><a href="#h0-1-39" id="h0-1-39" class="d">-        .url(BOLT_HTTP_RESOLVER_URL + &quot;/resolve?co=&quot; + Base64.getUrlEncoder().encodeToString(protoKey))
+</a><a href="#h0-1-40" id="h0-1-40" class="d">-        .addHeader(&quot;User-Agent&quot;, Constants.USER_AGENT)
+</a><a href="#h0-1-41" id="h0-1-41" class="d">-        .build()
+</a><a href="#h0-1-42" id="h0-1-42" class="i">+        return Request.Builder()
+</a><a href="#h0-1-43" id="h0-1-43" class="i">+            .url(url)
+</a><a href="#h0-1-44" id="h0-1-44" class="i">+            .addHeader(&quot;User-Agent&quot;, Constants.USER_AGENT)
+</a><a href="#h0-1-45" id="h0-1-45" class="i">+            .build()
+</a><a href="#h0-1-46" id="h0-1-46" class="i">+    }
+</a> 
+     suspend inline fun downloadMedia(url: String, decryptionCallback: (InputStream) -&gt; InputStream = { it }, result: (InputStream, Long) -&gt; Unit) {
+         okHttpClient.newCall(Request.Builder().url(url).build()).await().use { response -&gt;
+</pre>
+</div>
+</body>
+</html>
