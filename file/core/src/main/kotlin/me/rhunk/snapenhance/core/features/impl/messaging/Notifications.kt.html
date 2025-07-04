@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> Notifications.kt (26656B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt">raw</a></p><hr/><pre id="blob">
+<p> Notifications.kt (24997B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core.features.impl.messaging
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import android.app.Notification
@@ -47,519 +47,494 @@
 <a href="#l24" class="line" id="l24">     24</a> import me.rhunk.snapenhance.core.features.Feature
 <a href="#l25" class="line" id="l25">     25</a> import me.rhunk.snapenhance.core.features.impl.FriendMutationObserver
 <a href="#l26" class="line" id="l26">     26</a> import me.rhunk.snapenhance.core.features.impl.downloader.MediaDownloader
-<a href="#l27" class="line" id="l27">     27</a> import me.rhunk.snapenhance.core.features.impl.downloader.decoder.AttachmentType
-<a href="#l28" class="line" id="l28">     28</a> import me.rhunk.snapenhance.core.features.impl.downloader.decoder.MessageDecoder
-<a href="#l29" class="line" id="l29">     29</a> import me.rhunk.snapenhance.core.features.impl.experiments.BetterTranscript
-<a href="#l30" class="line" id="l30">     30</a> import me.rhunk.snapenhance.core.features.impl.spying.StealthMode
-<a href="#l31" class="line" id="l31">     31</a> import me.rhunk.snapenhance.core.util.hook.HookStage
-<a href="#l32" class="line" id="l32">     32</a> import me.rhunk.snapenhance.core.util.hook.findRestrictedConstructor
-<a href="#l33" class="line" id="l33">     33</a> import me.rhunk.snapenhance.core.util.hook.findRestrictedMethod
-<a href="#l34" class="line" id="l34">     34</a> import me.rhunk.snapenhance.core.util.hook.hook
-<a href="#l35" class="line" id="l35">     35</a> import me.rhunk.snapenhance.core.util.ktx.setObjectField
-<a href="#l36" class="line" id="l36">     36</a> import me.rhunk.snapenhance.core.util.media.PreviewUtils
-<a href="#l37" class="line" id="l37">     37</a> import me.rhunk.snapenhance.core.wrapper.impl.Message
-<a href="#l38" class="line" id="l38">     38</a> import me.rhunk.snapenhance.core.wrapper.impl.SnapUUID
-<a href="#l39" class="line" id="l39">     39</a> import okhttp3.RequestBody.Companion.toRequestBody
-<a href="#l40" class="line" id="l40">     40</a> import kotlin.coroutines.suspendCoroutine
-<a href="#l41" class="line" id="l41">     41</a> 
-<a href="#l42" class="line" id="l42">     42</a> class Notifications : Feature(&quot;Notifications&quot;) {
-<a href="#l43" class="line" id="l43">     43</a>     inner class NotificationData(
-<a href="#l44" class="line" id="l44">     44</a>         val tag: String?,
-<a href="#l45" class="line" id="l45">     45</a>         val id: Int,
-<a href="#l46" class="line" id="l46">     46</a>         var notification: Notification,
-<a href="#l47" class="line" id="l47">     47</a>         val userHandle: UserHandle
-<a href="#l48" class="line" id="l48">     48</a>     ) {
-<a href="#l49" class="line" id="l49">     49</a>         fun send() {
-<a href="#l50" class="line" id="l50">     50</a>             XposedBridge.invokeOriginalMethod(notifyAsUserMethod, notificationManager, arrayOf(
-<a href="#l51" class="line" id="l51">     51</a>                 tag, id, notification, userHandle
-<a href="#l52" class="line" id="l52">     52</a>             ))
-<a href="#l53" class="line" id="l53">     53</a>         }
-<a href="#l54" class="line" id="l54">     54</a> 
-<a href="#l55" class="line" id="l55">     55</a>         fun copy(tag: String? = this.tag, id: Int = this.id, notification: Notification = this.notification, userHandle: UserHandle = this.userHandle) =
-<a href="#l56" class="line" id="l56">     56</a>             NotificationData(tag, id, notification, userHandle)
-<a href="#l57" class="line" id="l57">     57</a>     }
-<a href="#l58" class="line" id="l58">     58</a> 
-<a href="#l59" class="line" id="l59">     59</a>     companion object{
-<a href="#l60" class="line" id="l60">     60</a>         const val ACTION_REPLY = &quot;me.rhunk.snapenhance.action.notification.REPLY&quot;
-<a href="#l61" class="line" id="l61">     61</a>         const val ACTION_DOWNLOAD = &quot;me.rhunk.snapenhance.action.notification.DOWNLOAD&quot;
-<a href="#l62" class="line" id="l62">     62</a>         const val ACTION_MARK_AS_READ = &quot;me.rhunk.snapenhance.action.notification.MARK_AS_READ&quot;
-<a href="#l63" class="line" id="l63">     63</a>         const val SNAPCHAT_NOTIFICATION_GROUP = &quot;snapchat_notification_group&quot;
-<a href="#l64" class="line" id="l64">     64</a>     }
-<a href="#l65" class="line" id="l65">     65</a> 
-<a href="#l66" class="line" id="l66">     66</a>     @OptIn(ExperimentalCoroutinesApi::class)
-<a href="#l67" class="line" id="l67">     67</a>     private val coroutineDispatcher = Dispatchers.IO.limitedParallelism(1)
-<a href="#l68" class="line" id="l68">     68</a>     private val cachedMessages = mutableMapOf&lt;String, MutableMap&lt;Long, String&gt;&gt;() // conversationId =&gt; orderKey, message
-<a href="#l69" class="line" id="l69">     69</a>     private val sentNotifications = mutableMapOf&lt;Int, String&gt;() // notificationId =&gt; conversationId
-<a href="#l70" class="line" id="l70">     70</a> 
-<a href="#l71" class="line" id="l71">     71</a>     private val notifyAsUserMethod by lazy {
-<a href="#l72" class="line" id="l72">     72</a>         NotificationManager::class.java.findRestrictedMethod { it.name == &quot;notifyAsUser&quot; } ?: throw NoSuchMethodException(&quot;notifyAsUser&quot;)
-<a href="#l73" class="line" id="l73">     73</a>     }
-<a href="#l74" class="line" id="l74">     74</a> 
-<a href="#l75" class="line" id="l75">     75</a>     private val notificationManager by lazy {
-<a href="#l76" class="line" id="l76">     76</a>         context.androidContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-<a href="#l77" class="line" id="l77">     77</a>     }
+<a href="#l27" class="line" id="l27">     27</a> import me.rhunk.snapenhance.core.features.impl.downloader.decoder.MessageDecoder
+<a href="#l28" class="line" id="l28">     28</a> import me.rhunk.snapenhance.core.features.impl.spying.StealthMode
+<a href="#l29" class="line" id="l29">     29</a> import me.rhunk.snapenhance.core.util.hook.HookStage
+<a href="#l30" class="line" id="l30">     30</a> import me.rhunk.snapenhance.core.util.hook.findRestrictedConstructor
+<a href="#l31" class="line" id="l31">     31</a> import me.rhunk.snapenhance.core.util.hook.findRestrictedMethod
+<a href="#l32" class="line" id="l32">     32</a> import me.rhunk.snapenhance.core.util.hook.hook
+<a href="#l33" class="line" id="l33">     33</a> import me.rhunk.snapenhance.core.util.ktx.setObjectField
+<a href="#l34" class="line" id="l34">     34</a> import me.rhunk.snapenhance.core.util.media.PreviewUtils
+<a href="#l35" class="line" id="l35">     35</a> import me.rhunk.snapenhance.core.wrapper.impl.Message
+<a href="#l36" class="line" id="l36">     36</a> import me.rhunk.snapenhance.core.wrapper.impl.SnapUUID
+<a href="#l37" class="line" id="l37">     37</a> import kotlin.coroutines.suspendCoroutine
+<a href="#l38" class="line" id="l38">     38</a> 
+<a href="#l39" class="line" id="l39">     39</a> class Notifications : Feature(&quot;Notifications&quot;) {
+<a href="#l40" class="line" id="l40">     40</a>     inner class NotificationData(
+<a href="#l41" class="line" id="l41">     41</a>         val tag: String?,
+<a href="#l42" class="line" id="l42">     42</a>         val id: Int,
+<a href="#l43" class="line" id="l43">     43</a>         var notification: Notification,
+<a href="#l44" class="line" id="l44">     44</a>         val userHandle: UserHandle
+<a href="#l45" class="line" id="l45">     45</a>     ) {
+<a href="#l46" class="line" id="l46">     46</a>         fun send() {
+<a href="#l47" class="line" id="l47">     47</a>             XposedBridge.invokeOriginalMethod(notifyAsUserMethod, notificationManager, arrayOf(
+<a href="#l48" class="line" id="l48">     48</a>                 tag, id, notification, userHandle
+<a href="#l49" class="line" id="l49">     49</a>             ))
+<a href="#l50" class="line" id="l50">     50</a>         }
+<a href="#l51" class="line" id="l51">     51</a> 
+<a href="#l52" class="line" id="l52">     52</a>         fun copy(tag: String? = this.tag, id: Int = this.id, notification: Notification = this.notification, userHandle: UserHandle = this.userHandle) =
+<a href="#l53" class="line" id="l53">     53</a>             NotificationData(tag, id, notification, userHandle)
+<a href="#l54" class="line" id="l54">     54</a>     }
+<a href="#l55" class="line" id="l55">     55</a> 
+<a href="#l56" class="line" id="l56">     56</a>     companion object{
+<a href="#l57" class="line" id="l57">     57</a>         const val ACTION_REPLY = &quot;me.rhunk.snapenhance.action.notification.REPLY&quot;
+<a href="#l58" class="line" id="l58">     58</a>         const val ACTION_DOWNLOAD = &quot;me.rhunk.snapenhance.action.notification.DOWNLOAD&quot;
+<a href="#l59" class="line" id="l59">     59</a>         const val ACTION_MARK_AS_READ = &quot;me.rhunk.snapenhance.action.notification.MARK_AS_READ&quot;
+<a href="#l60" class="line" id="l60">     60</a>         const val SNAPCHAT_NOTIFICATION_GROUP = &quot;snapchat_notification_group&quot;
+<a href="#l61" class="line" id="l61">     61</a>     }
+<a href="#l62" class="line" id="l62">     62</a> 
+<a href="#l63" class="line" id="l63">     63</a>     @OptIn(ExperimentalCoroutinesApi::class)
+<a href="#l64" class="line" id="l64">     64</a>     private val coroutineDispatcher = Dispatchers.IO.limitedParallelism(1)
+<a href="#l65" class="line" id="l65">     65</a>     private val cachedMessages = mutableMapOf&lt;String, MutableMap&lt;Long, String&gt;&gt;() // conversationId =&gt; orderKey, message
+<a href="#l66" class="line" id="l66">     66</a>     private val sentNotifications = mutableMapOf&lt;Int, String&gt;() // notificationId =&gt; conversationId
+<a href="#l67" class="line" id="l67">     67</a> 
+<a href="#l68" class="line" id="l68">     68</a>     private val notifyAsUserMethod by lazy {
+<a href="#l69" class="line" id="l69">     69</a>         NotificationManager::class.java.findRestrictedMethod { it.name == &quot;notifyAsUser&quot; } ?: throw NoSuchMethodException(&quot;notifyAsUser&quot;)
+<a href="#l70" class="line" id="l70">     70</a>     }
+<a href="#l71" class="line" id="l71">     71</a> 
+<a href="#l72" class="line" id="l72">     72</a>     private val notificationManager by lazy {
+<a href="#l73" class="line" id="l73">     73</a>         context.androidContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+<a href="#l74" class="line" id="l74">     74</a>     }
+<a href="#l75" class="line" id="l75">     75</a> 
+<a href="#l76" class="line" id="l76">     76</a>     private val translations by lazy { context.translation.getCategory(&quot;better_notifications&quot;) }
+<a href="#l77" class="line" id="l77">     77</a>     private val config by lazy { context.config.messaging.betterNotifications }
 <a href="#l78" class="line" id="l78">     78</a> 
-<a href="#l79" class="line" id="l79">     79</a>     private val translations by lazy { context.translation.getCategory(&quot;better_notifications&quot;) }
-<a href="#l80" class="line" id="l80">     80</a>     private val config by lazy { context.config.messaging.betterNotifications }
-<a href="#l81" class="line" id="l81">     81</a> 
-<a href="#l82" class="line" id="l82">     82</a>     private fun newNotificationBuilder(notification: Notification) = Notification.Builder::class.java.findRestrictedConstructor {
-<a href="#l83" class="line" id="l83">     83</a>         it.parameterTypes.size == 2 &amp;&amp; it.parameterTypes[1] == Notification::class.java
-<a href="#l84" class="line" id="l84">     84</a>     }?.newInstance(context.androidContext, notification) as? Notification.Builder ?: throw NoSuchMethodException(&quot;Notification.Builder&quot;)
-<a href="#l85" class="line" id="l85">     85</a> 
-<a href="#l86" class="line" id="l86">     86</a>     private fun setNotificationText(notification: Notification, text: String) {
-<a href="#l87" class="line" id="l87">     87</a>         notification.extras.putString(&quot;android.text&quot;, text)
-<a href="#l88" class="line" id="l88">     88</a>         notification.extras.putString(&quot;android.bigText&quot;, text)
-<a href="#l89" class="line" id="l89">     89</a>         notification.extras.putParcelableArray(&quot;android.messages&quot;, text.split(&quot;\n&quot;).map {
-<a href="#l90" class="line" id="l90">     90</a>             Bundle().apply {
-<a href="#l91" class="line" id="l91">     91</a>                 putBundle(&quot;extras&quot;, Bundle())
-<a href="#l92" class="line" id="l92">     92</a>                 putString(&quot;text&quot;, it)
-<a href="#l93" class="line" id="l93">     93</a>                 putLong(&quot;time&quot;, System.currentTimeMillis())
-<a href="#l94" class="line" id="l94">     94</a>             }
-<a href="#l95" class="line" id="l95">     95</a>         }.toTypedArray())
-<a href="#l96" class="line" id="l96">     96</a>     }
-<a href="#l97" class="line" id="l97">     97</a> 
-<a href="#l98" class="line" id="l98">     98</a>     private fun computeNotificationMessages(notification: Notification, conversationId: String) {
-<a href="#l99" class="line" id="l99">     99</a>         val messageText = StringBuilder().apply {
-<a href="#l100" class="line" id="l100">    100</a>             cachedMessages.computeIfAbsent(conversationId) { sortedMapOf() }.forEach {
-<a href="#l101" class="line" id="l101">    101</a>                 if (isNotEmpty()) append(&quot;\n&quot;)
-<a href="#l102" class="line" id="l102">    102</a>                 append(it.value)
-<a href="#l103" class="line" id="l103">    103</a>             }
-<a href="#l104" class="line" id="l104">    104</a>         }.toString()
+<a href="#l79" class="line" id="l79">     79</a>     private fun newNotificationBuilder(notification: Notification) = Notification.Builder::class.java.findRestrictedConstructor {
+<a href="#l80" class="line" id="l80">     80</a>         it.parameterTypes.size == 2 &amp;&amp; it.parameterTypes[1] == Notification::class.java
+<a href="#l81" class="line" id="l81">     81</a>     }?.newInstance(context.androidContext, notification) as? Notification.Builder ?: throw NoSuchMethodException(&quot;Notification.Builder&quot;)
+<a href="#l82" class="line" id="l82">     82</a> 
+<a href="#l83" class="line" id="l83">     83</a>     private fun setNotificationText(notification: Notification, text: String) {
+<a href="#l84" class="line" id="l84">     84</a>         notification.extras.putString(&quot;android.text&quot;, text)
+<a href="#l85" class="line" id="l85">     85</a>         notification.extras.putString(&quot;android.bigText&quot;, text)
+<a href="#l86" class="line" id="l86">     86</a>         notification.extras.putParcelableArray(&quot;android.messages&quot;, text.split(&quot;\n&quot;).map {
+<a href="#l87" class="line" id="l87">     87</a>             Bundle().apply {
+<a href="#l88" class="line" id="l88">     88</a>                 putBundle(&quot;extras&quot;, Bundle())
+<a href="#l89" class="line" id="l89">     89</a>                 putString(&quot;text&quot;, it)
+<a href="#l90" class="line" id="l90">     90</a>                 putLong(&quot;time&quot;, System.currentTimeMillis())
+<a href="#l91" class="line" id="l91">     91</a>             }
+<a href="#l92" class="line" id="l92">     92</a>         }.toTypedArray())
+<a href="#l93" class="line" id="l93">     93</a>     }
+<a href="#l94" class="line" id="l94">     94</a> 
+<a href="#l95" class="line" id="l95">     95</a>     private fun computeNotificationMessages(notification: Notification, conversationId: String) {
+<a href="#l96" class="line" id="l96">     96</a>         val messageText = StringBuilder().apply {
+<a href="#l97" class="line" id="l97">     97</a>             cachedMessages.computeIfAbsent(conversationId) { sortedMapOf() }.forEach {
+<a href="#l98" class="line" id="l98">     98</a>                 if (isNotEmpty()) append(&quot;\n&quot;)
+<a href="#l99" class="line" id="l99">     99</a>                 append(it.value)
+<a href="#l100" class="line" id="l100">    100</a>             }
+<a href="#l101" class="line" id="l101">    101</a>         }.toString()
+<a href="#l102" class="line" id="l102">    102</a> 
+<a href="#l103" class="line" id="l103">    103</a>         setNotificationText(notification, messageText)
+<a href="#l104" class="line" id="l104">    104</a>     }
 <a href="#l105" class="line" id="l105">    105</a> 
-<a href="#l106" class="line" id="l106">    106</a>         setNotificationText(notification, messageText)
-<a href="#l107" class="line" id="l107">    107</a>     }
-<a href="#l108" class="line" id="l108">    108</a> 
-<a href="#l109" class="line" id="l109">    109</a>     private fun setupNotificationActionButtons(contentType: ContentType, conversationId: String, message: Message, notificationData: NotificationData) {
-<a href="#l110" class="line" id="l110">    110</a>         val actions = mutableListOf&lt;Notification.Action&gt;()
-<a href="#l111" class="line" id="l111">    111</a>         actions.addAll(notificationData.notification.actions ?: emptyArray())
+<a href="#l106" class="line" id="l106">    106</a>     private fun setupNotificationActionButtons(contentType: ContentType, conversationId: String, message: Message, notificationData: NotificationData) {
+<a href="#l107" class="line" id="l107">    107</a>         val actions = mutableListOf&lt;Notification.Action&gt;()
+<a href="#l108" class="line" id="l108">    108</a>         actions.addAll(notificationData.notification.actions ?: emptyArray())
+<a href="#l109" class="line" id="l109">    109</a> 
+<a href="#l110" class="line" id="l110">    110</a>         fun newAction(title: String, remoteAction: String, filter: (() -&gt; Boolean), builder: (Notification.Action.Builder) -&gt; Unit) {
+<a href="#l111" class="line" id="l111">    111</a>             if (!filter()) return
 <a href="#l112" class="line" id="l112">    112</a> 
-<a href="#l113" class="line" id="l113">    113</a>         fun newAction(title: String, remoteAction: String, filter: (() -&gt; Boolean), builder: (Notification.Action.Builder) -&gt; Unit) {
-<a href="#l114" class="line" id="l114">    114</a>             if (!filter()) return
-<a href="#l115" class="line" id="l115">    115</a> 
-<a href="#l116" class="line" id="l116">    116</a>             val intent = SnapWidgetBroadcastReceiverHelper.create(remoteAction) {
-<a href="#l117" class="line" id="l117">    117</a>                 putExtra(&quot;conversation_id&quot;, conversationId)
-<a href="#l118" class="line" id="l118">    118</a>                 putExtra(&quot;notification_id&quot;, notificationData.id)
-<a href="#l119" class="line" id="l119">    119</a>                 putExtra(&quot;client_message_id&quot;, message.messageDescriptor!!.messageId!!)
-<a href="#l120" class="line" id="l120">    120</a>             }
-<a href="#l121" class="line" id="l121">    121</a> 
-<a href="#l122" class="line" id="l122">    122</a>             val action = Notification.Action.Builder(null, title, PendingIntent.getBroadcast(
-<a href="#l123" class="line" id="l123">    123</a>                 context.androidContext,
-<a href="#l124" class="line" id="l124">    124</a>                 System.nanoTime().toInt(),
-<a href="#l125" class="line" id="l125">    125</a>                 intent,
-<a href="#l126" class="line" id="l126">    126</a>                 PendingIntent.FLAG_MUTABLE
-<a href="#l127" class="line" id="l127">    127</a>             )).apply(builder).build()
-<a href="#l128" class="line" id="l128">    128</a>             actions.add(action)
-<a href="#l129" class="line" id="l129">    129</a>         }
-<a href="#l130" class="line" id="l130">    130</a> 
-<a href="#l131" class="line" id="l131">    131</a>         newAction(translations[&quot;button.reply&quot;], ACTION_REPLY, {
-<a href="#l132" class="line" id="l132">    132</a>             config.replyButton.get() &amp;&amp; contentType == ContentType.CHAT
-<a href="#l133" class="line" id="l133">    133</a>         }) {
-<a href="#l134" class="line" id="l134">    134</a>             val chatReplyInput = RemoteInput.Builder(&quot;chat_reply_input&quot;)
-<a href="#l135" class="line" id="l135">    135</a>                 .setLabel(translations[&quot;button.reply&quot;])
-<a href="#l136" class="line" id="l136">    136</a>                 .build()
-<a href="#l137" class="line" id="l137">    137</a>             it.addRemoteInput(chatReplyInput)
-<a href="#l138" class="line" id="l138">    138</a>             if (config.smartReplies.get()) {
-<a href="#l139" class="line" id="l139">    139</a>                 it.setAllowGeneratedReplies(true)
-<a href="#l140" class="line" id="l140">    140</a>             }
-<a href="#l141" class="line" id="l141">    141</a>         }
-<a href="#l142" class="line" id="l142">    142</a> 
-<a href="#l143" class="line" id="l143">    143</a>         newAction(translations[&quot;button.download&quot;], ACTION_DOWNLOAD, {
-<a href="#l144" class="line" id="l144">    144</a>             config.downloadButton.get() &amp;&amp; config.mediaPreview.get().contains(contentType.name)
-<a href="#l145" class="line" id="l145">    145</a>         }) {}
-<a href="#l146" class="line" id="l146">    146</a> 
-<a href="#l147" class="line" id="l147">    147</a>         newAction(translations[&quot;button.mark_as_read&quot;], ACTION_MARK_AS_READ, {
-<a href="#l148" class="line" id="l148">    148</a>             config.markAsReadButton.get()
-<a href="#l149" class="line" id="l149">    149</a>         }) {}
-<a href="#l150" class="line" id="l150">    150</a> 
-<a href="#l151" class="line" id="l151">    151</a>         val notificationBuilder = newNotificationBuilder(notificationData.notification).apply {
-<a href="#l152" class="line" id="l152">    152</a>             setActions(*actions.toTypedArray())
-<a href="#l153" class="line" id="l153">    153</a>         }
-<a href="#l154" class="line" id="l154">    154</a>         notificationData.notification = notificationBuilder.build()
-<a href="#l155" class="line" id="l155">    155</a>     }
-<a href="#l156" class="line" id="l156">    156</a> 
-<a href="#l157" class="line" id="l157">    157</a>     private fun setupBroadcastReceiverHook() {
-<a href="#l158" class="line" id="l158">    158</a>         context.event.subscribe(SnapWidgetBroadcastReceiveEvent::class) { event -&gt;
-<a href="#l159" class="line" id="l159">    159</a>             val intent = event.intent ?: return@subscribe
-<a href="#l160" class="line" id="l160">    160</a>             val conversationId = intent.getStringExtra(&quot;conversation_id&quot;) ?: return@subscribe
-<a href="#l161" class="line" id="l161">    161</a>             val clientMessageId = intent.getLongExtra(&quot;client_message_id&quot;, -1)
-<a href="#l162" class="line" id="l162">    162</a>             val notificationId = intent.getIntExtra(&quot;notification_id&quot;, -1)
-<a href="#l163" class="line" id="l163">    163</a> 
-<a href="#l164" class="line" id="l164">    164</a>             val updateNotification: (Int, (Notification) -&gt; Unit) -&gt; Unit = { id, notificationBuilder -&gt;
-<a href="#l165" class="line" id="l165">    165</a>                 notificationManager.activeNotifications.firstOrNull { it.id == id }?.let {
-<a href="#l166" class="line" id="l166">    166</a>                     notificationBuilder(it.notification)
-<a href="#l167" class="line" id="l167">    167</a>                     NotificationData(it.tag, it.id, it.notification, it.user).send()
-<a href="#l168" class="line" id="l168">    168</a>                 }
-<a href="#l169" class="line" id="l169">    169</a>             }
-<a href="#l170" class="line" id="l170">    170</a> 
-<a href="#l171" class="line" id="l171">    171</a>             suspend fun appendNotificationText(input: String) {
-<a href="#l172" class="line" id="l172">    172</a>                 cachedMessages.computeIfAbsent(conversationId) { sortedMapOf() }.let {
-<a href="#l173" class="line" id="l173">    173</a>                     it[(it.keys.lastOrNull() ?: 0) + 1L] = input
-<a href="#l174" class="line" id="l174">    174</a>                 }
-<a href="#l175" class="line" id="l175">    175</a> 
-<a href="#l176" class="line" id="l176">    176</a>                 withContext(Dispatchers.Main) {
-<a href="#l177" class="line" id="l177">    177</a>                     updateNotification(notificationId) { notification -&gt;
-<a href="#l178" class="line" id="l178">    178</a>                         notification.flags = notification.flags or Notification.FLAG_ONLY_ALERT_ONCE
-<a href="#l179" class="line" id="l179">    179</a>                         computeNotificationMessages(notification, conversationId)
-<a href="#l180" class="line" id="l180">    180</a>                     }
-<a href="#l181" class="line" id="l181">    181</a>                 }
-<a href="#l182" class="line" id="l182">    182</a>             }
-<a href="#l183" class="line" id="l183">    183</a> 
-<a href="#l184" class="line" id="l184">    184</a>             when (event.action) {
-<a href="#l185" class="line" id="l185">    185</a>                 ACTION_REPLY -&gt; {
-<a href="#l186" class="line" id="l186">    186</a>                     val input = RemoteInput.getResultsFromIntent(intent).getCharSequence(&quot;chat_reply_input&quot;)
-<a href="#l187" class="line" id="l187">    187</a>                         .toString()
-<a href="#l188" class="line" id="l188">    188</a>                     val myUser = context.database.myUserId.let { context.database.getFriendInfo(it) } ?: return@subscribe
-<a href="#l189" class="line" id="l189">    189</a> 
-<a href="#l190" class="line" id="l190">    190</a>                     context.messageSender.sendChatMessage(listOf(SnapUUID(conversationId)), input, onError = {
-<a href="#l191" class="line" id="l191">    191</a>                         context.longToast(&quot;Failed to send message: $it&quot;)
-<a href="#l192" class="line" id="l192">    192</a>                         context.coroutineScope.launch(coroutineDispatcher) {
-<a href="#l193" class="line" id="l193">    193</a>                             appendNotificationText(&quot;Failed to send message: $it&quot;)
-<a href="#l194" class="line" id="l194">    194</a>                         }
-<a href="#l195" class="line" id="l195">    195</a>                     }, onSuccess = {
-<a href="#l196" class="line" id="l196">    196</a>                         context.coroutineScope.launch(coroutineDispatcher) {
-<a href="#l197" class="line" id="l197">    197</a>                             appendNotificationText(&quot;${myUser.displayName ?: myUser.mutableUsername}: $input&quot;)
-<a href="#l198" class="line" id="l198">    198</a>                             context.feature(AutoMarkAsRead::class).takeIf { it.canMarkConversationAsRead }?.markConversationsAsRead(listOf(conversationId))
-<a href="#l199" class="line" id="l199">    199</a>                         }
-<a href="#l200" class="line" id="l200">    200</a>                     })
-<a href="#l201" class="line" id="l201">    201</a>                 }
-<a href="#l202" class="line" id="l202">    202</a>                 ACTION_DOWNLOAD -&gt; {
-<a href="#l203" class="line" id="l203">    203</a>                     runCatching {
-<a href="#l204" class="line" id="l204">    204</a>                         context.feature(MediaDownloader::class).downloadMessageId(clientMessageId, isPreview = false)
-<a href="#l205" class="line" id="l205">    205</a>                     }.onFailure {
-<a href="#l206" class="line" id="l206">    206</a>                         context.longToast(it)
-<a href="#l207" class="line" id="l207">    207</a>                     }
-<a href="#l208" class="line" id="l208">    208</a>                 }
-<a href="#l209" class="line" id="l209">    209</a>                 ACTION_MARK_AS_READ -&gt; {
-<a href="#l210" class="line" id="l210">    210</a>                     runCatching {
-<a href="#l211" class="line" id="l211">    211</a>                         val conversationManager = context.feature(Messaging::class).conversationManager ?: return@subscribe
-<a href="#l212" class="line" id="l212">    212</a> 
-<a href="#l213" class="line" id="l213">    213</a>                         context.feature(StealthMode::class).addDisplayedMessageException(clientMessageId)
-<a href="#l214" class="line" id="l214">    214</a>                         conversationManager.displayedMessages(
-<a href="#l215" class="line" id="l215">    215</a>                             conversationId,
-<a href="#l216" class="line" id="l216">    216</a>                             clientMessageId,
-<a href="#l217" class="line" id="l217">    217</a>                             onResult = {
-<a href="#l218" class="line" id="l218">    218</a>                                 if (it != null) {
-<a href="#l219" class="line" id="l219">    219</a>                                     context.log.error(&quot;Failed to mark conversation as read: $it&quot;)
-<a href="#l220" class="line" id="l220">    220</a>                                     context.shortToast(&quot;Failed to mark conversation as read&quot;)
-<a href="#l221" class="line" id="l221">    221</a>                                 }
-<a href="#l222" class="line" id="l222">    222</a>                             }
-<a href="#l223" class="line" id="l223">    223</a>                         )
-<a href="#l224" class="line" id="l224">    224</a> 
-<a href="#l225" class="line" id="l225">    225</a>                         if (config.markAsReadAndSaveInChat.get()) {
-<a href="#l226" class="line" id="l226">    226</a>                             val messaging = context.feature(Messaging::class)
-<a href="#l227" class="line" id="l227">    227</a>                             val autoSave = context.feature(AutoSave::class)
-<a href="#l228" class="line" id="l228">    228</a> 
-<a href="#l229" class="line" id="l229">    229</a>                             if (autoSave.canSaveInConversation(conversationId, headless = true)) {
-<a href="#l230" class="line" id="l230">    230</a>                                 messaging.conversationManager?.fetchConversationWithMessagesPaginated(
-<a href="#l231" class="line" id="l231">    231</a>                                     conversationId,
-<a href="#l232" class="line" id="l232">    232</a>                                     Long.MAX_VALUE,
-<a href="#l233" class="line" id="l233">    233</a>                                     20,
-<a href="#l234" class="line" id="l234">    234</a>                                     onSuccess = { messages -&gt;
-<a href="#l235" class="line" id="l235">    235</a>                                         messages.reversed().forEach { message -&gt;
-<a href="#l236" class="line" id="l236">    236</a>                                             if (!autoSave.canSaveMessage(message, headless = true)) return@forEach
-<a href="#l237" class="line" id="l237">    237</a>                                             context.coroutineScope.launch(coroutineDispatcher) {
-<a href="#l238" class="line" id="l238">    238</a>                                                 autoSave.saveMessage(conversationId, message)
-<a href="#l239" class="line" id="l239">    239</a>                                             }
-<a href="#l240" class="line" id="l240">    240</a>                                         }
-<a href="#l241" class="line" id="l241">    241</a>                                     },
-<a href="#l242" class="line" id="l242">    242</a>                                     onError = {
-<a href="#l243" class="line" id="l243">    243</a>                                         context.log.error(&quot;Failed to fetch conversation: $it&quot;)
-<a href="#l244" class="line" id="l244">    244</a>                                         context.shortToast(&quot;Failed to fetch conversation&quot;)
-<a href="#l245" class="line" id="l245">    245</a>                                     }
-<a href="#l246" class="line" id="l246">    246</a>                                 )
-<a href="#l247" class="line" id="l247">    247</a>                             }
-<a href="#l248" class="line" id="l248">    248</a>                         }
-<a href="#l249" class="line" id="l249">    249</a> 
-<a href="#l250" class="line" id="l250">    250</a>                         val conversationMessage = context.database.getConversationMessageFromId(clientMessageId) ?: return@subscribe
-<a href="#l251" class="line" id="l251">    251</a> 
-<a href="#l252" class="line" id="l252">    252</a>                         if (conversationMessage.contentType == ContentType.SNAP.id) {
-<a href="#l253" class="line" id="l253">    253</a>                             conversationManager.updateMessage(conversationId, clientMessageId, MessageUpdate.READ) {
-<a href="#l254" class="line" id="l254">    254</a>                                 if (it != null) {
-<a href="#l255" class="line" id="l255">    255</a>                                     context.log.error(&quot;Failed to open snap: $it&quot;)
-<a href="#l256" class="line" id="l256">    256</a>                                     context.shortToast(&quot;Failed to open snap&quot;)
-<a href="#l257" class="line" id="l257">    257</a>                                 }
-<a href="#l258" class="line" id="l258">    258</a>                             }
-<a href="#l259" class="line" id="l259">    259</a>                         }
-<a href="#l260" class="line" id="l260">    260</a>                     }.onFailure {
-<a href="#l261" class="line" id="l261">    261</a>                         context.log.error(&quot;Failed to mark message as read&quot;, it)
-<a href="#l262" class="line" id="l262">    262</a>                         context.shortToast(&quot;Failed to mark message as read. Check logs for more details&quot;)
-<a href="#l263" class="line" id="l263">    263</a>                     }
-<a href="#l264" class="line" id="l264">    264</a>                     notificationManager.cancel(notificationId)
-<a href="#l265" class="line" id="l265">    265</a>                 }
-<a href="#l266" class="line" id="l266">    266</a>                 else -&gt; return@subscribe
-<a href="#l267" class="line" id="l267">    267</a>             }
-<a href="#l268" class="line" id="l268">    268</a> 
-<a href="#l269" class="line" id="l269">    269</a>             event.canceled = true
-<a href="#l270" class="line" id="l270">    270</a>         }
-<a href="#l271" class="line" id="l271">    271</a>     }
-<a href="#l272" class="line" id="l272">    272</a> 
-<a href="#l273" class="line" id="l273">    273</a>     private fun sendNotification(message: Message, notificationData: NotificationData, forceCreate: Boolean) {
-<a href="#l274" class="line" id="l274">    274</a>         val conversationId = message.messageDescriptor?.conversationId.toString()
-<a href="#l275" class="line" id="l275">    275</a>         val notificationId = if (forceCreate) System.nanoTime().toInt() else message.messageDescriptor?.conversationId?.toBytes().contentHashCode()
-<a href="#l276" class="line" id="l276">    276</a>         sentNotifications.computeIfAbsent(notificationId) { conversationId }
-<a href="#l277" class="line" id="l277">    277</a> 
-<a href="#l278" class="line" id="l278">    278</a>         if (config.groupNotifications.get()) {
-<a href="#l279" class="line" id="l279">    279</a>             runCatching {
-<a href="#l280" class="line" id="l280">    280</a>                 if (notificationManager.activeNotifications.firstOrNull {
-<a href="#l281" class="line" id="l281">    281</a>                     it.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0
-<a href="#l282" class="line" id="l282">    282</a>                 } == null) {
-<a href="#l283" class="line" id="l283">    283</a>                     notificationManager.notify(
-<a href="#l284" class="line" id="l284">    284</a>                         notificationData.tag,
-<a href="#l285" class="line" id="l285">    285</a>                         System.nanoTime().toInt(),
-<a href="#l286" class="line" id="l286">    286</a>                         Notification.Builder(context.androidContext, notificationData.notification.channelId)
-<a href="#l287" class="line" id="l287">    287</a>                             .setSmallIcon(notificationData.notification.smallIcon)
-<a href="#l288" class="line" id="l288">    288</a>                             .setGroup(SNAPCHAT_NOTIFICATION_GROUP)
-<a href="#l289" class="line" id="l289">    289</a>                             .setGroupSummary(true)
-<a href="#l290" class="line" id="l290">    290</a>                             .setAutoCancel(true)
-<a href="#l291" class="line" id="l291">    291</a>                             .setOnlyAlertOnce(true)
-<a href="#l292" class="line" id="l292">    292</a>                             .build()
-<a href="#l293" class="line" id="l293">    293</a>                     )
-<a href="#l294" class="line" id="l294">    294</a>                 }
-<a href="#l295" class="line" id="l295">    295</a>             }.onFailure {
-<a href="#l296" class="line" id="l296">    296</a>                 context.log.warn(&quot;Failed to set notification group key: ${it.stackTraceToString()}&quot;, key)
-<a href="#l297" class="line" id="l297">    297</a>             }
-<a href="#l298" class="line" id="l298">    298</a>         }
-<a href="#l299" class="line" id="l299">    299</a> 
-<a href="#l300" class="line" id="l300">    300</a>         val builder = newNotificationBuilder(notificationData.notification).apply {
-<a href="#l301" class="line" id="l301">    301</a>             setGroup(SNAPCHAT_NOTIFICATION_GROUP)
-<a href="#l302" class="line" id="l302">    302</a>             setGroupAlertBehavior(Notification.GROUP_ALERT_CHILDREN)
-<a href="#l303" class="line" id="l303">    303</a>             if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.Q &amp;&amp; config.smartReplies.get()) {
-<a href="#l304" class="line" id="l304">    304</a>                 setAllowSystemGeneratedContextualActions(true)
-<a href="#l305" class="line" id="l305">    305</a>             }
-<a href="#l306" class="line" id="l306">    306</a>         }
-<a href="#l307" class="line" id="l307">    307</a> 
-<a href="#l308" class="line" id="l308">    308</a>         notificationData.copy(id = notificationId, notification = builder.build()).also {
-<a href="#l309" class="line" id="l309">    309</a>             setupNotificationActionButtons(message.messageContent!!.contentType!!, conversationId, message, it)
-<a href="#l310" class="line" id="l310">    310</a>         }.send()
-<a href="#l311" class="line" id="l311">    311</a>     }
-<a href="#l312" class="line" id="l312">    312</a> 
-<a href="#l313" class="line" id="l313">    313</a>     private suspend fun onMessageReceived(data: NotificationData, notificationType: String, message: Message) {
-<a href="#l314" class="line" id="l314">    314</a>         val conversationId = message.messageDescriptor?.conversationId.toString()
-<a href="#l315" class="line" id="l315">    315</a>         val orderKey = message.orderKey ?: return
-<a href="#l316" class="line" id="l316">    316</a>         val senderUsername by lazy {
-<a href="#l317" class="line" id="l317">    317</a>             context.database.getFriendInfo(message.senderId.toString())?.let {
-<a href="#l318" class="line" id="l318">    318</a>                 it.displayName ?: it.mutableUsername
-<a href="#l319" class="line" id="l319">    319</a>             } ?: &quot;Unknown&quot;
-<a href="#l320" class="line" id="l320">    320</a>         }
-<a href="#l321" class="line" id="l321">    321</a> 
-<a href="#l322" class="line" id="l322">    322</a>         val contentType = message.messageContent!!.contentType!!.let { contentType -&gt;
-<a href="#l323" class="line" id="l323">    323</a>             when {
-<a href="#l324" class="line" id="l324">    324</a>                 notificationType.contains(&quot;screenshot&quot;) -&gt; ContentType.STATUS_CONVERSATION_CAPTURE_SCREENSHOT
-<a href="#l325" class="line" id="l325">    325</a>                 notificationType.contains(&quot;save_camera_roll&quot;) -&gt; ContentType.STATUS_SAVE_TO_CAMERA_ROLL
-<a href="#l326" class="line" id="l326">    326</a>                 else -&gt; contentType
-<a href="#l327" class="line" id="l327">    327</a>             }
-<a href="#l328" class="line" id="l328">    328</a>         }
-<a href="#l329" class="line" id="l329">    329</a>         val computeMessages: () -&gt; Unit = { computeNotificationMessages(data.notification, conversationId)}
-<a href="#l330" class="line" id="l330">    330</a> 
-<a href="#l331" class="line" id="l331">    331</a>         fun setNotificationText(text: String) {
-<a href="#l332" class="line" id="l332">    332</a>             val includeUsername = context.database.getDMOtherParticipant(conversationId) == null
-<a href="#l333" class="line" id="l333">    333</a>             cachedMessages.computeIfAbsent(conversationId) {
-<a href="#l334" class="line" id="l334">    334</a>                 sortedMapOf()
-<a href="#l335" class="line" id="l335">    335</a>             }[orderKey] = if (includeUsername) &quot;$senderUsername: $text&quot; else text
-<a href="#l336" class="line" id="l336">    336</a>         }
-<a href="#l337" class="line" id="l337">    337</a> 
-<a href="#l338" class="line" id="l338">    338</a>         if (config.mediaPreview.get().contains(contentType.name)) {
-<a href="#l339" class="line" id="l339">    339</a>             MessageDecoder.decode(message.messageContent!!).firstOrNull()?.also { media -&gt;
-<a href="#l340" class="line" id="l340">    340</a>                 runCatching {
-<a href="#l341" class="line" id="l341">    341</a>                     media.openStream { mediaStream, length -&gt;
-<a href="#l342" class="line" id="l342">    342</a>                         if (mediaStream == null || length &gt; 25 * 1024 * 1024) {
-<a href="#l343" class="line" id="l343">    343</a>                             context.log.error(&quot;Failed to open media stream or media is too large&quot;)
-<a href="#l344" class="line" id="l344">    344</a>                             sendNotification(message, data, true)
-<a href="#l345" class="line" id="l345">    345</a>                             return@openStream
-<a href="#l346" class="line" id="l346">    346</a>                         }
-<a href="#l347" class="line" id="l347">    347</a>                         val downloadedMedias = mutableMapOf&lt;SplitMediaAssetType, ByteArray&gt;()
-<a href="#l348" class="line" id="l348">    348</a> 
-<a href="#l349" class="line" id="l349">    349</a>                         MediaDownloaderHelper.getSplitElements(mediaStream) { type, inputStream -&gt;
-<a href="#l350" class="line" id="l350">    350</a>                             downloadedMedias[type] = inputStream.readBytes()
-<a href="#l351" class="line" id="l351">    351</a>                         }
+<a href="#l113" class="line" id="l113">    113</a>             val intent = SnapWidgetBroadcastReceiverHelper.create(remoteAction) {
+<a href="#l114" class="line" id="l114">    114</a>                 putExtra(&quot;conversation_id&quot;, conversationId)
+<a href="#l115" class="line" id="l115">    115</a>                 putExtra(&quot;notification_id&quot;, notificationData.id)
+<a href="#l116" class="line" id="l116">    116</a>                 putExtra(&quot;client_message_id&quot;, message.messageDescriptor!!.messageId!!)
+<a href="#l117" class="line" id="l117">    117</a>             }
+<a href="#l118" class="line" id="l118">    118</a> 
+<a href="#l119" class="line" id="l119">    119</a>             val action = Notification.Action.Builder(null, title, PendingIntent.getBroadcast(
+<a href="#l120" class="line" id="l120">    120</a>                 context.androidContext,
+<a href="#l121" class="line" id="l121">    121</a>                 System.nanoTime().toInt(),
+<a href="#l122" class="line" id="l122">    122</a>                 intent,
+<a href="#l123" class="line" id="l123">    123</a>                 PendingIntent.FLAG_MUTABLE
+<a href="#l124" class="line" id="l124">    124</a>             )).apply(builder).build()
+<a href="#l125" class="line" id="l125">    125</a>             actions.add(action)
+<a href="#l126" class="line" id="l126">    126</a>         }
+<a href="#l127" class="line" id="l127">    127</a> 
+<a href="#l128" class="line" id="l128">    128</a>         newAction(translations[&quot;button.reply&quot;], ACTION_REPLY, {
+<a href="#l129" class="line" id="l129">    129</a>             config.replyButton.get() &amp;&amp; contentType == ContentType.CHAT
+<a href="#l130" class="line" id="l130">    130</a>         }) {
+<a href="#l131" class="line" id="l131">    131</a>             val chatReplyInput = RemoteInput.Builder(&quot;chat_reply_input&quot;)
+<a href="#l132" class="line" id="l132">    132</a>                 .setLabel(translations[&quot;button.reply&quot;])
+<a href="#l133" class="line" id="l133">    133</a>                 .build()
+<a href="#l134" class="line" id="l134">    134</a>             it.addRemoteInput(chatReplyInput)
+<a href="#l135" class="line" id="l135">    135</a>             if (config.smartReplies.get()) {
+<a href="#l136" class="line" id="l136">    136</a>                 it.setAllowGeneratedReplies(true)
+<a href="#l137" class="line" id="l137">    137</a>             }
+<a href="#l138" class="line" id="l138">    138</a>         }
+<a href="#l139" class="line" id="l139">    139</a> 
+<a href="#l140" class="line" id="l140">    140</a>         newAction(translations[&quot;button.download&quot;], ACTION_DOWNLOAD, {
+<a href="#l141" class="line" id="l141">    141</a>             config.downloadButton.get() &amp;&amp; config.mediaPreview.get().contains(contentType.name)
+<a href="#l142" class="line" id="l142">    142</a>         }) {}
+<a href="#l143" class="line" id="l143">    143</a> 
+<a href="#l144" class="line" id="l144">    144</a>         newAction(translations[&quot;button.mark_as_read&quot;], ACTION_MARK_AS_READ, {
+<a href="#l145" class="line" id="l145">    145</a>             config.markAsReadButton.get()
+<a href="#l146" class="line" id="l146">    146</a>         }) {}
+<a href="#l147" class="line" id="l147">    147</a> 
+<a href="#l148" class="line" id="l148">    148</a>         val notificationBuilder = newNotificationBuilder(notificationData.notification).apply {
+<a href="#l149" class="line" id="l149">    149</a>             setActions(*actions.toTypedArray())
+<a href="#l150" class="line" id="l150">    150</a>         }
+<a href="#l151" class="line" id="l151">    151</a>         notificationData.notification = notificationBuilder.build()
+<a href="#l152" class="line" id="l152">    152</a>     }
+<a href="#l153" class="line" id="l153">    153</a> 
+<a href="#l154" class="line" id="l154">    154</a>     private fun setupBroadcastReceiverHook() {
+<a href="#l155" class="line" id="l155">    155</a>         context.event.subscribe(SnapWidgetBroadcastReceiveEvent::class) { event -&gt;
+<a href="#l156" class="line" id="l156">    156</a>             val intent = event.intent ?: return@subscribe
+<a href="#l157" class="line" id="l157">    157</a>             val conversationId = intent.getStringExtra(&quot;conversation_id&quot;) ?: return@subscribe
+<a href="#l158" class="line" id="l158">    158</a>             val clientMessageId = intent.getLongExtra(&quot;client_message_id&quot;, -1)
+<a href="#l159" class="line" id="l159">    159</a>             val notificationId = intent.getIntExtra(&quot;notification_id&quot;, -1)
+<a href="#l160" class="line" id="l160">    160</a> 
+<a href="#l161" class="line" id="l161">    161</a>             val updateNotification: (Int, (Notification) -&gt; Unit) -&gt; Unit = { id, notificationBuilder -&gt;
+<a href="#l162" class="line" id="l162">    162</a>                 notificationManager.activeNotifications.firstOrNull { it.id == id }?.let {
+<a href="#l163" class="line" id="l163">    163</a>                     notificationBuilder(it.notification)
+<a href="#l164" class="line" id="l164">    164</a>                     NotificationData(it.tag, it.id, it.notification, it.user).send()
+<a href="#l165" class="line" id="l165">    165</a>                 }
+<a href="#l166" class="line" id="l166">    166</a>             }
+<a href="#l167" class="line" id="l167">    167</a> 
+<a href="#l168" class="line" id="l168">    168</a>             suspend fun appendNotificationText(input: String) {
+<a href="#l169" class="line" id="l169">    169</a>                 cachedMessages.computeIfAbsent(conversationId) { sortedMapOf() }.let {
+<a href="#l170" class="line" id="l170">    170</a>                     it[(it.keys.lastOrNull() ?: 0) + 1L] = input
+<a href="#l171" class="line" id="l171">    171</a>                 }
+<a href="#l172" class="line" id="l172">    172</a> 
+<a href="#l173" class="line" id="l173">    173</a>                 withContext(Dispatchers.Main) {
+<a href="#l174" class="line" id="l174">    174</a>                     updateNotification(notificationId) { notification -&gt;
+<a href="#l175" class="line" id="l175">    175</a>                         notification.flags = notification.flags or Notification.FLAG_ONLY_ALERT_ONCE
+<a href="#l176" class="line" id="l176">    176</a>                         computeNotificationMessages(notification, conversationId)
+<a href="#l177" class="line" id="l177">    177</a>                     }
+<a href="#l178" class="line" id="l178">    178</a>                 }
+<a href="#l179" class="line" id="l179">    179</a>             }
+<a href="#l180" class="line" id="l180">    180</a> 
+<a href="#l181" class="line" id="l181">    181</a>             when (event.action) {
+<a href="#l182" class="line" id="l182">    182</a>                 ACTION_REPLY -&gt; {
+<a href="#l183" class="line" id="l183">    183</a>                     val input = RemoteInput.getResultsFromIntent(intent).getCharSequence(&quot;chat_reply_input&quot;)
+<a href="#l184" class="line" id="l184">    184</a>                         .toString()
+<a href="#l185" class="line" id="l185">    185</a>                     val myUser = context.database.myUserId.let { context.database.getFriendInfo(it) } ?: return@subscribe
+<a href="#l186" class="line" id="l186">    186</a> 
+<a href="#l187" class="line" id="l187">    187</a>                     context.messageSender.sendChatMessage(listOf(SnapUUID(conversationId)), input, onError = {
+<a href="#l188" class="line" id="l188">    188</a>                         context.longToast(&quot;Failed to send message: $it&quot;)
+<a href="#l189" class="line" id="l189">    189</a>                         context.coroutineScope.launch(coroutineDispatcher) {
+<a href="#l190" class="line" id="l190">    190</a>                             appendNotificationText(&quot;Failed to send message: $it&quot;)
+<a href="#l191" class="line" id="l191">    191</a>                         }
+<a href="#l192" class="line" id="l192">    192</a>                     }, onSuccess = {
+<a href="#l193" class="line" id="l193">    193</a>                         context.coroutineScope.launch(coroutineDispatcher) {
+<a href="#l194" class="line" id="l194">    194</a>                             appendNotificationText(&quot;${myUser.displayName ?: myUser.mutableUsername}: $input&quot;)
+<a href="#l195" class="line" id="l195">    195</a>                             context.feature(AutoMarkAsRead::class).takeIf { it.canMarkConversationAsRead }?.markConversationsAsRead(listOf(conversationId))
+<a href="#l196" class="line" id="l196">    196</a>                         }
+<a href="#l197" class="line" id="l197">    197</a>                     })
+<a href="#l198" class="line" id="l198">    198</a>                 }
+<a href="#l199" class="line" id="l199">    199</a>                 ACTION_DOWNLOAD -&gt; {
+<a href="#l200" class="line" id="l200">    200</a>                     runCatching {
+<a href="#l201" class="line" id="l201">    201</a>                         context.feature(MediaDownloader::class).downloadMessageId(clientMessageId, isPreview = false)
+<a href="#l202" class="line" id="l202">    202</a>                     }.onFailure {
+<a href="#l203" class="line" id="l203">    203</a>                         context.longToast(it)
+<a href="#l204" class="line" id="l204">    204</a>                     }
+<a href="#l205" class="line" id="l205">    205</a>                 }
+<a href="#l206" class="line" id="l206">    206</a>                 ACTION_MARK_AS_READ -&gt; {
+<a href="#l207" class="line" id="l207">    207</a>                     runCatching {
+<a href="#l208" class="line" id="l208">    208</a>                         val conversationManager = context.feature(Messaging::class).conversationManager ?: return@subscribe
+<a href="#l209" class="line" id="l209">    209</a> 
+<a href="#l210" class="line" id="l210">    210</a>                         context.feature(StealthMode::class).addDisplayedMessageException(clientMessageId)
+<a href="#l211" class="line" id="l211">    211</a>                         conversationManager.displayedMessages(
+<a href="#l212" class="line" id="l212">    212</a>                             conversationId,
+<a href="#l213" class="line" id="l213">    213</a>                             clientMessageId,
+<a href="#l214" class="line" id="l214">    214</a>                             onResult = {
+<a href="#l215" class="line" id="l215">    215</a>                                 if (it != null) {
+<a href="#l216" class="line" id="l216">    216</a>                                     context.log.error(&quot;Failed to mark conversation as read: $it&quot;)
+<a href="#l217" class="line" id="l217">    217</a>                                     context.shortToast(&quot;Failed to mark conversation as read&quot;)
+<a href="#l218" class="line" id="l218">    218</a>                                 }
+<a href="#l219" class="line" id="l219">    219</a>                             }
+<a href="#l220" class="line" id="l220">    220</a>                         )
+<a href="#l221" class="line" id="l221">    221</a> 
+<a href="#l222" class="line" id="l222">    222</a>                         if (config.markAsReadAndSaveInChat.get()) {
+<a href="#l223" class="line" id="l223">    223</a>                             val messaging = context.feature(Messaging::class)
+<a href="#l224" class="line" id="l224">    224</a>                             val autoSave = context.feature(AutoSave::class)
+<a href="#l225" class="line" id="l225">    225</a> 
+<a href="#l226" class="line" id="l226">    226</a>                             if (autoSave.canSaveInConversation(conversationId, headless = true)) {
+<a href="#l227" class="line" id="l227">    227</a>                                 messaging.conversationManager?.fetchConversationWithMessagesPaginated(
+<a href="#l228" class="line" id="l228">    228</a>                                     conversationId,
+<a href="#l229" class="line" id="l229">    229</a>                                     Long.MAX_VALUE,
+<a href="#l230" class="line" id="l230">    230</a>                                     20,
+<a href="#l231" class="line" id="l231">    231</a>                                     onSuccess = { messages -&gt;
+<a href="#l232" class="line" id="l232">    232</a>                                         messages.reversed().forEach { message -&gt;
+<a href="#l233" class="line" id="l233">    233</a>                                             if (!autoSave.canSaveMessage(message, headless = true)) return@forEach
+<a href="#l234" class="line" id="l234">    234</a>                                             context.coroutineScope.launch(coroutineDispatcher) {
+<a href="#l235" class="line" id="l235">    235</a>                                                 autoSave.saveMessage(conversationId, message)
+<a href="#l236" class="line" id="l236">    236</a>                                             }
+<a href="#l237" class="line" id="l237">    237</a>                                         }
+<a href="#l238" class="line" id="l238">    238</a>                                     },
+<a href="#l239" class="line" id="l239">    239</a>                                     onError = {
+<a href="#l240" class="line" id="l240">    240</a>                                         context.log.error(&quot;Failed to fetch conversation: $it&quot;)
+<a href="#l241" class="line" id="l241">    241</a>                                         context.shortToast(&quot;Failed to fetch conversation&quot;)
+<a href="#l242" class="line" id="l242">    242</a>                                     }
+<a href="#l243" class="line" id="l243">    243</a>                                 )
+<a href="#l244" class="line" id="l244">    244</a>                             }
+<a href="#l245" class="line" id="l245">    245</a>                         }
+<a href="#l246" class="line" id="l246">    246</a> 
+<a href="#l247" class="line" id="l247">    247</a>                         val conversationMessage = context.database.getConversationMessageFromId(clientMessageId) ?: return@subscribe
+<a href="#l248" class="line" id="l248">    248</a> 
+<a href="#l249" class="line" id="l249">    249</a>                         if (conversationMessage.contentType == ContentType.SNAP.id) {
+<a href="#l250" class="line" id="l250">    250</a>                             conversationManager.updateMessage(conversationId, clientMessageId, MessageUpdate.READ) {
+<a href="#l251" class="line" id="l251">    251</a>                                 if (it != null) {
+<a href="#l252" class="line" id="l252">    252</a>                                     context.log.error(&quot;Failed to open snap: $it&quot;)
+<a href="#l253" class="line" id="l253">    253</a>                                     context.shortToast(&quot;Failed to open snap&quot;)
+<a href="#l254" class="line" id="l254">    254</a>                                 }
+<a href="#l255" class="line" id="l255">    255</a>                             }
+<a href="#l256" class="line" id="l256">    256</a>                         }
+<a href="#l257" class="line" id="l257">    257</a>                     }.onFailure {
+<a href="#l258" class="line" id="l258">    258</a>                         context.log.error(&quot;Failed to mark message as read&quot;, it)
+<a href="#l259" class="line" id="l259">    259</a>                         context.shortToast(&quot;Failed to mark message as read. Check logs for more details&quot;)
+<a href="#l260" class="line" id="l260">    260</a>                     }
+<a href="#l261" class="line" id="l261">    261</a>                     notificationManager.cancel(notificationId)
+<a href="#l262" class="line" id="l262">    262</a>                 }
+<a href="#l263" class="line" id="l263">    263</a>                 else -&gt; return@subscribe
+<a href="#l264" class="line" id="l264">    264</a>             }
+<a href="#l265" class="line" id="l265">    265</a> 
+<a href="#l266" class="line" id="l266">    266</a>             event.canceled = true
+<a href="#l267" class="line" id="l267">    267</a>         }
+<a href="#l268" class="line" id="l268">    268</a>     }
+<a href="#l269" class="line" id="l269">    269</a> 
+<a href="#l270" class="line" id="l270">    270</a>     private fun sendNotification(message: Message, notificationData: NotificationData, forceCreate: Boolean) {
+<a href="#l271" class="line" id="l271">    271</a>         val conversationId = message.messageDescriptor?.conversationId.toString()
+<a href="#l272" class="line" id="l272">    272</a>         val notificationId = if (forceCreate) System.nanoTime().toInt() else message.messageDescriptor?.conversationId?.toBytes().contentHashCode()
+<a href="#l273" class="line" id="l273">    273</a>         sentNotifications.computeIfAbsent(notificationId) { conversationId }
+<a href="#l274" class="line" id="l274">    274</a> 
+<a href="#l275" class="line" id="l275">    275</a>         if (config.groupNotifications.get()) {
+<a href="#l276" class="line" id="l276">    276</a>             runCatching {
+<a href="#l277" class="line" id="l277">    277</a>                 if (notificationManager.activeNotifications.firstOrNull {
+<a href="#l278" class="line" id="l278">    278</a>                     it.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0
+<a href="#l279" class="line" id="l279">    279</a>                 } == null) {
+<a href="#l280" class="line" id="l280">    280</a>                     notificationManager.notify(
+<a href="#l281" class="line" id="l281">    281</a>                         notificationData.tag,
+<a href="#l282" class="line" id="l282">    282</a>                         System.nanoTime().toInt(),
+<a href="#l283" class="line" id="l283">    283</a>                         Notification.Builder(context.androidContext, notificationData.notification.channelId)
+<a href="#l284" class="line" id="l284">    284</a>                             .setSmallIcon(notificationData.notification.smallIcon)
+<a href="#l285" class="line" id="l285">    285</a>                             .setGroup(SNAPCHAT_NOTIFICATION_GROUP)
+<a href="#l286" class="line" id="l286">    286</a>                             .setGroupSummary(true)
+<a href="#l287" class="line" id="l287">    287</a>                             .setAutoCancel(true)
+<a href="#l288" class="line" id="l288">    288</a>                             .setOnlyAlertOnce(true)
+<a href="#l289" class="line" id="l289">    289</a>                             .build()
+<a href="#l290" class="line" id="l290">    290</a>                     )
+<a href="#l291" class="line" id="l291">    291</a>                 }
+<a href="#l292" class="line" id="l292">    292</a>             }.onFailure {
+<a href="#l293" class="line" id="l293">    293</a>                 context.log.warn(&quot;Failed to set notification group key: ${it.stackTraceToString()}&quot;, key)
+<a href="#l294" class="line" id="l294">    294</a>             }
+<a href="#l295" class="line" id="l295">    295</a>         }
+<a href="#l296" class="line" id="l296">    296</a> 
+<a href="#l297" class="line" id="l297">    297</a>         val builder = newNotificationBuilder(notificationData.notification).apply {
+<a href="#l298" class="line" id="l298">    298</a>             setGroup(SNAPCHAT_NOTIFICATION_GROUP)
+<a href="#l299" class="line" id="l299">    299</a>             setGroupAlertBehavior(Notification.GROUP_ALERT_CHILDREN)
+<a href="#l300" class="line" id="l300">    300</a>             if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.Q &amp;&amp; config.smartReplies.get()) {
+<a href="#l301" class="line" id="l301">    301</a>                 setAllowSystemGeneratedContextualActions(true)
+<a href="#l302" class="line" id="l302">    302</a>             }
+<a href="#l303" class="line" id="l303">    303</a>         }
+<a href="#l304" class="line" id="l304">    304</a> 
+<a href="#l305" class="line" id="l305">    305</a>         notificationData.copy(id = notificationId, notification = builder.build()).also {
+<a href="#l306" class="line" id="l306">    306</a>             setupNotificationActionButtons(message.messageContent!!.contentType!!, conversationId, message, it)
+<a href="#l307" class="line" id="l307">    307</a>         }.send()
+<a href="#l308" class="line" id="l308">    308</a>     }
+<a href="#l309" class="line" id="l309">    309</a> 
+<a href="#l310" class="line" id="l310">    310</a>     private suspend fun onMessageReceived(data: NotificationData, notificationType: String, message: Message) {
+<a href="#l311" class="line" id="l311">    311</a>         val conversationId = message.messageDescriptor?.conversationId.toString()
+<a href="#l312" class="line" id="l312">    312</a>         val orderKey = message.orderKey ?: return
+<a href="#l313" class="line" id="l313">    313</a>         val senderUsername by lazy {
+<a href="#l314" class="line" id="l314">    314</a>             context.database.getFriendInfo(message.senderId.toString())?.let {
+<a href="#l315" class="line" id="l315">    315</a>                 it.displayName ?: it.mutableUsername
+<a href="#l316" class="line" id="l316">    316</a>             } ?: &quot;Unknown&quot;
+<a href="#l317" class="line" id="l317">    317</a>         }
+<a href="#l318" class="line" id="l318">    318</a> 
+<a href="#l319" class="line" id="l319">    319</a>         val contentType = message.messageContent!!.contentType!!.let { contentType -&gt;
+<a href="#l320" class="line" id="l320">    320</a>             when {
+<a href="#l321" class="line" id="l321">    321</a>                 notificationType.contains(&quot;screenshot&quot;) -&gt; ContentType.STATUS_CONVERSATION_CAPTURE_SCREENSHOT
+<a href="#l322" class="line" id="l322">    322</a>                 notificationType.contains(&quot;save_camera_roll&quot;) -&gt; ContentType.STATUS_SAVE_TO_CAMERA_ROLL
+<a href="#l323" class="line" id="l323">    323</a>                 else -&gt; contentType
+<a href="#l324" class="line" id="l324">    324</a>             }
+<a href="#l325" class="line" id="l325">    325</a>         }
+<a href="#l326" class="line" id="l326">    326</a>         val computeMessages: () -&gt; Unit = { computeNotificationMessages(data.notification, conversationId)}
+<a href="#l327" class="line" id="l327">    327</a> 
+<a href="#l328" class="line" id="l328">    328</a>         fun setNotificationText(text: String) {
+<a href="#l329" class="line" id="l329">    329</a>             val includeUsername = context.database.getDMOtherParticipant(conversationId) == null
+<a href="#l330" class="line" id="l330">    330</a>             cachedMessages.computeIfAbsent(conversationId) {
+<a href="#l331" class="line" id="l331">    331</a>                 sortedMapOf()
+<a href="#l332" class="line" id="l332">    332</a>             }[orderKey] = if (includeUsername) &quot;$senderUsername: $text&quot; else text
+<a href="#l333" class="line" id="l333">    333</a>         }
+<a href="#l334" class="line" id="l334">    334</a> 
+<a href="#l335" class="line" id="l335">    335</a>         if (config.mediaPreview.get().contains(contentType.name)) {
+<a href="#l336" class="line" id="l336">    336</a>             MessageDecoder.decode(message.messageContent!!).firstOrNull()?.also { media -&gt;
+<a href="#l337" class="line" id="l337">    337</a>                 runCatching {
+<a href="#l338" class="line" id="l338">    338</a>                     media.openStream { mediaStream, length -&gt;
+<a href="#l339" class="line" id="l339">    339</a>                         if (mediaStream == null || length &gt; 25 * 1024 * 1024) {
+<a href="#l340" class="line" id="l340">    340</a>                             context.log.error(&quot;Failed to open media stream or media is too large&quot;)
+<a href="#l341" class="line" id="l341">    341</a>                             sendNotification(message, data, true)
+<a href="#l342" class="line" id="l342">    342</a>                             return@openStream
+<a href="#l343" class="line" id="l343">    343</a>                         }
+<a href="#l344" class="line" id="l344">    344</a>                         val downloadedMedias = mutableMapOf&lt;SplitMediaAssetType, ByteArray&gt;()
+<a href="#l345" class="line" id="l345">    345</a> 
+<a href="#l346" class="line" id="l346">    346</a>                         MediaDownloaderHelper.getSplitElements(mediaStream) { type, inputStream -&gt;
+<a href="#l347" class="line" id="l347">    347</a>                             downloadedMedias[type] = inputStream.readBytes()
+<a href="#l348" class="line" id="l348">    348</a>                         }
+<a href="#l349" class="line" id="l349">    349</a> 
+<a href="#l350" class="line" id="l350">    350</a>                         val originalMedia = downloadedMedias[SplitMediaAssetType.ORIGINAL]!!
+<a href="#l351" class="line" id="l351">    351</a>                         var bitmapPreview = PreviewUtils.createPreview(originalMedia, FileType.fromByteArray(originalMedia).isVideo)!!
 <a href="#l352" class="line" id="l352">    352</a> 
-<a href="#l353" class="line" id="l353">    353</a>                         val originalMedia = downloadedMedias[SplitMediaAssetType.ORIGINAL]!!
-<a href="#l354" class="line" id="l354">    354</a>                         var bitmapPreview = PreviewUtils.createPreview(originalMedia, FileType.fromByteArray(originalMedia).isVideo)!!
-<a href="#l355" class="line" id="l355">    355</a> 
-<a href="#l356" class="line" id="l356">    356</a>                         downloadedMedias[SplitMediaAssetType.OVERLAY]?.let {
-<a href="#l357" class="line" id="l357">    357</a>                             bitmapPreview = PreviewUtils.mergeBitmapOverlay(bitmapPreview, BitmapFactory.decodeByteArray(it, 0, it.size))
-<a href="#l358" class="line" id="l358">    358</a>                         }
-<a href="#l359" class="line" id="l359">    359</a> 
-<a href="#l360" class="line" id="l360">    360</a>                         val notificationBuilder = newNotificationBuilder(data.notification).apply {
-<a href="#l361" class="line" id="l361">    361</a>                             setLargeIcon(bitmapPreview)
-<a href="#l362" class="line" id="l362">    362</a>                             style = Notification.BigPictureStyle().bigPicture(bitmapPreview).bigLargeIcon(null as Bitmap?)
-<a href="#l363" class="line" id="l363">    363</a>                         }
-<a href="#l364" class="line" id="l364">    364</a>                         if (config.mediaCaption.get()) {
-<a href="#l365" class="line" id="l365">    365</a>                             message.serialize()?.let {
-<a href="#l366" class="line" id="l366">    366</a>                                 notificationBuilder.setContentText(it)
-<a href="#l367" class="line" id="l367">    367</a>                             }
-<a href="#l368" class="line" id="l368">    368</a>                         }
-<a href="#l369" class="line" id="l369">    369</a> 
-<a href="#l370" class="line" id="l370">    370</a>                         sendNotification(message, data.copy(notification = notificationBuilder.build()), true)
-<a href="#l371" class="line" id="l371">    371</a>                     }
-<a href="#l372" class="line" id="l372">    372</a>                     return
-<a href="#l373" class="line" id="l373">    373</a>                 }.onFailure {
-<a href="#l374" class="line" id="l374">    374</a>                     context.log.error(&quot;Failed to send preview notification&quot;, it)
-<a href="#l375" class="line" id="l375">    375</a>                     sendNotification(message, data, true)
-<a href="#l376" class="line" id="l376">    376</a>                     return
-<a href="#l377" class="line" id="l377">    377</a>                 }
-<a href="#l378" class="line" id="l378">    378</a>             }
-<a href="#l379" class="line" id="l379">    379</a>         }
-<a href="#l380" class="line" id="l380">    380</a> 
-<a href="#l381" class="line" id="l381">    381</a>         if (config.chatPreview.get()) {
-<a href="#l382" class="line" id="l382">    382</a>             var isChatMessage = contentType == ContentType.CHAT
-<a href="#l383" class="line" id="l383">    383</a>             var serializedMessage = if (isChatMessage) {
-<a href="#l384" class="line" id="l384">    384</a>                 message.serialize() ?: &quot;[Failed to parse message]&quot;
-<a href="#l385" class="line" id="l385">    385</a>             } else {
-<a href="#l386" class="line" id="l386">    386</a>                 &quot;[${context.translation.getCategory(&quot;content_type&quot;)[contentType.name]}]${
-<a href="#l387" class="line" id="l387">    387</a>                     if (config.mediaCaption.get()) {
-<a href="#l388" class="line" id="l388">    388</a>                         message.serialize() ?: &quot;&quot;
-<a href="#l389" class="line" id="l389">    389</a>                     } else &quot;&quot;
-<a href="#l390" class="line" id="l390">    390</a>                 }&quot;
-<a href="#l391" class="line" id="l391">    391</a>             }
-<a href="#l392" class="line" id="l392">    392</a> 
-<a href="#l393" class="line" id="l393">    393</a>             if (contentType == ContentType.NOTE &amp;&amp; context.config.experimental.betterTranscript.takeIf { it.globalState == true }?.enhancedTranscriptInNotifications?.get() == true) {
-<a href="#l394" class="line" id="l394">    394</a>                 val transcriptApi = context.feature(BetterTranscript::class).transcriptApi
-<a href="#l395" class="line" id="l395">    395</a>                 MessageDecoder.decode(message.messageContent!!).firstOrNull { it.type == AttachmentType.NOTE  }?.also { media -&gt;
-<a href="#l396" class="line" id="l396">    396</a>                     runCatching {
-<a href="#l397" class="line" id="l397">    397</a>                         media.openStream { mediaStream, length -&gt;
-<a href="#l398" class="line" id="l398">    398</a>                             if (mediaStream == null || length &gt; 25 * 1024 * 1024) {
-<a href="#l399" class="line" id="l399">    399</a>                                 context.log.error(&quot;Failed to open media stream or media is too large&quot;)
-<a href="#l400" class="line" id="l400">    400</a>                                 return@openStream
-<a href="#l401" class="line" id="l401">    401</a>                             }
-<a href="#l402" class="line" id="l402">    402</a>                             val text = transcriptApi.transcribe(
-<a href="#l403" class="line" id="l403">    403</a>                                 mediaStream.readBytes().toRequestBody(),
-<a href="#l404" class="line" id="l404">    404</a>                                 lang = context.config.experimental.betterTranscript.preferredTranscriptionLang.getNullable()?.takeIf { it.isNotBlank() }
-<a href="#l405" class="line" id="l405">    405</a>                             )?.takeIf { it.isNotBlank() } ?: return@openStream
-<a href="#l406" class="line" id="l406">    406</a>                             serializedMessage = &quot;\uD83C\uDFA4 $text&quot;
-<a href="#l407" class="line" id="l407">    407</a>                             isChatMessage = true
-<a href="#l408" class="line" id="l408">    408</a>                         }
-<a href="#l409" class="line" id="l409">    409</a>                     }.onFailure {
-<a href="#l410" class="line" id="l410">    410</a>                         context.log.error(&quot;Failed to transcribe message&quot;, it)
-<a href="#l411" class="line" id="l411">    411</a>                     }
-<a href="#l412" class="line" id="l412">    412</a>                 }
-<a href="#l413" class="line" id="l413">    413</a>             }
-<a href="#l414" class="line" id="l414">    414</a> 
-<a href="#l415" class="line" id="l415">    415</a>             if (isChatMessage || config.stackedMediaMessages.get()) {
-<a href="#l416" class="line" id="l416">    416</a>                 setNotificationText(serializedMessage)
-<a href="#l417" class="line" id="l417">    417</a>             } else {
-<a href="#l418" class="line" id="l418">    418</a>                 sendNotification(message, data, true)
-<a href="#l419" class="line" id="l419">    419</a>                 return
-<a href="#l420" class="line" id="l420">    420</a>             }
-<a href="#l421" class="line" id="l421">    421</a>             computeMessages()
-<a href="#l422" class="line" id="l422">    422</a>         }
-<a href="#l423" class="line" id="l423">    423</a> 
-<a href="#l424" class="line" id="l424">    424</a>         sendNotification(message, data, false)
-<a href="#l425" class="line" id="l425">    425</a>     }
+<a href="#l353" class="line" id="l353">    353</a>                         downloadedMedias[SplitMediaAssetType.OVERLAY]?.let {
+<a href="#l354" class="line" id="l354">    354</a>                             bitmapPreview = PreviewUtils.mergeBitmapOverlay(bitmapPreview, BitmapFactory.decodeByteArray(it, 0, it.size))
+<a href="#l355" class="line" id="l355">    355</a>                         }
+<a href="#l356" class="line" id="l356">    356</a> 
+<a href="#l357" class="line" id="l357">    357</a>                         val notificationBuilder = newNotificationBuilder(data.notification).apply {
+<a href="#l358" class="line" id="l358">    358</a>                             setLargeIcon(bitmapPreview)
+<a href="#l359" class="line" id="l359">    359</a>                             style = Notification.BigPictureStyle().bigPicture(bitmapPreview).bigLargeIcon(null as Bitmap?)
+<a href="#l360" class="line" id="l360">    360</a>                         }
+<a href="#l361" class="line" id="l361">    361</a>                         if (config.mediaCaption.get()) {
+<a href="#l362" class="line" id="l362">    362</a>                             message.serialize()?.let {
+<a href="#l363" class="line" id="l363">    363</a>                                 notificationBuilder.setContentText(it)
+<a href="#l364" class="line" id="l364">    364</a>                             }
+<a href="#l365" class="line" id="l365">    365</a>                         }
+<a href="#l366" class="line" id="l366">    366</a> 
+<a href="#l367" class="line" id="l367">    367</a>                         sendNotification(message, data.copy(notification = notificationBuilder.build()), true)
+<a href="#l368" class="line" id="l368">    368</a>                     }
+<a href="#l369" class="line" id="l369">    369</a>                     return
+<a href="#l370" class="line" id="l370">    370</a>                 }.onFailure {
+<a href="#l371" class="line" id="l371">    371</a>                     context.log.error(&quot;Failed to send preview notification&quot;, it)
+<a href="#l372" class="line" id="l372">    372</a>                     sendNotification(message, data, true)
+<a href="#l373" class="line" id="l373">    373</a>                     return
+<a href="#l374" class="line" id="l374">    374</a>                 }
+<a href="#l375" class="line" id="l375">    375</a>             }
+<a href="#l376" class="line" id="l376">    376</a>         }
+<a href="#l377" class="line" id="l377">    377</a> 
+<a href="#l378" class="line" id="l378">    378</a>         if (config.chatPreview.get()) {
+<a href="#l379" class="line" id="l379">    379</a>             var isChatMessage = contentType == ContentType.CHAT
+<a href="#l380" class="line" id="l380">    380</a>             var serializedMessage = if (isChatMessage) {
+<a href="#l381" class="line" id="l381">    381</a>                 message.serialize() ?: &quot;[Failed to parse message]&quot;
+<a href="#l382" class="line" id="l382">    382</a>             } else {
+<a href="#l383" class="line" id="l383">    383</a>                 &quot;[${context.translation.getCategory(&quot;content_type&quot;)[contentType.name]}]${
+<a href="#l384" class="line" id="l384">    384</a>                     if (config.mediaCaption.get()) {
+<a href="#l385" class="line" id="l385">    385</a>                         message.serialize() ?: &quot;&quot;
+<a href="#l386" class="line" id="l386">    386</a>                     } else &quot;&quot;
+<a href="#l387" class="line" id="l387">    387</a>                 }&quot;
+<a href="#l388" class="line" id="l388">    388</a>             }
+<a href="#l389" class="line" id="l389">    389</a> 
+<a href="#l390" class="line" id="l390">    390</a>             if (isChatMessage || config.stackedMediaMessages.get()) {
+<a href="#l391" class="line" id="l391">    391</a>                 setNotificationText(serializedMessage)
+<a href="#l392" class="line" id="l392">    392</a>             } else {
+<a href="#l393" class="line" id="l393">    393</a>                 sendNotification(message, data, true)
+<a href="#l394" class="line" id="l394">    394</a>                 return
+<a href="#l395" class="line" id="l395">    395</a>             }
+<a href="#l396" class="line" id="l396">    396</a>             computeMessages()
+<a href="#l397" class="line" id="l397">    397</a>         }
+<a href="#l398" class="line" id="l398">    398</a> 
+<a href="#l399" class="line" id="l399">    399</a>         sendNotification(message, data, false)
+<a href="#l400" class="line" id="l400">    400</a>     }
+<a href="#l401" class="line" id="l401">    401</a> 
+<a href="#l402" class="line" id="l402">    402</a>     private fun canSendNotification(type: String): Boolean {
+<a href="#l403" class="line" id="l403">    403</a>         val formattedMessageType = type.replaceFirst(&quot;mischief_&quot;, &quot;&quot;)
+<a href="#l404" class="line" id="l404">    404</a>             .replaceFirst(&quot;group_your_&quot;, &quot;group_&quot;)
+<a href="#l405" class="line" id="l405">    405</a>             .replaceFirst(&quot;group_other_&quot;, &quot;group_&quot;)
+<a href="#l406" class="line" id="l406">    406</a> 
+<a href="#l407" class="line" id="l407">    407</a>         return context.config.messaging.notificationBlacklist.get().mapNotNull {
+<a href="#l408" class="line" id="l408">    408</a>             NotificationType.getByKey(it)
+<a href="#l409" class="line" id="l409">    409</a>         }.none {
+<a href="#l410" class="line" id="l410">    410</a>             it.isMatch(formattedMessageType)
+<a href="#l411" class="line" id="l411">    411</a>         }.also {
+<a href="#l412" class="line" id="l412">    412</a>             if (!it) context.log.debug(&quot;prevented notification of type $type&quot;)
+<a href="#l413" class="line" id="l413">    413</a>         }
+<a href="#l414" class="line" id="l414">    414</a>     }
+<a href="#l415" class="line" id="l415">    415</a> 
+<a href="#l416" class="line" id="l416">    416</a>     override fun init() {
+<a href="#l417" class="line" id="l417">    417</a>         setupBroadcastReceiverHook()
+<a href="#l418" class="line" id="l418">    418</a> 
+<a href="#l419" class="line" id="l419">    419</a>         notifyAsUserMethod.hook(HookStage.BEFORE) { param -&gt;
+<a href="#l420" class="line" id="l420">    420</a>             val notificationData = NotificationData(param.argNullable(0), param.arg(1), param.arg(2), param.arg(3))
+<a href="#l421" class="line" id="l421">    421</a>             val extras = notificationData.notification.extras.getBundle(&quot;system_notification_extras&quot;)?: return@hook
+<a href="#l422" class="line" id="l422">    422</a> 
+<a href="#l423" class="line" id="l423">    423</a>             if (config.groupNotifications.get()) {
+<a href="#l424" class="line" id="l424">    424</a>                 notificationData.notification.setObjectField(&quot;mGroupKey&quot;, SNAPCHAT_NOTIFICATION_GROUP)
+<a href="#l425" class="line" id="l425">    425</a>             }
 <a href="#l426" class="line" id="l426">    426</a> 
-<a href="#l427" class="line" id="l427">    427</a>     private fun canSendNotification(type: String): Boolean {
-<a href="#l428" class="line" id="l428">    428</a>         val formattedMessageType = type.replaceFirst(&quot;mischief_&quot;, &quot;&quot;)
-<a href="#l429" class="line" id="l429">    429</a>             .replaceFirst(&quot;group_your_&quot;, &quot;group_&quot;)
-<a href="#l430" class="line" id="l430">    430</a>             .replaceFirst(&quot;group_other_&quot;, &quot;group_&quot;)
-<a href="#l431" class="line" id="l431">    431</a> 
-<a href="#l432" class="line" id="l432">    432</a>         return context.config.messaging.notificationBlacklist.get().mapNotNull {
-<a href="#l433" class="line" id="l433">    433</a>             NotificationType.getByKey(it)
-<a href="#l434" class="line" id="l434">    434</a>         }.none {
-<a href="#l435" class="line" id="l435">    435</a>             it.isMatch(formattedMessageType)
-<a href="#l436" class="line" id="l436">    436</a>         }.also {
-<a href="#l437" class="line" id="l437">    437</a>             if (!it) context.log.debug(&quot;prevented notification of type $type&quot;)
-<a href="#l438" class="line" id="l438">    438</a>         }
-<a href="#l439" class="line" id="l439">    439</a>     }
-<a href="#l440" class="line" id="l440">    440</a> 
-<a href="#l441" class="line" id="l441">    441</a>     override fun init() {
-<a href="#l442" class="line" id="l442">    442</a>         setupBroadcastReceiverHook()
-<a href="#l443" class="line" id="l443">    443</a> 
-<a href="#l444" class="line" id="l444">    444</a>         notifyAsUserMethod.hook(HookStage.BEFORE) { param -&gt;
-<a href="#l445" class="line" id="l445">    445</a>             val notificationData = NotificationData(param.argNullable(0), param.arg(1), param.arg(2), param.arg(3))
-<a href="#l446" class="line" id="l446">    446</a>             val extras = notificationData.notification.extras.getBundle(&quot;system_notification_extras&quot;)?: return@hook
-<a href="#l447" class="line" id="l447">    447</a> 
-<a href="#l448" class="line" id="l448">    448</a>             if (config.groupNotifications.get()) {
-<a href="#l449" class="line" id="l449">    449</a>                 notificationData.notification.setObjectField(&quot;mGroupKey&quot;, SNAPCHAT_NOTIFICATION_GROUP)
-<a href="#l450" class="line" id="l450">    450</a>             }
-<a href="#l451" class="line" id="l451">    451</a> 
-<a href="#l452" class="line" id="l452">    452</a>             val notificationType = extras.getString(&quot;notification_type&quot;)?.lowercase() ?: return@hook
-<a href="#l453" class="line" id="l453">    453</a> 
-<a href="#l454" class="line" id="l454">    454</a>             if (!canSendNotification(notificationType)) {
-<a href="#l455" class="line" id="l455">    455</a>                 param.setResult(null)
-<a href="#l456" class="line" id="l456">    456</a>                 return@hook
-<a href="#l457" class="line" id="l457">    457</a>             }
-<a href="#l458" class="line" id="l458">    458</a> 
-<a href="#l459" class="line" id="l459">    459</a>             if (notificationType == &quot;addfriend&quot; &amp;&amp; config.friendAddSource.get()) {
-<a href="#l460" class="line" id="l460">    460</a>                 val userId = notificationData.notification.shortcutId?.split(&quot;|&quot;)?.lastOrNull() ?: return@hook
-<a href="#l461" class="line" id="l461">    461</a>                 runBlocking {
-<a href="#l462" class="line" id="l462">    462</a>                     var addSource: String? = null
-<a href="#l463" class="line" id="l463">    463</a>                     withTimeoutOrNull(7000) {
-<a href="#l464" class="line" id="l464">    464</a>                         while (true) {
-<a href="#l465" class="line" id="l465">    465</a>                             addSource = context.feature(FriendMutationObserver::class).getFriendAddSource(userId)
-<a href="#l466" class="line" id="l466">    466</a>                             if (addSource != null) break
-<a href="#l467" class="line" id="l467">    467</a>                             delay(500)
+<a href="#l427" class="line" id="l427">    427</a>             val notificationType = extras.getString(&quot;notification_type&quot;)?.lowercase() ?: return@hook
+<a href="#l428" class="line" id="l428">    428</a> 
+<a href="#l429" class="line" id="l429">    429</a>             if (!canSendNotification(notificationType)) {
+<a href="#l430" class="line" id="l430">    430</a>                 param.setResult(null)
+<a href="#l431" class="line" id="l431">    431</a>                 return@hook
+<a href="#l432" class="line" id="l432">    432</a>             }
+<a href="#l433" class="line" id="l433">    433</a> 
+<a href="#l434" class="line" id="l434">    434</a>             if (notificationType == &quot;addfriend&quot; &amp;&amp; config.friendAddSource.get()) {
+<a href="#l435" class="line" id="l435">    435</a>                 val userId = notificationData.notification.shortcutId?.split(&quot;|&quot;)?.lastOrNull() ?: return@hook
+<a href="#l436" class="line" id="l436">    436</a>                 runBlocking {
+<a href="#l437" class="line" id="l437">    437</a>                     var addSource: String? = null
+<a href="#l438" class="line" id="l438">    438</a>                     withTimeoutOrNull(7000) {
+<a href="#l439" class="line" id="l439">    439</a>                         while (true) {
+<a href="#l440" class="line" id="l440">    440</a>                             addSource = context.feature(FriendMutationObserver::class).getFriendAddSource(userId)
+<a href="#l441" class="line" id="l441">    441</a>                             if (addSource != null) break
+<a href="#l442" class="line" id="l442">    442</a>                             delay(500)
+<a href="#l443" class="line" id="l443">    443</a>                         }
+<a href="#l444" class="line" id="l444">    444</a>                     }
+<a href="#l445" class="line" id="l445">    445</a>                     setNotificationText(notificationData.notification, addSource ?: return@runBlocking)
+<a href="#l446" class="line" id="l446">    446</a>                 }
+<a href="#l447" class="line" id="l447">    447</a>                 return@hook
+<a href="#l448" class="line" id="l448">    448</a>             }
+<a href="#l449" class="line" id="l449">    449</a> 
+<a href="#l450" class="line" id="l450">    450</a>             if (!config.chatPreview.get() &amp;&amp; config.mediaPreview.isEmpty()) return@hook
+<a href="#l451" class="line" id="l451">    451</a>             if (notificationType.endsWith(&quot;typing&quot;)) return@hook
+<a href="#l452" class="line" id="l452">    452</a> 
+<a href="#l453" class="line" id="l453">    453</a>             val serverMessageId = extras.getString(&quot;message_id&quot;) ?: return@hook
+<a href="#l454" class="line" id="l454">    454</a>             val conversationId = extras.getString(&quot;conversation_id&quot;).also { id -&gt;
+<a href="#l455" class="line" id="l455">    455</a>                 sentNotifications.computeIfAbsent(notificationData.id) { id ?: &quot;&quot; }
+<a href="#l456" class="line" id="l456">    456</a>             } ?: return@hook
+<a href="#l457" class="line" id="l457">    457</a> 
+<a href="#l458" class="line" id="l458">    458</a>             param.setResult(null)
+<a href="#l459" class="line" id="l459">    459</a>             val conversationManager = context.feature(Messaging::class).conversationManager ?: return@hook
+<a href="#l460" class="line" id="l460">    460</a> 
+<a href="#l461" class="line" id="l461">    461</a>             context.coroutineScope.launch(coroutineDispatcher) {
+<a href="#l462" class="line" id="l462">    462</a>                 suspendCoroutine { continuation -&gt;
+<a href="#l463" class="line" id="l463">    463</a>                     conversationManager.fetchMessageByServerId(conversationId, serverMessageId.toLong(), onSuccess = {
+<a href="#l464" class="line" id="l464">    464</a>                         continuation.resumeWith(Result.success(Unit))
+<a href="#l465" class="line" id="l465">    465</a>                         if (it.senderId.toString() == context.database.myUserId) {
+<a href="#l466" class="line" id="l466">    466</a>                             param.invokeOriginal()
+<a href="#l467" class="line" id="l467">    467</a>                             return@fetchMessageByServerId
 <a href="#l468" class="line" id="l468">    468</a>                         }
-<a href="#l469" class="line" id="l469">    469</a>                     }
-<a href="#l470" class="line" id="l470">    470</a>                     setNotificationText(notificationData.notification, addSource ?: return@runBlocking)
-<a href="#l471" class="line" id="l471">    471</a>                 }
-<a href="#l472" class="line" id="l472">    472</a>                 return@hook
-<a href="#l473" class="line" id="l473">    473</a>             }
-<a href="#l474" class="line" id="l474">    474</a> 
-<a href="#l475" class="line" id="l475">    475</a>             if (!config.chatPreview.get() &amp;&amp; config.mediaPreview.isEmpty()) return@hook
-<a href="#l476" class="line" id="l476">    476</a>             if (notificationType.endsWith(&quot;typing&quot;)) return@hook
-<a href="#l477" class="line" id="l477">    477</a> 
-<a href="#l478" class="line" id="l478">    478</a>             val serverMessageId = extras.getString(&quot;message_id&quot;) ?: return@hook
-<a href="#l479" class="line" id="l479">    479</a>             val conversationId = extras.getString(&quot;conversation_id&quot;).also { id -&gt;
-<a href="#l480" class="line" id="l480">    480</a>                 sentNotifications.computeIfAbsent(notificationData.id) { id ?: &quot;&quot; }
-<a href="#l481" class="line" id="l481">    481</a>             } ?: return@hook
-<a href="#l482" class="line" id="l482">    482</a> 
-<a href="#l483" class="line" id="l483">    483</a>             param.setResult(null)
-<a href="#l484" class="line" id="l484">    484</a>             val conversationManager = context.feature(Messaging::class).conversationManager ?: return@hook
+<a href="#l469" class="line" id="l469">    469</a>                         context.coroutineScope.launch(coroutineDispatcher) {
+<a href="#l470" class="line" id="l470">    470</a>                             onMessageReceived(notificationData, notificationType, it)
+<a href="#l471" class="line" id="l471">    471</a>                         }
+<a href="#l472" class="line" id="l472">    472</a>                     }, onError = {
+<a href="#l473" class="line" id="l473">    473</a>                         context.log.error(&quot;Failed to fetch message id ${serverMessageId}: $it&quot;)
+<a href="#l474" class="line" id="l474">    474</a>                         continuation.resumeWith(Result.success(Unit))
+<a href="#l475" class="line" id="l475">    475</a>                         param.invokeOriginal()
+<a href="#l476" class="line" id="l476">    476</a>                     })
+<a href="#l477" class="line" id="l477">    477</a>                 }
+<a href="#l478" class="line" id="l478">    478</a>             }
+<a href="#l479" class="line" id="l479">    479</a>         }
+<a href="#l480" class="line" id="l480">    480</a> 
+<a href="#l481" class="line" id="l481">    481</a>         NotificationManager::class.java.findRestrictedMethod {
+<a href="#l482" class="line" id="l482">    482</a>             it.name == &quot;cancelAsUser&quot;
+<a href="#l483" class="line" id="l483">    483</a>         }?.hook(HookStage.AFTER) { param -&gt;
+<a href="#l484" class="line" id="l484">    484</a>             val notificationId = param.arg&lt;Int&gt;(1)
 <a href="#l485" class="line" id="l485">    485</a> 
 <a href="#l486" class="line" id="l486">    486</a>             context.coroutineScope.launch(coroutineDispatcher) {
-<a href="#l487" class="line" id="l487">    487</a>                 suspendCoroutine { continuation -&gt;
-<a href="#l488" class="line" id="l488">    488</a>                     conversationManager.fetchMessageByServerId(conversationId, serverMessageId.toLong(), onSuccess = {
-<a href="#l489" class="line" id="l489">    489</a>                         continuation.resumeWith(Result.success(Unit))
-<a href="#l490" class="line" id="l490">    490</a>                         if (it.senderId.toString() == context.database.myUserId) {
-<a href="#l491" class="line" id="l491">    491</a>                             param.invokeOriginal()
-<a href="#l492" class="line" id="l492">    492</a>                             return@fetchMessageByServerId
-<a href="#l493" class="line" id="l493">    493</a>                         }
-<a href="#l494" class="line" id="l494">    494</a>                         context.coroutineScope.launch(coroutineDispatcher) {
-<a href="#l495" class="line" id="l495">    495</a>                             onMessageReceived(notificationData, notificationType, it)
-<a href="#l496" class="line" id="l496">    496</a>                         }
-<a href="#l497" class="line" id="l497">    497</a>                     }, onError = {
-<a href="#l498" class="line" id="l498">    498</a>                         context.log.error(&quot;Failed to fetch message id ${serverMessageId}: $it&quot;)
-<a href="#l499" class="line" id="l499">    499</a>                         continuation.resumeWith(Result.success(Unit))
-<a href="#l500" class="line" id="l500">    500</a>                         param.invokeOriginal()
-<a href="#l501" class="line" id="l501">    501</a>                     })
-<a href="#l502" class="line" id="l502">    502</a>                 }
-<a href="#l503" class="line" id="l503">    503</a>             }
-<a href="#l504" class="line" id="l504">    504</a>         }
+<a href="#l487" class="line" id="l487">    487</a>                 sentNotifications[notificationId]?.let {
+<a href="#l488" class="line" id="l488">    488</a>                     cachedMessages[it]?.clear()
+<a href="#l489" class="line" id="l489">    489</a>                 }
+<a href="#l490" class="line" id="l490">    490</a>                 sentNotifications.remove(notificationId)
+<a href="#l491" class="line" id="l491">    491</a>             }
+<a href="#l492" class="line" id="l492">    492</a> 
+<a href="#l493" class="line" id="l493">    493</a>             notificationManager.activeNotifications.let { notifications -&gt;
+<a href="#l494" class="line" id="l494">    494</a>                 if (notifications.all { it.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 }) {
+<a href="#l495" class="line" id="l495">    495</a>                     notifications.forEach { param.invokeOriginal(arrayOf(it.tag, it.id, it.user)) }
+<a href="#l496" class="line" id="l496">    496</a>                 }
+<a href="#l497" class="line" id="l497">    497</a>             }
+<a href="#l498" class="line" id="l498">    498</a>         }
+<a href="#l499" class="line" id="l499">    499</a> 
+<a href="#l500" class="line" id="l500">    500</a>         findClass(&quot;com.google.firebase.messaging.FirebaseMessagingService&quot;).run {
+<a href="#l501" class="line" id="l501">    501</a>             methods.first { it.declaringClass == this &amp;&amp; it.returnType == Void::class.javaPrimitiveType &amp;&amp; it.parameterCount == 1 &amp;&amp; it.parameterTypes[0] == Intent::class.java }
+<a href="#l502" class="line" id="l502">    502</a>                 .hook(HookStage.BEFORE) { param -&gt;
+<a href="#l503" class="line" id="l503">    503</a>                     val intent = param.argNullable&lt;Intent&gt;(0) ?: return@hook
+<a href="#l504" class="line" id="l504">    504</a>                     val messageType = intent.getStringExtra(&quot;type&quot;) ?: return@hook
 <a href="#l505" class="line" id="l505">    505</a> 
-<a href="#l506" class="line" id="l506">    506</a>         NotificationManager::class.java.findRestrictedMethod {
-<a href="#l507" class="line" id="l507">    507</a>             it.name == &quot;cancelAsUser&quot;
-<a href="#l508" class="line" id="l508">    508</a>         }?.hook(HookStage.AFTER) { param -&gt;
-<a href="#l509" class="line" id="l509">    509</a>             val notificationId = param.arg&lt;Int&gt;(1)
-<a href="#l510" class="line" id="l510">    510</a> 
-<a href="#l511" class="line" id="l511">    511</a>             context.coroutineScope.launch(coroutineDispatcher) {
-<a href="#l512" class="line" id="l512">    512</a>                 sentNotifications[notificationId]?.let {
-<a href="#l513" class="line" id="l513">    513</a>                     cachedMessages[it]?.clear()
-<a href="#l514" class="line" id="l514">    514</a>                 }
-<a href="#l515" class="line" id="l515">    515</a>                 sentNotifications.remove(notificationId)
-<a href="#l516" class="line" id="l516">    516</a>             }
-<a href="#l517" class="line" id="l517">    517</a> 
-<a href="#l518" class="line" id="l518">    518</a>             notificationManager.activeNotifications.let { notifications -&gt;
-<a href="#l519" class="line" id="l519">    519</a>                 if (notifications.all { it.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 }) {
-<a href="#l520" class="line" id="l520">    520</a>                     notifications.forEach { param.invokeOriginal(arrayOf(it.tag, it.id, it.user)) }
-<a href="#l521" class="line" id="l521">    521</a>                 }
-<a href="#l522" class="line" id="l522">    522</a>             }
-<a href="#l523" class="line" id="l523">    523</a>         }
-<a href="#l524" class="line" id="l524">    524</a> 
-<a href="#l525" class="line" id="l525">    525</a>         findClass(&quot;com.google.firebase.messaging.FirebaseMessagingService&quot;).run {
-<a href="#l526" class="line" id="l526">    526</a>             methods.first { it.declaringClass == this &amp;&amp; it.returnType == Void::class.javaPrimitiveType &amp;&amp; it.parameterCount == 1 &amp;&amp; it.parameterTypes[0] == Intent::class.java }
-<a href="#l527" class="line" id="l527">    527</a>                 .hook(HookStage.BEFORE) { param -&gt;
-<a href="#l528" class="line" id="l528">    528</a>                     val intent = param.argNullable&lt;Intent&gt;(0) ?: return@hook
-<a href="#l529" class="line" id="l529">    529</a>                     val messageType = intent.getStringExtra(&quot;type&quot;) ?: return@hook
-<a href="#l530" class="line" id="l530">    530</a> 
-<a href="#l531" class="line" id="l531">    531</a>                     context.log.debug(&quot;received message type: $messageType&quot;)
-<a href="#l532" class="line" id="l532">    532</a> 
-<a href="#l533" class="line" id="l533">    533</a>                     if (!canSendNotification(messageType)) {
-<a href="#l534" class="line" id="l534">    534</a>                         param.setResult(null)
-<a href="#l535" class="line" id="l535">    535</a>                     }
-<a href="#l536" class="line" id="l536">    536</a>                 }
-<a href="#l537" class="line" id="l537">    537</a>         }
-<a href="#l538" class="line" id="l538">    538</a>     }
-<a href="#l539" class="line" id="l539">    539</a> }</pre>
+<a href="#l506" class="line" id="l506">    506</a>                     context.log.debug(&quot;received message type: $messageType&quot;)
+<a href="#l507" class="line" id="l507">    507</a> 
+<a href="#l508" class="line" id="l508">    508</a>                     if (!canSendNotification(messageType)) {
+<a href="#l509" class="line" id="l509">    509</a>                         param.setResult(null)
+<a href="#l510" class="line" id="l510">    510</a>                     }
+<a href="#l511" class="line" id="l511">    511</a>                 }
+<a href="#l512" class="line" id="l512">    512</a>         }
+<a href="#l513" class="line" id="l513">    513</a>     }
+<a href="#l514" class="line" id="l514">    514</a> }</pre>
 </div>
 </body>
 </html>

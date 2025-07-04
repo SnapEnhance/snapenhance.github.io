@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>refactor: remove deprecated transcript api - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/dc5b91a42ad3a741d59ec010e4eb442a8d8e7800.html">dc5b91a42ad3a741d59ec010e4eb442a8d8e7800</a>
+<b>parent</b> <a href="../commit/4e4f77a21323907b612979904495aa93cada7af3.html">4e4f77a21323907b612979904495aa93cada7af3</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri,  4 Jul 2025 18:57:30 +0200
+
+refactor: remove deprecated transcript api
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">8</td><td><span class="i"></span><span class="d">--------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></td><td> | </td><td class="num">2</td><td><span class="i"></span><span class="d">--</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/util/TranscriptApi.kt</a></td><td> | </td><td class="num">46</td><td><span class="i"></span><span class="d">----------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterTranscript.kt</a></td><td> | </td><td class="num">34</td><td><span class="i"></span><span class="d">----------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt</a></td><td> | </td><td class="num">25</td><td><span class="i"></span><span class="d">-------------------------</span></td></tr>
+</table></pre><pre>5 files changed, 0 insertions(+), 115 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1056,14 +1056,6 @@
+</a>                             &quot;preferred_transcription_lang&quot;: {
+                                 &quot;name&quot;: &quot;Preferred Transcription Language&quot;,
+                                 &quot;description&quot;: &quot;The preferred language for the voice note transcript (e.g. EN, ES, FR)&quot;
+<a href="#h0-0-3" id="h0-0-3" class="d">-                            },
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-                            &quot;enhanced_transcript&quot;: {
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-                                &quot;name&quot;: &quot;Enhanced Transcript&quot;,
+</a><a href="#h0-0-6" id="h0-0-6" class="d">-                                &quot;description&quot;: &quot;Improves the voice note transcript using DeepL.\nBefore using this feature, please ensure that you have read their privacy policy.&quot;
+</a><a href="#h0-0-7" id="h0-0-7" class="d">-                            },
+</a><a href="#h0-0-8" id="h0-0-8" class="d">-                            &quot;enhanced_transcript_in_notifications&quot;: {
+</a><a href="#h0-0-9" id="h0-0-9" class="d">-                                &quot;name&quot;: &quot;Enhanced Transcript in Notifications&quot;,
+</a><a href="#h0-0-10" id="h0-0-10" class="d">-                                &quot;description&quot;: &quot;Transcribes voice notes in notifications using DeepL. This requires the Chat Preview feature to be enabled in Better Notifications&quot;
+</a>                             }
+                         }
+                     },
+<b>diff --git a/<a id="h1" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Experimental.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -20,8 +20,6 @@ class Experimental : ConfigContainer() {
+</a>     class BetterTranscriptConfig: ConfigContainer(hasGlobalState = true) {
+         val forceTranscription = boolean(&quot;force_transcription&quot;) { requireRestart() }
+         val preferredTranscriptionLang = string(&quot;preferred_transcription_lang&quot;) { requireRestart() }
+<a href="#h1-0-3" id="h1-0-3" class="d">-        val enhancedTranscript = boolean(&quot;enhanced_transcript&quot;) { requireRestart(); addNotices(FeatureNotice.UNSTABLE) }
+</a><a href="#h1-0-4" id="h1-0-4" class="d">-        val enhancedTranscriptInNotifications = boolean(&quot;enhanced_transcript_in_notifications&quot;) { requireRestart(); addNotices(FeatureNotice.UNSTABLE) }
+</a>     }
+ 
+     class ComposerHooksConfig: ConfigContainer(hasGlobalState = true) {
+<b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/TranscriptApi.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/TranscriptApi.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/util/TranscriptApi.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/util/TranscriptApi.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -1,46 +0,0 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="d">-package me.rhunk.snapenhance.common.util
+</a><a href="#h2-0-1" id="h2-0-1" class="d">-
+</a><a href="#h2-0-2" id="h2-0-2" class="d">-import com.google.gson.JsonParser
+</a><a href="#h2-0-3" id="h2-0-3" class="d">-import me.rhunk.snapenhance.common.Constants
+</a><a href="#h2-0-4" id="h2-0-4" class="d">-import okhttp3.Headers
+</a><a href="#h2-0-5" id="h2-0-5" class="d">-import okhttp3.HttpUrl.Companion.toHttpUrl
+</a><a href="#h2-0-6" id="h2-0-6" class="d">-import okhttp3.OkHttpClient
+</a><a href="#h2-0-7" id="h2-0-7" class="d">-import okhttp3.Request
+</a><a href="#h2-0-8" id="h2-0-8" class="d">-import okhttp3.RequestBody
+</a><a href="#h2-0-9" id="h2-0-9" class="d">-
+</a><a href="#h2-0-10" id="h2-0-10" class="d">-
+</a><a href="#h2-0-11" id="h2-0-11" class="d">-class TranscriptApi(
+</a><a href="#h2-0-12" id="h2-0-12" class="d">-    private val okHttpClient: OkHttpClient = OkHttpClient.Builder().addInterceptor {
+</a><a href="#h2-0-13" id="h2-0-13" class="d">-        it.proceed(it.request().newBuilder().header(&quot;User-Agent&quot;, Constants.USER_AGENT).build())
+</a><a href="#h2-0-14" id="h2-0-14" class="d">-    }.build()
+</a><a href="#h2-0-15" id="h2-0-15" class="d">-) {
+</a><a href="#h2-0-16" id="h2-0-16" class="d">-    private fun genDlClearance() = okHttpClient.newCall(
+</a><a href="#h2-0-17" id="h2-0-17" class="d">-        Request(&quot;https://clearance.deepl.com/token&quot;.toHttpUrl())
+</a><a href="#h2-0-18" id="h2-0-18" class="d">-    ).execute().use { response -&gt;
+</a><a href="#h2-0-19" id="h2-0-19" class="d">-        val cookie = response.headers.firstOrNull { it.first.lowercase() == &quot;set-cookie&quot; &amp;&amp; it.second.contains(&quot;dl_clearance&quot;, ignoreCase = true) }
+</a><a href="#h2-0-20" id="h2-0-20" class="d">-        cookie?.second?.substringBefore(&quot;;&quot;)?.substringAfter(&quot;dl_clearance=&quot;)
+</a><a href="#h2-0-21" id="h2-0-21" class="d">-    }
+</a><a href="#h2-0-22" id="h2-0-22" class="d">-
+</a><a href="#h2-0-23" id="h2-0-23" class="d">-    fun transcribe(
+</a><a href="#h2-0-24" id="h2-0-24" class="d">-        body: RequestBody,
+</a><a href="#h2-0-25" id="h2-0-25" class="d">-        lang: String? = null,
+</a><a href="#h2-0-26" id="h2-0-26" class="d">-    ): String? {
+</a><a href="#h2-0-27" id="h2-0-27" class="d">-        val clearance = genDlClearance() ?: return null
+</a><a href="#h2-0-28" id="h2-0-28" class="d">-        val url = &quot;https://voice-pro.www.deepl.com/sync/transcribe&quot;.toHttpUrl().newBuilder()
+</a><a href="#h2-0-29" id="h2-0-29" class="d">-            .apply {
+</a><a href="#h2-0-30" id="h2-0-30" class="d">-                lang?.let { addQueryParameter(&quot;lang&quot;, it) }
+</a><a href="#h2-0-31" id="h2-0-31" class="d">-            }
+</a><a href="#h2-0-32" id="h2-0-32" class="d">-            .build()
+</a><a href="#h2-0-33" id="h2-0-33" class="d">-        val request = Request(url, headers = Headers.headersOf(
+</a><a href="#h2-0-34" id="h2-0-34" class="d">-            &quot;Cookie&quot;, &quot;dl_clearance=$clearance&quot;,
+</a><a href="#h2-0-35" id="h2-0-35" class="d">-            &quot;Content-Type&quot;, &quot;audio/webm&quot;
+</a><a href="#h2-0-36" id="h2-0-36" class="d">-        ), method = &quot;POST&quot;, body = body)
+</a><a href="#h2-0-37" id="h2-0-37" class="d">-        return okHttpClient.newCall(request).execute().use { response -&gt;
+</a><a href="#h2-0-38" id="h2-0-38" class="d">-            if (!response.isSuccessful) return@use null
+</a><a href="#h2-0-39" id="h2-0-39" class="d">-            val jsonObject = JsonParser.parseString(response.body.string()).asJsonObject
+</a><a href="#h2-0-40" id="h2-0-40" class="d">-            jsonObject.getAsJsonArray(&quot;segments&quot;).fold(&quot;&quot;) { text, segment -&gt;
+</a><a href="#h2-0-41" id="h2-0-41" class="d">-                text + segment.asJsonObject.getAsJsonPrimitive(&quot;text&quot;).asString
+</a><a href="#h2-0-42" id="h2-0-42" class="d">-            }.trim()
+</a><a href="#h2-0-43" id="h2-0-43" class="d">-        }
+</a><a href="#h2-0-44" id="h2-0-44" class="d">-    }
+</a><a href="#h2-0-45" id="h2-0-45" class="d">-}
+</a><b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterTranscript.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterTranscript.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterTranscript.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/BetterTranscript.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -1,22 +1,15 @@
+</a> package me.rhunk.snapenhance.core.features.impl.experiments
+ 
+ import me.rhunk.snapenhance.common.data.ContentType
+<a href="#h3-0-3" id="h3-0-3" class="d">-import me.rhunk.snapenhance.common.util.TranscriptApi
+</a> import me.rhunk.snapenhance.common.util.protobuf.ProtoEditor
+ import me.rhunk.snapenhance.core.event.events.impl.BuildMessageEvent
+ import me.rhunk.snapenhance.core.features.Feature
+<a href="#h3-0-7" id="h3-0-7" class="d">-import me.rhunk.snapenhance.core.util.dataBuilder
+</a> import me.rhunk.snapenhance.core.util.hook.HookStage
+ import me.rhunk.snapenhance.core.util.hook.hook
+ import me.rhunk.snapenhance.core.util.ktx.getObjectFieldOrNull
+ import me.rhunk.snapenhance.core.util.ktx.setObjectField
+<a href="#h3-0-12" id="h3-0-12" class="d">-import okhttp3.RequestBody.Companion.toRequestBody
+</a><a href="#h3-0-13" id="h3-0-13" class="d">-import java.lang.reflect.Method
+</a><a href="#h3-0-14" id="h3-0-14" class="d">-import java.nio.ByteBuffer
+</a> 
+ class BetterTranscript: Feature(&quot;Better Transcript&quot;) {
+<a href="#h3-0-17" id="h3-0-17" class="d">-    val transcriptApi by lazy { TranscriptApi() }
+</a><a href="#h3-0-18" id="h3-0-18" class="d">-
+</a>     override fun init() {
+         if (context.config.experimental.betterTranscript.globalState != true) return
+ 
+<a href="#h3-1" id="h3-1" class="h">@@ -40,33 +33,6 @@ class BetterTranscript: Feature(&quot;Better Transcript&quot;) {
+</a>             }
+ 
+             findClass(&quot;com.snapchat.client.voiceml.IVoiceMLSDK\$CppProxy&quot;).hook(&quot;asrTranscribe&quot;, HookStage.BEFORE) { param -&gt;
+<a href="#h3-1-3" id="h3-1-3" class="d">-                if (config.enhancedTranscript.get()) {
+</a><a href="#h3-1-4" id="h3-1-4" class="d">-                    val buffer = param.arg&lt;ByteBuffer&gt;(2).let {
+</a><a href="#h3-1-5" id="h3-1-5" class="d">-                        it.rewind()
+</a><a href="#h3-1-6" id="h3-1-6" class="d">-                        ByteArray(it.remaining()).also { it1 -&gt; it.get(it1); it.rewind() }
+</a><a href="#h3-1-7" id="h3-1-7" class="d">-                    }
+</a><a href="#h3-1-8" id="h3-1-8" class="d">-                    val result = runCatching {
+</a><a href="#h3-1-9" id="h3-1-9" class="d">-                        transcriptApi.transcribe(
+</a><a href="#h3-1-10" id="h3-1-10" class="d">-                            buffer.toRequestBody(),
+</a><a href="#h3-1-11" id="h3-1-11" class="d">-                            lang = config.preferredTranscriptionLang.getNullable()?.takeIf {
+</a><a href="#h3-1-12" id="h3-1-12" class="d">-                                it.isNotBlank()
+</a><a href="#h3-1-13" id="h3-1-13" class="d">-                            }?.uppercase()
+</a><a href="#h3-1-14" id="h3-1-14" class="d">-                        )
+</a><a href="#h3-1-15" id="h3-1-15" class="d">-                    }.onFailure {
+</a><a href="#h3-1-16" id="h3-1-16" class="d">-                        context.log.error(&quot;Failed to transcribe audio&quot;, it)
+</a><a href="#h3-1-17" id="h3-1-17" class="d">-                        context.shortToast(&quot;Failed to transcribe audio! Check logcat for more details.&quot;)
+</a><a href="#h3-1-18" id="h3-1-18" class="d">-                    }.getOrNull()
+</a><a href="#h3-1-19" id="h3-1-19" class="d">-
+</a><a href="#h3-1-20" id="h3-1-20" class="d">-                    param.setResult(
+</a><a href="#h3-1-21" id="h3-1-21" class="d">-                        (param.method() as Method).returnType.dataBuilder {
+</a><a href="#h3-1-22" id="h3-1-22" class="d">-                            set(&quot;mError&quot;, result == null)
+</a><a href="#h3-1-23" id="h3-1-23" class="d">-                            set(&quot;mNlpResponses&quot;, ArrayList&lt;Any&gt;())
+</a><a href="#h3-1-24" id="h3-1-24" class="d">-                            set(&quot;mWordInfo&quot;, ArrayList&lt;Any&gt;())
+</a><a href="#h3-1-25" id="h3-1-25" class="d">-                            set(&quot;mTranscription&quot;, result)
+</a><a href="#h3-1-26" id="h3-1-26" class="d">-                        }
+</a><a href="#h3-1-27" id="h3-1-27" class="d">-                    )
+</a><a href="#h3-1-28" id="h3-1-28" class="d">-                    return@hook
+</a><a href="#h3-1-29" id="h3-1-29" class="d">-                }
+</a>                 preferredTranscriptionLang?.lowercase()?.let {
+                     val asrConfig = param.arg&lt;Any&gt;(1)
+                     asrConfig.getObjectFieldOrNull(&quot;mBaseConfig&quot;)?.apply {
+<b>diff --git a/<a id="h4" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/messaging/Notifications.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -24,9 +24,7 @@ import me.rhunk.snapenhance.core.event.events.impl.SnapWidgetBroadcastReceiveEve
+</a> import me.rhunk.snapenhance.core.features.Feature
+ import me.rhunk.snapenhance.core.features.impl.FriendMutationObserver
+ import me.rhunk.snapenhance.core.features.impl.downloader.MediaDownloader
+<a href="#h4-0-3" id="h4-0-3" class="d">-import me.rhunk.snapenhance.core.features.impl.downloader.decoder.AttachmentType
+</a> import me.rhunk.snapenhance.core.features.impl.downloader.decoder.MessageDecoder
+<a href="#h4-0-5" id="h4-0-5" class="d">-import me.rhunk.snapenhance.core.features.impl.experiments.BetterTranscript
+</a> import me.rhunk.snapenhance.core.features.impl.spying.StealthMode
+ import me.rhunk.snapenhance.core.util.hook.HookStage
+ import me.rhunk.snapenhance.core.util.hook.findRestrictedConstructor
+<a href="#h4-1" id="h4-1" class="h">@@ -36,7 +34,6 @@ import me.rhunk.snapenhance.core.util.ktx.setObjectField
+</a> import me.rhunk.snapenhance.core.util.media.PreviewUtils
+ import me.rhunk.snapenhance.core.wrapper.impl.Message
+ import me.rhunk.snapenhance.core.wrapper.impl.SnapUUID
+<a href="#h4-1-3" id="h4-1-3" class="d">-import okhttp3.RequestBody.Companion.toRequestBody
+</a> import kotlin.coroutines.suspendCoroutine
+ 
+ class Notifications : Feature(&quot;Notifications&quot;) {
+<a href="#h4-2" id="h4-2" class="h">@@ -390,28 +387,6 @@ class Notifications : Feature(&quot;Notifications&quot;) {
+</a>                 }&quot;
+             }
+ 
+<a href="#h4-2-3" id="h4-2-3" class="d">-            if (contentType == ContentType.NOTE &amp;&amp; context.config.experimental.betterTranscript.takeIf { it.globalState == true }?.enhancedTranscriptInNotifications?.get() == true) {
+</a><a href="#h4-2-4" id="h4-2-4" class="d">-                val transcriptApi = context.feature(BetterTranscript::class).transcriptApi
+</a><a href="#h4-2-5" id="h4-2-5" class="d">-                MessageDecoder.decode(message.messageContent!!).firstOrNull { it.type == AttachmentType.NOTE  }?.also { media -&gt;
+</a><a href="#h4-2-6" id="h4-2-6" class="d">-                    runCatching {
+</a><a href="#h4-2-7" id="h4-2-7" class="d">-                        media.openStream { mediaStream, length -&gt;
+</a><a href="#h4-2-8" id="h4-2-8" class="d">-                            if (mediaStream == null || length &gt; 25 * 1024 * 1024) {
+</a><a href="#h4-2-9" id="h4-2-9" class="d">-                                context.log.error(&quot;Failed to open media stream or media is too large&quot;)
+</a><a href="#h4-2-10" id="h4-2-10" class="d">-                                return@openStream
+</a><a href="#h4-2-11" id="h4-2-11" class="d">-                            }
+</a><a href="#h4-2-12" id="h4-2-12" class="d">-                            val text = transcriptApi.transcribe(
+</a><a href="#h4-2-13" id="h4-2-13" class="d">-                                mediaStream.readBytes().toRequestBody(),
+</a><a href="#h4-2-14" id="h4-2-14" class="d">-                                lang = context.config.experimental.betterTranscript.preferredTranscriptionLang.getNullable()?.takeIf { it.isNotBlank() }
+</a><a href="#h4-2-15" id="h4-2-15" class="d">-                            )?.takeIf { it.isNotBlank() } ?: return@openStream
+</a><a href="#h4-2-16" id="h4-2-16" class="d">-                            serializedMessage = &quot;\uD83C\uDFA4 $text&quot;
+</a><a href="#h4-2-17" id="h4-2-17" class="d">-                            isChatMessage = true
+</a><a href="#h4-2-18" id="h4-2-18" class="d">-                        }
+</a><a href="#h4-2-19" id="h4-2-19" class="d">-                    }.onFailure {
+</a><a href="#h4-2-20" id="h4-2-20" class="d">-                        context.log.error(&quot;Failed to transcribe message&quot;, it)
+</a><a href="#h4-2-21" id="h4-2-21" class="d">-                    }
+</a><a href="#h4-2-22" id="h4-2-22" class="d">-                }
+</a><a href="#h4-2-23" id="h4-2-23" class="d">-            }
+</a><a href="#h4-2-24" id="h4-2-24" class="d">-
+</a>             if (isChatMessage || config.stackedMediaMessages.get()) {
+                 setNotificationText(serializedMessage)
+             } else {
+</pre>
+</div>
+</body>
+</html>
