@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix: prevent message list auto scroll - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/4e4f77a21323907b612979904495aa93cada7af3.html">4e4f77a21323907b612979904495aa93cada7af3</a>
+<b>parent</b> <a href="../commit/0f2edca45959d9b441f9b24ea186ed2a93d55505.html">0f2edca45959d9b441f9b24ea186ed2a93d55505</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri,  4 Jul 2025 01:28:33 +0200
+
+fix: prevent message list auto scroll
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/PreventMessageListAutoScroll.kt</a></td><td> | </td><td class="num">87</td><td><span class="i">+++++++++++++++++++++++++++</span><span class="d">----------------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/ClassMapper.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h2">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/FoldingLayoutMapper.kt</a></td><td> | </td><td class="num">36</td><td><span class="i">++++++++++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>3 files changed, 67 insertions(+), 57 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/PreventMessageListAutoScroll.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/PreventMessageListAutoScroll.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/PreventMessageListAutoScroll.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/PreventMessageListAutoScroll.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,79 +1,52 @@
+</a> package me.rhunk.snapenhance.core.features.impl.tweaks
+ 
+<a href="#h0-0-2" id="h0-0-2" class="d">-import android.view.View
+</a><a href="#h0-0-3" id="h0-0-3" class="d">-import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-import me.rhunk.snapenhance.core.event.events.impl.ConversationUpdateEvent
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+import android.util.SparseIntArray
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+import androidx.core.util.size
+</a> import me.rhunk.snapenhance.core.features.Feature
+ import me.rhunk.snapenhance.core.util.hook.HookStage
+ import me.rhunk.snapenhance.core.util.hook.hook
+<a href="#h0-0-10" id="h0-0-10" class="d">-import me.rhunk.snapenhance.core.wrapper.impl.SnapUUID
+</a><a href="#h0-0-11" id="h0-0-11" class="i">+import me.rhunk.snapenhance.core.util.ktx.getObjectField
+</a><a href="#h0-0-12" id="h0-0-12" class="i">+import me.rhunk.snapenhance.core.util.ktx.setObjectField
+</a><a href="#h0-0-13" id="h0-0-13" class="i">+import me.rhunk.snapenhance.mapper.impl.FoldingLayoutMapper
+</a><a href="#h0-0-14" id="h0-0-14" class="i">+
+</a> 
+ class PreventMessageListAutoScroll : Feature(&quot;PreventMessageListAutoScroll&quot;) {
+<a href="#h0-0-17" id="h0-0-17" class="d">-    private var openedConversationId: String? = null
+</a><a href="#h0-0-18" id="h0-0-18" class="d">-    private val focusedMessages = mutableMapOf&lt;View, Long&gt;()
+</a><a href="#h0-0-19" id="h0-0-19" class="d">-    private var firstFocusedMessageId: Long? = null
+</a><a href="#h0-0-20" id="h0-0-20" class="d">-    private val delayedMessageUpdates = mutableListOf&lt;() -&gt; Unit&gt;()
+</a><a href="#h0-0-21" id="h0-0-21" class="i">+    companion object {
+</a><a href="#h0-0-22" id="h0-0-22" class="i">+        private const val MIN_SCROLL_ITEMS = 4
+</a><a href="#h0-0-23" id="h0-0-23" class="i">+    }
+</a> 
+     override fun init() {
+         if (!context.config.userInterface.preventMessageListAutoScroll.get()) return
+ 
+<a href="#h0-0-28" id="h0-0-28" class="d">-        onNextActivityCreate {
+</a><a href="#h0-0-29" id="h0-0-29" class="d">-            context.event.subscribe(ConversationUpdateEvent::class) { event -&gt;
+</a><a href="#h0-0-30" id="h0-0-30" class="d">-                val updatedMessage = event.messages.firstOrNull() ?: return@subscribe
+</a><a href="#h0-0-31" id="h0-0-31" class="d">-                if (openedConversationId != updatedMessage.messageDescriptor?.conversationId.toString()) return@subscribe
+</a><a href="#h0-0-32" id="h0-0-32" class="i">+        val foldingLayoutManager = findClass(&quot;com.snap.messaging.chat.features.messagelist.FoldingLayoutManager&quot;)
+</a><a href="#h0-0-33" id="h0-0-33" class="i">+        val recyclerViewClass = findClass(&quot;androidx.recyclerview.widget.RecyclerView&quot;)
+</a> 
+<a href="#h0-0-35" id="h0-0-35" class="d">-                // cancel if the message is already in focus
+</a><a href="#h0-0-36" id="h0-0-36" class="d">-                if (focusedMessages.entries.any { entry -&gt; entry.value == updatedMessage.messageDescriptor?.messageId &amp;&amp; entry.key.isAttachedToWindow }) return@subscribe
+</a><a href="#h0-0-37" id="h0-0-37" class="i">+        val computeVerticalScrollOffsetMethod = recyclerViewClass.getMethod(&quot;computeVerticalScrollOffset&quot;)
+</a><a href="#h0-0-38" id="h0-0-38" class="i">+        val computeVerticalScrollExtentMethod = recyclerViewClass.getMethod(&quot;computeVerticalScrollExtent&quot;)
+</a><a href="#h0-0-39" id="h0-0-39" class="i">+        val computeVerticalScrollRangeMethod = recyclerViewClass.getMethod(&quot;computeVerticalScrollRange&quot;)
+</a> 
+<a href="#h0-0-41" id="h0-0-41" class="d">-                val conversationLastMessages = context.database.getMessagesFromConversationId(
+</a><a href="#h0-0-42" id="h0-0-42" class="d">-                    openedConversationId.toString(),
+</a><a href="#h0-0-43" id="h0-0-43" class="d">-                    4
+</a><a href="#h0-0-44" id="h0-0-44" class="d">-                ) ?: return@subscribe
+</a><a href="#h0-0-45" id="h0-0-45" class="i">+        context.mappings.useMapper(FoldingLayoutMapper::class) {
+</a><a href="#h0-0-46" id="h0-0-46" class="i">+            foldingLayoutManager.hook(onLayoutCompletedMethod.getAsString() ?: throw NoSuchMethodError(&quot;onLayoutCompleted&quot;), HookStage.BEFORE) { param -&gt;
+</a><a href="#h0-0-47" id="h0-0-47" class="i">+                val instance = param.thisObject&lt;Any&gt;()
+</a><a href="#h0-0-48" id="h0-0-48" class="i">+                val shouldScrollToBottom = instance.getObjectField(shouldScrollToBottomField.getAsString()!!) as Boolean
+</a> 
+<a href="#h0-0-50" id="h0-0-50" class="d">-                if (conversationLastMessages.none {
+</a><a href="#h0-0-51" id="h0-0-51" class="d">-                        focusedMessages.entries.any { entry -&gt; entry.value == it.clientMessageId.toLong() &amp;&amp; entry.key.isAttachedToWindow }
+</a><a href="#h0-0-52" id="h0-0-52" class="d">-                    }) {
+</a><a href="#h0-0-53" id="h0-0-53" class="d">-                    synchronized(delayedMessageUpdates) {
+</a><a href="#h0-0-54" id="h0-0-54" class="d">-                        if (firstFocusedMessageId == null) firstFocusedMessageId = conversationLastMessages.lastOrNull()?.clientMessageId?.toLong()
+</a><a href="#h0-0-55" id="h0-0-55" class="d">-                        delayedMessageUpdates.add {
+</a><a href="#h0-0-56" id="h0-0-56" class="d">-                            event.adapter.invokeOriginal()
+</a><a href="#h0-0-57" id="h0-0-57" class="d">-                        }
+</a><a href="#h0-0-58" id="h0-0-58" class="d">-                    }
+</a><a href="#h0-0-59" id="h0-0-59" class="d">-                    event.adapter.setResult(null)
+</a><a href="#h0-0-60" id="h0-0-60" class="d">-                }
+</a><a href="#h0-0-61" id="h0-0-61" class="d">-            }
+</a><a href="#h0-0-62" id="h0-0-62" class="i">+                if (shouldScrollToBottom) {
+</a><a href="#h0-0-63" id="h0-0-63" class="i">+                    val sparseIntArray = param.thisObject&lt;Any&gt;().getObjectField(sizeSparseArrayField.getAsString()!!) as SparseIntArray
+</a><a href="#h0-0-64" id="h0-0-64" class="i">+                    val recyclerView = param.thisObject&lt;Any&gt;().getObjectField(recyclerViewField.getAsString()!!)
+</a> 
+<a href="#h0-0-66" id="h0-0-66" class="d">-            context.classCache.conversationManager.apply {
+</a><a href="#h0-0-67" id="h0-0-67" class="d">-                hook(&quot;enterConversation&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h0-0-68" id="h0-0-68" class="d">-                    openedConversationId = SnapUUID(param.arg(0)).toString()
+</a><a href="#h0-0-69" id="h0-0-69" class="d">-                }
+</a><a href="#h0-0-70" id="h0-0-70" class="d">-                hook(&quot;exitConversation&quot;, HookStage.BEFORE) {
+</a><a href="#h0-0-71" id="h0-0-71" class="d">-                    openedConversationId = null
+</a><a href="#h0-0-72" id="h0-0-72" class="d">-                    firstFocusedMessageId = null
+</a><a href="#h0-0-73" id="h0-0-73" class="d">-                    synchronized(focusedMessages) {
+</a><a href="#h0-0-74" id="h0-0-74" class="d">-                        focusedMessages.clear()
+</a><a href="#h0-0-75" id="h0-0-75" class="d">-                    }
+</a><a href="#h0-0-76" id="h0-0-76" class="d">-                    synchronized(delayedMessageUpdates) {
+</a><a href="#h0-0-77" id="h0-0-77" class="d">-                        delayedMessageUpdates.clear()
+</a><a href="#h0-0-78" id="h0-0-78" class="d">-                    }
+</a><a href="#h0-0-79" id="h0-0-79" class="d">-                }
+</a><a href="#h0-0-80" id="h0-0-80" class="d">-            }
+</a><a href="#h0-0-81" id="h0-0-81" class="i">+                    val scrollOffset = computeVerticalScrollRangeMethod.invoke(recyclerView) as Int - (computeVerticalScrollOffsetMethod.invoke(recyclerView) as Int + computeVerticalScrollExtentMethod.invoke(recyclerView) as Int)
+</a> 
+<a href="#h0-0-83" id="h0-0-83" class="d">-            context.event.subscribe(BindViewEvent::class) { event -&gt;
+</a><a href="#h0-0-84" id="h0-0-84" class="d">-                event.chatMessage { conversationId, messageId -&gt;
+</a><a href="#h0-0-85" id="h0-0-85" class="d">-                    if (conversationId != openedConversationId) return@chatMessage
+</a><a href="#h0-0-86" id="h0-0-86" class="d">-                    synchronized(focusedMessages) {
+</a><a href="#h0-0-87" id="h0-0-87" class="d">-                        focusedMessages[event.view] = messageId.toLong()
+</a><a href="#h0-0-88" id="h0-0-88" class="d">-                    }
+</a><a href="#h0-0-89" id="h0-0-89" class="i">+                    var layoutSizeSum = 0
+</a> 
+<a href="#h0-0-91" id="h0-0-91" class="d">-                    if (delayedMessageUpdates.isNotEmpty() &amp;&amp; focusedMessages.entries.any { entry -&gt; entry.value == firstFocusedMessageId &amp;&amp; entry.key.isAttachedToWindow }) {
+</a><a href="#h0-0-92" id="h0-0-92" class="d">-                        delayedMessageUpdates.apply {
+</a><a href="#h0-0-93" id="h0-0-93" class="d">-                            synchronized(this) {
+</a><a href="#h0-0-94" id="h0-0-94" class="d">-                                removeIf { it(); true }
+</a><a href="#h0-0-95" id="h0-0-95" class="d">-                                firstFocusedMessageId = null
+</a><a href="#h0-0-96" id="h0-0-96" class="d">-                            }
+</a><a href="#h0-0-97" id="h0-0-97" class="i">+                    for (i in 0 until sparseIntArray.size) {
+</a><a href="#h0-0-98" id="h0-0-98" class="i">+                        if (sparseIntArray.keyAt(i) &lt; MIN_SCROLL_ITEMS) {
+</a><a href="#h0-0-99" id="h0-0-99" class="i">+                            layoutSizeSum += sparseIntArray.valueAt(i)
+</a>                         }
+                     }
+<a href="#h0-0-102" id="h0-0-102" class="i">+
+</a><a href="#h0-0-103" id="h0-0-103" class="i">+                    if (scrollOffset &lt;= 0 || scrollOffset &gt; layoutSizeSum) {
+</a><a href="#h0-0-104" id="h0-0-104" class="i">+                        instance.setObjectField(shouldScrollToBottomField.getAsString()!!, false)
+</a><a href="#h0-0-105" id="h0-0-105" class="i">+                    }
+</a>                 }
+             }
+         }
+<b>diff --git a/<a id="h1" href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/ClassMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/ClassMapper.kt</a> b/<a href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/ClassMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/ClassMapper.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -38,6 +38,7 @@ class ClassMapper(
+</a>             MemoriesPresenterMapper(),
+             StreaksExpirationMapper(),
+             COFObservableMapper(),
+<a href="#h1-0-3" id="h1-0-3" class="i">+            FoldingLayoutMapper(),
+</a>         )
+     }
+ 
+<b>diff --git a/<a id="h2" href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/FoldingLayoutMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/FoldingLayoutMapper.kt</a> b/<a href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/FoldingLayoutMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/FoldingLayoutMapper.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -0,0 +1,35 @@
+</a><a href="#h2-0-0" id="h2-0-0" class="i">+package me.rhunk.snapenhance.mapper.impl
+</a><a href="#h2-0-1" id="h2-0-1" class="i">+
+</a><a href="#h2-0-2" id="h2-0-2" class="i">+import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction22c
+</a><a href="#h2-0-3" id="h2-0-3" class="i">+import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction35c
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+import com.android.tools.smali.dexlib2.iface.reference.FieldReference
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+import com.android.tools.smali.dexlib2.iface.reference.MethodReference
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+import me.rhunk.snapenhance.mapper.AbstractClassMapper
+</a><a href="#h2-0-7" id="h2-0-7" class="i">+
+</a><a href="#h2-0-8" id="h2-0-8" class="i">+class FoldingLayoutMapper: AbstractClassMapper(&quot;FoldingLayoutMapper&quot;) {
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+    val onLayoutCompletedMethod = string(&quot;onLayoutCompletedMethod&quot;)
+</a><a href="#h2-0-10" id="h2-0-10" class="i">+    val shouldScrollToBottomField = string(&quot;shouldScrollToBottomField&quot;)
+</a><a href="#h2-0-11" id="h2-0-11" class="i">+    val sizeSparseArrayField = string(&quot;sizeSparseArrayField&quot;)
+</a><a href="#h2-0-12" id="h2-0-12" class="i">+    val recyclerViewField = string(&quot;recyclerViewField&quot;)
+</a><a href="#h2-0-13" id="h2-0-13" class="i">+
+</a><a href="#h2-0-14" id="h2-0-14" class="i">+    init {
+</a><a href="#h2-0-15" id="h2-0-15" class="i">+        mapper {
+</a><a href="#h2-0-16" id="h2-0-16" class="i">+            val foldingLayoutManagerClass = getClass(&quot;Lcom/snap/messaging/chat/features/messagelist/FoldingLayoutManager;&quot;) ?: return@mapper
+</a><a href="#h2-0-17" id="h2-0-17" class="i">+
+</a><a href="#h2-0-18" id="h2-0-18" class="i">+            sizeSparseArrayField.set(foldingLayoutManagerClass.fields.firstOrNull { it.type == &quot;Landroid/util/SparseIntArray;&quot; }?.name ?: return@mapper)
+</a><a href="#h2-0-19" id="h2-0-19" class="i">+            recyclerViewField.set(foldingLayoutManagerClass.fields.firstOrNull { it.type == &quot;Landroidx/recyclerview/widget/RecyclerView;&quot; }?.name ?: return@mapper)
+</a><a href="#h2-0-20" id="h2-0-20" class="i">+
+</a><a href="#h2-0-21" id="h2-0-21" class="i">+            foldingLayoutManagerClass.methods.firstOrNull {
+</a><a href="#h2-0-22" id="h2-0-22" class="i">+                it.parameterTypes.size == 1 &amp;&amp; it.returnType == &quot;V&quot; &amp;&amp; it.implementation?.instructions?.any {
+</a><a href="#h2-0-23" id="h2-0-23" class="i">+                    ((it as? Instruction35c)?.reference as? MethodReference)?.name == &quot;invoke&quot;
+</a><a href="#h2-0-24" id="h2-0-24" class="i">+                } == true
+</a><a href="#h2-0-25" id="h2-0-25" class="i">+            }?.let { method -&gt;
+</a><a href="#h2-0-26" id="h2-0-26" class="i">+                onLayoutCompletedMethod.set(method.name)
+</a><a href="#h2-0-27" id="h2-0-27" class="i">+                for (instruction in method.implementation?.instructions ?: return@mapper) {
+</a><a href="#h2-0-28" id="h2-0-28" class="i">+                    shouldScrollToBottomField.set(((instruction as? Instruction22c)?.reference as? FieldReference)?.takeIf { it.type == &quot;Z&quot; }?.name ?: continue)
+</a><a href="#h2-0-29" id="h2-0-29" class="i">+                    break
+</a><a href="#h2-0-30" id="h2-0-30" class="i">+                }
+</a><a href="#h2-0-31" id="h2-0-31" class="i">+            }
+</a><a href="#h2-0-32" id="h2-0-32" class="i">+        }
+</a><a href="#h2-0-33" id="h2-0-33" class="i">+    }
+</a><a href="#h2-0-34" id="h2-0-34" class="i">+}</a><a href="#h2-0-35" id="h2-0-35" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>
