@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>refactor: security features - remove remote shared library manager - prevent plugin from loading in newer versions - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/5702420f89061d79c4ecc2af560f3fcf0fb2b5b5.html">5702420f89061d79c4ecc2af560f3fcf0fb2b5b5</a>
+<b>parent</b> <a href="../commit/56e434cb15307c6bf53a2acd7eb62e725c0902fb.html">56e434cb15307c6bf53a2acd7eb62e725c0902fb</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat,  5 Jul 2025 16:40:36 +0200
+
+refactor: security features
+- remove remote shared library manager
+- prevent plugin from loading in newer versions
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="D">D</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSharedLibraryManager.kt</a></td><td> | </td><td class="num">124</td><td><span class="i"></span><span class="d">-------------------------------------------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></td><td> | </td><td class="num">12</td><td><span class="i"></span><span class="d">------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt</a></td><td> | </td><td class="num">5</td><td><span class="i">+</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/SetupActivity.kt</a></td><td> | </td><td class="num">8</td><td><span class="i">++++</span><span class="d">----</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h4">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SecurityScreen.kt</a></td><td> | </td><td class="num">133</td><td><span class="i"></span><span class="d">-------------------------------------------------------------------------------</span></td></tr>
+<tr><td class="D">D</td><td><a href="#h5">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/WelcomeScreen.kt</a></td><td> | </td><td class="num">18</td><td><span class="i"></span><span class="d">------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">4</td><td><span class="i"></span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h7">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">+</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h8">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h9">core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt</a></td><td> | </td><td class="num">83</td><td><span class="i">++++++++++++++++++++++++++++++++++</span><span class="d">---------------------------------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h10">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></td><td> | </td><td class="num">28</td><td><span class="i">+++++++++++++</span><span class="d">---------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h11">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/ClassMapper.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="A">A</td><td><a href="#h12">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/PlatformClientAttestationMapper.kt</a></td><td> | </td><td class="num">29</td><td><span class="i">+++++++++++++++++++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>13 files changed, 86 insertions(+), 364 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSharedLibraryManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSharedLibraryManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSharedLibraryManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSharedLibraryManager.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -1,123 +0,0 @@
+</a><a href="#h0-0-0" id="h0-0-0" class="d">-package me.rhunk.snapenhance
+</a><a href="#h0-0-1" id="h0-0-1" class="d">-
+</a><a href="#h0-0-2" id="h0-0-2" class="d">-import android.annotation.SuppressLint
+</a><a href="#h0-0-3" id="h0-0-3" class="d">-import android.app.Notification
+</a><a href="#h0-0-4" id="h0-0-4" class="d">-import android.app.NotificationChannel
+</a><a href="#h0-0-5" id="h0-0-5" class="d">-import android.app.NotificationManager
+</a><a href="#h0-0-6" id="h0-0-6" class="d">-import android.app.PendingIntent
+</a><a href="#h0-0-7" id="h0-0-7" class="d">-import android.content.Intent
+</a><a href="#h0-0-8" id="h0-0-8" class="d">-import android.os.Build
+</a><a href="#h0-0-9" id="h0-0-9" class="d">-import androidx.core.net.toUri
+</a><a href="#h0-0-10" id="h0-0-10" class="d">-import me.rhunk.snapenhance.common.BuildConfig
+</a><a href="#h0-0-11" id="h0-0-11" class="d">-import me.rhunk.snapenhance.common.bridge.InternalFileHandleType
+</a><a href="#h0-0-12" id="h0-0-12" class="d">-import okhttp3.OkHttpClient
+</a><a href="#h0-0-13" id="h0-0-13" class="d">-import okhttp3.Request
+</a><a href="#h0-0-14" id="h0-0-14" class="d">-import java.io.File
+</a><a href="#h0-0-15" id="h0-0-15" class="d">-
+</a><a href="#h0-0-16" id="h0-0-16" class="d">-class RemoteSharedLibraryManager(
+</a><a href="#h0-0-17" id="h0-0-17" class="d">-    private val remoteSideContext: RemoteSideContext
+</a><a href="#h0-0-18" id="h0-0-18" class="d">-) {
+</a><a href="#h0-0-19" id="h0-0-19" class="d">-    private val okHttpClient = OkHttpClient()
+</a><a href="#h0-0-20" id="h0-0-20" class="d">-
+</a><a href="#h0-0-21" id="h0-0-21" class="d">-    private fun getVersion(): String? {
+</a><a href="#h0-0-22" id="h0-0-22" class="d">-        return runCatching {
+</a><a href="#h0-0-23" id="h0-0-23" class="d">-            okHttpClient.newCall(
+</a><a href="#h0-0-24" id="h0-0-24" class="d">-                Request.Builder()
+</a><a href="#h0-0-25" id="h0-0-25" class="d">-                    .url(&quot;${BuildConfig.SIF_ENDPOINT}/version&quot;)
+</a><a href="#h0-0-26" id="h0-0-26" class="d">-                    .build()
+</a><a href="#h0-0-27" id="h0-0-27" class="d">-            ).execute().use { response -&gt;
+</a><a href="#h0-0-28" id="h0-0-28" class="d">-                if (!response.isSuccessful) {
+</a><a href="#h0-0-29" id="h0-0-29" class="d">-                    return null
+</a><a href="#h0-0-30" id="h0-0-30" class="d">-                }
+</a><a href="#h0-0-31" id="h0-0-31" class="d">-                response.body.string()
+</a><a href="#h0-0-32" id="h0-0-32" class="d">-            }
+</a><a href="#h0-0-33" id="h0-0-33" class="d">-        }.getOrNull()
+</a><a href="#h0-0-34" id="h0-0-34" class="d">-    }
+</a><a href="#h0-0-35" id="h0-0-35" class="d">-
+</a><a href="#h0-0-36" id="h0-0-36" class="d">-    private fun downloadLatest(outputFile: File): Boolean {
+</a><a href="#h0-0-37" id="h0-0-37" class="d">-        val abi = Build.SUPPORTED_ABIS.firstOrNull() ?: return false
+</a><a href="#h0-0-38" id="h0-0-38" class="d">-        val request = Request.Builder()
+</a><a href="#h0-0-39" id="h0-0-39" class="d">-            .url(&quot;${BuildConfig.SIF_ENDPOINT}/$abi.so&quot;)
+</a><a href="#h0-0-40" id="h0-0-40" class="d">-            .build()
+</a><a href="#h0-0-41" id="h0-0-41" class="d">-        runCatching {
+</a><a href="#h0-0-42" id="h0-0-42" class="d">-            okHttpClient.newCall(request).execute().use { response -&gt;
+</a><a href="#h0-0-43" id="h0-0-43" class="d">-                if (!response.isSuccessful) {
+</a><a href="#h0-0-44" id="h0-0-44" class="d">-                    return false
+</a><a href="#h0-0-45" id="h0-0-45" class="d">-                }
+</a><a href="#h0-0-46" id="h0-0-46" class="d">-                response.body.byteStream().use { input -&gt;
+</a><a href="#h0-0-47" id="h0-0-47" class="d">-                    outputFile.outputStream().use { output -&gt;
+</a><a href="#h0-0-48" id="h0-0-48" class="d">-                        input.copyTo(output)
+</a><a href="#h0-0-49" id="h0-0-49" class="d">-                    }
+</a><a href="#h0-0-50" id="h0-0-50" class="d">-                }
+</a><a href="#h0-0-51" id="h0-0-51" class="d">-                return true
+</a><a href="#h0-0-52" id="h0-0-52" class="d">-            }
+</a><a href="#h0-0-53" id="h0-0-53" class="d">-        }.onFailure {
+</a><a href="#h0-0-54" id="h0-0-54" class="d">-            remoteSideContext.log.error(&quot;Failed to download latest sif&quot;, it)
+</a><a href="#h0-0-55" id="h0-0-55" class="d">-        }
+</a><a href="#h0-0-56" id="h0-0-56" class="d">-        return false
+</a><a href="#h0-0-57" id="h0-0-57" class="d">-    }
+</a><a href="#h0-0-58" id="h0-0-58" class="d">-
+</a><a href="#h0-0-59" id="h0-0-59" class="d">-    @SuppressLint(&quot;ApplySharedPref&quot;)
+</a><a href="#h0-0-60" id="h0-0-60" class="d">-    fun init() {
+</a><a href="#h0-0-61" id="h0-0-61" class="d">-        val libraryFile = InternalFileHandleType.SIF.resolve(remoteSideContext.androidContext)
+</a><a href="#h0-0-62" id="h0-0-62" class="d">-        val currentVersion = remoteSideContext.sharedPreferences.getString(&quot;sif&quot;, null)?.trim()
+</a><a href="#h0-0-63" id="h0-0-63" class="d">-        if (currentVersion == null || currentVersion == &quot;false&quot;) {
+</a><a href="#h0-0-64" id="h0-0-64" class="d">-            libraryFile.takeIf { it.exists() }?.delete()
+</a><a href="#h0-0-65" id="h0-0-65" class="d">-            remoteSideContext.log.info(&quot;sif can&#39;t be loaded due to user preference&quot;)
+</a><a href="#h0-0-66" id="h0-0-66" class="d">-            return
+</a><a href="#h0-0-67" id="h0-0-67" class="d">-        }
+</a><a href="#h0-0-68" id="h0-0-68" class="d">-        val latestVersion = getVersion()?.trim() ?: run {
+</a><a href="#h0-0-69" id="h0-0-69" class="d">-            throw Exception(&quot;Failed to get latest sif version&quot;)
+</a><a href="#h0-0-70" id="h0-0-70" class="d">-        }
+</a><a href="#h0-0-71" id="h0-0-71" class="d">-
+</a><a href="#h0-0-72" id="h0-0-72" class="d">-        if (currentVersion == latestVersion) {
+</a><a href="#h0-0-73" id="h0-0-73" class="d">-            remoteSideContext.log.info(&quot;sif is up to date ($currentVersion)&quot;)
+</a><a href="#h0-0-74" id="h0-0-74" class="d">-            return
+</a><a href="#h0-0-75" id="h0-0-75" class="d">-        }
+</a><a href="#h0-0-76" id="h0-0-76" class="d">-
+</a><a href="#h0-0-77" id="h0-0-77" class="d">-        remoteSideContext.log.info(&quot;Updating sif from $currentVersion to $latestVersion&quot;)
+</a><a href="#h0-0-78" id="h0-0-78" class="d">-        if (downloadLatest(libraryFile)) {
+</a><a href="#h0-0-79" id="h0-0-79" class="d">-            remoteSideContext.sharedPreferences.edit().putString(&quot;sif&quot;, latestVersion).commit()
+</a><a href="#h0-0-80" id="h0-0-80" class="d">-            remoteSideContext.shortToast(&quot;SIF updated to $latestVersion!&quot;)
+</a><a href="#h0-0-81" id="h0-0-81" class="d">-
+</a><a href="#h0-0-82" id="h0-0-82" class="d">-            if (currentVersion.isNotEmpty()) {
+</a><a href="#h0-0-83" id="h0-0-83" class="d">-                val notificationManager = remoteSideContext.androidContext.getSystemService(NotificationManager::class.java)
+</a><a href="#h0-0-84" id="h0-0-84" class="d">-                val channelId = &quot;sif_update&quot;
+</a><a href="#h0-0-85" id="h0-0-85" class="d">-
+</a><a href="#h0-0-86" id="h0-0-86" class="d">-                notificationManager.createNotificationChannel(
+</a><a href="#h0-0-87" id="h0-0-87" class="d">-                    NotificationChannel(
+</a><a href="#h0-0-88" id="h0-0-88" class="d">-                        channelId,
+</a><a href="#h0-0-89" id="h0-0-89" class="d">-                        &quot;SIF Updates&quot;,
+</a><a href="#h0-0-90" id="h0-0-90" class="d">-                        NotificationManager.IMPORTANCE_DEFAULT
+</a><a href="#h0-0-91" id="h0-0-91" class="d">-                    )
+</a><a href="#h0-0-92" id="h0-0-92" class="d">-                )
+</a><a href="#h0-0-93" id="h0-0-93" class="d">-
+</a><a href="#h0-0-94" id="h0-0-94" class="d">-                notificationManager.notify(
+</a><a href="#h0-0-95" id="h0-0-95" class="d">-                    System.nanoTime().toInt(),
+</a><a href="#h0-0-96" id="h0-0-96" class="d">-                    Notification.Builder(remoteSideContext.androidContext, channelId)
+</a><a href="#h0-0-97" id="h0-0-97" class="d">-                        .setContentTitle(&quot;SnapEnhance&quot;)
+</a><a href="#h0-0-98" id="h0-0-98" class="d">-                        .setContentText(&quot;Security Features have been updated to version $latestVersion&quot;)
+</a><a href="#h0-0-99" id="h0-0-99" class="d">-                        .setSmallIcon(android.R.drawable.stat_sys_download_done)
+</a><a href="#h0-0-100" id="h0-0-100" class="d">-                        .setContentIntent(PendingIntent.getActivity(
+</a><a href="#h0-0-101" id="h0-0-101" class="d">-                            remoteSideContext.androidContext,
+</a><a href="#h0-0-102" id="h0-0-102" class="d">-                            0,
+</a><a href="#h0-0-103" id="h0-0-103" class="d">-                            Intent().apply {
+</a><a href="#h0-0-104" id="h0-0-104" class="d">-                                action = Intent.ACTION_VIEW
+</a><a href="#h0-0-105" id="h0-0-105" class="d">-                                data = &quot;https://github.com/SnapEnhance/resources&quot;.toUri()
+</a><a href="#h0-0-106" id="h0-0-106" class="d">-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+</a><a href="#h0-0-107" id="h0-0-107" class="d">-                            },
+</a><a href="#h0-0-108" id="h0-0-108" class="d">-                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+</a><a href="#h0-0-109" id="h0-0-109" class="d">-                        )).build()
+</a><a href="#h0-0-110" id="h0-0-110" class="d">-                )
+</a><a href="#h0-0-111" id="h0-0-111" class="d">-            }
+</a><a href="#h0-0-112" id="h0-0-112" class="d">-
+</a><a href="#h0-0-113" id="h0-0-113" class="d">-            // force restart snapchat
+</a><a href="#h0-0-114" id="h0-0-114" class="d">-            runCatching {
+</a><a href="#h0-0-115" id="h0-0-115" class="d">-                remoteSideContext.config.configStateListener?.takeIf { it.asBinder().pingBinder() }?.onRestartRequired()
+</a><a href="#h0-0-116" id="h0-0-116" class="d">-            }
+</a><a href="#h0-0-117" id="h0-0-117" class="d">-        } else {
+</a><a href="#h0-0-118" id="h0-0-118" class="d">-            remoteSideContext.log.warn(&quot;Failed to download latest sif&quot;)
+</a><a href="#h0-0-119" id="h0-0-119" class="d">-            throw Exception(&quot;Failed to download latest sif&quot;)
+</a><a href="#h0-0-120" id="h0-0-120" class="d">-        }
+</a><a href="#h0-0-121" id="h0-0-121" class="d">-    }
+</a><a href="#h0-0-122" id="h0-0-122" class="d">-}</a><a href="#h0-0-123" id="h0-0-123" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h1" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/RemoteSideContext.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -78,7 +78,6 @@ class RemoteSideContext(
+</a>     val tracker = RemoteTracker(this)
+     val accountStorage = RemoteAccountStorage(this)
+     val locationManager = RemoteLocationManager(this)
+<a href="#h1-0-3" id="h1-0-3" class="d">-    val remoteSharedLibraryManager = RemoteSharedLibraryManager(this)
+</a> 
+     //used to load bitmoji selfies and download previews
+     val imageLoader by lazy {
+<a href="#h1-1" id="h1-1" class="h">@@ -132,13 +131,6 @@ class RemoteSideContext(
+</a>                         messageLogger.purgeTrackerLogs(it)
+                     }
+                 }
+<a href="#h1-1-3" id="h1-1-3" class="d">-                coroutineScope.launch {
+</a><a href="#h1-1-4" id="h1-1-4" class="d">-                    runCatching {
+</a><a href="#h1-1-5" id="h1-1-5" class="d">-                        remoteSharedLibraryManager.init()
+</a><a href="#h1-1-6" id="h1-1-6" class="d">-                    }.onFailure {
+</a><a href="#h1-1-7" id="h1-1-7" class="d">-                        log.error(&quot;Failed to init RemoteSharedLibraryManager&quot;, it)
+</a><a href="#h1-1-8" id="h1-1-8" class="d">-                    }
+</a><a href="#h1-1-9" id="h1-1-9" class="d">-                }
+</a>             }
+         }.onFailure {
+             log.error(&quot;Failed to load RemoteSideContext&quot;, it)
+<a href="#h1-2" id="h1-2" class="h">@@ -220,10 +212,6 @@ class RemoteSideContext(
+</a>             requirements = requirements or Requirements.MAPPINGS
+         }
+ 
+<a href="#h1-2-3" id="h1-2-3" class="d">-        if (sharedPreferences.getString(&quot;sif&quot;, null) == null) {
+</a><a href="#h1-2-4" id="h1-2-4" class="d">-            requirements = requirements or Requirements.SIF
+</a><a href="#h1-2-5" id="h1-2-5" class="d">-        }
+</a><a href="#h1-2-6" id="h1-2-6" class="d">-
+</a>         if (requirements == 0) return false
+ 
+         val currentContext = activity ?: androidContext
+<b>diff --git a/<a id="h2" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -154,9 +154,6 @@ class HomeSettings : Routes.Route() {
+</a>             RowAction(key = &quot;change_language&quot;) {
+                 context.checkForRequirements(Requirements.LANGUAGE)
+             }
+<a href="#h2-0-3" id="h2-0-3" class="d">-            RowAction(key = &quot;security_features&quot;) {
+</a><a href="#h2-0-4" id="h2-0-4" class="d">-                context.checkForRequirements(Requirements.SIF)
+</a><a href="#h2-0-5" id="h2-0-5" class="d">-            }
+</a>             RowTitle(title = translation[&quot;message_logger_title&quot;])
+             ShiftedRow {
+                 Column(
+<a href="#h2-1" id="h2-1" class="h">@@ -285,7 +282,7 @@ class HomeSettings : Routes.Route() {
+</a>                 Column(
+                     verticalArrangement = Arrangement.spacedBy(4.dp),
+                 ) {
+<a href="#h2-1-3" id="h2-1-3" class="d">-                    PreferenceToggle(context.sharedPreferences, key = &quot;enable_security_features&quot;, text = &quot;Enable Security Features&quot;)
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+                    PreferenceToggle(context.sharedPreferences, key = &quot;test_mode&quot;, text = &quot;Test Mode (Debugging)&quot;)
+</a>                     PreferenceToggle(context.sharedPreferences, key = &quot;disable_feature_loading&quot;, text = &quot;Disable Feature Loading&quot;)
+                     PreferenceToggle(context.sharedPreferences, key = &quot;disable_mapper&quot;, text = &quot;Disable Auto Mapper&quot;)
+                 }
+<b>diff --git a/<a id="h3" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/SetupActivity.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/SetupActivity.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/SetupActivity.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/SetupActivity.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -29,7 +29,10 @@ import androidx.navigation.compose.rememberNavController
+</a> import me.rhunk.snapenhance.SharedContextHolder
+ import me.rhunk.snapenhance.common.ui.AppMaterialTheme
+ import me.rhunk.snapenhance.ui.setup.screens.SetupScreen
+<a href="#h3-0-3" id="h3-0-3" class="d">-import me.rhunk.snapenhance.ui.setup.screens.impl.*
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+import me.rhunk.snapenhance.ui.setup.screens.impl.MappingsScreen
+</a><a href="#h3-0-5" id="h3-0-5" class="i">+import me.rhunk.snapenhance.ui.setup.screens.impl.PermissionsScreen
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+import me.rhunk.snapenhance.ui.setup.screens.impl.PickLanguageScreen
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+import me.rhunk.snapenhance.ui.setup.screens.impl.SaveFolderScreen
+</a> 
+ 
+ class SetupActivity : ComponentActivity() {
+<a href="#h3-1" id="h3-1" class="h">@@ -66,9 +69,6 @@ class SetupActivity : ComponentActivity() {
+</a>             if (isFirstRun || hasRequirement(Requirements.MAPPINGS)) {
+                 add(MappingsScreen().apply { route = &quot;mappings&quot; })
+             }
+<a href="#h3-1-3" id="h3-1-3" class="d">-            if (isFirstRun || hasRequirement(Requirements.SIF)) {
+</a><a href="#h3-1-4" id="h3-1-4" class="d">-                add(SecurityScreen().apply { route = &quot;security&quot; })
+</a><a href="#h3-1-5" id="h3-1-5" class="d">-            }
+</a>         }
+ 
+         // If there are no required screens, we can just finish the activity
+<b>diff --git a/<a id="h4" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SecurityScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SecurityScreen.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SecurityScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/SecurityScreen.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -1,132 +0,0 @@
+</a><a href="#h4-0-0" id="h4-0-0" class="d">-package me.rhunk.snapenhance.ui.setup.screens.impl
+</a><a href="#h4-0-1" id="h4-0-1" class="d">-
+</a><a href="#h4-0-2" id="h4-0-2" class="d">-import android.annotation.SuppressLint
+</a><a href="#h4-0-3" id="h4-0-3" class="d">-import androidx.compose.foundation.layout.*
+</a><a href="#h4-0-4" id="h4-0-4" class="d">-import androidx.compose.foundation.rememberScrollState
+</a><a href="#h4-0-5" id="h4-0-5" class="d">-import androidx.compose.foundation.verticalScroll
+</a><a href="#h4-0-6" id="h4-0-6" class="d">-import androidx.compose.material.icons.Icons
+</a><a href="#h4-0-7" id="h4-0-7" class="d">-import androidx.compose.material.icons.filled.WarningAmber
+</a><a href="#h4-0-8" id="h4-0-8" class="d">-import androidx.compose.material3.*
+</a><a href="#h4-0-9" id="h4-0-9" class="d">-import androidx.compose.runtime.*
+</a><a href="#h4-0-10" id="h4-0-10" class="d">-import androidx.compose.ui.Alignment
+</a><a href="#h4-0-11" id="h4-0-11" class="d">-import androidx.compose.ui.Modifier
+</a><a href="#h4-0-12" id="h4-0-12" class="d">-import androidx.compose.ui.text.font.FontWeight
+</a><a href="#h4-0-13" id="h4-0-13" class="d">-import androidx.compose.ui.unit.dp
+</a><a href="#h4-0-14" id="h4-0-14" class="d">-import androidx.compose.ui.unit.sp
+</a><a href="#h4-0-15" id="h4-0-15" class="d">-import kotlinx.coroutines.Dispatchers
+</a><a href="#h4-0-16" id="h4-0-16" class="d">-import kotlinx.coroutines.Job
+</a><a href="#h4-0-17" id="h4-0-17" class="d">-import kotlinx.coroutines.launch
+</a><a href="#h4-0-18" id="h4-0-18" class="d">-import kotlinx.coroutines.withContext
+</a><a href="#h4-0-19" id="h4-0-19" class="d">-import me.rhunk.snapenhance.ui.setup.screens.SetupScreen
+</a><a href="#h4-0-20" id="h4-0-20" class="d">-
+</a><a href="#h4-0-21" id="h4-0-21" class="d">-class SecurityScreen : SetupScreen() {
+</a><a href="#h4-0-22" id="h4-0-22" class="d">-    @SuppressLint(&quot;ApplySharedPref&quot;)
+</a><a href="#h4-0-23" id="h4-0-23" class="d">-    @Composable
+</a><a href="#h4-0-24" id="h4-0-24" class="d">-    override fun Content() {
+</a><a href="#h4-0-25" id="h4-0-25" class="d">-        Icon(
+</a><a href="#h4-0-26" id="h4-0-26" class="d">-            imageVector = Icons.Default.WarningAmber,
+</a><a href="#h4-0-27" id="h4-0-27" class="d">-            contentDescription = null,
+</a><a href="#h4-0-28" id="h4-0-28" class="d">-            modifier = Modifier
+</a><a href="#h4-0-29" id="h4-0-29" class="d">-                .padding(16.dp)
+</a><a href="#h4-0-30" id="h4-0-30" class="d">-                .size(30.dp),
+</a><a href="#h4-0-31" id="h4-0-31" class="d">-        )
+</a><a href="#h4-0-32" id="h4-0-32" class="d">-
+</a><a href="#h4-0-33" id="h4-0-33" class="d">-        DialogText(
+</a><a href="#h4-0-34" id="h4-0-34" class="d">-            &quot;Since Snapchat has implemented additional security measures against third-party applications such as SnapEnhance, we offer a non-opensource solution that reduces the risk of banning and prevents Snapchat from detecting SnapEnhance. &quot; +
+</a><a href="#h4-0-35" id="h4-0-35" class="d">-                    &quot;\nPlease note that this solution does not provide a ban bypass or spoofer for anything, and does not take any personal data or communicate with the network.&quot; +
+</a><a href="#h4-0-36" id="h4-0-36" class="d">-                    &quot;\nWe also encourage you to use official signed builds to avoid compromising the security of your account.&quot; +
+</a><a href="#h4-0-37" id="h4-0-37" class="d">-            &quot;\nIf you&#39;re having trouble using the solution, or are experiencing crashes, join the Telegram Group for help: https://t.me/snapenhance_chat&quot;
+</a><a href="#h4-0-38" id="h4-0-38" class="d">-        )
+</a><a href="#h4-0-39" id="h4-0-39" class="d">-
+</a><a href="#h4-0-40" id="h4-0-40" class="d">-        var denyDialog by remember { mutableStateOf(false) }
+</a><a href="#h4-0-41" id="h4-0-41" class="d">-
+</a><a href="#h4-0-42" id="h4-0-42" class="d">-        if (denyDialog) {
+</a><a href="#h4-0-43" id="h4-0-43" class="d">-            AlertDialog(
+</a><a href="#h4-0-44" id="h4-0-44" class="d">-                onDismissRequest = {
+</a><a href="#h4-0-45" id="h4-0-45" class="d">-                    denyDialog = false
+</a><a href="#h4-0-46" id="h4-0-46" class="d">-                },
+</a><a href="#h4-0-47" id="h4-0-47" class="d">-                text = {
+</a><a href="#h4-0-48" id="h4-0-48" class="d">-                    Text(&quot;Are you sure you don&#39;t want to use this solution? You can always change this later in the settings in the SnapEnhance app.&quot;)
+</a><a href="#h4-0-49" id="h4-0-49" class="d">-                },
+</a><a href="#h4-0-50" id="h4-0-50" class="d">-                dismissButton = {
+</a><a href="#h4-0-51" id="h4-0-51" class="d">-                    Button(onClick = {
+</a><a href="#h4-0-52" id="h4-0-52" class="d">-                        denyDialog = false
+</a><a href="#h4-0-53" id="h4-0-53" class="d">-                    }) {
+</a><a href="#h4-0-54" id="h4-0-54" class="d">-                        Text(&quot;Go back&quot;)
+</a><a href="#h4-0-55" id="h4-0-55" class="d">-                    }
+</a><a href="#h4-0-56" id="h4-0-56" class="d">-                },
+</a><a href="#h4-0-57" id="h4-0-57" class="d">-                confirmButton = {
+</a><a href="#h4-0-58" id="h4-0-58" class="d">-                    Button(onClick = {
+</a><a href="#h4-0-59" id="h4-0-59" class="d">-                        context.sharedPreferences.edit().putString(&quot;sif&quot;, &quot;false&quot;).apply()
+</a><a href="#h4-0-60" id="h4-0-60" class="d">-                        goNext()
+</a><a href="#h4-0-61" id="h4-0-61" class="d">-                    }) {
+</a><a href="#h4-0-62" id="h4-0-62" class="d">-                        Text(&quot;Yes, I&#39;m sure&quot;)
+</a><a href="#h4-0-63" id="h4-0-63" class="d">-                    }
+</a><a href="#h4-0-64" id="h4-0-64" class="d">-                }
+</a><a href="#h4-0-65" id="h4-0-65" class="d">-            )
+</a><a href="#h4-0-66" id="h4-0-66" class="d">-        }
+</a><a href="#h4-0-67" id="h4-0-67" class="d">-
+</a><a href="#h4-0-68" id="h4-0-68" class="d">-        var downloadJob by remember { mutableStateOf(null as Job?) }
+</a><a href="#h4-0-69" id="h4-0-69" class="d">-        var jobError by remember { mutableStateOf(null as Throwable?) }
+</a><a href="#h4-0-70" id="h4-0-70" class="d">-
+</a><a href="#h4-0-71" id="h4-0-71" class="d">-        if (downloadJob != null) {
+</a><a href="#h4-0-72" id="h4-0-72" class="d">-            AlertDialog(onDismissRequest = {
+</a><a href="#h4-0-73" id="h4-0-73" class="d">-                downloadJob?.cancel()
+</a><a href="#h4-0-74" id="h4-0-74" class="d">-                downloadJob = null
+</a><a href="#h4-0-75" id="h4-0-75" class="d">-            }, confirmButton = {}, text = {
+</a><a href="#h4-0-76" id="h4-0-76" class="d">-                Column(
+</a><a href="#h4-0-77" id="h4-0-77" class="d">-                    modifier = Modifier.verticalScroll(rememberScrollState()).fillMaxWidth(),
+</a><a href="#h4-0-78" id="h4-0-78" class="d">-                    horizontalAlignment = Alignment.CenterHorizontally,
+</a><a href="#h4-0-79" id="h4-0-79" class="d">-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+</a><a href="#h4-0-80" id="h4-0-80" class="d">-                ) {
+</a><a href="#h4-0-81" id="h4-0-81" class="d">-                    if (jobError != null) {
+</a><a href="#h4-0-82" id="h4-0-82" class="d">-                        Text(&quot;Failed to download the required files.\n\n${jobError?.message}&quot;)
+</a><a href="#h4-0-83" id="h4-0-83" class="d">-                    } else {
+</a><a href="#h4-0-84" id="h4-0-84" class="d">-                        Text(&quot;Downloading the required files...&quot;)
+</a><a href="#h4-0-85" id="h4-0-85" class="d">-                        CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+</a><a href="#h4-0-86" id="h4-0-86" class="d">-                    }
+</a><a href="#h4-0-87" id="h4-0-87" class="d">-                }
+</a><a href="#h4-0-88" id="h4-0-88" class="d">-            })
+</a><a href="#h4-0-89" id="h4-0-89" class="d">-        }
+</a><a href="#h4-0-90" id="h4-0-90" class="d">-
+</a><a href="#h4-0-91" id="h4-0-91" class="d">-        fun newDownloadJob() {
+</a><a href="#h4-0-92" id="h4-0-92" class="d">-            downloadJob?.cancel()
+</a><a href="#h4-0-93" id="h4-0-93" class="d">-            downloadJob = context.coroutineScope.launch {
+</a><a href="#h4-0-94" id="h4-0-94" class="d">-                context.sharedPreferences.edit().putString(&quot;sif&quot;, &quot;&quot;).commit()
+</a><a href="#h4-0-95" id="h4-0-95" class="d">-                runCatching {
+</a><a href="#h4-0-96" id="h4-0-96" class="d">-                    context.remoteSharedLibraryManager.init()
+</a><a href="#h4-0-97" id="h4-0-97" class="d">-                }.onFailure {
+</a><a href="#h4-0-98" id="h4-0-98" class="d">-                    jobError = it
+</a><a href="#h4-0-99" id="h4-0-99" class="d">-                    context.log.error(&quot;Failed to download the required files&quot;, it)
+</a><a href="#h4-0-100" id="h4-0-100" class="d">-                }.onSuccess {
+</a><a href="#h4-0-101" id="h4-0-101" class="d">-                    downloadJob = null
+</a><a href="#h4-0-102" id="h4-0-102" class="d">-                    withContext(Dispatchers.Main) {
+</a><a href="#h4-0-103" id="h4-0-103" class="d">-                        goNext()
+</a><a href="#h4-0-104" id="h4-0-104" class="d">-                    }
+</a><a href="#h4-0-105" id="h4-0-105" class="d">-                }
+</a><a href="#h4-0-106" id="h4-0-106" class="d">-            }
+</a><a href="#h4-0-107" id="h4-0-107" class="d">-        }
+</a><a href="#h4-0-108" id="h4-0-108" class="d">-
+</a><a href="#h4-0-109" id="h4-0-109" class="d">-        Column (
+</a><a href="#h4-0-110" id="h4-0-110" class="d">-            modifier = Modifier.padding(16.dp),
+</a><a href="#h4-0-111" id="h4-0-111" class="d">-            horizontalAlignment = Alignment.CenterHorizontally,
+</a><a href="#h4-0-112" id="h4-0-112" class="d">-            verticalArrangement = Arrangement.spacedBy(10.dp)
+</a><a href="#h4-0-113" id="h4-0-113" class="d">-        ) {
+</a><a href="#h4-0-114" id="h4-0-114" class="d">-            Button(
+</a><a href="#h4-0-115" id="h4-0-115" class="d">-                onClick = {
+</a><a href="#h4-0-116" id="h4-0-116" class="d">-                    newDownloadJob()
+</a><a href="#h4-0-117" id="h4-0-117" class="d">-                }
+</a><a href="#h4-0-118" id="h4-0-118" class="d">-            ) {
+</a><a href="#h4-0-119" id="h4-0-119" class="d">-                Text(&quot;Accept and continue&quot;, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+</a><a href="#h4-0-120" id="h4-0-120" class="d">-            }
+</a><a href="#h4-0-121" id="h4-0-121" class="d">-            Button(
+</a><a href="#h4-0-122" id="h4-0-122" class="d">-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+</a><a href="#h4-0-123" id="h4-0-123" class="d">-                onClick = {
+</a><a href="#h4-0-124" id="h4-0-124" class="d">-                    denyDialog = true
+</a><a href="#h4-0-125" id="h4-0-125" class="d">-                }
+</a><a href="#h4-0-126" id="h4-0-126" class="d">-            ) {
+</a><a href="#h4-0-127" id="h4-0-127" class="d">-                Text(&quot;I don&#39;t want to use this solution&quot;)
+</a><a href="#h4-0-128" id="h4-0-128" class="d">-            }
+</a><a href="#h4-0-129" id="h4-0-129" class="d">-        }
+</a><a href="#h4-0-130" id="h4-0-130" class="d">-    }
+</a><a href="#h4-0-131" id="h4-0-131" class="d">-}</a><a href="#h4-0-132" id="h4-0-132" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h5" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/WelcomeScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/WelcomeScreen.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/WelcomeScreen.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/setup/screens/impl/WelcomeScreen.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -1,17 +0,0 @@
+</a><a href="#h5-0-0" id="h5-0-0" class="d">-package me.rhunk.snapenhance.ui.setup.screens.impl
+</a><a href="#h5-0-1" id="h5-0-1" class="d">-
+</a><a href="#h5-0-2" id="h5-0-2" class="d">-import androidx.compose.material3.Button
+</a><a href="#h5-0-3" id="h5-0-3" class="d">-import androidx.compose.material3.Text
+</a><a href="#h5-0-4" id="h5-0-4" class="d">-import androidx.compose.runtime.Composable
+</a><a href="#h5-0-5" id="h5-0-5" class="d">-import me.rhunk.snapenhance.ui.setup.screens.SetupScreen
+</a><a href="#h5-0-6" id="h5-0-6" class="d">-
+</a><a href="#h5-0-7" id="h5-0-7" class="d">-class WelcomeScreen : SetupScreen() {
+</a><a href="#h5-0-8" id="h5-0-8" class="d">-
+</a><a href="#h5-0-9" id="h5-0-9" class="d">-    @Composable
+</a><a href="#h5-0-10" id="h5-0-10" class="d">-    override fun Content() {
+</a><a href="#h5-0-11" id="h5-0-11" class="d">-        Text(text = &quot;Welcome&quot;)
+</a><a href="#h5-0-12" id="h5-0-12" class="d">-        Button(onClick = { allowNext(true) }) {
+</a><a href="#h5-0-13" id="h5-0-13" class="d">-            Text(text = &quot;Next&quot;)
+</a><a href="#h5-0-14" id="h5-0-14" class="d">-        }
+</a><a href="#h5-0-15" id="h5-0-15" class="d">-    }
+</a><a href="#h5-0-16" id="h5-0-16" class="d">-}</a><a href="#h5-0-17" id="h5-0-17" class="d">-
+\ No newline at end of file
+</a><b>diff --git a/<a id="h6" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -316,10 +316,6 @@
+</a>             &quot;name&quot;: &quot;Change Language&quot;,
+             &quot;description&quot;: &quot;Change the language of SnapEnhance&quot;
+         },
+<a href="#h6-0-3" id="h6-0-3" class="d">-        &quot;security_features&quot;: {
+</a><a href="#h6-0-4" id="h6-0-4" class="d">-            &quot;name&quot;: &quot;Security Features&quot;,
+</a><a href="#h6-0-5" id="h6-0-5" class="d">-            &quot;description&quot;: &quot;Change security features preferences&quot;
+</a><a href="#h6-0-6" id="h6-0-6" class="d">-        },
+</a>         &quot;file_imports&quot;: {
+             &quot;name&quot;: &quot;File Imports&quot;,
+             &quot;description&quot;: &quot;Import files for use in Snapchat&quot;
+<b>diff --git a/<a id="h7" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/BridgeFiles.kt</a></b>
+<a href="#h7-0" id="h7-0" class="h">@@ -34,8 +34,7 @@ enum class InternalFileHandleType(
+</a>     MAPPINGS(&quot;mappings&quot;, &quot;mappings.json&quot;),
+     MESSAGE_LOGGER(&quot;message_logger&quot;, &quot;message_logger.db&quot;, isDatabase = true),
+     PINNED_BEST_FRIEND(&quot;pinned_best_friend&quot;, &quot;pinned_best_friend.txt&quot;),
+<a href="#h7-0-3" id="h7-0-3" class="d">-    NATIVE_SIG_CACHE(&quot;native_sig_cache&quot;, &quot;native_sig_cache.txt&quot;),
+</a><a href="#h7-0-4" id="h7-0-4" class="d">-    SIF(&quot;sif&quot;, &quot;libsif.so&quot;);
+</a><a href="#h7-0-5" id="h7-0-5" class="i">+    NATIVE_SIG_CACHE(&quot;native_sig_cache&quot;, &quot;native_sig_cache.txt&quot;);
+</a> 
+     fun resolve(context: Context): File = if (isDatabase) {
+         context.getDatabasePath(fileName)
+<b>diff --git a/<a id="h8" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></b>
+<a href="#h8-0" id="h8-0" class="h">@@ -75,7 +75,7 @@ class ModContext(
+</a>     val isDeveloper by lazy { config.scripting.developerMode.get() }
+ 
+     var isMainActivityPaused = true
+<a href="#h8-0-3" id="h8-0-3" class="d">-    var isSafeMode = false
+</a><a href="#h8-0-4" id="h8-0-4" class="i">+    var disablePlugin = false
+</a> 
+     fun &lt;T : Feature&gt; feature(featureClass: KClass&lt;T&gt;): T {
+         return features.get(featureClass)!!
+<b>diff --git a/<a id="h9" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt</a></b>
+<a href="#h9-0" id="h9-0" class="h">@@ -18,12 +18,13 @@ import androidx.compose.ui.text.style.TextAlign
+</a> import androidx.compose.ui.unit.dp
+ import kotlinx.coroutines.delay
+ import me.rhunk.snapenhance.common.bridge.FileHandleScope
+<a href="#h9-0-3" id="h9-0-3" class="d">-import me.rhunk.snapenhance.common.bridge.InternalFileHandleType
+</a> import me.rhunk.snapenhance.common.bridge.toWrapper
+ import me.rhunk.snapenhance.common.config.MOD_DETECTION_VERSION_CHECK
+ import me.rhunk.snapenhance.common.config.VersionRequirement
+ import me.rhunk.snapenhance.common.ui.createComposeView
+<a href="#h9-0-8" id="h9-0-8" class="i">+import me.rhunk.snapenhance.core.event.events.impl.UnaryCallEvent
+</a> import me.rhunk.snapenhance.core.ui.CustomComposable
+<a href="#h9-0-10" id="h9-0-10" class="i">+import me.rhunk.snapenhance.core.util.ktx.getObjectField
+</a> 
+ class SecurityFeatures(
+     private val context: ModContext
+<a href="#h9-1" id="h9-1" class="h">@@ -38,67 +39,55 @@ class SecurityFeatures(
+</a>         transact(this, 0)?.toString(2)?.padStart(32, &#39;0&#39;)?.count { it == &#39;1&#39; }
+     }
+ 
+<a href="#h9-1-3" id="h9-1-3" class="d">-    private fun isSafeMode(): Boolean {
+</a><a href="#h9-1-4" id="h9-1-4" class="i">+    fun init() {
+</a>         val snapchatVersionCode = context.androidContext.packageManager?.getPackageInfo(context.androidContext.packageName, 0)?.longVersionCode ?: throw IllegalStateException(&quot;Failed to get version code&quot;)
+<a href="#h9-1-6" id="h9-1-6" class="d">-        val shouldUseSafeMode = MOD_DETECTION_VERSION_CHECK.checkVersion(snapchatVersionCode)?.second == VersionRequirement.OLDER_REQUIRED
+</a><a href="#h9-1-7" id="h9-1-7" class="i">+        var shouldDisablePlugin = MOD_DETECTION_VERSION_CHECK.checkVersion(snapchatVersionCode)?.second == VersionRequirement.OLDER_REQUIRED
+</a> 
+<a href="#h9-1-9" id="h9-1-9" class="i">+        // load user shared library
+</a>         context.config.experimental.nativeHooks.customSharedLibrary.get().takeIf { it.isNotEmpty() }?.let {
+             runCatching {
+                 context.native.loadSharedLibrary(
+                     context.fileHandlerManager.getFileHandle(FileHandleScope.USER_IMPORT.key, it).toWrapper().readBytes()
+                 )
+                 context.log.verbose(&quot;loaded custom shared library&quot;)
+<a href="#h9-1-16" id="h9-1-16" class="i">+                shouldDisablePlugin = false
+</a><a href="#h9-1-17" id="h9-1-17" class="i">+
+</a><a href="#h9-1-18" id="h9-1-18" class="i">+                lateinit var composable: CustomComposable
+</a><a href="#h9-1-19" id="h9-1-19" class="i">+                composable = {
+</a><a href="#h9-1-20" id="h9-1-20" class="i">+                    Row(
+</a><a href="#h9-1-21" id="h9-1-21" class="i">+                        modifier = Modifier
+</a><a href="#h9-1-22" id="h9-1-22" class="i">+                            .padding(16.dp)
+</a><a href="#h9-1-23" id="h9-1-23" class="i">+                            .align(Alignment.TopCenter),
+</a><a href="#h9-1-24" id="h9-1-24" class="i">+                    ) {
+</a><a href="#h9-1-25" id="h9-1-25" class="i">+                        Icon(Icons.Filled.Check, contentDescription = null, tint = Color(0xFF85A947))
+</a><a href="#h9-1-26" id="h9-1-26" class="i">+                    }
+</a><a href="#h9-1-27" id="h9-1-27" class="i">+
+</a><a href="#h9-1-28" id="h9-1-28" class="i">+                    LaunchedEffect(Unit) {
+</a><a href="#h9-1-29" id="h9-1-29" class="i">+                        delay(2500)
+</a><a href="#h9-1-30" id="h9-1-30" class="i">+                        context.inAppOverlay.removeCustomComposable(composable)
+</a><a href="#h9-1-31" id="h9-1-31" class="i">+                    }
+</a><a href="#h9-1-32" id="h9-1-32" class="i">+                }
+</a><a href="#h9-1-33" id="h9-1-33" class="i">+
+</a><a href="#h9-1-34" id="h9-1-34" class="i">+                context.inAppOverlay.addCustomComposable(composable)
+</a>             }.onFailure {
+                 context.log.error(&quot;Failed to load custom shared library&quot;, it)
+<a href="#h9-1-37" id="h9-1-37" class="d">-                return true
+</a>             }
+<a href="#h9-1-39" id="h9-1-39" class="d">-        } ?: context.bridgeClient.getDebugProp(&quot;enable_security_features&quot;, &quot;false&quot;).takeIf { it == &quot;true&quot; }?.runCatching {
+</a><a href="#h9-1-40" id="h9-1-40" class="d">-            context.native.loadSharedLibrary(
+</a><a href="#h9-1-41" id="h9-1-41" class="d">-                context.fileHandlerManager.getFileHandle(FileHandleScope.INTERNAL.key, InternalFileHandleType.SIF.key)
+</a><a href="#h9-1-42" id="h9-1-42" class="d">-                    .toWrapper()
+</a><a href="#h9-1-43" id="h9-1-43" class="d">-                    .readBytes()
+</a><a href="#h9-1-44" id="h9-1-44" class="d">-                    .takeIf {
+</a><a href="#h9-1-45" id="h9-1-45" class="d">-                        it.isNotEmpty()
+</a><a href="#h9-1-46" id="h9-1-46" class="d">-                    } ?: throw IllegalStateException(&quot;Binary is empty&quot;)
+</a><a href="#h9-1-47" id="h9-1-47" class="d">-            )
+</a><a href="#h9-1-48" id="h9-1-48" class="d">-            context.log.verbose(&quot;loaded sif&quot;)
+</a><a href="#h9-1-49" id="h9-1-49" class="d">-        }?.onFailure {
+</a><a href="#h9-1-50" id="h9-1-50" class="d">-            context.log.error(&quot;Failed to load sif: &quot; + it.message)
+</a><a href="#h9-1-51" id="h9-1-51" class="d">-            return shouldUseSafeMode
+</a><a href="#h9-1-52" id="h9-1-52" class="d">-        } ?: context.log.warn(&quot;Security features are disabled&quot;)
+</a><a href="#h9-1-53" id="h9-1-53" class="d">-
+</a><a href="#h9-1-54" id="h9-1-54" class="d">-        token // pre init token
+</a><a href="#h9-1-55" id="h9-1-55" class="d">-
+</a><a href="#h9-1-56" id="h9-1-56" class="d">-        val status = getStatus()
+</a><a href="#h9-1-57" id="h9-1-57" class="d">-        val safeMode = shouldUseSafeMode &amp;&amp; (status == null || status &lt; 2)
+</a><a href="#h9-1-58" id="h9-1-58" class="d">-
+</a><a href="#h9-1-59" id="h9-1-59" class="d">-        if (status != null &amp;&amp; status &gt;= 2) {
+</a><a href="#h9-1-60" id="h9-1-60" class="d">-            context.log.verbose(&quot;status=$status&quot;)
+</a><a href="#h9-1-61" id="h9-1-61" class="d">-            lateinit var composable: CustomComposable
+</a><a href="#h9-1-62" id="h9-1-62" class="d">-            composable = {
+</a><a href="#h9-1-63" id="h9-1-63" class="d">-                Row(
+</a><a href="#h9-1-64" id="h9-1-64" class="d">-                    modifier = Modifier
+</a><a href="#h9-1-65" id="h9-1-65" class="d">-                        .padding(16.dp)
+</a><a href="#h9-1-66" id="h9-1-66" class="d">-                        .align(Alignment.TopCenter),
+</a><a href="#h9-1-67" id="h9-1-67" class="d">-                ) {
+</a><a href="#h9-1-68" id="h9-1-68" class="d">-                    Icon(Icons.Filled.Check, contentDescription = null, tint = Color(0xFF85A947))
+</a><a href="#h9-1-69" id="h9-1-69" class="d">-                }
+</a><a href="#h9-1-70" id="h9-1-70" class="i">+        }
+</a> 
+<a href="#h9-1-72" id="h9-1-72" class="d">-                LaunchedEffect(Unit) {
+</a><a href="#h9-1-73" id="h9-1-73" class="d">-                    delay(2500)
+</a><a href="#h9-1-74" id="h9-1-74" class="d">-                    context.inAppOverlay.removeCustomComposable(composable)
+</a><a href="#h9-1-75" id="h9-1-75" class="d">-                }
+</a><a href="#h9-1-76" id="h9-1-76" class="d">-            }
+</a><a href="#h9-1-77" id="h9-1-77" class="d">-            context.inAppOverlay.addCustomComposable(composable)
+</a><a href="#h9-1-78" id="h9-1-78" class="i">+        if (context.bridgeClient.getDebugProp(&quot;test_mode&quot;, &quot;false&quot;) == &quot;true&quot;) {
+</a><a href="#h9-1-79" id="h9-1-79" class="i">+            shouldDisablePlugin = false
+</a>         }
+ 
+<a href="#h9-1-82" id="h9-1-82" class="d">-        return safeMode
+</a><a href="#h9-1-83" id="h9-1-83" class="d">-    }
+</a><a href="#h9-1-84" id="h9-1-84" class="i">+        context.disablePlugin = shouldDisablePlugin
+</a><a href="#h9-1-85" id="h9-1-85" class="i">+        context.log.verbose(&quot;disablePlugin=${context.disablePlugin}&quot;)
+</a><a href="#h9-1-86" id="h9-1-86" class="i">+        if (!context.disablePlugin) return
+</a> 
+<a href="#h9-1-88" id="h9-1-88" class="d">-    fun init() {
+</a><a href="#h9-1-89" id="h9-1-89" class="d">-        context.isSafeMode = isSafeMode()
+</a><a href="#h9-1-90" id="h9-1-90" class="d">-        context.log.verbose(&quot;isSafeMode=${context.isSafeMode}&quot;)
+</a><a href="#h9-1-91" id="h9-1-91" class="d">-        if (!context.isSafeMode) return
+</a><a href="#h9-1-92" id="h9-1-92" class="i">+        context.event.subscribe(UnaryCallEvent::class) { event -&gt;
+</a><a href="#h9-1-93" id="h9-1-93" class="i">+            val callOptions = event.adapter.arg&lt;Any&gt;(2).let { it.javaClass.getMethod(&quot;build&quot;).invoke(it) } ?: return@subscribe
+</a><a href="#h9-1-94" id="h9-1-94" class="i">+            if (callOptions.getObjectField(&quot;mAttestation&quot;) != null) {
+</a><a href="#h9-1-95" id="h9-1-95" class="i">+                event.canceled = true
+</a><a href="#h9-1-96" id="h9-1-96" class="i">+            }
+</a><a href="#h9-1-97" id="h9-1-97" class="i">+        }
+</a> 
+         context.features.addActivityCreateListener { activity -&gt;
+             if (!activity.javaClass.name.endsWith(&quot;LoginSignupActivity&quot;)) return@addActivityCreateListener
+<b>diff --git a/<a id="h10" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></b>
+<a href="#h10-0" id="h10-0" class="h">@@ -18,7 +18,6 @@ import me.rhunk.snapenhance.common.action.EnumAction
+</a> import me.rhunk.snapenhance.common.bridge.FileHandleScope
+ import me.rhunk.snapenhance.common.bridge.InternalFileHandleType
+ import me.rhunk.snapenhance.common.bridge.toWrapper
+<a href="#h10-0-3" id="h10-0-3" class="d">-import me.rhunk.snapenhance.common.config.MOD_DETECTION_VERSION_CHECK
+</a> import me.rhunk.snapenhance.common.data.FriendStreaks
+ import me.rhunk.snapenhance.common.data.MessagingFriendInfo
+ import me.rhunk.snapenhance.common.data.MessagingGroupInfo
+<a href="#h10-1" id="h10-1" class="h">@@ -33,6 +32,7 @@ import me.rhunk.snapenhance.core.util.hook.HookAdapter
+</a> import me.rhunk.snapenhance.core.util.hook.HookStage
+ import me.rhunk.snapenhance.core.util.hook.findRestrictedMethod
+ import me.rhunk.snapenhance.core.util.hook.hook
+<a href="#h10-1-3" id="h10-1-3" class="i">+import me.rhunk.snapenhance.mapper.impl.PlatformClientAttestationMapper
+</a> import kotlin.reflect.KClass
+ import kotlin.system.exitProcess
+ import kotlin.system.measureTimeMillis
+<a href="#h10-2" id="h10-2" class="h">@@ -231,24 +231,22 @@ class SnapEnhance {
+</a>                 else arrayOf(ClassLoader::class.java, String::class.java)
+             )
+         }!!.apply {
+<a href="#h10-2-3" id="h10-2-3" class="d">-            if (appContext.isSafeMode) {
+</a><a href="#h10-2-4" id="h10-2-4" class="i">+            if (appContext.disablePlugin) {
+</a>                 hook(HookStage.BEFORE) { param -&gt;
+                     if (param.arg&lt;String&gt;(1) != &quot;scplugin&quot;) return@hook
+                     param.setResult(null)
+<a href="#h10-2-8" id="h10-2-8" class="d">-                    appContext.runOnUiThread {
+</a><a href="#h10-2-9" id="h10-2-9" class="d">-                        appContext.inAppOverlay.showStatusToast(
+</a><a href="#h10-2-10" id="h10-2-10" class="d">-                            Icons.Outlined.Cancel,
+</a><a href="#h10-2-11" id="h10-2-11" class="d">-                            &quot;SnapEnhance is not compatible with this version of Snapchat and will result in a ban.\nUse Snapchat ${MOD_DETECTION_VERSION_CHECK.maxVersion?.first ?: &quot;0.0.0&quot;} or older to avoid detections.&quot;,
+</a><a href="#h10-2-12" id="h10-2-12" class="d">-                            durationMs = 7000,
+</a><a href="#h10-2-13" id="h10-2-13" class="d">-                            maxLines = 6
+</a><a href="#h10-2-14" id="h10-2-14" class="d">-                        )
+</a><a href="#h10-2-15" id="h10-2-15" class="i">+                    appContext.log.verbose(&quot;skipped scplugin load&quot;)
+</a><a href="#h10-2-16" id="h10-2-16" class="i">+
+</a><a href="#h10-2-17" id="h10-2-17" class="i">+                    appContext.mappings.useMapper(PlatformClientAttestationMapper::class) {
+</a><a href="#h10-2-18" id="h10-2-18" class="i">+                        pluginNativeClass.getAsClass()?.methods?.filter {
+</a><a href="#h10-2-19" id="h10-2-19" class="i">+                            it.declaringClass == pluginNativeClass.getAsClass()
+</a><a href="#h10-2-20" id="h10-2-20" class="i">+                        }?.forEach { method -&gt;
+</a><a href="#h10-2-21" id="h10-2-21" class="i">+                            method.hook(HookStage.BEFORE) {
+</a><a href="#h10-2-22" id="h10-2-22" class="i">+                                appContext.log.verbose(&quot;called $method&quot;)
+</a><a href="#h10-2-23" id="h10-2-23" class="i">+                                it.setResult(null)
+</a><a href="#h10-2-24" id="h10-2-24" class="i">+                            }
+</a><a href="#h10-2-25" id="h10-2-25" class="i">+                        } ?: error(&quot;Failed to get pluginNativeClass class&quot;)
+</a>                     }
+<a href="#h10-2-27" id="h10-2-27" class="d">-                    runCatching {
+</a><a href="#h10-2-28" id="h10-2-28" class="d">-                        Thread.sleep(Long.MAX_VALUE)
+</a><a href="#h10-2-29" id="h10-2-29" class="d">-                    }.onFailure {
+</a><a href="#h10-2-30" id="h10-2-30" class="d">-                        appContext.log.error(it)
+</a><a href="#h10-2-31" id="h10-2-31" class="d">-                    }
+</a><a href="#h10-2-32" id="h10-2-32" class="d">-                    exitProcess(1)
+</a>                 }
+             }
+ 
+<b>diff --git a/<a id="h11" href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/ClassMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/ClassMapper.kt</a> b/<a href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/ClassMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/ClassMapper.kt</a></b>
+<a href="#h11-0" id="h11-0" class="h">@@ -39,6 +39,7 @@ class ClassMapper(
+</a>             StreaksExpirationMapper(),
+             COFObservableMapper(),
+             FoldingLayoutMapper(),
+<a href="#h11-0-3" id="h11-0-3" class="i">+            PlatformClientAttestationMapper(),
+</a>         )
+     }
+ 
+<b>diff --git a/<a id="h12" href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/PlatformClientAttestationMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/PlatformClientAttestationMapper.kt</a> b/<a href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/PlatformClientAttestationMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/PlatformClientAttestationMapper.kt</a></b>
+<a href="#h12-0" id="h12-0" class="h">@@ -0,0 +1,28 @@
+</a><a href="#h12-0-0" id="h12-0-0" class="i">+package me.rhunk.snapenhance.mapper.impl
+</a><a href="#h12-0-1" id="h12-0-1" class="i">+
+</a><a href="#h12-0-2" id="h12-0-2" class="i">+import com.android.tools.smali.dexlib2.Opcode
+</a><a href="#h12-0-3" id="h12-0-3" class="i">+import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction35c
+</a><a href="#h12-0-4" id="h12-0-4" class="i">+import com.android.tools.smali.dexlib2.iface.reference.MethodReference
+</a><a href="#h12-0-5" id="h12-0-5" class="i">+import me.rhunk.snapenhance.mapper.AbstractClassMapper
+</a><a href="#h12-0-6" id="h12-0-6" class="i">+import me.rhunk.snapenhance.mapper.ext.getSuperClassName
+</a><a href="#h12-0-7" id="h12-0-7" class="i">+
+</a><a href="#h12-0-8" id="h12-0-8" class="i">+class PlatformClientAttestationMapper: AbstractClassMapper(&quot;PlatformClientAttestationMapper&quot;) {
+</a><a href="#h12-0-9" id="h12-0-9" class="i">+    val pluginNativeClass = classReference(&quot;pluginNativeClass&quot;)
+</a><a href="#h12-0-10" id="h12-0-10" class="i">+
+</a><a href="#h12-0-11" id="h12-0-11" class="i">+    init {
+</a><a href="#h12-0-12" id="h12-0-12" class="i">+        mapper {
+</a><a href="#h12-0-13" id="h12-0-13" class="i">+            for (clazz in classes) {
+</a><a href="#h12-0-14" id="h12-0-14" class="i">+                if (clazz.getSuperClassName()?.endsWith(&quot;PlatformClientAttestation&quot;) != true) continue
+</a><a href="#h12-0-15" id="h12-0-15" class="i">+                val getSignatureMethod = clazz.methods.firstOrNull { it.name == &quot;getSignature&quot; } ?: continue
+</a><a href="#h12-0-16" id="h12-0-16" class="i">+
+</a><a href="#h12-0-17" id="h12-0-17" class="i">+                getSignatureMethod.implementation?.instructions?.firstOrNull { instruction -&gt;
+</a><a href="#h12-0-18" id="h12-0-18" class="i">+                    instruction.opcode == Opcode.INVOKE_STATIC &amp;&amp; instruction is Instruction35c &amp;&amp; (instruction.reference as? MethodReference)?.takeIf { it.definingClass.count { it == &#39;/&#39; } == 1 }?.returnType == &quot;[B&quot;
+</a><a href="#h12-0-19" id="h12-0-19" class="i">+                }?.let { instruction -&gt;
+</a><a href="#h12-0-20" id="h12-0-20" class="i">+                    val method = (instruction as Instruction35c).reference as MethodReference
+</a><a href="#h12-0-21" id="h12-0-21" class="i">+                    pluginNativeClass.set(method.definingClass.replaceFirst(&quot;L&quot;, &quot;&quot;).replaceFirst(&quot;;&quot;, &quot;&quot;).replace(&quot;/&quot;, &quot;.&quot;))
+</a><a href="#h12-0-22" id="h12-0-22" class="i">+                }
+</a><a href="#h12-0-23" id="h12-0-23" class="i">+                return@mapper
+</a><a href="#h12-0-24" id="h12-0-24" class="i">+            }
+</a><a href="#h12-0-25" id="h12-0-25" class="i">+        }
+</a><a href="#h12-0-26" id="h12-0-26" class="i">+    }
+</a><a href="#h12-0-27" id="h12-0-27" class="i">+}</a><a href="#h12-0-28" id="h12-0-28" class="i">+
+\ No newline at end of file
+</a></pre>
+</div>
+</body>
+</html>

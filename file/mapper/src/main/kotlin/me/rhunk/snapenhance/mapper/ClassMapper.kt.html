@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> ClassMapper.kt (3254B) - <a href="../../../../../../../../../raw/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/ClassMapper.kt">raw</a></p><hr/><pre id="blob">
+<p> ClassMapper.kt (3301B) - <a href="../../../../../../../../../raw/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/ClassMapper.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.mapper
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import com.android.tools.smali.dexlib2.Opcodes
@@ -62,64 +62,65 @@
 <a href="#l39" class="line" id="l39">     39</a>             StreaksExpirationMapper(),
 <a href="#l40" class="line" id="l40">     40</a>             COFObservableMapper(),
 <a href="#l41" class="line" id="l41">     41</a>             FoldingLayoutMapper(),
-<a href="#l42" class="line" id="l42">     42</a>         )
-<a href="#l43" class="line" id="l43">     43</a>     }
-<a href="#l44" class="line" id="l44">     44</a> 
+<a href="#l42" class="line" id="l42">     42</a>             PlatformClientAttestationMapper(),
+<a href="#l43" class="line" id="l43">     43</a>         )
+<a href="#l44" class="line" id="l44">     44</a>     }
 <a href="#l45" class="line" id="l45">     45</a> 
-<a href="#l46" class="line" id="l46">     46</a>     fun loadApk(path: String) {
-<a href="#l47" class="line" id="l47">     47</a>         val apkFile = ZipFile(path)
-<a href="#l48" class="line" id="l48">     48</a>         val apkEntries = apkFile.entries().toList()
-<a href="#l49" class="line" id="l49">     49</a> 
-<a href="#l50" class="line" id="l50">     50</a>         fun readClass(stream: InputStream) = runCatching {
-<a href="#l51" class="line" id="l51">     51</a>             classes.addAll(
-<a href="#l52" class="line" id="l52">     52</a>                 DexBackedDexFile.fromInputStream(Opcodes.getDefault(), BufferedInputStream(stream)).classes
-<a href="#l53" class="line" id="l53">     53</a>             )
-<a href="#l54" class="line" id="l54">     54</a>         }.onFailure {
-<a href="#l55" class="line" id="l55">     55</a>             throw Throwable(&quot;Failed to load dex file&quot;, it)
-<a href="#l56" class="line" id="l56">     56</a>         }
-<a href="#l57" class="line" id="l57">     57</a> 
-<a href="#l58" class="line" id="l58">     58</a>         fun filterDexClasses(name: String) = name.startsWith(&quot;classes&quot;) &amp;&amp; name.endsWith(&quot;.dex&quot;)
-<a href="#l59" class="line" id="l59">     59</a> 
-<a href="#l60" class="line" id="l60">     60</a>         apkEntries.firstOrNull { it.name.endsWith(&quot;lspatch/origin.apk&quot;) }?.let { origin -&gt;
-<a href="#l61" class="line" id="l61">     61</a>             val originApk = ZipInputStream(apkFile.getInputStream(origin))
-<a href="#l62" class="line" id="l62">     62</a>             var nextEntry = originApk.nextEntry
-<a href="#l63" class="line" id="l63">     63</a>             while (nextEntry != null) {
-<a href="#l64" class="line" id="l64">     64</a>                 if (filterDexClasses(nextEntry.name)) {
-<a href="#l65" class="line" id="l65">     65</a>                     readClass(originApk)
-<a href="#l66" class="line" id="l66">     66</a>                 }
-<a href="#l67" class="line" id="l67">     67</a>                 originApk.closeEntry()
-<a href="#l68" class="line" id="l68">     68</a>                 nextEntry = originApk.nextEntry
-<a href="#l69" class="line" id="l69">     69</a>             }
-<a href="#l70" class="line" id="l70">     70</a>             return
-<a href="#l71" class="line" id="l71">     71</a>         }
-<a href="#l72" class="line" id="l72">     72</a> 
-<a href="#l73" class="line" id="l73">     73</a>         apkEntries.toList().filter { filterDexClasses(it.name) }.forEach {
-<a href="#l74" class="line" id="l74">     74</a>             readClass(apkFile.getInputStream(it))
-<a href="#l75" class="line" id="l75">     75</a>         }
-<a href="#l76" class="line" id="l76">     76</a>     }
-<a href="#l77" class="line" id="l77">     77</a> 
-<a href="#l78" class="line" id="l78">     78</a>     fun getWarns() = warnings
-<a href="#l79" class="line" id="l79">     79</a> 
-<a href="#l80" class="line" id="l80">     80</a>     suspend fun run(): JsonObject {
-<a href="#l81" class="line" id="l81">     81</a>         val context = MapperContext(classes.associateBy { it.type })
-<a href="#l82" class="line" id="l82">     82</a> 
-<a href="#l83" class="line" id="l83">     83</a>         withContext(Dispatchers.IO) {
-<a href="#l84" class="line" id="l84">     84</a>             mappers.forEach { mapper -&gt;
-<a href="#l85" class="line" id="l85">     85</a>                 launch {
-<a href="#l86" class="line" id="l86">     86</a>                     mapper.run(context)
-<a href="#l87" class="line" id="l87">     87</a>                 }
-<a href="#l88" class="line" id="l88">     88</a>             }
-<a href="#l89" class="line" id="l89">     89</a>         }
-<a href="#l90" class="line" id="l90">     90</a> 
-<a href="#l91" class="line" id="l91">     91</a>         val outputJson = JsonObject()
-<a href="#l92" class="line" id="l92">     92</a>         mappers.forEach { mapper -&gt;
-<a href="#l93" class="line" id="l93">     93</a>             outputJson.add(mapper.mapperName, JsonObject().apply {
-<a href="#l94" class="line" id="l94">     94</a>                 warnings.addAll(mapper.writeFromJson(this))
-<a href="#l95" class="line" id="l95">     95</a>             })
-<a href="#l96" class="line" id="l96">     96</a>         }
-<a href="#l97" class="line" id="l97">     97</a>         return outputJson
-<a href="#l98" class="line" id="l98">     98</a>     }
-<a href="#l99" class="line" id="l99">     99</a> }
+<a href="#l46" class="line" id="l46">     46</a> 
+<a href="#l47" class="line" id="l47">     47</a>     fun loadApk(path: String) {
+<a href="#l48" class="line" id="l48">     48</a>         val apkFile = ZipFile(path)
+<a href="#l49" class="line" id="l49">     49</a>         val apkEntries = apkFile.entries().toList()
+<a href="#l50" class="line" id="l50">     50</a> 
+<a href="#l51" class="line" id="l51">     51</a>         fun readClass(stream: InputStream) = runCatching {
+<a href="#l52" class="line" id="l52">     52</a>             classes.addAll(
+<a href="#l53" class="line" id="l53">     53</a>                 DexBackedDexFile.fromInputStream(Opcodes.getDefault(), BufferedInputStream(stream)).classes
+<a href="#l54" class="line" id="l54">     54</a>             )
+<a href="#l55" class="line" id="l55">     55</a>         }.onFailure {
+<a href="#l56" class="line" id="l56">     56</a>             throw Throwable(&quot;Failed to load dex file&quot;, it)
+<a href="#l57" class="line" id="l57">     57</a>         }
+<a href="#l58" class="line" id="l58">     58</a> 
+<a href="#l59" class="line" id="l59">     59</a>         fun filterDexClasses(name: String) = name.startsWith(&quot;classes&quot;) &amp;&amp; name.endsWith(&quot;.dex&quot;)
+<a href="#l60" class="line" id="l60">     60</a> 
+<a href="#l61" class="line" id="l61">     61</a>         apkEntries.firstOrNull { it.name.endsWith(&quot;lspatch/origin.apk&quot;) }?.let { origin -&gt;
+<a href="#l62" class="line" id="l62">     62</a>             val originApk = ZipInputStream(apkFile.getInputStream(origin))
+<a href="#l63" class="line" id="l63">     63</a>             var nextEntry = originApk.nextEntry
+<a href="#l64" class="line" id="l64">     64</a>             while (nextEntry != null) {
+<a href="#l65" class="line" id="l65">     65</a>                 if (filterDexClasses(nextEntry.name)) {
+<a href="#l66" class="line" id="l66">     66</a>                     readClass(originApk)
+<a href="#l67" class="line" id="l67">     67</a>                 }
+<a href="#l68" class="line" id="l68">     68</a>                 originApk.closeEntry()
+<a href="#l69" class="line" id="l69">     69</a>                 nextEntry = originApk.nextEntry
+<a href="#l70" class="line" id="l70">     70</a>             }
+<a href="#l71" class="line" id="l71">     71</a>             return
+<a href="#l72" class="line" id="l72">     72</a>         }
+<a href="#l73" class="line" id="l73">     73</a> 
+<a href="#l74" class="line" id="l74">     74</a>         apkEntries.toList().filter { filterDexClasses(it.name) }.forEach {
+<a href="#l75" class="line" id="l75">     75</a>             readClass(apkFile.getInputStream(it))
+<a href="#l76" class="line" id="l76">     76</a>         }
+<a href="#l77" class="line" id="l77">     77</a>     }
+<a href="#l78" class="line" id="l78">     78</a> 
+<a href="#l79" class="line" id="l79">     79</a>     fun getWarns() = warnings
+<a href="#l80" class="line" id="l80">     80</a> 
+<a href="#l81" class="line" id="l81">     81</a>     suspend fun run(): JsonObject {
+<a href="#l82" class="line" id="l82">     82</a>         val context = MapperContext(classes.associateBy { it.type })
+<a href="#l83" class="line" id="l83">     83</a> 
+<a href="#l84" class="line" id="l84">     84</a>         withContext(Dispatchers.IO) {
+<a href="#l85" class="line" id="l85">     85</a>             mappers.forEach { mapper -&gt;
+<a href="#l86" class="line" id="l86">     86</a>                 launch {
+<a href="#l87" class="line" id="l87">     87</a>                     mapper.run(context)
+<a href="#l88" class="line" id="l88">     88</a>                 }
+<a href="#l89" class="line" id="l89">     89</a>             }
+<a href="#l90" class="line" id="l90">     90</a>         }
+<a href="#l91" class="line" id="l91">     91</a> 
+<a href="#l92" class="line" id="l92">     92</a>         val outputJson = JsonObject()
+<a href="#l93" class="line" id="l93">     93</a>         mappers.forEach { mapper -&gt;
+<a href="#l94" class="line" id="l94">     94</a>             outputJson.add(mapper.mapperName, JsonObject().apply {
+<a href="#l95" class="line" id="l95">     95</a>                 warnings.addAll(mapper.writeFromJson(this))
+<a href="#l96" class="line" id="l96">     96</a>             })
+<a href="#l97" class="line" id="l97">     97</a>         }
+<a href="#l98" class="line" id="l98">     98</a>         return outputJson
+<a href="#l99" class="line" id="l99">     99</a>     }
+<a href="#l100" class="line" id="l100">    100</a> }
 </pre>
 </div>
 </body>
