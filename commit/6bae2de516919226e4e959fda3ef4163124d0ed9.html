@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core): crashes - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/6bae2de516919226e4e959fda3ef4163124d0ed9.html">6bae2de516919226e4e959fda3ef4163124d0ed9</a>
+<b>parent</b> <a href="../commit/e7822d8fc50dc5ce45b8e234f83651679aa357b4.html">e7822d8fc50dc5ce45b8e234f83651679aa357b4</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sun,  6 Jul 2025 13:22:43 +0200
+
+fix(core): crashes
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt</a></td><td> | </td><td class="num">9</td><td><span class="i">++++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+</table></pre><pre>3 files changed, 13 insertions(+), 2 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/ui/manager/pages/home/HomeSettings.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -282,7 +282,7 @@ class HomeSettings : Routes.Route() {
+</a>                 Column(
+                     verticalArrangement = Arrangement.spacedBy(4.dp),
+                 ) {
+<a href="#h0-0-3" id="h0-0-3" class="d">-                    PreferenceToggle(context.sharedPreferences, key = &quot;test_mode&quot;, text = &quot;Test Mode (Debugging)&quot;)
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                    PreferenceToggle(context.sharedPreferences, key = &quot;test_mode&quot;, text = &quot;Test Mode (FOR DEBUGGING ONLY)&quot;)
+</a>                     PreferenceToggle(context.sharedPreferences, key = &quot;disable_feature_loading&quot;, text = &quot;Disable Feature Loading&quot;)
+                     PreferenceToggle(context.sharedPreferences, key = &quot;disable_mapper&quot;, text = &quot;Disable Auto Mapper&quot;)
+                 }
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -24,6 +24,8 @@ import me.rhunk.snapenhance.common.config.VersionRequirement
+</a> import me.rhunk.snapenhance.common.ui.createComposeView
+ import me.rhunk.snapenhance.core.event.events.impl.UnaryCallEvent
+ import me.rhunk.snapenhance.core.ui.CustomComposable
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.core.util.hook.HookStage
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+import me.rhunk.snapenhance.core.util.hook.hook
+</a> import me.rhunk.snapenhance.core.util.ktx.getObjectField
+ 
+ class SecurityFeatures(
+<a href="#h1-1" id="h1-1" class="h">@@ -89,6 +91,11 @@ class SecurityFeatures(
+</a>             }
+         }
+ 
+<a href="#h1-1-3" id="h1-1-3" class="i">+        context.androidContext.classLoader.loadClass(&quot;com.snapchat.client.client_attestation.ArgosClient\$CppProxy&quot;).apply {
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+            hook(&quot;getArgosTokenAsync&quot;, HookStage.BEFORE) { it.setResult(null) }
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+            hook(&quot;getAttestationHeaders&quot;, HookStage.BEFORE) { it.setResult(null) }
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+        }
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+
+</a>         context.features.addActivityCreateListener { activity -&gt;
+             if (!activity.javaClass.name.endsWith(&quot;LoginSignupActivity&quot;)) return@addActivityCreateListener
+ 
+<a href="#h1-2" id="h1-2" class="h">@@ -110,7 +117,7 @@ class SecurityFeatures(
+</a>                                     Icon(Icons.Rounded.NotInterested, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(110.dp))
+                                     Spacer(Modifier.height(50.dp))
+                                     Text(
+<a href="#h1-2-3" id="h1-2-3" class="d">-                                        &quot;SnapEnhance can&#39;t be used to login or signup because your Snapchat version isn&#39;t the recommended one (v${MOD_DETECTION_VERSION_CHECK.maxVersion?.first ?: &quot;0.0.0&quot;}). Please downgrade to continue using it.\n\nFor more details, join t.me/snapenhance_chat&quot;,
+</a><a href="#h1-2-4" id="h1-2-4" class="i">+                                        &quot;SnapEnhance can&#39;t be used to login or signup because your Snapchat version isn&#39;t the recommended one. Please downgrade to Snapchat v${MOD_DETECTION_VERSION_CHECK.maxVersion?.first ?: &quot;0.0.0&quot;} or disable SnapEnhance in LSPosed to continue.\n\nFor more details, join t.me/snapenhance_chat&quot;,
+</a>                                         color = MaterialTheme.colorScheme.onSurface,
+                                         textAlign = TextAlign.Center,
+                                     )
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -243,6 +243,10 @@ class SnapEnhance {
+</a>                         }?.forEach { method -&gt;
+                             method.hook(HookStage.BEFORE) {
+                                 appContext.log.verbose(&quot;called $method&quot;)
+<a href="#h2-0-3" id="h2-0-3" class="i">+                                if (Throwable().stackTrace.lastOrNull()?.methodName == &quot;getAttestationPayloadProto&quot;) {
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+                                    appContext.log.verbose(&quot;sleeping&quot;)
+</a><a href="#h2-0-5" id="h2-0-5" class="i">+                                    Thread.sleep(Long.MAX_VALUE)
+</a><a href="#h2-0-6" id="h2-0-6" class="i">+                                }
+</a>                                 it.setResult(null)
+                             }
+                         } ?: error(&quot;Failed to get pluginNativeClass class&quot;)
+</pre>
+</div>
+</body>
+</html>
