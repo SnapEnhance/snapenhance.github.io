@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core): composer native bridge - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/deae5f301387c48ed16c46c9a9ab8a67293a26dd.html">deae5f301387c48ed16c46c9a9ab8a67293a26dd</a>
+<b>parent</b> <a href="../commit/6bae2de516919226e4e959fda3ef4163124d0ed9.html">6bae2de516919226e4e959fda3ef4163124d0ed9</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Mon,  7 Jul 2025 22:17:13 +0200
+
+fix(core): composer native bridge
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/data/SnapClassCache.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">+++</span><span class="d">----</span></td></tr>
+</table></pre><pre>2 files changed, 4 insertions(+), 5 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/data/SnapClassCache.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/data/SnapClassCache.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/data/SnapClassCache.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/data/SnapClassCache.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -17,7 +17,7 @@ class SnapClassCache (
+</a>     val feedEntry by lazy { findClass(&quot;com.snapchat.client.messaging.FeedEntry&quot;) }
+     val conversation by lazy { findClass(&quot;com.snapchat.client.messaging.Conversation&quot;) }
+     val feedManager by lazy { findClass(&quot;com.snapchat.client.messaging.FeedManager\$CppProxy&quot;) }
+<a href="#h0-0-3" id="h0-0-3" class="d">-    val nativeBridge by lazy { findClass(&quot;com.snapchat.client.composer.NativeBridge&quot;) }
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+    val nativeBridge by lazy { runCatching { findClass(&quot;com.snapchat.client.valdi.NativeBridge&quot;) }.getOrNull() ?: findClass(&quot;com.snapchat.client.composer.NativeBridge&quot;) }
+</a>     val composerView by lazy { findClass(&quot;com.snap.composer.views.ComposerView&quot;) }
+     val composerAction by lazy { findClass(&quot;com.snap.composer.actions.ComposerAction&quot;) }
+     val composerFunctionActionAdapter by lazy { findClass(&quot;com.snap.composer.callable.ComposerFunctionActionAdapter&quot;) }
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/experiments/ComposerHooks.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
+</a> import me.rhunk.snapenhance.common.bridge.FileHandleScope
+ import me.rhunk.snapenhance.common.bridge.toWrapper
+ import me.rhunk.snapenhance.common.ui.createComposeAlertDialog
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.core.SnapEnhance
+</a> import me.rhunk.snapenhance.core.features.Feature
+ import me.rhunk.snapenhance.core.features.impl.downloader.MediaDownloader
+ import me.rhunk.snapenhance.core.util.hook.HookStage
+<a href="#h1-1" id="h1-1" class="h">@@ -104,8 +105,6 @@ class ComposerHooks: Feature(&quot;ComposerHooks&quot;) {
+</a>     override fun init() {
+         if (config.globalState != true) return
+ 
+<a href="#h1-1-3" id="h1-1-3" class="d">-        val nativeBridgeClass = runCatching { findClass(&quot;com.snapchat.client.valdi.NativeBridge&quot;) }.getOrNull() ?: findClass(&quot;com.snapchat.client.composer.NativeBridge&quot;)
+</a><a href="#h1-1-4" id="h1-1-4" class="d">-
+</a>         val importedFunctions = mutableMapOf&lt;String, Any?&gt;()
+ 
+         fun composerFunction(name: String, block: ComposerMarshaller.() -&gt; Unit) {
+<a href="#h1-2" id="h1-2" class="h">@@ -175,7 +174,7 @@ class ComposerHooks: Feature(&quot;ComposerHooks&quot;) {
+</a>             context.native.setComposerLoader(&quot;&quot;&quot;
+                 const i = setInterval(() =&gt; {
+                     try {
+<a href="#h1-2-3" id="h1-2-3" class="d">-                        const _runtimeName = &quot;${if (nativeBridgeClass.name == &quot;com.snapchat.client.valdi.NativeBridge&quot;) &quot;valdi&quot; else &quot;composer&quot;}&quot;;
+</a><a href="#h1-2-4" id="h1-2-4" class="i">+                        const _runtimeName = &quot;${if (SnapEnhance.classCache.nativeBridge.name == &quot;com.snapchat.client.valdi.NativeBridge&quot;) &quot;valdi&quot; else &quot;composer&quot;}&quot;;
+</a>                         require(_runtimeName + &#39;_core/src/DeviceBridge&#39;).getDisplayWidth();
+                         clearInterval(i);
+                         (() =&gt; { const _getImportsFunctionName = &quot;$getImportsFunctionName&quot;; $loaderScript })();
+<a href="#h1-3" id="h1-3" class="h">@@ -199,7 +198,7 @@ class ComposerHooks: Feature(&quot;ComposerHooks&quot;) {
+</a>             }
+         }
+ 
+<a href="#h1-3-3" id="h1-3-3" class="d">-        nativeBridgeClass.hook(&quot;registerNativeModuleFactory&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h1-3-4" id="h1-3-4" class="i">+        SnapEnhance.classCache.nativeBridge.hook(&quot;registerNativeModuleFactory&quot;, HookStage.BEFORE) { param -&gt;
+</a>             val moduleFactory = param.argNullable&lt;Any&gt;(1) ?: return@hook
+             if (moduleFactory.javaClass.getMethod(&quot;getModulePath&quot;).invoke(moduleFactory)?.toString()?.contains(&quot;DeviceBridge&quot;) != true) return@hook
+             Hooker.ephemeralHookObjectMethod(moduleFactory.javaClass, moduleFactory, &quot;loadModule&quot;, HookStage.AFTER) { methodParam -&gt;
+</pre>
+</div>
+</body>
+</html>
