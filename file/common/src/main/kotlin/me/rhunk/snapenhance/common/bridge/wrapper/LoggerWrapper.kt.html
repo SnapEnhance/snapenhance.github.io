@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> LoggerWrapper.kt (19326B) - <a href="../../../../../../../../../../../raw/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt">raw</a></p><hr/><pre id="blob">
+<p> LoggerWrapper.kt (20610B) - <a href="../../../../../../../../../../../raw/common/src/main/kotlin/me/rhunk/snapenhance/common/bridge/wrapper/LoggerWrapper.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.common.bridge.wrapper
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import android.content.ContentValues
@@ -453,39 +453,68 @@
 <a href="#l430" class="line" id="l430">    430</a>                 }.takeIf { it.timestamp &gt; 0L } ?: continue)
 <a href="#l431" class="line" id="l431">    431</a>             }
 <a href="#l432" class="line" id="l432">    432</a>         }
-<a href="#l433" class="line" id="l433">    433</a>         return edits
-<a href="#l434" class="line" id="l434">    434</a>     }
-<a href="#l435" class="line" id="l435">    435</a> 
-<a href="#l436" class="line" id="l436">    436</a>     fun fetchMessages(
-<a href="#l437" class="line" id="l437">    437</a>         conversationId: String,
-<a href="#l438" class="line" id="l438">    438</a>         fromTimestamp: Long,
-<a href="#l439" class="line" id="l439">    439</a>         limit: Int,
-<a href="#l440" class="line" id="l440">    440</a>         reverseOrder: Boolean = true,
-<a href="#l441" class="line" id="l441">    441</a>         filter: ((LoggedMessage) -&gt; Boolean)? = null
-<a href="#l442" class="line" id="l442">    442</a>     ): List&lt;LoggedMessage&gt; {
-<a href="#l443" class="line" id="l443">    443</a>         val messages = mutableListOf&lt;LoggedMessage&gt;()
-<a href="#l444" class="line" id="l444">    444</a>         database.rawQuery(
-<a href="#l445" class="line" id="l445">    445</a>             &quot;SELECT * FROM messages WHERE conversation_id = ? AND send_timestamp ${if (reverseOrder) &quot;&lt;&quot; else &quot;&gt;&quot;} ? ORDER BY send_timestamp ${if (reverseOrder) &quot;DESC&quot; else &quot;ASC&quot;}&quot;,
-<a href="#l446" class="line" id="l446">    446</a>             arrayOf(conversationId, fromTimestamp.toString())
-<a href="#l447" class="line" id="l447">    447</a>         ).use {
-<a href="#l448" class="line" id="l448">    448</a>             while (it.moveToNext() &amp;&amp; messages.size &lt; limit) {
-<a href="#l449" class="line" id="l449">    449</a>                 val message = LoggedMessage(
-<a href="#l450" class="line" id="l450">    450</a>                     messageId = it.getLongOrNull(&quot;message_id&quot;) ?: continue,
-<a href="#l451" class="line" id="l451">    451</a>                     conversationId = it.getStringOrNull(&quot;conversation_id&quot;) ?: continue,
-<a href="#l452" class="line" id="l452">    452</a>                     userId = it.getStringOrNull(&quot;user_id&quot;) ?: continue,
-<a href="#l453" class="line" id="l453">    453</a>                     username = it.getStringOrNull(&quot;username&quot;) ?: continue,
-<a href="#l454" class="line" id="l454">    454</a>                     sendTimestamp = it.getLongOrNull(&quot;send_timestamp&quot;) ?: continue,
-<a href="#l455" class="line" id="l455">    455</a>                     addedTimestamp = it.getLongOrNull(&quot;added_timestamp&quot;) ?: continue,
-<a href="#l456" class="line" id="l456">    456</a>                     groupTitle = it.getStringOrNull(&quot;group_title&quot;),
-<a href="#l457" class="line" id="l457">    457</a>                     messageData = it.getBlobOrNull(&quot;message_data&quot;) ?: continue
-<a href="#l458" class="line" id="l458">    458</a>                 )
-<a href="#l459" class="line" id="l459">    459</a>                 if (filter != null &amp;&amp; !filter(message)) continue
-<a href="#l460" class="line" id="l460">    460</a>                 messages.add(message)
-<a href="#l461" class="line" id="l461">    461</a>             }
-<a href="#l462" class="line" id="l462">    462</a>         }
-<a href="#l463" class="line" id="l463">    463</a>         return messages
-<a href="#l464" class="line" id="l464">    464</a>     }
-<a href="#l465" class="line" id="l465">    465</a> }</pre>
+<a href="#l433" class="line" id="l433">    433</a> 
+<a href="#l434" class="line" id="l434">    434</a>         if (edits.isNotEmpty()) {
+<a href="#l435" class="line" id="l435">    435</a>             // append original message
+<a href="#l436" class="line" id="l436">    436</a>             database.rawQuery(&quot;SELECT added_timestamp, message_data FROM messages WHERE conversation_id = ? AND message_id = ?&quot;, arrayOf(conversationId, messageId.toString())).use { cursor -&gt;
+<a href="#l437" class="line" id="l437">    437</a>                 if (!cursor.moveToFirst()) return@use
+<a href="#l438" class="line" id="l438">    438</a> 
+<a href="#l439" class="line" id="l439">    439</a>                 val originalMessage = cursor.getBlobOrNull(&quot;message_data&quot;) ?: return@use
+<a href="#l440" class="line" id="l440">    440</a>                 val addedTimestamp = cursor.getLongOrNull(&quot;added_timestamp&quot;) ?: return@use
+<a href="#l441" class="line" id="l441">    441</a> 
+<a href="#l442" class="line" id="l442">    442</a>                 val messageObject = gson.fromJson(
+<a href="#l443" class="line" id="l443">    443</a>                     originalMessage.toString(Charsets.UTF_8),
+<a href="#l444" class="line" id="l444">    444</a>                     JsonObject::class.java
+<a href="#l445" class="line" id="l445">    445</a>                 )
+<a href="#l446" class="line" id="l446">    446</a> 
+<a href="#l447" class="line" id="l447">    447</a>                 val messageTextContent =
+<a href="#l448" class="line" id="l448">    448</a>                     messageObject.getAsJsonObject(&quot;mMessageContent&quot;)?.getAsJsonArray(&quot;mContent&quot;)
+<a href="#l449" class="line" id="l449">    449</a>                         ?.map { it.asByte }?.toByteArray()?.let {
+<a href="#l450" class="line" id="l450">    450</a>                             ProtoReader(it).getString(2, 1)
+<a href="#l451" class="line" id="l451">    451</a>                         } ?: return@use
+<a href="#l452" class="line" id="l452">    452</a> 
+<a href="#l453" class="line" id="l453">    453</a>                 if (edits.firstOrNull()?.message != messageTextContent) {
+<a href="#l454" class="line" id="l454">    454</a>                     edits.add(0, LoggedChatEdit().apply {
+<a href="#l455" class="line" id="l455">    455</a>                         timestamp = addedTimestamp
+<a href="#l456" class="line" id="l456">    456</a>                         message = messageTextContent
+<a href="#l457" class="line" id="l457">    457</a>                     })
+<a href="#l458" class="line" id="l458">    458</a>                 }
+<a href="#l459" class="line" id="l459">    459</a>             }
+<a href="#l460" class="line" id="l460">    460</a>         }
+<a href="#l461" class="line" id="l461">    461</a> 
+<a href="#l462" class="line" id="l462">    462</a>         return edits
+<a href="#l463" class="line" id="l463">    463</a>     }
+<a href="#l464" class="line" id="l464">    464</a> 
+<a href="#l465" class="line" id="l465">    465</a>     fun fetchMessages(
+<a href="#l466" class="line" id="l466">    466</a>         conversationId: String,
+<a href="#l467" class="line" id="l467">    467</a>         fromTimestamp: Long,
+<a href="#l468" class="line" id="l468">    468</a>         limit: Int,
+<a href="#l469" class="line" id="l469">    469</a>         reverseOrder: Boolean = true,
+<a href="#l470" class="line" id="l470">    470</a>         filter: ((LoggedMessage) -&gt; Boolean)? = null
+<a href="#l471" class="line" id="l471">    471</a>     ): List&lt;LoggedMessage&gt; {
+<a href="#l472" class="line" id="l472">    472</a>         val messages = mutableListOf&lt;LoggedMessage&gt;()
+<a href="#l473" class="line" id="l473">    473</a>         database.rawQuery(
+<a href="#l474" class="line" id="l474">    474</a>             &quot;SELECT * FROM messages WHERE conversation_id = ? AND send_timestamp ${if (reverseOrder) &quot;&lt;&quot; else &quot;&gt;&quot;} ? ORDER BY send_timestamp ${if (reverseOrder) &quot;DESC&quot; else &quot;ASC&quot;}&quot;,
+<a href="#l475" class="line" id="l475">    475</a>             arrayOf(conversationId, fromTimestamp.toString())
+<a href="#l476" class="line" id="l476">    476</a>         ).use {
+<a href="#l477" class="line" id="l477">    477</a>             while (it.moveToNext() &amp;&amp; messages.size &lt; limit) {
+<a href="#l478" class="line" id="l478">    478</a>                 val message = LoggedMessage(
+<a href="#l479" class="line" id="l479">    479</a>                     messageId = it.getLongOrNull(&quot;message_id&quot;) ?: continue,
+<a href="#l480" class="line" id="l480">    480</a>                     conversationId = it.getStringOrNull(&quot;conversation_id&quot;) ?: continue,
+<a href="#l481" class="line" id="l481">    481</a>                     userId = it.getStringOrNull(&quot;user_id&quot;) ?: continue,
+<a href="#l482" class="line" id="l482">    482</a>                     username = it.getStringOrNull(&quot;username&quot;) ?: continue,
+<a href="#l483" class="line" id="l483">    483</a>                     sendTimestamp = it.getLongOrNull(&quot;send_timestamp&quot;) ?: continue,
+<a href="#l484" class="line" id="l484">    484</a>                     addedTimestamp = it.getLongOrNull(&quot;added_timestamp&quot;) ?: continue,
+<a href="#l485" class="line" id="l485">    485</a>                     groupTitle = it.getStringOrNull(&quot;group_title&quot;),
+<a href="#l486" class="line" id="l486">    486</a>                     messageData = it.getBlobOrNull(&quot;message_data&quot;) ?: continue
+<a href="#l487" class="line" id="l487">    487</a>                 )
+<a href="#l488" class="line" id="l488">    488</a>                 if (filter != null &amp;&amp; !filter(message)) continue
+<a href="#l489" class="line" id="l489">    489</a>                 messages.add(message)
+<a href="#l490" class="line" id="l490">    490</a>             }
+<a href="#l491" class="line" id="l491">    491</a>         }
+<a href="#l492" class="line" id="l492">    492</a>         return messages
+<a href="#l493" class="line" id="l493">    493</a>     }
+<a href="#l494" class="line" id="l494">    494</a> }</pre>
 </div>
 </body>
 </html>
