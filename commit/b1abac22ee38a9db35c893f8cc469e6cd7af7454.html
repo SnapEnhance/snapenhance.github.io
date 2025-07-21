@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core): arroyo conversation - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/b1abac22ee38a9db35c893f8cc469e6cd7af7454.html">b1abac22ee38a9db35c893f8cc469e6cd7af7454</a>
+<b>parent</b> <a href="../commit/68c9a4cc4e589daa9af4a08282f3f7c4eaaacb3e.html">68c9a4cc4e589daa9af4a08282f3f7c4eaaacb3e</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Mon, 21 Jul 2025 16:33:09 +0200
+
+fix(core): arroyo conversation
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a></td><td> | </td><td class="num">3</td><td><span class="i">+</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a></td><td> | </td><td class="num">125</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">--------------------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/CoreMessagingBridge.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+</table></pre><pre>4 files changed, 98 insertions(+), 36 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -325,7 +325,7 @@ class SnapEnhance {
+</a> 
+                 MessagingFriendInfo(
+                     friendUserId,
+<a href="#h0-0-3" id="h0-0-3" class="d">-                    appContext.database.getConversationLinkFromUserId(friendUserId)?.clientConversationId,
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+                    it.key,
+</a>                     friend.displayName,
+                     friend.mutableUsername ?: friend.usernameForSorting!!,
+                     friend.bitmojiAvatarId,
+<a href="#h0-1" id="h0-1" class="h">@@ -344,7 +344,7 @@ class SnapEnhance {
+</a>                 return appContext.database.getFriendInfo(uuid)?.let {
+                     MessagingFriendInfo(
+                         userId = it.userId!!,
+<a href="#h0-1-3" id="h0-1-3" class="d">-                        dmConversationId = appContext.database.getConversationLinkFromUserId(it.userId!!)?.clientConversationId,
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+                        dmConversationId = null,
+</a>                         displayName = it.displayName,
+                         mutableUsername = it.mutableUsername!!,
+                         bitmojiId = it.bitmojiAvatarId,
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/action/impl/BulkMessagingAction.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -54,7 +54,6 @@ import me.rhunk.snapenhance.core.ui.ViewAppearanceHelper
+</a> import me.rhunk.snapenhance.core.util.EvictingMap
+ import me.rhunk.snapenhance.core.util.dataBuilder
+ import me.rhunk.snapenhance.mapper.impl.FriendRelationshipChangerMapper
+<a href="#h1-0-3" id="h1-0-3" class="d">-import java.net.URL
+</a> import java.text.DateFormat
+ import java.util.Date
+ import kotlin.random.Random
+<a href="#h1-1" id="h1-1" class="h">@@ -184,7 +183,7 @@ class BulkMessagingAction : AbstractAction() {
+</a>     }
+ 
+     private fun getDMLastMessage(userId: String?): ConversationMessage? {
+<a href="#h1-1-3" id="h1-1-3" class="d">-        return context.database.getConversationLinkFromUserId(userId ?: return null)?.clientConversationId?.let {
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+        return context.database.getDMConversationId(userId ?: return null)?.let {
+</a>             context.database.getMessagesFromConversationId(it, 1)
+         }?.firstOrNull()
+     }
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -13,6 +13,7 @@ import me.rhunk.snapenhance.common.util.ktx.getInteger
+</a> import me.rhunk.snapenhance.common.util.ktx.getStringOrNull
+ import me.rhunk.snapenhance.common.util.protobuf.ProtoReader
+ import me.rhunk.snapenhance.core.ModContext
+<a href="#h2-0-3" id="h2-0-3" class="i">+import me.rhunk.snapenhance.core.wrapper.impl.toSnapUUID
+</a> import me.rhunk.snapenhance.nativelib.NativeLib
+ 
+ 
+<a href="#h2-1" id="h2-1" class="h">@@ -30,6 +31,14 @@ class DatabaseAccess(
+</a> ) {
+     private val openedDatabases = mutableMapOf&lt;DatabaseType, SQLiteDatabase&gt;()
+ 
+<a href="#h2-1-3" id="h2-1-3" class="i">+    private val hasArroyoConversationTable by lazy {
+</a><a href="#h2-1-4" id="h2-1-4" class="i">+        useDatabase(DatabaseType.ARROYO)?.performOperation {
+</a><a href="#h2-1-5" id="h2-1-5" class="i">+            safeRawQuery(&quot;SELECT name FROM sqlite_master WHERE type = &#39;table&#39; AND name = &#39;conversation&#39;&quot;)?.use { query -&gt;
+</a><a href="#h2-1-6" id="h2-1-6" class="i">+                query.moveToFirst() &amp;&amp; query.getStringOrNull(&quot;name&quot;) == &quot;conversation&quot;
+</a><a href="#h2-1-7" id="h2-1-7" class="i">+            }
+</a><a href="#h2-1-8" id="h2-1-8" class="i">+        } == true
+</a><a href="#h2-1-9" id="h2-1-9" class="i">+    }
+</a><a href="#h2-1-10" id="h2-1-10" class="i">+
+</a>     private fun useDatabase(database: DatabaseType, writeMode: Boolean = false): SQLiteDatabase? {
+         // only cache read-only databases
+         if (!writeMode &amp;&amp; openedDatabases.containsKey(database) &amp;&amp; openedDatabases[database]?.isOpen == true) {
+<a href="#h2-2" id="h2-2" class="h">@@ -88,7 +97,44 @@ class DatabaseAccess(
+</a>         }.getOrNull()
+     }
+ 
+<a href="#h2-2-3" id="h2-2-3" class="i">+    private val friendDMsCache by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+</a><a href="#h2-2-4" id="h2-2-4" class="i">+        getFeedEntries(Int.MAX_VALUE)
+</a><a href="#h2-2-5" id="h2-2-5" class="i">+            .filter { it.conversationType == 0 &amp;&amp; it.participantsSize == 2 }
+</a><a href="#h2-2-6" id="h2-2-6" class="i">+            .associate { it.participants?.firstOrNull { it != myUserId } to it.key }
+</a><a href="#h2-2-7" id="h2-2-7" class="i">+            .toMutableMap()
+</a><a href="#h2-2-8" id="h2-2-8" class="i">+    }
+</a><a href="#h2-2-9" id="h2-2-9" class="i">+
+</a>     private val dmOtherParticipantCache by lazy {
+<a href="#h2-2-11" id="h2-2-11" class="i">+        if (hasArroyoConversationTable) {
+</a><a href="#h2-2-12" id="h2-2-12" class="i">+            return@lazy useDatabase(DatabaseType.ARROYO)?.performOperation {
+</a><a href="#h2-2-13" id="h2-2-13" class="i">+                safeRawQuery(
+</a><a href="#h2-2-14" id="h2-2-14" class="i">+                    &quot;SELECT client_conversation_id, conversation_metadata FROM conversation&quot;,
+</a><a href="#h2-2-15" id="h2-2-15" class="i">+                )?.use { query -&gt;
+</a><a href="#h2-2-16" id="h2-2-16" class="i">+                    val result = mutableMapOf&lt;String, String?&gt;()
+</a><a href="#h2-2-17" id="h2-2-17" class="i">+                    if (!query.moveToFirst()) {
+</a><a href="#h2-2-18" id="h2-2-18" class="i">+                        return@performOperation null
+</a><a href="#h2-2-19" id="h2-2-19" class="i">+                    }
+</a><a href="#h2-2-20" id="h2-2-20" class="i">+                    do {
+</a><a href="#h2-2-21" id="h2-2-21" class="i">+                        val conversationId = query.getStringOrNull(&quot;client_conversation_id&quot;) ?: continue
+</a><a href="#h2-2-22" id="h2-2-22" class="i">+                        val conversationMetadata = ProtoReader(query.getBlobOrNull(&quot;conversation_metadata&quot;) ?: continue)
+</a><a href="#h2-2-23" id="h2-2-23" class="i">+
+</a><a href="#h2-2-24" id="h2-2-24" class="i">+                        val participants = mutableListOf&lt;String&gt;()
+</a><a href="#h2-2-25" id="h2-2-25" class="i">+                        conversationMetadata.eachBuffer(3) {
+</a><a href="#h2-2-26" id="h2-2-26" class="i">+                            participants.add(getByteArray(1, 1)?.toSnapUUID()?.toString() ?: return@eachBuffer)
+</a><a href="#h2-2-27" id="h2-2-27" class="i">+                        }
+</a><a href="#h2-2-28" id="h2-2-28" class="i">+
+</a><a href="#h2-2-29" id="h2-2-29" class="i">+                        result[conversationId] = if (participants.size == 2) {
+</a><a href="#h2-2-30" id="h2-2-30" class="i">+                            participants.firstOrNull { it != myUserId }?.also {
+</a><a href="#h2-2-31" id="h2-2-31" class="i">+                                result[it] = null
+</a><a href="#h2-2-32" id="h2-2-32" class="i">+                            }
+</a><a href="#h2-2-33" id="h2-2-33" class="i">+                        } else null
+</a><a href="#h2-2-34" id="h2-2-34" class="i">+                    } while (query.moveToNext())
+</a><a href="#h2-2-35" id="h2-2-35" class="i">+
+</a><a href="#h2-2-36" id="h2-2-36" class="i">+                    result
+</a><a href="#h2-2-37" id="h2-2-37" class="i">+                }
+</a><a href="#h2-2-38" id="h2-2-38" class="i">+            }?.toMutableMap() ?: mutableMapOf()
+</a><a href="#h2-2-39" id="h2-2-39" class="i">+        }
+</a><a href="#h2-2-40" id="h2-2-40" class="i">+
+</a>         (useDatabase(DatabaseType.ARROYO)?.performOperation {
+             safeRawQuery(
+                 &quot;SELECT client_conversation_id, conversation_type, user_id FROM user_conversation WHERE user_id != ?&quot;,
+<a href="#h2-3" id="h2-3" class="h">@@ -293,6 +339,10 @@ class DatabaseAccess(
+</a>     }
+ 
+     fun getConversationType(conversationId: String): Int? {
+<a href="#h2-3-3" id="h2-3-3" class="i">+        if (hasArroyoConversationTable) {
+</a><a href="#h2-3-4" id="h2-3-4" class="i">+            return getFeedEntryByConversationId(conversationId)?.conversationType
+</a><a href="#h2-3-5" id="h2-3-5" class="i">+        }
+</a><a href="#h2-3-6" id="h2-3-6" class="i">+
+</a>         return useDatabase(DatabaseType.ARROYO)?.performOperation {
+             safeRawQuery(
+                 &quot;SELECT conversation_type FROM user_conversation WHERE client_conversation_id = ?&quot;,
+<a href="#h2-4" id="h2-4" class="h">@@ -306,36 +356,67 @@ class DatabaseAccess(
+</a>         }
+     }
+ 
+<a href="#h2-4-3" id="h2-4-3" class="d">-    fun getConversationLinkFromUserId(userId: String): UserConversationLink? {
+</a><a href="#h2-4-4" id="h2-4-4" class="i">+    fun getDMConversationId(userId: String): String? {
+</a><a href="#h2-4-5" id="h2-4-5" class="i">+        if (hasArroyoConversationTable) {
+</a><a href="#h2-4-6" id="h2-4-6" class="i">+            return friendDMsCache[userId]
+</a><a href="#h2-4-7" id="h2-4-7" class="i">+        }
+</a><a href="#h2-4-8" id="h2-4-8" class="i">+
+</a>         return useDatabase(DatabaseType.ARROYO)?.performOperation {
+             readDatabaseObject(
+                 UserConversationLink(),
+                 &quot;user_conversation&quot;,
+                 &quot;user_id = ? AND conversation_type = 0&quot;,
+                 arrayOf(userId)
+<a href="#h2-4-15" id="h2-4-15" class="d">-            )
+</a><a href="#h2-4-16" id="h2-4-16" class="i">+            )?.clientConversationId
+</a>         }
+     }
+ 
+<a href="#h2-4-20" id="h2-4-20" class="d">-    fun getDMOtherParticipant(conversationId: String): String? {
+</a><a href="#h2-4-21" id="h2-4-21" class="d">-        if (dmOtherParticipantCache.containsKey(conversationId)) return dmOtherParticipantCache[conversationId]
+</a><a href="#h2-4-22" id="h2-4-22" class="i">+    private fun getConversationParticipantsRaw(conversationId: String): List&lt;String&gt;? {
+</a><a href="#h2-4-23" id="h2-4-23" class="i">+        if (hasArroyoConversationTable) {
+</a><a href="#h2-4-24" id="h2-4-24" class="i">+            return useDatabase(DatabaseType.ARROYO)?.performOperation {
+</a><a href="#h2-4-25" id="h2-4-25" class="i">+                safeRawQuery(
+</a><a href="#h2-4-26" id="h2-4-26" class="i">+                    &quot;SELECT conversation_metadata FROM conversation WHERE client_conversation_id = ?&quot;,
+</a><a href="#h2-4-27" id="h2-4-27" class="i">+                    arrayOf(conversationId)
+</a><a href="#h2-4-28" id="h2-4-28" class="i">+                )?.use { query -&gt;
+</a><a href="#h2-4-29" id="h2-4-29" class="i">+                    val participants = mutableListOf&lt;String&gt;()
+</a><a href="#h2-4-30" id="h2-4-30" class="i">+                    if (!query.moveToFirst()) {
+</a><a href="#h2-4-31" id="h2-4-31" class="i">+                        return@performOperation null
+</a><a href="#h2-4-32" id="h2-4-32" class="i">+                    }
+</a><a href="#h2-4-33" id="h2-4-33" class="i">+                    val conversationMetadata = ProtoReader(query.getBlobOrNull(&quot;conversation_metadata&quot;) ?: return@performOperation null)
+</a><a href="#h2-4-34" id="h2-4-34" class="i">+
+</a><a href="#h2-4-35" id="h2-4-35" class="i">+                    conversationMetadata.eachBuffer(3) {
+</a><a href="#h2-4-36" id="h2-4-36" class="i">+                        participants.add(getByteArray(1, 1)?.toSnapUUID()?.toString() ?: return@eachBuffer)
+</a><a href="#h2-4-37" id="h2-4-37" class="i">+                    }
+</a><a href="#h2-4-38" id="h2-4-38" class="i">+
+</a><a href="#h2-4-39" id="h2-4-39" class="i">+                    participants
+</a><a href="#h2-4-40" id="h2-4-40" class="i">+                }
+</a><a href="#h2-4-41" id="h2-4-41" class="i">+            }
+</a><a href="#h2-4-42" id="h2-4-42" class="i">+        }
+</a><a href="#h2-4-43" id="h2-4-43" class="i">+
+</a>         return useDatabase(DatabaseType.ARROYO)?.performOperation {
+             safeRawQuery(
+<a href="#h2-4-46" id="h2-4-46" class="d">-                &quot;SELECT user_id FROM user_conversation WHERE client_conversation_id = ? AND conversation_type = 0&quot;,
+</a><a href="#h2-4-47" id="h2-4-47" class="i">+                &quot;SELECT user_id FROM user_conversation WHERE client_conversation_id = ?&quot;,
+</a>                 arrayOf(conversationId)
+             )?.use { query -&gt;
+<a href="#h2-4-50" id="h2-4-50" class="d">-                val participants = mutableListOf&lt;String&gt;()
+</a>                 if (!query.moveToFirst()) {
+<a href="#h2-4-52" id="h2-4-52" class="d">-                    return@performOperation null
+</a><a href="#h2-4-53" id="h2-4-53" class="i">+                    return@performOperation emptyList()
+</a>                 }
+<a href="#h2-4-55" id="h2-4-55" class="i">+                val participants = mutableListOf&lt;String&gt;()
+</a>                 do {
+<a href="#h2-4-57" id="h2-4-57" class="d">-                    participants.add(query.getStringOrNull(&quot;user_id&quot;)!!)
+</a><a href="#h2-4-58" id="h2-4-58" class="i">+                    query.getStringOrNull(&quot;user_id&quot;)?.let { participants.add(it) }
+</a>                 } while (query.moveToNext())
+<a href="#h2-4-60" id="h2-4-60" class="d">-                participants.firstOrNull { it != myUserId }
+</a><a href="#h2-4-61" id="h2-4-61" class="d">-            }.also { dmOtherParticipantCache[conversationId] = it }
+</a><a href="#h2-4-62" id="h2-4-62" class="i">+                participants
+</a><a href="#h2-4-63" id="h2-4-63" class="i">+            }
+</a>         }
+     }
+ 
+<a href="#h2-4-67" id="h2-4-67" class="i">+    fun getDMOtherParticipant(conversationId: String): String? {
+</a><a href="#h2-4-68" id="h2-4-68" class="i">+        if (dmOtherParticipantCache.containsKey(conversationId)) return dmOtherParticipantCache[conversationId]
+</a><a href="#h2-4-69" id="h2-4-69" class="i">+
+</a><a href="#h2-4-70" id="h2-4-70" class="i">+        return getConversationParticipantsRaw(conversationId)?.takeIf { it.size == 2 }?.firstOrNull { it != myUserId }.also {
+</a><a href="#h2-4-71" id="h2-4-71" class="i">+            dmOtherParticipantCache[conversationId] = it
+</a><a href="#h2-4-72" id="h2-4-72" class="i">+        }
+</a><a href="#h2-4-73" id="h2-4-73" class="i">+    }
+</a> 
+     fun getStoryEntryFromId(storyId: String): StoryEntry? {
+         return useDatabase(DatabaseType.MAIN)?.performOperation  {
+<a href="#h2-5" id="h2-5" class="h">@@ -345,28 +426,10 @@ class DatabaseAccess(
+</a> 
+     fun getConversationParticipants(conversationId: String, useCache: Boolean = true): List&lt;String&gt;? {
+         if (dmOtherParticipantCache[conversationId] != null &amp;&amp; useCache) return dmOtherParticipantCache[conversationId]?.let { listOf(myUserId, it) }
+<a href="#h2-5-3" id="h2-5-3" class="d">-        return useDatabase(DatabaseType.ARROYO)?.performOperation {
+</a><a href="#h2-5-4" id="h2-5-4" class="d">-            safeRawQuery(
+</a><a href="#h2-5-5" id="h2-5-5" class="d">-                &quot;SELECT user_id, conversation_type FROM user_conversation WHERE client_conversation_id = ?&quot;,
+</a><a href="#h2-5-6" id="h2-5-6" class="d">-                arrayOf(conversationId)
+</a><a href="#h2-5-7" id="h2-5-7" class="d">-            )?.use { cursor -&gt;
+</a><a href="#h2-5-8" id="h2-5-8" class="d">-                if (!cursor.moveToFirst()) {
+</a><a href="#h2-5-9" id="h2-5-9" class="d">-                    return@performOperation null
+</a><a href="#h2-5-10" id="h2-5-10" class="d">-                }
+</a><a href="#h2-5-11" id="h2-5-11" class="d">-                val participants = mutableListOf&lt;String&gt;()
+</a><a href="#h2-5-12" id="h2-5-12" class="d">-                var conversationType = -1
+</a><a href="#h2-5-13" id="h2-5-13" class="d">-                do {
+</a><a href="#h2-5-14" id="h2-5-14" class="d">-                    if (conversationType == -1) conversationType = cursor.getInteger(&quot;conversation_type&quot;)
+</a><a href="#h2-5-15" id="h2-5-15" class="d">-                    participants.add(cursor.getStringOrNull(&quot;user_id&quot;)!!)
+</a><a href="#h2-5-16" id="h2-5-16" class="d">-                } while (cursor.moveToNext())
+</a> 
+<a href="#h2-5-18" id="h2-5-18" class="d">-                if (!dmOtherParticipantCache.containsKey(conversationId)) {
+</a><a href="#h2-5-19" id="h2-5-19" class="d">-                    dmOtherParticipantCache[conversationId] = when (conversationType) {
+</a><a href="#h2-5-20" id="h2-5-20" class="d">-                        0 -&gt; participants.firstOrNull { it != myUserId }
+</a><a href="#h2-5-21" id="h2-5-21" class="d">-                        else -&gt; null
+</a><a href="#h2-5-22" id="h2-5-22" class="d">-                    }
+</a><a href="#h2-5-23" id="h2-5-23" class="d">-                }
+</a><a href="#h2-5-24" id="h2-5-24" class="d">-                participants
+</a><a href="#h2-5-25" id="h2-5-25" class="i">+        return getConversationParticipantsRaw(conversationId)?.also {
+</a><a href="#h2-5-26" id="h2-5-26" class="i">+            if (!dmOtherParticipantCache.containsKey(conversationId)) {
+</a><a href="#h2-5-27" id="h2-5-27" class="i">+                dmOtherParticipantCache[conversationId] = it.firstOrNull { it != myUserId }
+</a>             }
+         }
+     }
+<b>diff --git a/<a id="h3" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/CoreMessagingBridge.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/CoreMessagingBridge.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/CoreMessagingBridge.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/messaging/CoreMessagingBridge.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -116,5 +116,5 @@ class CoreMessagingBridge(
+</a>         }
+     }
+ 
+<a href="#h3-0-3" id="h3-0-3" class="d">-    override fun getOneToOneConversationId(userId: String) = context.database.getConversationLinkFromUserId(userId)?.clientConversationId
+</a><a href="#h3-0-4" id="h3-0-4" class="i">+    override fun getOneToOneConversationId(userId: String) = context.database.getDMConversationId(userId)
+</a> } 
+\ No newline at end of file
+</pre>
+</div>
+</body>
+</html>
