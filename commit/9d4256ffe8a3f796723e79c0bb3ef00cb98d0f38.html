@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Merge branch &#39;refs/heads/loading_fix&#39; into dev - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/9d4256ffe8a3f796723e79c0bb3ef00cb98d0f38.html">9d4256ffe8a3f796723e79c0bb3ef00cb98d0f38</a>
+<b>parent</b> <a href="../commit/e26ea0121fdda620a0a1be2910effcb3c4e8048e.html">e26ea0121fdda620a0a1be2910effcb3c4e8048e</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed, 30 Jul 2025 16:49:42 +0200
+
+Merge branch &#39;refs/heads/loading_fix&#39; into dev
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">+</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt</a></td><td> | </td><td class="num">84</td><td><span class="i">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span><span class="d">------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></td><td> | </td><td class="num">11</td><td><span class="i">++++</span><span class="d">-------</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/PlatformClientAttestationMapper.kt</a></td><td> | </td><td class="num">13</td><td><span class="i">+++++++++++++</span><span class="d"></span></td></tr>
+</table></pre><pre>4 files changed, 96 insertions(+), 14 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/ModContext.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -61,7 +61,7 @@ class ModContext(
+</a>     val messageSender = MessageSender(this)
+ 
+     val features = FeatureManager(this)
+<a href="#h0-0-3" id="h0-0-3" class="d">-    val mappings by lazy { MappingsWrapper(lazyFileHandlerManager) }
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+    val mappings by lazy { MappingsWrapper(lazyFileHandlerManager).apply { init(androidContext) } }
+</a>     val actionManager = ActionManager(this)
+     val database = DatabaseAccess(this)
+     val event = EventBus(this)
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SecurityFeatures.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -24,10 +24,16 @@ import me.rhunk.snapenhance.common.config.VersionRequirement
+</a> import me.rhunk.snapenhance.common.ui.createComposeView
+ import me.rhunk.snapenhance.core.event.events.impl.UnaryCallEvent
+ import me.rhunk.snapenhance.core.ui.CustomComposable
+<a href="#h1-0-3" id="h1-0-3" class="i">+import me.rhunk.snapenhance.core.util.dataBuilder
+</a> import me.rhunk.snapenhance.core.util.hook.HookStage
+ import me.rhunk.snapenhance.core.util.hook.hook
+ import me.rhunk.snapenhance.core.util.hook.hookConstructor
+ import me.rhunk.snapenhance.core.util.ktx.getObjectField
+<a href="#h1-0-8" id="h1-0-8" class="i">+import me.rhunk.snapenhance.mapper.impl.CallbackMapper
+</a><a href="#h1-0-9" id="h1-0-9" class="i">+import me.rhunk.snapenhance.mapper.impl.PlatformClientAttestationMapper
+</a><a href="#h1-0-10" id="h1-0-10" class="i">+import java.io.IOException
+</a><a href="#h1-0-11" id="h1-0-11" class="i">+import java.lang.reflect.Method
+</a><a href="#h1-0-12" id="h1-0-12" class="i">+import kotlin.system.exitProcess
+</a> 
+ class SecurityFeatures(
+     private val context: ModContext
+<a href="#h1-1" id="h1-1" class="h">@@ -85,21 +91,87 @@ class SecurityFeatures(
+</a>         context.log.verbose(&quot;disablePlugin=${context.disablePlugin}&quot;)
+         if (!context.disablePlugin) return
+ 
+<a href="#h1-1-3" id="h1-1-3" class="i">+        val allowedEPs = listOf(
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+            &quot;/messagingcoreservice.MessagingCoreService/&quot;,
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+            &quot;/GetConvoSafetyPrompt&quot;,
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+            &quot;/GetSnapchatterPublicInfo&quot;,
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+            &quot;/UserRecentlyActive&quot;,
+</a><a href="#h1-1-8" id="h1-1-8" class="i">+        )
+</a><a href="#h1-1-9" id="h1-1-9" class="i">+
+</a>         context.event.subscribe(UnaryCallEvent::class) { event -&gt;
+             val callOptions = event.adapter.arg&lt;Any&gt;(2).let { it.javaClass.getMethod(&quot;build&quot;).invoke(it) } ?: return@subscribe
+             if (callOptions.getObjectField(&quot;mAttestation&quot;) != null) {
+<a href="#h1-1-13" id="h1-1-13" class="i">+                context.log.verbose(&quot;blocked ep ${event.adapter.arg&lt;Any&gt;(0)}&quot;, &quot;UnaryCallEvent&quot;)
+</a>                 event.canceled = true
+<a href="#h1-1-15" id="h1-1-15" class="i">+                val eventHandler = event.adapter.arg&lt;Any&gt;(3)
+</a><a href="#h1-1-16" id="h1-1-16" class="i">+                eventHandler.javaClass.methods.first { it.name == &quot;onEvent&quot; }.also { method -&gt;
+</a><a href="#h1-1-17" id="h1-1-17" class="i">+                    method.invoke(eventHandler, null, method.parameterTypes[0].dataBuilder {
+</a><a href="#h1-1-18" id="h1-1-18" class="i">+                        set(&quot;mStatusCode&quot;, &quot;CANCELLED&quot;)
+</a><a href="#h1-1-19" id="h1-1-19" class="i">+                    })
+</a><a href="#h1-1-20" id="h1-1-20" class="i">+                }
+</a>             }
+         }
+ 
+<a href="#h1-1-24" id="h1-1-24" class="d">-        context.androidContext.classLoader.loadClass(&quot;com.snapchat.client.client_attestation.ArgosClient\$CppProxy&quot;).apply {
+</a><a href="#h1-1-25" id="h1-1-25" class="d">-            hook(&quot;getArgosTokenAsync&quot;, HookStage.BEFORE) { it.setResult(null) }
+</a><a href="#h1-1-26" id="h1-1-26" class="d">-            hook(&quot;getAttestationHeaders&quot;, HookStage.BEFORE) { it.setResult(null) }
+</a><a href="#h1-1-27" id="h1-1-27" class="i">+        context.androidContext.classLoader.apply {
+</a><a href="#h1-1-28" id="h1-1-28" class="i">+            val argosClientClass = loadClass(&quot;com.snapchat.client.client_attestation.ArgosClient\$CppProxy&quot;)
+</a><a href="#h1-1-29" id="h1-1-29" class="i">+            argosClientClass.apply {
+</a><a href="#h1-1-30" id="h1-1-30" class="i">+                hookConstructor(HookStage.BEFORE) { it.setResult(null) }
+</a><a href="#h1-1-31" id="h1-1-31" class="i">+                hook(&quot;getArgosTokenAsync&quot;, HookStage.BEFORE) { it.setResult(null) }
+</a><a href="#h1-1-32" id="h1-1-32" class="i">+                hook(&quot;getAttestationHeaders&quot;, HookStage.BEFORE) { it.setResult(null) }
+</a><a href="#h1-1-33" id="h1-1-33" class="i">+            }
+</a><a href="#h1-1-34" id="h1-1-34" class="i">+            loadClass(&quot;com.snapchat.client.client_attestation.ArgosClient&quot;).hook(&quot;createInstance&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h1-1-35" id="h1-1-35" class="i">+                param.setResult(argosClientClass.declaredConstructors.first().also { it.isAccessible = true }.newInstance(0))
+</a><a href="#h1-1-36" id="h1-1-36" class="i">+            }
+</a><a href="#h1-1-37" id="h1-1-37" class="i">+            loadClass(&quot;com.snap.security.attestation.impl.SCClientAttestationDurableJob&quot;).hookConstructor(HookStage.BEFORE) { param -&gt;
+</a><a href="#h1-1-38" id="h1-1-38" class="i">+                param.setArg(0, null)
+</a><a href="#h1-1-39" id="h1-1-39" class="i">+            }
+</a><a href="#h1-1-40" id="h1-1-40" class="i">+            loadClass(&quot;com.snapchat.client.grpc.AuthContext&quot;).hookConstructor(HookStage.AFTER) { param -&gt;
+</a><a href="#h1-1-41" id="h1-1-41" class="i">+                val headers by lazy { (param.thisObject&lt;Any&gt;().getObjectField(&quot;mHeaders&quot;) as? List&lt;*&gt;)?.filterNotNull() ?: emptyList() }
+</a><a href="#h1-1-42" id="h1-1-42" class="i">+
+</a><a href="#h1-1-43" id="h1-1-43" class="i">+                if (param.thisObject&lt;Any&gt;().getObjectField(&quot;mAuthTokenErrorCode&quot;) != null ||
+</a><a href="#h1-1-44" id="h1-1-44" class="i">+                    headers.isEmpty() ||
+</a><a href="#h1-1-45" id="h1-1-45" class="i">+                    headers.mapNotNull { it.getObjectField(&quot;mKey&quot;)?.toString()?.lowercase() }.any { it != &quot;x-snap-access-token&quot; }
+</a><a href="#h1-1-46" id="h1-1-46" class="i">+                ) {
+</a><a href="#h1-1-47" id="h1-1-47" class="i">+                    context.log.error(&quot;invalid headers ${headers.size}&quot;)
+</a><a href="#h1-1-48" id="h1-1-48" class="i">+                    exitProcess(139)
+</a><a href="#h1-1-49" id="h1-1-49" class="i">+                }
+</a><a href="#h1-1-50" id="h1-1-50" class="i">+            }
+</a>         }
+ 
+<a href="#h1-1-53" id="h1-1-53" class="d">-        context.androidContext.classLoader.loadClass(&quot;com.snap.security.attestation.impl.SCClientAttestationDurableJob&quot;)
+</a><a href="#h1-1-54" id="h1-1-54" class="d">-            .hookConstructor(HookStage.BEFORE) { param -&gt;
+</a><a href="#h1-1-55" id="h1-1-55" class="d">-                param.setArg(0, null)
+</a><a href="#h1-1-56" id="h1-1-56" class="i">+        context.mappings.useMapper(CallbackMapper::class) {
+</a><a href="#h1-1-57" id="h1-1-57" class="i">+            callbacks.getClass(&quot;AuthContextDelegate&quot;)?.hook(&quot;getAuthContext&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h1-1-58" id="h1-1-58" class="i">+                val authContextRequest = param.arg&lt;Any&gt;(0)
+</a><a href="#h1-1-59" id="h1-1-59" class="i">+                val requestPath = authContextRequest.getObjectField(&quot;mRequestPath&quot;).toString()
+</a><a href="#h1-1-60" id="h1-1-60" class="i">+
+</a><a href="#h1-1-61" id="h1-1-61" class="i">+                if (authContextRequest.getObjectField(&quot;mAttestationRequired&quot;) == true) {
+</a><a href="#h1-1-62" id="h1-1-62" class="i">+                    if (allowedEPs.any { requestPath.contains(it) }) {
+</a><a href="#h1-1-63" id="h1-1-63" class="i">+                        context.log.verbose(&quot;ep $requestPath&quot;, &quot;AuthContextDelegate&quot;)
+</a><a href="#h1-1-64" id="h1-1-64" class="i">+                        return@hook
+</a><a href="#h1-1-65" id="h1-1-65" class="i">+                    }
+</a><a href="#h1-1-66" id="h1-1-66" class="i">+
+</a><a href="#h1-1-67" id="h1-1-67" class="i">+                    context.log.verbose(&quot;blocked ep $requestPath&quot;, &quot;AuthContextDelegate&quot;)
+</a><a href="#h1-1-68" id="h1-1-68" class="i">+                    param.setResult(null)
+</a><a href="#h1-1-69" id="h1-1-69" class="i">+                }
+</a><a href="#h1-1-70" id="h1-1-70" class="i">+            } ?: error(&quot;AuthContextDelegate not found in mappings&quot;)
+</a><a href="#h1-1-71" id="h1-1-71" class="i">+        }
+</a><a href="#h1-1-72" id="h1-1-72" class="i">+
+</a><a href="#h1-1-73" id="h1-1-73" class="i">+        context.mappings.useMapper(PlatformClientAttestationMapper::class) {
+</a><a href="#h1-1-74" id="h1-1-74" class="i">+            apiInvocationHandler.getAsClass()?.hook(&quot;invoke&quot;, HookStage.BEFORE) { param -&gt;
+</a><a href="#h1-1-75" id="h1-1-75" class="i">+                val method = param.arg&lt;Method&gt;(1)
+</a><a href="#h1-1-76" id="h1-1-76" class="i">+                if (method.annotations.any { it.toString().contains(&quot;attestation&quot;) }) {
+</a><a href="#h1-1-77" id="h1-1-77" class="i">+                    context.log.verbose(&quot;blocked call ${method.declaringClass.name}.${method.name}(...)&quot;)
+</a><a href="#h1-1-78" id="h1-1-78" class="i">+                    if (method.returnType.name.endsWith(&quot;Single&quot;)) {
+</a><a href="#h1-1-79" id="h1-1-79" class="i">+                        param.setResult(
+</a><a href="#h1-1-80" id="h1-1-80" class="i">+                            method.returnType.methods.first {
+</a><a href="#h1-1-81" id="h1-1-81" class="i">+                                java.lang.reflect.Modifier.isStatic(it.modifiers) &amp;&amp; it.parameterCount == 1 &amp;&amp; it.parameterTypes[0] == Throwable::class.java
+</a><a href="#h1-1-82" id="h1-1-82" class="i">+                            }.invoke(null, IOException())
+</a><a href="#h1-1-83" id="h1-1-83" class="i">+                        )
+</a><a href="#h1-1-84" id="h1-1-84" class="i">+                        return@hook
+</a><a href="#h1-1-85" id="h1-1-85" class="i">+                    }
+</a><a href="#h1-1-86" id="h1-1-86" class="i">+
+</a><a href="#h1-1-87" id="h1-1-87" class="i">+                    param.setResult(null)
+</a><a href="#h1-1-88" id="h1-1-88" class="i">+                }
+</a><a href="#h1-1-89" id="h1-1-89" class="i">+            } ?: context.log.warn(&quot;apiInvocationHandler not found in mappings&quot;)
+</a>         }
+ 
+         context.features.addActivityCreateListener { activity -&gt;
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -154,14 +154,13 @@ class SnapEnhance {
+</a>             }
+ 
+             reloadConfig()
+<a href="#h2-0-3" id="h2-0-3" class="d">-            initWidgetListener()
+</a>             initNative()
+<a href="#h2-0-5" id="h2-0-5" class="i">+            initWidgetListener()
+</a>             scope.launch(Dispatchers.IO) {
+                 translation.userLocale = getConfigLocale()
+                 translation.load()
+             }
+ 
+<a href="#h2-0-11" id="h2-0-11" class="d">-            mappings.init(androidContext)
+</a>             database.init()
+             eventDispatcher.init()
+             userInterface.init()
+<a href="#h2-1" id="h2-1" class="h">@@ -243,12 +242,10 @@ class SnapEnhance {
+</a>                             it.declaringClass == pluginNativeClass.getAsClass()
+                         }?.forEach { method -&gt;
+                             method.hook(HookStage.BEFORE) {
+<a href="#h2-1-3" id="h2-1-3" class="d">-                                appContext.log.verbose(&quot;called $method&quot;)
+</a><a href="#h2-1-4" id="h2-1-4" class="d">-                                if (Throwable().stackTrace.lastOrNull()?.methodName == &quot;getAttestationPayloadProto&quot;) {
+</a><a href="#h2-1-5" id="h2-1-5" class="d">-                                    appContext.log.verbose(&quot;sleeping&quot;)
+</a><a href="#h2-1-6" id="h2-1-6" class="d">-                                    Thread.sleep(Long.MAX_VALUE)
+</a><a href="#h2-1-7" id="h2-1-7" class="d">-                                }
+</a><a href="#h2-1-8" id="h2-1-8" class="i">+                                appContext.log.error(&quot;Calling $method&quot;, Throwable())
+</a>                                 it.setResult(null)
+<a href="#h2-1-10" id="h2-1-10" class="i">+                                runCatching { exitProcess(139) }
+</a><a href="#h2-1-11" id="h2-1-11" class="i">+                                runCatching { Thread.sleep(Long.MAX_VALUE) }
+</a>                             }
+                         } ?: error(&quot;Failed to get pluginNativeClass class&quot;)
+                     }
+<b>diff --git a/<a id="h3" href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/PlatformClientAttestationMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/PlatformClientAttestationMapper.kt</a> b/<a href="../file/mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/PlatformClientAttestationMapper.kt.html">mapper/src/main/kotlin/me/rhunk/snapenhance/mapper/impl/PlatformClientAttestationMapper.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -4,14 +4,27 @@ import com.android.tools.smali.dexlib2.Opcode
+</a> import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction35c
+ import com.android.tools.smali.dexlib2.iface.reference.MethodReference
+ import me.rhunk.snapenhance.mapper.AbstractClassMapper
+<a href="#h3-0-3" id="h3-0-3" class="i">+import me.rhunk.snapenhance.mapper.ext.getClassName
+</a> import me.rhunk.snapenhance.mapper.ext.getSuperClassName
+ 
+ class PlatformClientAttestationMapper: AbstractClassMapper(&quot;PlatformClientAttestationMapper&quot;) {
+     val pluginNativeClass = classReference(&quot;pluginNativeClass&quot;)
+<a href="#h3-0-8" id="h3-0-8" class="i">+    val apiInvocationHandler = classReference(&quot;apiInvocationHandler&quot;)
+</a> 
+     init {
+         mapper {
+             for (clazz in classes) {
+<a href="#h3-0-13" id="h3-0-13" class="i">+                if (clazz.interfaces.firstOrNull()?.endsWith(&quot;InvocationHandler;&quot;) != true) continue
+</a><a href="#h3-0-14" id="h3-0-14" class="i">+                val invokeMethod = clazz.methods.firstOrNull { it.name == &quot;invoke&quot; } ?: continue
+</a><a href="#h3-0-15" id="h3-0-15" class="i">+                invokeMethod.implementation?.instructions?.firstOrNull { it is Instruction35c &amp;&amp; (it.reference as? MethodReference)?.name == &quot;getDeclaringClass&quot; } ?: continue
+</a><a href="#h3-0-16" id="h3-0-16" class="i">+
+</a><a href="#h3-0-17" id="h3-0-17" class="i">+                apiInvocationHandler.set(clazz.getClassName())
+</a><a href="#h3-0-18" id="h3-0-18" class="i">+                return@mapper
+</a><a href="#h3-0-19" id="h3-0-19" class="i">+            }
+</a><a href="#h3-0-20" id="h3-0-20" class="i">+        }
+</a><a href="#h3-0-21" id="h3-0-21" class="i">+
+</a><a href="#h3-0-22" id="h3-0-22" class="i">+        mapper {
+</a><a href="#h3-0-23" id="h3-0-23" class="i">+            for (clazz in classes) {
+</a>                 if (clazz.getSuperClassName()?.endsWith(&quot;PlatformClientAttestation&quot;) != true) continue
+                 val getSignatureMethod = clazz.methods.firstOrNull { it.name == &quot;getSignature&quot; } ?: continue
+ 
+</pre>
+</div>
+</body>
+</html>
