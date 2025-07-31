@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> ConfigurationOverride.kt (7558B) - <a href="../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ConfigurationOverride.kt">raw</a></p><hr/><pre id="blob">
+<p> ConfigurationOverride.kt (7796B) - <a href="../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ConfigurationOverride.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core.features.impl
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import de.robv.android.xposed.XposedHelpers
@@ -87,85 +87,89 @@
 <a href="#l64" class="line" id="l64">     64</a> 
 <a href="#l65" class="line" id="l65">     65</a>             overrideProperty(&quot;BYPASS_AD_FEATURE_GATE&quot;, { context.config.global.blockAds.get() },
 <a href="#l66" class="line" id="l66">     66</a>                 { true })
-<a href="#l67" class="line" id="l67">     67</a>             arrayOf(&quot;CUSTOM_AD_TRACKER_URL&quot;, &quot;CUSTOM_AD_INIT_SERVER_URL&quot;, &quot;CUSTOM_AD_SERVER_URL&quot;, &quot;INIT_PRIMARY_URL&quot;, &quot;INIT_SHADOW_URL&quot;, &quot;GRAPHENE_HOST&quot;).forEach {
-<a href="#l68" class="line" id="l68">     68</a>                 overrideProperty(it, { context.config.global.blockAds.get() }, { &quot;http://127.0.0.1&quot; })
-<a href="#l69" class="line" id="l69">     69</a>             }
-<a href="#l70" class="line" id="l70">     70</a>             overrideProperty(&quot;GIFTING_CHAT_BIRTHDAY_UPSELL_ENABLED&quot;, { context.config.userInterface.hideUiComponents.get().contains(&quot;hide_snapchat_plus_gift_reminders&quot;) }, { false })
-<a href="#l71" class="line" id="l71">     71</a> 
-<a href="#l72" class="line" id="l72">     72</a>             classReference.getAsClass()?.hook(
-<a href="#l73" class="line" id="l73">     73</a>                 getProperty.getAsString()!!,
-<a href="#l74" class="line" id="l74">     74</a>                 HookStage.AFTER
-<a href="#l75" class="line" id="l75">     75</a>             ) { param -&gt;
-<a href="#l76" class="line" id="l76">     76</a>                 val propertyKey = getConfigKeyInfo(param.argNullable&lt;Any&gt;(0)) ?: return@hook
-<a href="#l77" class="line" id="l77">     77</a> 
-<a href="#l78" class="line" id="l78">     78</a>                 propertyOverrides[propertyKey.name]?.let { (filter, value) -&gt;
-<a href="#l79" class="line" id="l79">     79</a>                     if (!filter(propertyKey)) return@let
-<a href="#l80" class="line" id="l80">     80</a>                     param.setResult(value(propertyKey))
-<a href="#l81" class="line" id="l81">     81</a>                 }
-<a href="#l82" class="line" id="l82">     82</a>             }
-<a href="#l83" class="line" id="l83">     83</a> 
-<a href="#l84" class="line" id="l84">     84</a>             classReference.get()?.hook(
-<a href="#l85" class="line" id="l85">     85</a>                 observeProperty.getAsString()!!,
-<a href="#l86" class="line" id="l86">     86</a>                 HookStage.BEFORE
-<a href="#l87" class="line" id="l87">     87</a>             ) { param -&gt;
-<a href="#l88" class="line" id="l88">     88</a>                 val enumData = param.arg&lt;Any&gt;(0)
-<a href="#l89" class="line" id="l89">     89</a>                 val key = enumData.toString()
-<a href="#l90" class="line" id="l90">     90</a>                 val setValue: (Any?) -&gt; Unit = { value -&gt;
-<a href="#l91" class="line" id="l91">     91</a>                     val valueHolder = XposedHelpers.callMethod(enumData, configEnumMapping[&quot;getValue&quot;]?.getAsString())
-<a href="#l92" class="line" id="l92">     92</a>                     valueHolder.setObjectField(configEnumMapping[&quot;defaultValueField&quot;]?.getAsString()!!, value)
-<a href="#l93" class="line" id="l93">     93</a>                 }
-<a href="#l94" class="line" id="l94">     94</a> 
-<a href="#l95" class="line" id="l95">     95</a>                 propertyOverrides[key]?.let { (filter, value) -&gt;
-<a href="#l96" class="line" id="l96">     96</a>                     val keyInfo = getConfigKeyInfo(enumData) ?: return@let
-<a href="#l97" class="line" id="l97">     97</a>                     if (!filter(keyInfo)) return@let
-<a href="#l98" class="line" id="l98">     98</a>                     setValue(value(keyInfo))
-<a href="#l99" class="line" id="l99">     99</a>                 }
-<a href="#l100" class="line" id="l100">    100</a>             }
-<a href="#l101" class="line" id="l101">    101</a> 
-<a href="#l102" class="line" id="l102">    102</a>             runCatching {
-<a href="#l103" class="line" id="l103">    103</a>                 val customBooleanPropertyRules = mutableListOf&lt;(ConfigKeyInfo) -&gt; Boolean&gt;()
-<a href="#l104" class="line" id="l104">    104</a> 
-<a href="#l105" class="line" id="l105">    105</a>                 appExperimentProvider[&quot;getBooleanAppExperimentClass&quot;]?.getAsClass()
-<a href="#l106" class="line" id="l106">    106</a>                     ?.hook(&quot;invoke&quot;, HookStage.BEFORE) { param -&gt;
-<a href="#l107" class="line" id="l107">    107</a>                         val keyInfo = getConfigKeyInfo(param.arg(1)) ?: return@hook
-<a href="#l108" class="line" id="l108">    108</a>                         if (customBooleanPropertyRules.any { it(keyInfo) }) {
-<a href="#l109" class="line" id="l109">    109</a>                             param.setResult(true)
-<a href="#l110" class="line" id="l110">    110</a>                             return@hook
-<a href="#l111" class="line" id="l111">    111</a>                         }
-<a href="#l112" class="line" id="l112">    112</a>                         propertyOverrides[keyInfo.name]?.let { (filter, value, isAppExperiment) -&gt;
-<a href="#l113" class="line" id="l113">    113</a>                             if (isAppExperiment != true || !filter(keyInfo)) return@let
-<a href="#l114" class="line" id="l114">    114</a>                             param.setResult(value(keyInfo))
+<a href="#l67" class="line" id="l67">     67</a> 
+<a href="#l68" class="line" id="l68">     68</a>             overrideProperty(&quot;SPONSORED_SNAPS_ENABLED&quot;, { context.config.global.blockAds.get() }, { false })
+<a href="#l69" class="line" id="l69">     69</a>             overrideProperty(&quot;SPONSORED_SNAP_UPDATE_SPONSORED_FEED_ITEM&quot;, { context.config.global.blockAds.get() }, { false })
+<a href="#l70" class="line" id="l70">     70</a> 
+<a href="#l71" class="line" id="l71">     71</a>             arrayOf(&quot;CUSTOM_AD_TRACKER_URL&quot;, &quot;CUSTOM_AD_INIT_SERVER_URL&quot;, &quot;CUSTOM_AD_SERVER_URL&quot;, &quot;INIT_PRIMARY_URL&quot;, &quot;INIT_SHADOW_URL&quot;, &quot;GRAPHENE_HOST&quot;).forEach {
+<a href="#l72" class="line" id="l72">     72</a>                 overrideProperty(it, { context.config.global.blockAds.get() }, { &quot;http://127.0.0.1&quot; })
+<a href="#l73" class="line" id="l73">     73</a>             }
+<a href="#l74" class="line" id="l74">     74</a>             overrideProperty(&quot;GIFTING_CHAT_BIRTHDAY_UPSELL_ENABLED&quot;, { context.config.userInterface.hideUiComponents.get().contains(&quot;hide_snapchat_plus_gift_reminders&quot;) }, { false })
+<a href="#l75" class="line" id="l75">     75</a> 
+<a href="#l76" class="line" id="l76">     76</a>             classReference.getAsClass()?.hook(
+<a href="#l77" class="line" id="l77">     77</a>                 getProperty.getAsString()!!,
+<a href="#l78" class="line" id="l78">     78</a>                 HookStage.AFTER
+<a href="#l79" class="line" id="l79">     79</a>             ) { param -&gt;
+<a href="#l80" class="line" id="l80">     80</a>                 val propertyKey = getConfigKeyInfo(param.argNullable&lt;Any&gt;(0)) ?: return@hook
+<a href="#l81" class="line" id="l81">     81</a> 
+<a href="#l82" class="line" id="l82">     82</a>                 propertyOverrides[propertyKey.name]?.let { (filter, value) -&gt;
+<a href="#l83" class="line" id="l83">     83</a>                     if (!filter(propertyKey)) return@let
+<a href="#l84" class="line" id="l84">     84</a>                     param.setResult(value(propertyKey))
+<a href="#l85" class="line" id="l85">     85</a>                 }
+<a href="#l86" class="line" id="l86">     86</a>             }
+<a href="#l87" class="line" id="l87">     87</a> 
+<a href="#l88" class="line" id="l88">     88</a>             classReference.get()?.hook(
+<a href="#l89" class="line" id="l89">     89</a>                 observeProperty.getAsString()!!,
+<a href="#l90" class="line" id="l90">     90</a>                 HookStage.BEFORE
+<a href="#l91" class="line" id="l91">     91</a>             ) { param -&gt;
+<a href="#l92" class="line" id="l92">     92</a>                 val enumData = param.arg&lt;Any&gt;(0)
+<a href="#l93" class="line" id="l93">     93</a>                 val key = enumData.toString()
+<a href="#l94" class="line" id="l94">     94</a>                 val setValue: (Any?) -&gt; Unit = { value -&gt;
+<a href="#l95" class="line" id="l95">     95</a>                     val valueHolder = XposedHelpers.callMethod(enumData, configEnumMapping[&quot;getValue&quot;]?.getAsString())
+<a href="#l96" class="line" id="l96">     96</a>                     valueHolder.setObjectField(configEnumMapping[&quot;defaultValueField&quot;]?.getAsString()!!, value)
+<a href="#l97" class="line" id="l97">     97</a>                 }
+<a href="#l98" class="line" id="l98">     98</a> 
+<a href="#l99" class="line" id="l99">     99</a>                 propertyOverrides[key]?.let { (filter, value) -&gt;
+<a href="#l100" class="line" id="l100">    100</a>                     val keyInfo = getConfigKeyInfo(enumData) ?: return@let
+<a href="#l101" class="line" id="l101">    101</a>                     if (!filter(keyInfo)) return@let
+<a href="#l102" class="line" id="l102">    102</a>                     setValue(value(keyInfo))
+<a href="#l103" class="line" id="l103">    103</a>                 }
+<a href="#l104" class="line" id="l104">    104</a>             }
+<a href="#l105" class="line" id="l105">    105</a> 
+<a href="#l106" class="line" id="l106">    106</a>             runCatching {
+<a href="#l107" class="line" id="l107">    107</a>                 val customBooleanPropertyRules = mutableListOf&lt;(ConfigKeyInfo) -&gt; Boolean&gt;()
+<a href="#l108" class="line" id="l108">    108</a> 
+<a href="#l109" class="line" id="l109">    109</a>                 appExperimentProvider[&quot;getBooleanAppExperimentClass&quot;]?.getAsClass()
+<a href="#l110" class="line" id="l110">    110</a>                     ?.hook(&quot;invoke&quot;, HookStage.BEFORE) { param -&gt;
+<a href="#l111" class="line" id="l111">    111</a>                         val keyInfo = getConfigKeyInfo(param.arg(1)) ?: return@hook
+<a href="#l112" class="line" id="l112">    112</a>                         if (customBooleanPropertyRules.any { it(keyInfo) }) {
+<a href="#l113" class="line" id="l113">    113</a>                             param.setResult(true)
+<a href="#l114" class="line" id="l114">    114</a>                             return@hook
 <a href="#l115" class="line" id="l115">    115</a>                         }
-<a href="#l116" class="line" id="l116">    116</a>                     }
-<a href="#l117" class="line" id="l117">    117</a> 
-<a href="#l118" class="line" id="l118">    118</a>                 Hooker.ephemeralHookConstructor(
-<a href="#l119" class="line" id="l119">    119</a>                     classReference.get()!!,
-<a href="#l120" class="line" id="l120">    120</a>                     HookStage.AFTER
-<a href="#l121" class="line" id="l121">    121</a>                 ) { constructorParam -&gt;
-<a href="#l122" class="line" id="l122">    122</a>                     val instance = constructorParam.thisObject&lt;Any&gt;()
-<a href="#l123" class="line" id="l123">    123</a>                     val appExperimentProviderInstance = instance::class.java.fields.firstOrNull {
-<a href="#l124" class="line" id="l124">    124</a>                         appExperimentProvider[&quot;class&quot;]?.getAsClass()?.isAssignableFrom(it.type) == true
-<a href="#l125" class="line" id="l125">    125</a>                     }?.get(instance) ?: return@ephemeralHookConstructor
-<a href="#l126" class="line" id="l126">    126</a> 
-<a href="#l127" class="line" id="l127">    127</a>                     appExperimentProviderInstance::class.java.methods.first {
-<a href="#l128" class="line" id="l128">    128</a>                         it.name == appExperimentProvider[&quot;hasExperimentMethod&quot;]?.getAsString().toString()
-<a href="#l129" class="line" id="l129">    129</a>                     }.hook(HookStage.BEFORE) { param -&gt;
-<a href="#l130" class="line" id="l130">    130</a>                         val keyInfo = getConfigKeyInfo(param.arg(0)) ?: return@hook
-<a href="#l131" class="line" id="l131">    131</a>                         if (customBooleanPropertyRules.any { it(keyInfo) }) {
-<a href="#l132" class="line" id="l132">    132</a>                             param.setResult(true)
-<a href="#l133" class="line" id="l133">    133</a>                             return@hook
-<a href="#l134" class="line" id="l134">    134</a>                         }
-<a href="#l135" class="line" id="l135">    135</a> 
-<a href="#l136" class="line" id="l136">    136</a>                         val propertyOverride = propertyOverrides[keyInfo.name] ?: return@hook
-<a href="#l137" class="line" id="l137">    137</a>                         propertyOverride.isAppExperiment.takeIf { propertyOverride.filter(keyInfo) }?.let { param.setResult(it) }
-<a href="#l138" class="line" id="l138">    138</a>                     }
-<a href="#l139" class="line" id="l139">    139</a>                 }
-<a href="#l140" class="line" id="l140">    140</a>             }.onFailure {
-<a href="#l141" class="line" id="l141">    141</a>                 context.log.error(&quot;Failed to hook appExperimentProvider&quot;, it)
-<a href="#l142" class="line" id="l142">    142</a>             }
-<a href="#l143" class="line" id="l143">    143</a>         }
-<a href="#l144" class="line" id="l144">    144</a>     }
-<a href="#l145" class="line" id="l145">    145</a> }</pre>
+<a href="#l116" class="line" id="l116">    116</a>                         propertyOverrides[keyInfo.name]?.let { (filter, value, isAppExperiment) -&gt;
+<a href="#l117" class="line" id="l117">    117</a>                             if (isAppExperiment != true || !filter(keyInfo)) return@let
+<a href="#l118" class="line" id="l118">    118</a>                             param.setResult(value(keyInfo))
+<a href="#l119" class="line" id="l119">    119</a>                         }
+<a href="#l120" class="line" id="l120">    120</a>                     }
+<a href="#l121" class="line" id="l121">    121</a> 
+<a href="#l122" class="line" id="l122">    122</a>                 Hooker.ephemeralHookConstructor(
+<a href="#l123" class="line" id="l123">    123</a>                     classReference.get()!!,
+<a href="#l124" class="line" id="l124">    124</a>                     HookStage.AFTER
+<a href="#l125" class="line" id="l125">    125</a>                 ) { constructorParam -&gt;
+<a href="#l126" class="line" id="l126">    126</a>                     val instance = constructorParam.thisObject&lt;Any&gt;()
+<a href="#l127" class="line" id="l127">    127</a>                     val appExperimentProviderInstance = instance::class.java.fields.firstOrNull {
+<a href="#l128" class="line" id="l128">    128</a>                         appExperimentProvider[&quot;class&quot;]?.getAsClass()?.isAssignableFrom(it.type) == true
+<a href="#l129" class="line" id="l129">    129</a>                     }?.get(instance) ?: return@ephemeralHookConstructor
+<a href="#l130" class="line" id="l130">    130</a> 
+<a href="#l131" class="line" id="l131">    131</a>                     appExperimentProviderInstance::class.java.methods.first {
+<a href="#l132" class="line" id="l132">    132</a>                         it.name == appExperimentProvider[&quot;hasExperimentMethod&quot;]?.getAsString().toString()
+<a href="#l133" class="line" id="l133">    133</a>                     }.hook(HookStage.BEFORE) { param -&gt;
+<a href="#l134" class="line" id="l134">    134</a>                         val keyInfo = getConfigKeyInfo(param.arg(0)) ?: return@hook
+<a href="#l135" class="line" id="l135">    135</a>                         if (customBooleanPropertyRules.any { it(keyInfo) }) {
+<a href="#l136" class="line" id="l136">    136</a>                             param.setResult(true)
+<a href="#l137" class="line" id="l137">    137</a>                             return@hook
+<a href="#l138" class="line" id="l138">    138</a>                         }
+<a href="#l139" class="line" id="l139">    139</a> 
+<a href="#l140" class="line" id="l140">    140</a>                         val propertyOverride = propertyOverrides[keyInfo.name] ?: return@hook
+<a href="#l141" class="line" id="l141">    141</a>                         propertyOverride.isAppExperiment.takeIf { propertyOverride.filter(keyInfo) }?.let { param.setResult(it) }
+<a href="#l142" class="line" id="l142">    142</a>                     }
+<a href="#l143" class="line" id="l143">    143</a>                 }
+<a href="#l144" class="line" id="l144">    144</a>             }.onFailure {
+<a href="#l145" class="line" id="l145">    145</a>                 context.log.error(&quot;Failed to hook appExperimentProvider&quot;, it)
+<a href="#l146" class="line" id="l146">    146</a>             }
+<a href="#l147" class="line" id="l147">    147</a>         }
+<a href="#l148" class="line" id="l148">    148</a>     }
+<a href="#l149" class="line" id="l149">    149</a> }</pre>
 </div>
 </body>
 </html>
