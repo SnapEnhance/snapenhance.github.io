@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> RequerySqlite.kt (1739B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/RequerySqlite.kt">raw</a></p><hr/><pre id="blob">
+<p> RequerySqlite.kt (2086B) - <a href="../../../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/RequerySqlite.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core.features.impl.tweaks
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import me.rhunk.snapenhance.common.data.MessagingRuleType
@@ -32,30 +32,35 @@
 <a href="#l9" class="line" id="l9">      9</a>     override fun init() {
 <a href="#l10" class="line" id="l10">     10</a>         val hideQuickAddSuggestions = context.config.userInterface.hideQuickAddSuggestions.get()
 <a href="#l11" class="line" id="l11">     11</a>         val hideFriendFeedEntry = context.config.userInterface.hideFriendFeedEntry.get()
-<a href="#l12" class="line" id="l12">     12</a> 
-<a href="#l13" class="line" id="l13">     13</a>         if (!hideQuickAddSuggestions &amp;&amp; !hideFriendFeedEntry) return
-<a href="#l14" class="line" id="l14">     14</a> 
-<a href="#l15" class="line" id="l15">     15</a>         findClass(&quot;io.requery.android.database.sqlite.SQLiteDatabase&quot;).hook(&quot;rawQueryWithFactory&quot;, HookStage.BEFORE) { param -&gt;
-<a href="#l16" class="line" id="l16">     16</a>             var sqlRequest = param.argNullable&lt;String&gt;(1) ?: return@hook
-<a href="#l17" class="line" id="l17">     17</a> 
-<a href="#l18" class="line" id="l18">     18</a>             fun patchRequest(condition: String) {
-<a href="#l19" class="line" id="l19">     19</a>                 sqlRequest.lastIndexOf(&quot;WHERE&quot;).takeIf { it != -1 }?.let {
-<a href="#l20" class="line" id="l20">     20</a>                     sqlRequest = sqlRequest.substring(0, it + 5) + &quot; $condition AND &quot; + sqlRequest.substring(it + 5)
-<a href="#l21" class="line" id="l21">     21</a>                     param.setArg(1, sqlRequest)
-<a href="#l22" class="line" id="l22">     22</a>                 }
-<a href="#l23" class="line" id="l23">     23</a>             }
-<a href="#l24" class="line" id="l24">     24</a> 
-<a href="#l25" class="line" id="l25">     25</a>             if (hideQuickAddSuggestions &amp;&amp; sqlRequest.contains(&quot;SuggestedFriendPlacement&quot;)) {
-<a href="#l26" class="line" id="l26">     26</a>                 patchRequest(&quot;0 = 1&quot;)
-<a href="#l27" class="line" id="l27">     27</a>             }
-<a href="#l28" class="line" id="l28">     28</a> 
-<a href="#l29" class="line" id="l29">     29</a>             if (hideFriendFeedEntry &amp;&amp; sqlRequest.startsWith(&quot;SELECT&quot;) &amp;&amp; (sqlRequest.contains(&quot;FriendWithUsername&quot;)) &amp;&amp; sqlRequest.contains(&quot;userId&quot;)) {
-<a href="#l30" class="line" id="l30">     30</a>                 val ids = context.bridgeClient.getRuleIds(MessagingRuleType.HIDE_FRIEND_FEED).takeIf { it.isNotEmpty() } ?: return@hook
-<a href="#l31" class="line" id="l31">     31</a>                 patchRequest(ids.joinToString(&quot; AND &quot;) { &quot;${if (sqlRequest.contains(&quot;Friend.userId&quot;)) &quot;Friend.userId&quot; else &quot;userId &quot;} != &#39;$it&#39;&quot; })
+<a href="#l12" class="line" id="l12">     12</a>         val hideSuggestedStories = context.config.userInterface.hideStorySuggestions.get().contains(&quot;hide_suggested_friend_stories&quot;)
+<a href="#l13" class="line" id="l13">     13</a> 
+<a href="#l14" class="line" id="l14">     14</a>         if (!hideQuickAddSuggestions &amp;&amp; !hideFriendFeedEntry &amp;&amp; !hideSuggestedStories) return
+<a href="#l15" class="line" id="l15">     15</a> 
+<a href="#l16" class="line" id="l16">     16</a>         findClass(&quot;io.requery.android.database.sqlite.SQLiteDatabase&quot;).hook(&quot;rawQueryWithFactory&quot;, HookStage.BEFORE) { param -&gt;
+<a href="#l17" class="line" id="l17">     17</a>             var sqlRequest = param.argNullable&lt;String&gt;(1) ?: return@hook
+<a href="#l18" class="line" id="l18">     18</a> 
+<a href="#l19" class="line" id="l19">     19</a>             fun patchRequest(condition: String) {
+<a href="#l20" class="line" id="l20">     20</a>                 sqlRequest.lastIndexOf(&quot;WHERE&quot;).takeIf { it != -1 }?.let {
+<a href="#l21" class="line" id="l21">     21</a>                     sqlRequest = sqlRequest.substring(0, it + 5) + &quot; $condition AND &quot; + sqlRequest.substring(it + 5)
+<a href="#l22" class="line" id="l22">     22</a>                     param.setArg(1, sqlRequest)
+<a href="#l23" class="line" id="l23">     23</a>                 }
+<a href="#l24" class="line" id="l24">     24</a>             }
+<a href="#l25" class="line" id="l25">     25</a> 
+<a href="#l26" class="line" id="l26">     26</a>             if (hideQuickAddSuggestions &amp;&amp; sqlRequest.contains(&quot;SuggestedFriendPlacement&quot;)) {
+<a href="#l27" class="line" id="l27">     27</a>                 patchRequest(&quot;0 = 1&quot;)
+<a href="#l28" class="line" id="l28">     28</a>             }
+<a href="#l29" class="line" id="l29">     29</a> 
+<a href="#l30" class="line" id="l30">     30</a>             if (hideSuggestedStories &amp;&amp; sqlRequest.contains(&quot;DiscoverFeedFriendStoriesViewV2 AS DFStories&quot;)) {
+<a href="#l31" class="line" id="l31">     31</a>                 patchRequest(&quot;DFStories.isFriendOfFriend = 0&quot;)
 <a href="#l32" class="line" id="l32">     32</a>             }
-<a href="#l33" class="line" id="l33">     33</a>         }
-<a href="#l34" class="line" id="l34">     34</a>     }
-<a href="#l35" class="line" id="l35">     35</a> }</pre>
+<a href="#l33" class="line" id="l33">     33</a> 
+<a href="#l34" class="line" id="l34">     34</a>             if (hideFriendFeedEntry &amp;&amp; sqlRequest.startsWith(&quot;SELECT&quot;) &amp;&amp; (sqlRequest.contains(&quot;FriendWithUsername&quot;)) &amp;&amp; sqlRequest.contains(&quot;userId&quot;)) {
+<a href="#l35" class="line" id="l35">     35</a>                 val ids = context.bridgeClient.getRuleIds(MessagingRuleType.HIDE_FRIEND_FEED).takeIf { it.isNotEmpty() } ?: return@hook
+<a href="#l36" class="line" id="l36">     36</a>                 patchRequest(ids.joinToString(&quot; AND &quot;) { &quot;${if (sqlRequest.contains(&quot;Friend.userId&quot;)) &quot;Friend.userId&quot; else &quot;userId &quot;} != &#39;$it&#39;&quot; })
+<a href="#l37" class="line" id="l37">     37</a>             }
+<a href="#l38" class="line" id="l38">     38</a>         }
+<a href="#l39" class="line" id="l39">     39</a>     }
+<a href="#l40" class="line" id="l40">     40</a> }</pre>
 </div>
 </body>
 </html>

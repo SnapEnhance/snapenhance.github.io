@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core): hide story suggestions - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/4e60b01dd00e850264ad6609a3cdb52b7b6ce279.html">4e60b01dd00e850264ad6609a3cdb52b7b6ce279</a>
+<b>parent</b> <a href="../commit/ca01565d68beb81b3536e4d1952cc38b45151b51.html">ca01565d68beb81b3536e4d1952cc38b45151b51</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Fri,  1 Aug 2025 15:54:25 +0200
+
+fix(core): hide story suggestions
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/RequerySqlite.kt</a></td><td> | </td><td class="num">7</td><td><span class="i">++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/UITweaks.kt</a></td><td> | </td><td class="num">34</td><td><span class="i">+++++</span><span class="d">-----------------------------</span></td></tr>
+</table></pre><pre>2 files changed, 11 insertions(+), 30 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/RequerySqlite.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/RequerySqlite.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/RequerySqlite.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/tweaks/RequerySqlite.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -9,8 +9,9 @@ class RequerySqlite : Feature(&quot;Requery Sqlite&quot;) {
+</a>     override fun init() {
+         val hideQuickAddSuggestions = context.config.userInterface.hideQuickAddSuggestions.get()
+         val hideFriendFeedEntry = context.config.userInterface.hideFriendFeedEntry.get()
+<a href="#h0-0-3" id="h0-0-3" class="i">+        val hideSuggestedStories = context.config.userInterface.hideStorySuggestions.get().contains(&quot;hide_suggested_friend_stories&quot;)
+</a> 
+<a href="#h0-0-5" id="h0-0-5" class="d">-        if (!hideQuickAddSuggestions &amp;&amp; !hideFriendFeedEntry) return
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+        if (!hideQuickAddSuggestions &amp;&amp; !hideFriendFeedEntry &amp;&amp; !hideSuggestedStories) return
+</a> 
+         findClass(&quot;io.requery.android.database.sqlite.SQLiteDatabase&quot;).hook(&quot;rawQueryWithFactory&quot;, HookStage.BEFORE) { param -&gt;
+             var sqlRequest = param.argNullable&lt;String&gt;(1) ?: return@hook
+<a href="#h0-1" id="h0-1" class="h">@@ -26,6 +27,10 @@ class RequerySqlite : Feature(&quot;Requery Sqlite&quot;) {
+</a>                 patchRequest(&quot;0 = 1&quot;)
+             }
+ 
+<a href="#h0-1-3" id="h0-1-3" class="i">+            if (hideSuggestedStories &amp;&amp; sqlRequest.contains(&quot;DiscoverFeedFriendStoriesViewV2 AS DFStories&quot;)) {
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+                patchRequest(&quot;DFStories.isFriendOfFriend = 0&quot;)
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+            }
+</a><a href="#h0-1-6" id="h0-1-6" class="i">+
+</a>             if (hideFriendFeedEntry &amp;&amp; sqlRequest.startsWith(&quot;SELECT&quot;) &amp;&amp; (sqlRequest.contains(&quot;FriendWithUsername&quot;)) &amp;&amp; sqlRequest.contains(&quot;userId&quot;)) {
+                 val ids = context.bridgeClient.getRuleIds(MessagingRuleType.HIDE_FRIEND_FEED).takeIf { it.isNotEmpty() } ?: return@hook
+                 patchRequest(ids.joinToString(&quot; AND &quot;) { &quot;${if (sqlRequest.contains(&quot;Friend.userId&quot;)) &quot;Friend.userId&quot; else &quot;userId &quot;} != &#39;$it&#39;&quot; })
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/UITweaks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/UITweaks.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/UITweaks.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/features/impl/ui/UITweaks.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1,17 +1,18 @@
+</a> package me.rhunk.snapenhance.core.features.impl.ui
+ 
+ import android.content.res.Resources
+<a href="#h1-0-3" id="h1-0-3" class="d">-import android.util.Size
+</a> import android.view.View
+ import android.view.ViewGroup
+ import android.view.ViewGroup.MarginLayoutParams
+ import android.widget.FrameLayout
+ import android.widget.LinearLayout
+<a href="#h1-0-9" id="h1-0-9" class="d">-import me.rhunk.snapenhance.common.util.ktx.findFieldsToString
+</a> import me.rhunk.snapenhance.core.event.events.impl.AddViewEvent
+ import me.rhunk.snapenhance.core.event.events.impl.BindViewEvent
+ import me.rhunk.snapenhance.core.features.Feature
+<a href="#h1-0-13" id="h1-0-13" class="d">-import me.rhunk.snapenhance.core.ui.*
+</a><a href="#h1-0-14" id="h1-0-14" class="i">+import me.rhunk.snapenhance.core.ui.children
+</a><a href="#h1-0-15" id="h1-0-15" class="i">+import me.rhunk.snapenhance.core.ui.getComposerContext
+</a><a href="#h1-0-16" id="h1-0-16" class="i">+import me.rhunk.snapenhance.core.ui.hideViewCompletely
+</a><a href="#h1-0-17" id="h1-0-17" class="i">+import me.rhunk.snapenhance.core.ui.onLayoutChange
+</a> import me.rhunk.snapenhance.core.util.dataBuilder
+ import me.rhunk.snapenhance.core.util.hook.HookStage
+ import me.rhunk.snapenhance.core.util.hook.Hooker
+<a href="#h1-1" id="h1-1" class="h">@@ -79,7 +80,6 @@ class UITweaks : Feature(&quot;UITweaks&quot;) {
+</a> 
+         val chatNoteRecordButton = getId(&quot;chat_note_record_button&quot;, &quot;id&quot;)
+         val unreadHintButton = getId(&quot;unread_hint_button&quot;, &quot;id&quot;)
+<a href="#h1-1-3" id="h1-1-3" class="d">-        val friendCardFrame = getId(&quot;friend_card_frame&quot;, &quot;id&quot;)
+</a> 
+         Resources::class.java.methods.first { it.name == &quot;getDimensionPixelSize&quot;}.hook(
+             HookStage.AFTER,
+<a href="#h1-2" id="h1-2" class="h">@@ -92,8 +92,6 @@ class UITweaks : Feature(&quot;UITweaks&quot;) {
+</a>             }
+         }
+ 
+<a href="#h1-2-3" id="h1-2-3" class="d">-        var friendCardFrameSize: Size? = null
+</a><a href="#h1-2-4" id="h1-2-4" class="d">-
+</a>         context.event.subscribe(BindViewEvent::class, { hideStorySuggestions.isNotEmpty() }) { event -&gt;
+             if (event.view is FrameLayout) {
+                 fun removeView() {
+<a href="#h1-3" id="h1-3" class="h">@@ -103,35 +101,13 @@ class UITweaks : Feature(&quot;UITweaks&quot;) {
+</a>                 }
+ 
+                 val viewModelString = event.prevModel.toString()
+<a href="#h1-3-3" id="h1-3-3" class="d">-                val isMyStory by lazy { viewModelString.let { it.startsWith(&quot;CircularItemViewModel&quot;) &amp;&amp; it.contains(&quot;storyId=&quot;)} }
+</a><a href="#h1-3-4" id="h1-3-4" class="i">+                val isMyStory by lazy { viewModelString.let { it.startsWith(&quot;StoryCarouselItemViewModel&quot;) &amp;&amp; it.contains(&quot;storyId=&quot;) } }
+</a> 
+                 if (hideStorySuggestions.contains(&quot;hide_my_stories&quot;) &amp;&amp; isMyStory) {
+                     removeView()
+                     return@subscribe
+                 }
+             }
+<a href="#h1-3-11" id="h1-3-11" class="d">-
+</a><a href="#h1-3-12" id="h1-3-12" class="d">-            if (event.view.id == friendCardFrame &amp;&amp; hideStorySuggestions.contains(&quot;hide_suggested_friend_stories&quot;)) {
+</a><a href="#h1-3-13" id="h1-3-13" class="d">-                val friendStoryData = event.prevModel::class.java.findFieldsToString(event.prevModel, once = true) { _, value -&gt;
+</a><a href="#h1-3-14" id="h1-3-14" class="d">-                    value.contains(&quot;FriendStoryData&quot;)
+</a><a href="#h1-3-15" id="h1-3-15" class="d">-                }.firstOrNull()?.get(event.prevModel) ?: return@subscribe
+</a><a href="#h1-3-16" id="h1-3-16" class="d">-
+</a><a href="#h1-3-17" id="h1-3-17" class="d">-                event.view.layoutParams.apply {
+</a><a href="#h1-3-18" id="h1-3-18" class="d">-                    if (friendCardFrameSize == null &amp;&amp; width &gt; 0 &amp;&amp; height &gt; 0) {
+</a><a href="#h1-3-19" id="h1-3-19" class="d">-                        friendCardFrameSize = Size(width, height)
+</a><a href="#h1-3-20" id="h1-3-20" class="d">-                    }
+</a><a href="#h1-3-21" id="h1-3-21" class="d">-
+</a><a href="#h1-3-22" id="h1-3-22" class="d">-                    if (friendStoryData.toString().contains(&quot;isFriendOfFriend=true&quot;)) {
+</a><a href="#h1-3-23" id="h1-3-23" class="d">-                        width = 0
+</a><a href="#h1-3-24" id="h1-3-24" class="d">-                        height = 0
+</a><a href="#h1-3-25" id="h1-3-25" class="d">-                    } else {
+</a><a href="#h1-3-26" id="h1-3-26" class="d">-                        friendCardFrameSize?.let {
+</a><a href="#h1-3-27" id="h1-3-27" class="d">-                            width = it.width
+</a><a href="#h1-3-28" id="h1-3-28" class="d">-                            height = it.height
+</a><a href="#h1-3-29" id="h1-3-29" class="d">-                        }
+</a><a href="#h1-3-30" id="h1-3-30" class="d">-                    }
+</a><a href="#h1-3-31" id="h1-3-31" class="d">-                }
+</a><a href="#h1-3-32" id="h1-3-32" class="d">-            }
+</a>         }
+ 
+         context.event.subscribe(AddViewEvent::class) { event -&gt;
+</pre>
+</div>
+</body>
+</html>
