@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>feat(core/scripting): disable script optimization - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/621c16d7f4c01bdfae42e9bfcb0238c445452034.html">621c16d7f4c01bdfae42e9bfcb0238c445452034</a>
+<b>parent</b> <a href="../commit/93358d97f45020dbeb6686e937a96dd9854e548f.html">93358d97f45020dbeb6686e937a96dd9854e548f</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Sat,  2 Aug 2025 13:44:22 +0200
+
+feat(core/scripting): disable script optimization
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">+++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">common/src/main/assets/lang/en_US.json</a></td><td> | </td><td class="num">4</td><td><span class="i">++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Scripting.kt</a></td><td> | </td><td class="num">1</td><td><span class="i">+</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h3">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a></td><td> | </td><td class="num">6</td><td><span class="i">++++</span><span class="d">--</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h4">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ScriptRuntime.kt</a></td><td> | </td><td class="num">2</td><td><span class="i">++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h5">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ktx/RhinoKtx.kt</a></td><td> | </td><td class="num">5</td><td><span class="i">+</span><span class="d">----</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h6">core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">++++++</span><span class="d">------</span></td></tr>
+</table></pre><pre>7 files changed, 23 insertions(+), 13 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a> b/<a href="../file/app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt.html">app/src/main/kotlin/me/rhunk/snapenhance/scripting/RemoteScriptManager.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -29,7 +29,11 @@ import kotlin.system.exitProcess
+</a> class RemoteScriptManager(
+     val context: RemoteSideContext,
+ ) : IScripting.Stub() {
+<a href="#h0-0-3" id="h0-0-3" class="d">-    val runtime = ScriptRuntime(context.androidContext, context.log).apply {
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+    val runtime = ScriptRuntime(
+</a><a href="#h0-0-5" id="h0-0-5" class="i">+        config = { context.config.root },
+</a><a href="#h0-0-6" id="h0-0-6" class="i">+        androidContext = context.androidContext,
+</a><a href="#h0-0-7" id="h0-0-7" class="i">+        logger = context.log
+</a><a href="#h0-0-8" id="h0-0-8" class="i">+    ).apply {
+</a>         scripting = this@RemoteScriptManager
+     }
+ 
+<b>diff --git a/<a id="h1" href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a> b/<a href="../file/common/src/main/assets/lang/en_US.json.html">common/src/main/assets/lang/en_US.json</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -1156,6 +1156,10 @@
+</a>                     &quot;disable_log_anonymization&quot;: {
+                         &quot;name&quot;: &quot;Disable Log Anonymization&quot;,
+                         &quot;description&quot;: &quot;Disables the anonymization of logs&quot;
+<a href="#h1-0-3" id="h1-0-3" class="i">+                    },
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+                    &quot;disable_optimization&quot;: {
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+                        &quot;name&quot;: &quot;Disable Optimization&quot;,
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+                        &quot;description&quot;: &quot;Disables the optimization of scripts. This may cause performance issues.&quot;
+</a>                     }
+                 }
+             },
+<b>diff --git a/<a id="h2" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Scripting.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Scripting.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Scripting.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/config/impl/Scripting.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -9,4 +9,5 @@ class Scripting : ConfigContainer() {
+</a>     val autoReload = unique(&quot;auto_reload&quot;, &quot;snapchat_only&quot;, &quot;all&quot;)
+     val integratedUI = boolean(&quot;integrated_ui&quot;, false) { requireRestart() }
+     val disableLogAnonymization = boolean(&quot;disable_log_anonymization&quot;, false) { requireRestart() }
+<a href="#h2-0-3" id="h2-0-3" class="i">+    val disableOptimization = boolean(&quot;disable_optimization&quot;, false) { requireRestart() }
+</a> } 
+\ No newline at end of file
+<b>diff --git a/<a id="h3" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/JSModule.kt</a></b>
+<a href="#h3-0" id="h3-0" class="h">@@ -15,8 +15,10 @@ import me.rhunk.snapenhance.common.scripting.ktx.scriptableObject
+</a> import me.rhunk.snapenhance.common.scripting.type.ModuleInfo
+ import me.rhunk.snapenhance.common.scripting.type.Permissions
+ import me.rhunk.snapenhance.common.scripting.ui.InterfaceManager
+<a href="#h3-0-3" id="h3-0-3" class="d">-import org.mozilla.javascript.*
+</a> import org.mozilla.javascript.Function
+<a href="#h3-0-5" id="h3-0-5" class="i">+import org.mozilla.javascript.ScriptableObject
+</a><a href="#h3-0-6" id="h3-0-6" class="i">+import org.mozilla.javascript.Undefined
+</a><a href="#h3-0-7" id="h3-0-7" class="i">+import org.mozilla.javascript.Wrapper
+</a> import java.io.Reader
+ import java.lang.reflect.Modifier
+ import kotlin.reflect.KClass
+<a href="#h3-1" id="h3-1" class="h">@@ -235,7 +237,7 @@ class JSModule(
+</a>             }
+         }
+ 
+<a href="#h3-1-3" id="h3-1-3" class="d">-        contextScope(shouldOptimize = true) {
+</a><a href="#h3-1-4" id="h3-1-4" class="i">+        contextScope(shouldOptimize = scriptRuntime.config().scripting.disableOptimization.getNullable() != true) {
+</a>             evaluateReader(moduleObject, reader, moduleInfo.name, 1, null)
+         }
+     }
+<b>diff --git a/<a id="h4" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ScriptRuntime.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ScriptRuntime.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ScriptRuntime.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ScriptRuntime.kt</a></b>
+<a href="#h4-0" id="h4-0" class="h">@@ -4,12 +4,14 @@ import android.content.Context
+</a> import android.os.ParcelFileDescriptor
+ import me.rhunk.snapenhance.bridge.scripting.IScripting
+ import me.rhunk.snapenhance.common.BuildConfig
+<a href="#h4-0-3" id="h4-0-3" class="i">+import me.rhunk.snapenhance.common.config.impl.RootConfig
+</a> import me.rhunk.snapenhance.common.logger.AbstractLogger
+ import me.rhunk.snapenhance.common.scripting.type.readModuleInfo
+ import org.mozilla.javascript.ScriptableObject
+ import java.io.InputStream
+ 
+ open class ScriptRuntime(
+<a href="#h4-0-10" id="h4-0-10" class="i">+    val config: () -&gt; RootConfig,
+</a>     val androidContext: Context,
+     logger: AbstractLogger,
+ ) {
+<b>diff --git a/<a id="h5" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ktx/RhinoKtx.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ktx/RhinoKtx.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ktx/RhinoKtx.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/scripting/ktx/RhinoKtx.kt</a></b>
+<a href="#h5-0" id="h5-0" class="h">@@ -1,11 +1,8 @@
+</a> package me.rhunk.snapenhance.common.scripting.ktx
+ 
+ import com.faendir.rhino_android.RhinoAndroidHelper
+<a href="#h5-0-3" id="h5-0-3" class="d">-import org.mozilla.javascript.Context
+</a><a href="#h5-0-4" id="h5-0-4" class="i">+import org.mozilla.javascript.*
+</a> import org.mozilla.javascript.Function
+<a href="#h5-0-6" id="h5-0-6" class="d">-import org.mozilla.javascript.Scriptable
+</a><a href="#h5-0-7" id="h5-0-7" class="d">-import org.mozilla.javascript.ScriptableObject
+</a><a href="#h5-0-8" id="h5-0-8" class="d">-import org.mozilla.javascript.Wrapper
+</a> import java.io.File
+ 
+ private val rhinoAndroidHelper = RhinoAndroidHelper(null as File?)
+<b>diff --git a/<a id="h6" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/scripting/CoreScriptRuntime.kt</a></b>
+<a href="#h6-0" id="h6-0" class="h">@@ -5,16 +5,16 @@ import me.rhunk.snapenhance.common.logger.AbstractLogger
+</a> import me.rhunk.snapenhance.common.scripting.ScriptRuntime
+ import me.rhunk.snapenhance.common.scripting.bindings.BindingSide
+ import me.rhunk.snapenhance.core.ModContext
+<a href="#h6-0-3" id="h6-0-3" class="d">-import me.rhunk.snapenhance.core.scripting.impl.CoreEvents
+</a><a href="#h6-0-4" id="h6-0-4" class="d">-import me.rhunk.snapenhance.core.scripting.impl.CoreIPC
+</a><a href="#h6-0-5" id="h6-0-5" class="d">-import me.rhunk.snapenhance.core.scripting.impl.CoreMessaging
+</a><a href="#h6-0-6" id="h6-0-6" class="d">-import me.rhunk.snapenhance.core.scripting.impl.CoreScriptConfig
+</a><a href="#h6-0-7" id="h6-0-7" class="d">-import me.rhunk.snapenhance.core.scripting.impl.CoreScriptHooker
+</a><a href="#h6-0-8" id="h6-0-8" class="i">+import me.rhunk.snapenhance.core.scripting.impl.*
+</a> 
+ class CoreScriptRuntime(
+     private val modContext: ModContext,
+     logger: AbstractLogger,
+<a href="#h6-0-13" id="h6-0-13" class="d">-): ScriptRuntime(modContext.androidContext, logger) {
+</a><a href="#h6-0-14" id="h6-0-14" class="i">+): ScriptRuntime(
+</a><a href="#h6-0-15" id="h6-0-15" class="i">+    config = { modContext.config },
+</a><a href="#h6-0-16" id="h6-0-16" class="i">+    androidContext = modContext.androidContext,
+</a><a href="#h6-0-17" id="h6-0-17" class="i">+    logger = logger
+</a><a href="#h6-0-18" id="h6-0-18" class="i">+) {
+</a>     // we assume that the bridge is reloaded the next time we connect to it
+     private var isBridgeReloaded = false
+ 
+</pre>
+</div>
+</body>
+</html>
