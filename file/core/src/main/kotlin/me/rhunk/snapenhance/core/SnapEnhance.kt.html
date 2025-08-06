@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> SnapEnhance.kt (15869B) - <a href="../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt">raw</a></p><hr/><pre id="blob">
+<p> SnapEnhance.kt (16504B) - <a href="../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import android.app.Activity
@@ -360,54 +360,64 @@
 <a href="#l337" class="line" id="l337">    337</a>     }
 <a href="#l338" class="line" id="l338">    338</a> 
 <a href="#l339" class="line" id="l339">    339</a>     private fun syncRemote() {
-<a href="#l340" class="line" id="l340">    340</a>         appContext.bridgeClient.sync(object : SyncCallback.Stub() {
-<a href="#l341" class="line" id="l341">    341</a>             override fun syncFriend(uuid: String): String? {
-<a href="#l342" class="line" id="l342">    342</a>                 return appContext.database.getFriendInfo(uuid)?.let {
-<a href="#l343" class="line" id="l343">    343</a>                     MessagingFriendInfo(
-<a href="#l344" class="line" id="l344">    344</a>                         userId = it.userId!!,
-<a href="#l345" class="line" id="l345">    345</a>                         dmConversationId = null,
-<a href="#l346" class="line" id="l346">    346</a>                         displayName = it.displayName,
-<a href="#l347" class="line" id="l347">    347</a>                         mutableUsername = it.mutableUsername!!,
-<a href="#l348" class="line" id="l348">    348</a>                         bitmojiId = it.bitmojiAvatarId,
-<a href="#l349" class="line" id="l349">    349</a>                         selfieId = it.bitmojiSelfieId,
-<a href="#l350" class="line" id="l350">    350</a>                         streaks = if (it.streakLength &gt; 0) {
-<a href="#l351" class="line" id="l351">    351</a>                             FriendStreaks(
-<a href="#l352" class="line" id="l352">    352</a>                                 expirationTimestamp = it.streakExpirationTimestamp,
-<a href="#l353" class="line" id="l353">    353</a>                                 length = it.streakLength
-<a href="#l354" class="line" id="l354">    354</a>                             )
-<a href="#l355" class="line" id="l355">    355</a>                         } else null
-<a href="#l356" class="line" id="l356">    356</a>                     ).toSerialized()
-<a href="#l357" class="line" id="l357">    357</a>                 }
-<a href="#l358" class="line" id="l358">    358</a>             }
-<a href="#l359" class="line" id="l359">    359</a> 
-<a href="#l360" class="line" id="l360">    360</a>             override fun syncGroup(uuid: String): String? {
-<a href="#l361" class="line" id="l361">    361</a>                 return appContext.database.getFeedEntryByConversationId(uuid)?.let {
-<a href="#l362" class="line" id="l362">    362</a>                     MessagingGroupInfo(
-<a href="#l363" class="line" id="l363">    363</a>                         it.key!!,
-<a href="#l364" class="line" id="l364">    364</a>                         it.feedDisplayName ?: &quot;&quot;,
-<a href="#l365" class="line" id="l365">    365</a>                         it.participantsSize
+<a href="#l340" class="line" id="l340">    340</a>         val myUserId = appContext.database.myUserId
+<a href="#l341" class="line" id="l341">    341</a>         val streakEntries = appContext.database.getFeedEntries(Int.MAX_VALUE, whereClause = &quot;streak_count IS NOT NULL AND streak_count &gt; 0&quot;).associate {
+<a href="#l342" class="line" id="l342">    342</a>             (it.friendUserId ?: it.participants?.firstOrNull { it != myUserId }) to it
+<a href="#l343" class="line" id="l343">    343</a>         }.filter { it.key != null }
+<a href="#l344" class="line" id="l344">    344</a> 
+<a href="#l345" class="line" id="l345">    345</a>         appContext.bridgeClient.sync(object : SyncCallback.Stub() {
+<a href="#l346" class="line" id="l346">    346</a>             override fun syncFriend(uuid: String): String? {
+<a href="#l347" class="line" id="l347">    347</a>                 return appContext.database.getFriendInfo(uuid)?.let {
+<a href="#l348" class="line" id="l348">    348</a>                     MessagingFriendInfo(
+<a href="#l349" class="line" id="l349">    349</a>                         userId = it.userId!!,
+<a href="#l350" class="line" id="l350">    350</a>                         dmConversationId = null,
+<a href="#l351" class="line" id="l351">    351</a>                         displayName = it.displayName,
+<a href="#l352" class="line" id="l352">    352</a>                         mutableUsername = it.mutableUsername!!,
+<a href="#l353" class="line" id="l353">    353</a>                         bitmojiId = it.bitmojiAvatarId,
+<a href="#l354" class="line" id="l354">    354</a>                         selfieId = it.bitmojiSelfieId,
+<a href="#l355" class="line" id="l355">    355</a>                         streaks = if (it.streakLength &gt; 0) {
+<a href="#l356" class="line" id="l356">    356</a>                             FriendStreaks(
+<a href="#l357" class="line" id="l357">    357</a>                                 expirationTimestamp = it.streakExpirationTimestamp,
+<a href="#l358" class="line" id="l358">    358</a>                                 length = it.streakLength
+<a href="#l359" class="line" id="l359">    359</a>                             )
+<a href="#l360" class="line" id="l360">    360</a>                         } else streakEntries[it.userId]?.let {
+<a href="#l361" class="line" id="l361">    361</a>                             FriendStreaks(
+<a href="#l362" class="line" id="l362">    362</a>                                 expirationTimestamp = it.streakExpirationTimestampMs ?: return@let null,
+<a href="#l363" class="line" id="l363">    363</a>                                 length = it.streakCount ?: return@let null
+<a href="#l364" class="line" id="l364">    364</a>                             )
+<a href="#l365" class="line" id="l365">    365</a>                         }
 <a href="#l366" class="line" id="l366">    366</a>                     ).toSerialized()
 <a href="#l367" class="line" id="l367">    367</a>                 }
 <a href="#l368" class="line" id="l368">    368</a>             }
-<a href="#l369" class="line" id="l369">    369</a>         })
-<a href="#l370" class="line" id="l370">    370</a>     }
-<a href="#l371" class="line" id="l371">    371</a> 
-<a href="#l372" class="line" id="l372">    372</a>     private fun jetpackComposeResourceHook() {
-<a href="#l373" class="line" id="l373">    373</a>         fun strings(vararg classes: KClass&lt;*&gt;): Map&lt;Int, String&gt; {
-<a href="#l374" class="line" id="l374">    374</a>             return classes.fold(mapOf()) { map, clazz -&gt;
-<a href="#l375" class="line" id="l375">    375</a>                 map + clazz.java.fields.filter {
-<a href="#l376" class="line" id="l376">    376</a>                     java.lang.reflect.Modifier.isStatic(it.modifiers) &amp;&amp; it.type == Int::class.javaPrimitiveType
-<a href="#l377" class="line" id="l377">    377</a>                 }.associate { it.getInt(null) to it.name }
+<a href="#l369" class="line" id="l369">    369</a> 
+<a href="#l370" class="line" id="l370">    370</a>             override fun syncGroup(uuid: String): String? {
+<a href="#l371" class="line" id="l371">    371</a>                 return appContext.database.getFeedEntryByConversationId(uuid)?.let {
+<a href="#l372" class="line" id="l372">    372</a>                     MessagingGroupInfo(
+<a href="#l373" class="line" id="l373">    373</a>                         it.key!!,
+<a href="#l374" class="line" id="l374">    374</a>                         it.feedDisplayName ?: &quot;&quot;,
+<a href="#l375" class="line" id="l375">    375</a>                         it.participantsSize
+<a href="#l376" class="line" id="l376">    376</a>                     ).toSerialized()
+<a href="#l377" class="line" id="l377">    377</a>                 }
 <a href="#l378" class="line" id="l378">    378</a>             }
-<a href="#l379" class="line" id="l379">    379</a>         }
-<a href="#l380" class="line" id="l380">    380</a>         val stringResources = strings(androidx.compose.material3.R.string::class, androidx.compose.ui.R.string::class)
-<a href="#l381" class="line" id="l381">    381</a>         Resources::class.java.getMethod(&quot;getString&quot;, Int::class.javaPrimitiveType).hook(HookStage.BEFORE) { param -&gt;
-<a href="#l382" class="line" id="l382">    382</a>             val key = param.arg&lt;Int&gt;(0)
-<a href="#l383" class="line" id="l383">    383</a>             val name = stringResources[key]?.replaceFirst(&quot;m3c_&quot;, &quot;&quot;) ?: return@hook
-<a href="#l384" class="line" id="l384">    384</a>             param.setResult(appContext.translation.getOrNull(&quot;material3_strings.${name}&quot;) ?: &quot;&quot;)
-<a href="#l385" class="line" id="l385">    385</a>         }
-<a href="#l386" class="line" id="l386">    386</a>     }
-<a href="#l387" class="line" id="l387">    387</a> }</pre>
+<a href="#l379" class="line" id="l379">    379</a>         })
+<a href="#l380" class="line" id="l380">    380</a>     }
+<a href="#l381" class="line" id="l381">    381</a> 
+<a href="#l382" class="line" id="l382">    382</a>     private fun jetpackComposeResourceHook() {
+<a href="#l383" class="line" id="l383">    383</a>         fun strings(vararg classes: KClass&lt;*&gt;): Map&lt;Int, String&gt; {
+<a href="#l384" class="line" id="l384">    384</a>             return classes.fold(mapOf()) { map, clazz -&gt;
+<a href="#l385" class="line" id="l385">    385</a>                 map + clazz.java.fields.filter {
+<a href="#l386" class="line" id="l386">    386</a>                     java.lang.reflect.Modifier.isStatic(it.modifiers) &amp;&amp; it.type == Int::class.javaPrimitiveType
+<a href="#l387" class="line" id="l387">    387</a>                 }.associate { it.getInt(null) to it.name }
+<a href="#l388" class="line" id="l388">    388</a>             }
+<a href="#l389" class="line" id="l389">    389</a>         }
+<a href="#l390" class="line" id="l390">    390</a>         val stringResources = strings(androidx.compose.material3.R.string::class, androidx.compose.ui.R.string::class)
+<a href="#l391" class="line" id="l391">    391</a>         Resources::class.java.getMethod(&quot;getString&quot;, Int::class.javaPrimitiveType).hook(HookStage.BEFORE) { param -&gt;
+<a href="#l392" class="line" id="l392">    392</a>             val key = param.arg&lt;Int&gt;(0)
+<a href="#l393" class="line" id="l393">    393</a>             val name = stringResources[key]?.replaceFirst(&quot;m3c_&quot;, &quot;&quot;) ?: return@hook
+<a href="#l394" class="line" id="l394">    394</a>             param.setResult(appContext.translation.getOrNull(&quot;material3_strings.${name}&quot;) ?: &quot;&quot;)
+<a href="#l395" class="line" id="l395">    395</a>         }
+<a href="#l396" class="line" id="l396">    396</a>     }
+<a href="#l397" class="line" id="l397">    397</a> }</pre>
 </div>
 </body>
 </html>

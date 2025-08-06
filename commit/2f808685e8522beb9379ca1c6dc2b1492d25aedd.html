@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fix(core): streak expiration - SnapEnhance - An Xposed module offering an enhanced Snapchat experience
+</title>
+<link rel="icon" type="image/svg+xml" href="../../logo.png"/>
+<link rel="alternate icon" href="../../favicon.png"/>
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed" href="../atom.xml" />
+<link rel="alternate" type="application/atom+xml" title="SnapEnhance Atom Feed (tags)" href="../tags.xml" />
+<link rel="stylesheet" type="text/css" href="../../style.css" />
+<link rel="stylesheet" type="text/css" href="../../fonts.css" />
+</head>
+<body>
+<div id="head"><table><tr><td><a class="logo" href="../../"><img src="../../logo.png" alt="" width="32" height="32" /></a></td><td><strong>SnapEnhance</strong><span class="desc"> - An Xposed module offering an enhanced Snapchat experience
+</span>
+</td></tr></table>
+<p><a href="../about.html">About</a> | <a href="../log.html">Log</a> | <a href="../files.html">Files</a> | <a href="../refs.html">Refs</a> | <a href="../file/LICENSE.html">License</a></p>
+</div>
+<hr/>
+<div id="content">
+<pre><b>commit</b> <a href="../commit/2f808685e8522beb9379ca1c6dc2b1492d25aedd.html">2f808685e8522beb9379ca1c6dc2b1492d25aedd</a>
+<b>parent</b> <a href="../commit/3951d30f2b6e5a1071ccb48be5793fda23baa9ba.html">3951d30f2b6e5a1071ccb48be5793fda23baa9ba</a>
+<b>Author:</b> rhunk &lt;<a href="mailto:101876869+rhunk@users.noreply.github.com">101876869+rhunk@users.noreply.github.com</a>&gt;
+<b>Date:</b>   Wed,  6 Aug 2025 09:51:45 +0200
+
+fix(core): streak expiration
+
+Signed-off-by: rhunk &lt;101876869+rhunk@users.noreply.github.com&gt;
+
+<b>Diffstat:</b>
+<table><tr><td class="M">M</td><td><a href="#h0">common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendFeedEntry.kt</a></td><td> | </td><td class="num">5</td><td><span class="i">+++++</span><span class="d"></span></td></tr>
+<tr><td class="M">M</td><td><a href="#h1">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></td><td> | </td><td class="num">12</td><td><span class="i">+++++++++++</span><span class="d">-</span></td></tr>
+<tr><td class="M">M</td><td><a href="#h2">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a></td><td> | </td><td class="num">4</td><td><span class="i">++</span><span class="d">--</span></td></tr>
+</table></pre><pre>3 files changed, 18 insertions(+), 3 deletions(-)
+<hr/><b>diff --git a/<a id="h0" href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendFeedEntry.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendFeedEntry.kt</a> b/<a href="../file/common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendFeedEntry.kt.html">common/src/main/kotlin/me/rhunk/snapenhance/common/database/impl/FriendFeedEntry.kt</a></b>
+<a href="#h0-0" id="h0-0" class="h">@@ -26,6 +26,8 @@ data class FriendFeedEntry(
+</a>     var friendLinkType: Int? = null,
+     var bitmojiAvatarId: String? = null,
+     var bitmojiSelfieId: String? = null,
+<a href="#h0-0-3" id="h0-0-3" class="i">+    var streakCount: Int? = null,
+</a><a href="#h0-0-4" id="h0-0-4" class="i">+    var streakExpirationTimestampMs: Long? = null,
+</a> ) : DatabaseObject {
+     @SuppressLint(&quot;Range&quot;)
+     override fun write(cursor: Cursor) {
+<a href="#h0-1" id="h0-1" class="h">@@ -47,6 +49,9 @@ data class FriendFeedEntry(
+</a>             friendLinkType = getIntOrNull(&quot;friendLinkType&quot;)
+             bitmojiAvatarId = getStringOrNull(&quot;bitmojiAvatarId&quot;)
+             bitmojiSelfieId = getStringOrNull(&quot;bitmojiSelfieId&quot;)
+<a href="#h0-1-3" id="h0-1-3" class="i">+
+</a><a href="#h0-1-4" id="h0-1-4" class="i">+            streakCount = getIntOrNull(&quot;streak_count&quot;)
+</a><a href="#h0-1-5" id="h0-1-5" class="i">+            streakExpirationTimestampMs = getLongOrNull(&quot;streak_expiration_timestamp_ms&quot;)
+</a>         }
+     }
+ }
+<b>diff --git a/<a id="h1" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/SnapEnhance.kt</a></b>
+<a href="#h1-0" id="h1-0" class="h">@@ -337,6 +337,11 @@ class SnapEnhance {
+</a>     }
+ 
+     private fun syncRemote() {
+<a href="#h1-0-3" id="h1-0-3" class="i">+        val myUserId = appContext.database.myUserId
+</a><a href="#h1-0-4" id="h1-0-4" class="i">+        val streakEntries = appContext.database.getFeedEntries(Int.MAX_VALUE, whereClause = &quot;streak_count IS NOT NULL AND streak_count &gt; 0&quot;).associate {
+</a><a href="#h1-0-5" id="h1-0-5" class="i">+            (it.friendUserId ?: it.participants?.firstOrNull { it != myUserId }) to it
+</a><a href="#h1-0-6" id="h1-0-6" class="i">+        }.filter { it.key != null }
+</a><a href="#h1-0-7" id="h1-0-7" class="i">+
+</a>         appContext.bridgeClient.sync(object : SyncCallback.Stub() {
+             override fun syncFriend(uuid: String): String? {
+                 return appContext.database.getFriendInfo(uuid)?.let {
+<a href="#h1-1" id="h1-1" class="h">@@ -352,7 +357,12 @@ class SnapEnhance {
+</a>                                 expirationTimestamp = it.streakExpirationTimestamp,
+                                 length = it.streakLength
+                             )
+<a href="#h1-1-3" id="h1-1-3" class="d">-                        } else null
+</a><a href="#h1-1-4" id="h1-1-4" class="i">+                        } else streakEntries[it.userId]?.let {
+</a><a href="#h1-1-5" id="h1-1-5" class="i">+                            FriendStreaks(
+</a><a href="#h1-1-6" id="h1-1-6" class="i">+                                expirationTimestamp = it.streakExpirationTimestampMs ?: return@let null,
+</a><a href="#h1-1-7" id="h1-1-7" class="i">+                                length = it.streakCount ?: return@let null
+</a><a href="#h1-1-8" id="h1-1-8" class="i">+                            )
+</a><a href="#h1-1-9" id="h1-1-9" class="i">+                        }
+</a>                     ).toSerialized()
+                 }
+             }
+<b>diff --git a/<a id="h2" href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a> b/<a href="../file/core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt.html">core/src/main/kotlin/me/rhunk/snapenhance/core/database/DatabaseAccess.kt</a></b>
+<a href="#h2-0" id="h2-0" class="h">@@ -283,11 +283,11 @@ class DatabaseAccess(
+</a>         } ?: emptyList()
+     }
+ 
+<a href="#h2-0-3" id="h2-0-3" class="d">-    fun getFeedEntries(limit: Int): List&lt;FriendFeedEntry&gt; {
+</a><a href="#h2-0-4" id="h2-0-4" class="i">+    fun getFeedEntries(limit: Int, whereClause: String? = null): List&lt;FriendFeedEntry&gt; {
+</a>         val entries = mutableListOf&lt;FriendFeedEntry&gt;()
+         return useDatabase(DatabaseType.ARROYO)?.performOperation {
+             safeRawQuery(
+<a href="#h2-0-8" id="h2-0-8" class="d">-                &quot;SELECT * FROM feed_entry ORDER BY last_updated_timestamp DESC LIMIT ?&quot;,
+</a><a href="#h2-0-9" id="h2-0-9" class="i">+                &quot;SELECT * FROM feed_entry ${whereClause?.let { &quot;WHERE $it&quot; }.orEmpty()} ORDER BY last_updated_timestamp DESC LIMIT ?&quot;,
+</a>                 arrayOf(limit.toString())
+             )?.use { query -&gt;
+                 while (query.moveToNext()) {
+</pre>
+</div>
+</body>
+</html>
