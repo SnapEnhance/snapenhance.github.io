@@ -20,7 +20,7 @@
 </div>
 <hr/>
 <div id="content">
-<p> UserInterface.kt (2788B) - <a href="../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/UserInterface.kt">raw</a></p><hr/><pre id="blob">
+<p> UserInterface.kt (2920B) - <a href="../../../../../../../../../../raw/core/src/main/kotlin/me/rhunk/snapenhance/core/ui/UserInterface.kt">raw</a></p><hr/><pre id="blob">
 <a href="#l1" class="line" id="l1">      1</a> package me.rhunk.snapenhance.core.ui
 <a href="#l2" class="line" id="l2">      2</a> 
 <a href="#l3" class="line" id="l3">      3</a> import android.content.res.Resources
@@ -43,7 +43,7 @@
 <a href="#l20" class="line" id="l20">     20</a>     val actionSheetBackground get() = if (context.androidContext.isDarkTheme()) 0xff1e1e1e.toInt() else 0xffffffff.toInt()
 <a href="#l21" class="line" id="l21">     21</a> 
 <a href="#l22" class="line" id="l22">     22</a>     val avenirNextFontId = 500
-<a href="#l23" class="line" id="l23">     23</a>     val avenirNextTypeface get() = fontMap[avenirNextFontId] ?: fontMap.entries.sortedBy { it.key }.firstOrNull()?.value ?: Typeface.DEFAULT
+<a href="#l23" class="line" id="l23">     23</a>     val avenirNextTypeface get() = fontMap[avenirNextFontId] ?: fontMap.entries.minByOrNull { it.key }?.value ?: Typeface.DEFAULT
 <a href="#l24" class="line" id="l24">     24</a> 
 <a href="#l25" class="line" id="l25">     25</a>     fun dpToPx(dp: Int): Int {
 <a href="#l26" class="line" id="l26">     26</a>         return (dp * context.resources.displayMetrics.density).toInt()
@@ -86,21 +86,21 @@
 <a href="#l63" class="line" id="l63">     63</a>                 it.type == TypedValue.TYPE_STRING &amp;&amp; it.string?.endsWith(&quot;.ttf&quot;) == true
 <a href="#l64" class="line" id="l64">     64</a>             } ?: return@hook
 <a href="#l65" class="line" id="l65">     65</a> 
-<a href="#l66" class="line" id="l66">     66</a>             var offset = typedValue.resourceId.shr(8).shl(8)
+<a href="#l66" class="line" id="l66">     66</a>             unhook()
 <a href="#l67" class="line" id="l67">     67</a> 
-<a href="#l68" class="line" id="l68">     68</a>             while (true) {
-<a href="#l69" class="line" id="l69">     69</a>                 var font = try {
-<a href="#l70" class="line" id="l70">     70</a>                     context.resources.getFont(++offset)
-<a href="#l71" class="line" id="l71">     71</a>                 } catch (_: Throwable) {
-<a href="#l72" class="line" id="l72">     72</a>                     break
-<a href="#l73" class="line" id="l73">     73</a>                 }
-<a href="#l74" class="line" id="l74">     74</a> 
-<a href="#l75" class="line" id="l75">     75</a>                 fontMap[font.weight] = font
-<a href="#l76" class="line" id="l76">     76</a>             }
-<a href="#l77" class="line" id="l77">     77</a> 
-<a href="#l78" class="line" id="l78">     78</a>             unhook()
-<a href="#l79" class="line" id="l79">     79</a>         }.let {
-<a href="#l80" class="line" id="l80">     80</a>             { it.forEach { it.unhook() } }
+<a href="#l68" class="line" id="l68">     68</a>             var offset = typedValue.resourceId.shr(8).shl(8)
+<a href="#l69" class="line" id="l69">     69</a> 
+<a href="#l70" class="line" id="l70">     70</a>             while (true) {
+<a href="#l71" class="line" id="l71">     71</a>                 try {
+<a href="#l72" class="line" id="l72">     72</a>                     if (context.resources.getResourceTypeName(++offset) != &quot;font&quot;) break
+<a href="#l73" class="line" id="l73">     73</a>                     val font = runCatching { context.resources.getFont(offset) }.getOrNull() ?: break
+<a href="#l74" class="line" id="l74">     74</a>                     fontMap[font.weight] = font
+<a href="#l75" class="line" id="l75">     75</a>                 } catch (_: Throwable) {
+<a href="#l76" class="line" id="l76">     76</a>                     break
+<a href="#l77" class="line" id="l77">     77</a>                 }
+<a href="#l78" class="line" id="l78">     78</a>             }
+<a href="#l79" class="line" id="l79">     79</a>         }.let { unhooks -&gt;
+<a href="#l80" class="line" id="l80">     80</a>             { unhooks.forEach { it.unhook() } }
 <a href="#l81" class="line" id="l81">     81</a>         }
 <a href="#l82" class="line" id="l82">     82</a>     }
 <a href="#l83" class="line" id="l83">     83</a> }</pre>
